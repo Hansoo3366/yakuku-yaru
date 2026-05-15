@@ -1,0 +1,197 @@
+:root {
+  color-scheme: light;
+  --color-field-700: #0f6b4f;
+  --color-field-800: #0a4a3a;
+  --color-field-100: #e4f3ec;
+  --color-score-red: #d63b2a;
+  --color-ticket-gold: #d9a441;
+  --color-night-navy: #14213d;
+  --color-paper: #fbfaf6;
+  --color-white: #ffffff;
+  --color-line: #d8ded8;
+  --color-ink: #18201c;
+  --color-muted: #66736d;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+}
+
+body {
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family:
+    Arial,
+    Apple SD Gothic Neo,
+    Noto Sans KR,
+    sans-serif;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.page-shell {
+  margin: 0 auto;
+  max-width: 1120px;
+  padding: 32px 20px 56px;
+}
+
+.hero {
+  align-items: stretch;
+  display: grid;
+  gap: 24px;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  min-height: 420px;
+}
+
+.hero-copy {
+  background:
+    linear-gradient(rgba(15, 107, 79, 0.82), rgba(10, 74, 58, 0.88)),
+    url('https://images.unsplash.com/photo-1566577739112-5180d4bf9390?auto=format&fit=crop&w=1600&q=80');
+  background-position: center;
+  background-size: cover;
+  border-radius: 8px;
+  color: var(--color-white);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 40px;
+}
+
+.eyebrow {
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  margin: 0 0 12px;
+  text-transform: uppercase;
+}
+
+h1,
+h2,
+p {
+  margin-top: 0;
+}
+
+h1 {
+  font-size: clamp(2.4rem, 7vw, 5rem);
+  line-height: 1;
+  margin-bottom: 20px;
+}
+
+.description {
+  font-size: 1.08rem;
+  line-height: 1.7;
+  max-width: 620px;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.actions a {
+  align-items: center;
+  background: var(--color-white);
+  border: 1px solid transparent;
+  border-radius: 6px;
+  color: var(--color-field-800);
+  display: inline-flex;
+  font-weight: 700;
+  min-height: 44px;
+  padding: 0 18px;
+}
+
+.actions .secondary {
+  background: transparent;
+  border-color: rgba(255, 255, 255, 0.75);
+  color: var(--color-white);
+}
+
+.score-card,
+.content-grid > div {
+  background: var(--color-white);
+  border: 1px solid var(--color-line);
+  border-radius: 8px;
+}
+
+.score-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 28px;
+}
+
+.score-card span {
+  color: var(--color-muted);
+  font-weight: 700;
+}
+
+.score-card strong {
+  color: var(--color-score-red);
+  font-size: 5rem;
+  line-height: 1;
+  margin: 18px 0;
+}
+
+.score-card p {
+  color: var(--color-muted);
+  line-height: 1.6;
+  margin: 0;
+}
+
+.content-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: 24px;
+}
+
+.content-grid > div {
+  padding: 24px;
+}
+
+h2 {
+  font-size: 1.2rem;
+  margin-bottom: 16px;
+}
+
+ul {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding-left: 20px;
+}
+
+li {
+  line-height: 1.5;
+}
+
+@media (max-width: 760px) {
+  .page-shell {
+    padding: 16px 14px 36px;
+  }
+
+  .hero,
+  .content-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .hero-copy {
+    min-height: 520px;
+    padding: 28px;
+  }
+
+  .score-card strong {
+    font-size: 4rem;
+  }
+}
