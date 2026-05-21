@@ -65,6 +65,9 @@
 - [Frontend Spec](docs/frontend-spec.md)
 - [Design System](docs/design-system.md)
 - [PWA Spec](docs/pwa-spec.md)
+- [Docker Setup](docs/docker-setup.md)
+- [Deployment](docs/deployment.md)
+- [Evaluation Notes](docs/evaluation-notes.md)
 - [Development Plan](docs/development-plan.md)
 - [Work Order](docs/work-order.md)
 
@@ -109,13 +112,31 @@ npm run dev:api
 | --- | --- |
 | Web | `http://localhost:3000` |
 | API health | `http://localhost:4000/api/health` |
+| Swagger | `http://localhost:4000/api-docs` |
+| OpenAPI JSON | `http://localhost:4000/api-docs.json` |
+| PWA manifest | `http://localhost:3000/manifest.webmanifest` |
+| Offline fallback | `http://localhost:3000/offline` |
 
 ## Verification
 
 ```bash
+npm run lint
 npm run typecheck
 npm run build
 ```
+
+## Current Status
+
+MVP 기능은 대부분 구현되어 있습니다.
+
+- 인증, 게시판, 댓글, 페이징
+- MySQL 기반 DB 관계
+- 내 팀 설정, 경기 일정, 경기 상세
+- 직관 기록 CRUD, 사진 업로드, 캘린더 썸네일
+- 승률 계산과 `승리요정` 타이틀
+- PWA 기본 설정
+
+남은 큰 작업은 production 배포, GitHub Actions 자동 배포, 디자인 고도화입니다.
 
 ## Naming
 

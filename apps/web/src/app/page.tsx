@@ -1,3 +1,5 @@
+import Link from 'next/link';
+
 const featureItems = [
   '내 팀 경기 일정 캘린더',
   '직관 사진 업로드와 썸네일',
@@ -24,10 +26,13 @@ export default function HomePage() {
             한곳에서 관리하는 웹앱입니다.
           </p>
           <div className="actions">
-            <a href="/calendar">캘린더 보기</a>
-            <a href="/posts" className="secondary">
+            <Link href="/calendar">캘린더 보기</Link>
+            <Link href="/posts" className="secondary">
               후기 게시판
-            </a>
+            </Link>
+            <Link href="/me" className="secondary">
+              마이페이지
+            </Link>
           </div>
         </div>
         <div className="score-card" aria-label="직관 통계 미리보기">

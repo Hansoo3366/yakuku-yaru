@@ -1,6 +1,10 @@
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import dotenv from 'dotenv';
 
 dotenv.config();
+
+const apiRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 
 export const env = {
   nodeEnv: process.env.NODE_ENV ?? 'development',
@@ -9,6 +13,7 @@ export const env = {
     secret: process.env.JWT_SECRET ?? 'change-me-in-local-env',
     expiresIn: process.env.JWT_EXPIRES_IN ?? '1d',
   },
+  uploadDir: path.resolve(apiRoot, process.env.UPLOAD_DIR ?? 'uploads'),
   database: {
     host: process.env.MYSQL_HOST ?? 'localhost',
     port: Number(process.env.MYSQL_PORT ?? 3306),

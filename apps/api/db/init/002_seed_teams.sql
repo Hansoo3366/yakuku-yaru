@@ -1,3 +1,5 @@
+SET NAMES utf8mb4 COLLATE utf8mb4_0900_ai_ci;
+
 INSERT INTO teams (name, short_name, primary_color)
 VALUES
   ('LG 트윈스', 'LG', '#C30452'),

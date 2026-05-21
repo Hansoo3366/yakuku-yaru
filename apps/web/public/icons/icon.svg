@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Yakuku Yaru">
+  <rect width="512" height="512" rx="96" fill="#0F6B4F"/>
+  <circle cx="256" cy="256" r="150" fill="#FBFAF6"/>
+  <path d="M173 176c28 30 28 130 0 160" fill="none" stroke="#D63B2A" stroke-width="18" stroke-linecap="round"/>
+  <path d="M339 176c-28 30-28 130 0 160" fill="none" stroke="#D63B2A" stroke-width="18" stroke-linecap="round"/>
+  <path d="M162 352h188" fill="none" stroke="#14213D" stroke-width="22" stroke-linecap="round"/>
+  <path d="M210 120h92" fill="none" stroke="#D9A441" stroke-width="22" stroke-linecap="round"/>
+  <text x="256" y="284" text-anchor="middle" font-family="Arial, sans-serif" font-size="78" font-weight="800" fill="#14213D">Y</text>
+</svg>

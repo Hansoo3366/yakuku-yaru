@@ -76,3 +76,14 @@ export async function markUserEmailVerified(userId: number) {
     [userId],
   );
 }
+
+export async function updateUserFavoriteTeam(userId: number, teamId: number) {
+  await db.execute(
+    `UPDATE users
+     SET favorite_team_id = ?
+     WHERE id = ?`,
+    [teamId, userId],
+  );
+
+  return findUserById(userId);
+}

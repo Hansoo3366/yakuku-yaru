@@ -1,3 +1,5 @@
+SET NAMES utf8mb4 COLLATE utf8mb4_0900_ai_ci;
+
 CREATE TABLE IF NOT EXISTS teams (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   name VARCHAR(50) NOT NULL,
@@ -53,6 +55,7 @@ CREATE TABLE IF NOT EXISTS games (
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
+  UNIQUE KEY uq_games_date_home_away (game_date, home_team_id, away_team_id),
   KEY idx_games_game_date (game_date),
   KEY idx_games_home_team_id (home_team_id),
   KEY idx_games_away_team_id (away_team_id),
