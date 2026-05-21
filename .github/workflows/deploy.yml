@@ -15,6 +15,18 @@ jobs:
     name: Deploy
     runs-on: ubuntu-latest
     steps:
+      - name: Validate deployment secrets
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+        run: |
+          test -n "$DEPLOY_HOST" || (echo "DEPLOY_HOST secret is missing" && exit 1)
+          test -n "$DEPLOY_USER" || (echo "DEPLOY_USER secret is missing" && exit 1)
+          test -n "$DEPLOY_SSH_KEY" || (echo "DEPLOY_SSH_KEY secret is missing" && exit 1)
+          test -n "$DEPLOY_PATH" || (echo "DEPLOY_PATH secret is missing" && exit 1)
+
       - name: Deploy with Docker Compose
         uses: appleboy/ssh-action@v1.2.0
         with:
