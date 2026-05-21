@@ -8,7 +8,7 @@ const featureItems = [
 ];
 
 const milestoneItems = [
-  '회원가입/로그인',
+  '회원가입/로그인 테텥테스트',
   '게시판과 댓글',
   '경기 일정 캘린더',
   '직관 기록',
@@ -22,8 +22,8 @@ export default function HomePage() {
           <p className="eyebrow">PWA Baseball Attendance Log</p>
           <h1>Yakuku Yaru</h1>
           <p className="description">
-            야구장 직관 기록을 캘린더에 남기고 사진, 스코어, 승률을
-            한곳에서 관리하는 웹앱입니다.
+            야구장 직관 기록을 캘린더에 남기고 사진, 스코어, 승률을 한곳에서
+            관리하는 웹앱입니다.
           </p>
           <div className="actions">
             <Link href="/calendar">캘린더 보기</Link>
