@@ -209,10 +209,10 @@
 작업:
 
 - [x] Docker production 설정
-- [ ] Cloud Server 배포
+- [x] Cloud Server 배포
 - [x] Swagger URL 확인
 - [x] GitHub repository 정리
-- [ ] GitHub Actions 자동 배포
+- [x] GitHub Actions 자동 배포
 - [x] README에 실행/검증 URL 정리
 - [x] Docker 배포 문서 정리
 - [x] 평가 대비 설명 문서 정리
@@ -220,7 +220,7 @@
 추천 완료 기준:
 
 - [x] 제출 가능한 GitHub Repository가 있다.
-- [ ] 배포 URL이 있다.
+- [x] 배포 URL이 있다.
 - [x] Swagger API 문서 URL이 있다.
 
 ## Recommended First Sprint
