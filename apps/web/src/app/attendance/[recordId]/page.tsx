@@ -1,0 +1,260 @@
+'use client';
+
+/* eslint-disable @next/next/no-img-element */
+
+import Link from 'next/link';
+import { useParams, useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { getAccessToken } from '@/lib/auth';
+import {
+  deleteAttendanceRecord,
+  fetchAttendanceRecord,
+  type AttendanceRecord,
+} from '@/lib/attendance-api';
+import { getAssetUrl } from '@/lib/api';
+import { getTeamLogoSrc } from '@/lib/team-logo';
+import { Skeleton } from '@/components/Skeleton';
+
+function formatDate(value: string) {
+  return new Date(value).toLocaleDateString('ko-KR', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    weekday: 'short',
+  });
+}
+
+function formatTime(value: string) {
+  return new Date(value).toLocaleTimeString('ko-KR', {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+function resultLabel(result: string | null) {
+  switch (result) {
+    case 'win':
+      return 'WIN';
+    case 'lose':
+      return 'LOSE';
+    case 'draw':
+      return 'DRAW';
+    default:
+      return '결과 미입력';
+  }
+}
+
+export default function AttendanceDetailPage() {
+  const params = useParams<{ recordId: string }>();
+  const router = useRouter();
+  const recordId = Number(params.recordId);
+  const [record, setRecord] = useState<AttendanceRecord | null>(null);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  useEffect(() => {
+    const token = getAccessToken();
+    if (!token) {
+      router.replace('/login');
+      return;
+    }
+
+    fetchAttendanceRecord(recordId, token)
+      .then((response) => setRecord(response.record))
+      .catch(() => setErrorMessage('직관 기록을 불러오지 못했어요.'))
+      .finally(() => setIsLoading(false));
+  }, [recordId, router]);
+
+  async function handleDelete() {
+    if (!record) return;
+    if (!confirm('이 직관 기록을 삭제할까요? 되돌릴 수 없습니다.')) return;
+    const token = getAccessToken();
+    if (!token) return;
+    setIsDeleting(true);
+    try {
+      await deleteAttendanceRecord(record.id, token);
+      router.push('/calendar');
+    } catch {
+      setErrorMessage('삭제에 실패했어요. 잠시 후 다시 시도해주세요.');
+      setIsDeleting(false);
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <main className="app-shell">
+        <Skeleton height={420} radius={14} />
+      </main>
+    );
+  }
+
+  if (!record) {
+    return (
+      <main className="app-shell">
+        <p className="muted">{errorMessage || '기록을 찾지 못했어요.'}</p>
+        <Link className="back-link" href="/calendar">
+          캘린더로 돌아가기
+        </Link>
+      </main>
+    );
+  }
+
+  const isOwner = record.viewerRelation === 'owner';
+  const acceptedCompanions = record.companions.filter(
+    (companion) => companion.status === 'accepted',
+  );
+  const winLossClass = record.result ? `is-${record.result}` : 'is-blank';
+  const watchLabel = record.watchType === 'home' ? '집관' : '직관';
+  const myScore = record.myTeamScore;
+  const oppScore = record.opponentScore;
+  const hasScore = myScore !== null && oppScore !== null;
+
+  return (
+    <main className="app-shell">
+      <Link className="back-link" href="/calendar">
+        캘린더로
+      </Link>
+
+      <article className={`photo-ticket ${winLossClass}`} aria-label="직관 포토 티켓">
+        <div className="photo-ticket-stub">
+          <span className="photo-ticket-stub-label">{watchLabel}</span>
+          <span className="photo-ticket-stub-result">{resultLabel(record.result)}</span>
+          <span className="photo-ticket-stub-meta">
+            {new Date(record.game.gameDate).toLocaleDateString('ko-KR', {
+              month: '2-digit',
+              day: '2-digit',
+            })}
+          </span>
+        </div>
+        <div className="photo-ticket-perforation" aria-hidden="true" />
+        <div className="photo-ticket-body">
+          <div className="photo-ticket-photo">
+            {record.photoUrl ? (
+              <img alt="직관 사진" src={getAssetUrl(record.photoUrl)} />
+            ) : (
+              <div className="photo-ticket-photo-empty">
+                <span aria-hidden="true">◯</span>
+                <p>아직 등록된 사진이 없어요</p>
+              </div>
+            )}
+          </div>
+          <div className="photo-ticket-info">
+            <span className="photo-ticket-eyebrow">KBO Attendance Ticket</span>
+            <div className="photo-ticket-matchup">
+              <div className="photo-ticket-team">
+                <img alt="" src={getTeamLogoSrc(record.game.awayTeam)} />
+                <strong>{record.game.awayTeam.shortName}</strong>
+              </div>
+              <div className="photo-ticket-score">
+                {hasScore ? (
+                  <>
+                    <span className="photo-ticket-score-num">{myScore}</span>
+                    <span className="photo-ticket-score-divider">:</span>
+                    <span className="photo-ticket-score-num">{oppScore}</span>
+                  </>
+                ) : (
+                  <span className="photo-ticket-score-vs">vs</span>
+                )}
+              </div>
+              <div className="photo-ticket-team">
+                <img alt="" src={getTeamLogoSrc(record.game.homeTeam)} />
+                <strong>{record.game.homeTeam.shortName}</strong>
+              </div>
+            </div>
+            <dl className="photo-ticket-meta">
+              <div>
+                <dt>경기일</dt>
+                <dd>{formatDate(record.game.gameDate)}</dd>
+              </div>
+              <div>
+                <dt>플레이볼</dt>
+                <dd>{formatTime(record.game.gameDate)}</dd>
+              </div>
+              <div>
+                <dt>구장</dt>
+                <dd>{record.game.stadium}</dd>
+              </div>
+              <div>
+                <dt>관람</dt>
+                <dd>{watchLabel}</dd>
+              </div>
+            </dl>
+          </div>
+        </div>
+        <div className="photo-ticket-foot">
+          {record.memo ? (
+            <p className="photo-ticket-memo">“{record.memo}”</p>
+          ) : (
+            <p className="photo-ticket-memo muted">메모가 비어있어요.</p>
+          )}
+        </div>
+      </article>
+
+      {acceptedCompanions.length || record.companions.length ? (
+        <section className="card stack-sm" aria-label="동행 정보">
+          <div className="section-heading" style={{ marginBottom: 0 }}>
+            <h2>함께한 사람</h2>
+          </div>
+          <div className="companion-chip-row">
+            {record.companions.map((companion) => (
+              <span
+                className="companion-chip"
+                data-status={companion.status}
+                key={companion.id}
+              >
+                {companion.nickname}
+                <small>
+                  {companion.status === 'accepted'
+                    ? '수락'
+                    : companion.status === 'rejected'
+                      ? '거절'
+                      : '대기'}
+                </small>
+              </span>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
+      <section className="card stack-sm" aria-label="기록 정보">
+        <div className="section-heading" style={{ marginBottom: 0 }}>
+          <div>
+            <h2>기록</h2>
+            <p>작성자 · {record.ownerNickname}</p>
+          </div>
+        </div>
+        <p className="muted" style={{ fontSize: 'var(--text-xs)' }}>
+          최근 수정 · {new Date(record.updatedAt).toLocaleString('ko-KR')}
+        </p>
+      </section>
+
+      {isOwner ? (
+        <div className="action-bar">
+          <Link
+            className="btn btn-primary btn-lg"
+            href={`/attendance/${record.id}/edit`}
+          >
+            수정하기
+          </Link>
+          <button
+            className="btn btn-ghost btn-lg"
+            disabled={isDeleting}
+            onClick={handleDelete}
+            type="button"
+          >
+            삭제
+          </button>
+        </div>
+      ) : (
+        <p className="muted" style={{ fontSize: 'var(--text-xs)' }}>
+          동행 태그로 공유받은 기록은 작성자만 수정할 수 있어요.
+        </p>
+      )}
+
+      {errorMessage ? (
+        <p className="form-error" role="alert">{errorMessage}</p>
+      ) : null}
+    </main>
+  );
+}

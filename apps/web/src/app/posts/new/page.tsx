@@ -48,35 +48,62 @@ export default function NewPostPage() {
 
   return (
     <main className="app-shell">
-      <section className="editor-panel">
-        <Link className="back-link" href="/posts">
-          게시판으로
-        </Link>
+      <Link className="back-link" href="/posts">
+        게시판으로
+      </Link>
+
+      <header className="app-page-header">
+        <span className="eyebrow">New Post</span>
         <h1>후기 작성</h1>
-        <form className="form-stack" onSubmit={handleSubmit}>
-          <label>
-            제목
+        <p>경기장에서 느낀 분위기와 직관 팁을 공유해보세요.</p>
+      </header>
+
+      <form className="form-grid" onSubmit={handleSubmit}>
+        <section className="card stack">
+          <div className="field">
+            <label className="field-label" htmlFor="title-input">
+              제목
+            </label>
             <input
+              className="form-input"
+              id="title-input"
               onChange={(event) => setTitle(event.target.value)}
+              placeholder="예) 잠실 직관 첫 끝내기 승리 후기"
               required
               value={title}
             />
-          </label>
-          <label>
-            본문
+          </div>
+          <div className="field">
+            <label className="field-label" htmlFor="content-input">
+              본문
+            </label>
             <textarea
+              className="form-textarea"
+              id="content-input"
               onChange={(event) => setContent(event.target.value)}
+              placeholder="경기 분위기, 인상 깊었던 장면, 팁 등 자유롭게"
               required
               rows={10}
               value={content}
             />
-          </label>
-          {errorMessage ? <p className="form-error">{errorMessage}</p> : null}
-          <button disabled={isSubmitting} type="submit">
+          </div>
+        </section>
+
+        {errorMessage ? <p className="form-error">{errorMessage}</p> : null}
+
+        <div className="action-bar">
+          <button
+            className="btn btn-primary btn-lg"
+            disabled={isSubmitting}
+            type="submit"
+          >
             {isSubmitting ? '저장 중' : '작성 완료'}
           </button>
-        </form>
-      </section>
+          <Link className="btn btn-ghost btn-lg" href="/posts">
+            취소
+          </Link>
+        </div>
+      </form>
     </main>
   );
 }

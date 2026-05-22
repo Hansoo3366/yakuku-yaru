@@ -4,21 +4,9 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
 const navItems = [
-  {
-    href: '/calendar',
-    icon: '◇',
-    label: '캘린더',
-  },
-  {
-    href: '/posts',
-    icon: '▤',
-    label: '게시판',
-  },
-  {
-    href: '/me',
-    icon: '◉',
-    label: '마이',
-  },
+  { href: '/calendar', icon: '◇', label: '캘린더' },
+  { href: '/posts', icon: '▤', label: '게시판' },
+  { href: '/me', icon: '◉', label: '마이' },
 ];
 
 export function BottomNav() {

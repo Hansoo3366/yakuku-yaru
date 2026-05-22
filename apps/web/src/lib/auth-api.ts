@@ -35,3 +35,36 @@ export function fetchMe(token: string) {
     token,
   });
 }
+
+export function updateNickname(nickname: string, token: string) {
+  return request<{ user: PublicUser }>('/users/me/nickname', {
+    method: 'PATCH',
+    body: { nickname },
+    token,
+  });
+}
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api';
+
+export async function uploadProfilePhoto(photo: File, token: string) {
+  const formData = new FormData();
+  formData.set('photo', photo);
+
+  const response = await fetch(`${API_URL}/users/me/profile-photo`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const error = (await response.json().catch(() => ({
+      code: 'UNKNOWN_ERROR',
+      message: '프로필 사진 업로드에 실패했습니다.',
+    }))) as { message: string };
+    throw new Error(error.message);
+  }
+
+  return response.json() as Promise<{ user: PublicUser }>;
+}

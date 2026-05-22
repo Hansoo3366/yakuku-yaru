@@ -49,14 +49,18 @@ export function CompanionPicker({
       searchUsers(trimmedKeyword, token)
         .then((response) => {
           if (isMounted) {
-            setResults(response.items);
-            setMessage(response.items.length ? '' : '검색 결과가 없습니다.');
+            const filtered = response.items.filter(
+              (item) =>
+                !selectedCompanions.some((selected) => selected.id === item.id),
+            );
+            setResults(filtered);
+            setMessage(filtered.length ? '' : '검색 결과가 없어요.');
           }
         })
         .catch(() => {
           if (isMounted) {
             setResults([]);
-            setMessage('회원을 검색하지 못했습니다.');
+            setMessage('회원을 검색하지 못했어요. 잠시 후 다시 시도해주세요.');
           }
         });
     }, 250);
@@ -65,7 +69,7 @@ export function CompanionPicker({
       isMounted = false;
       window.clearTimeout(timer);
     };
-  }, [keyword]);
+  }, [keyword, selectedCompanions]);
 
   function addCompanion(user: UserSearchResult) {
     if (selectedCompanions.some((companion) => companion.id === user.id)) {
@@ -74,11 +78,7 @@ export function CompanionPicker({
 
     onChange([
       ...selectedCompanions,
-      {
-        id: user.id,
-        nickname: user.nickname,
-        email: user.email,
-      },
+      { id: user.id, nickname: user.nickname, email: user.email },
     ]);
     setKeyword('');
     setResults([]);
@@ -86,28 +86,36 @@ export function CompanionPicker({
   }
 
   function removeCompanion(userId: number) {
-    onChange(
-      selectedCompanions.filter((companion) => companion.id !== userId),
-    );
+    onChange(selectedCompanions.filter((companion) => companion.id !== userId));
   }
 
   return (
-    <div className="companion-picker">
-      <label>
-        같이 간 사람
-        <input
-          onChange={(event) => setKeyword(event.target.value)}
-          placeholder="닉네임 또는 이메일 2자 이상"
-          type="search"
-          value={keyword}
-        />
-      </label>
+    <div className="companion-section">
+      <div className="field">
+        <label className="field-label" htmlFor="companion-search-input">
+          같이 간 사람
+        </label>
+        <span className="field-hint">
+          닉네임이나 이메일로 회원을 검색하면 동행자로 태그할 수 있어요.
+        </span>
+        <div className="companion-search">
+          <input
+            id="companion-search-input"
+            onChange={(event) => setKeyword(event.target.value)}
+            placeholder="닉네임 또는 이메일 (2자 이상)"
+            type="search"
+            value={keyword}
+          />
+        </div>
+      </div>
       {results.length ? (
-        <div className="companion-results">
+        <div className="companion-result-list" role="listbox">
           {results.map((user) => (
             <button
               key={user.id}
               onClick={() => addCompanion(user)}
+              role="option"
+              aria-selected="false"
               type="button"
             >
               <strong>{user.nickname}</strong>
@@ -116,17 +124,29 @@ export function CompanionPicker({
           ))}
         </div>
       ) : null}
-      {message ? <p>{message}</p> : null}
+      {message ? (
+        <p className="muted" style={{ fontSize: 'var(--text-xs)' }}>
+          {message}
+        </p>
+      ) : null}
       {selectedCompanions.length ? (
-        <div className="companion-chips" aria-label="선택한 동행자">
+        <div
+          aria-label="선택한 동행자"
+          className="companion-chip-row"
+          role="list"
+        >
           {selectedCompanions.map((companion) => (
             <button
+              className="companion-chip"
               key={companion.id}
               onClick={() => removeCompanion(companion.id)}
+              role="listitem"
               type="button"
             >
               {companion.nickname}
-              <span>삭제</span>
+              <span aria-label="제거" className="companion-chip-remove">
+                ×
+              </span>
             </button>
           ))}
         </div>

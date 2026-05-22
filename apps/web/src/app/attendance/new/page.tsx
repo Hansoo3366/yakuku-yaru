@@ -15,6 +15,18 @@ import {
   type SelectedCompanion,
 } from '@/components/CompanionPicker';
 
+type ResultValue = 'win' | 'lose' | 'draw';
+
+function inferResult(myScore: string, opponentScore: string): ResultValue | null {
+  if (myScore === '' || opponentScore === '') return null;
+  const my = Number(myScore);
+  const opp = Number(opponentScore);
+  if (Number.isNaN(my) || Number.isNaN(opp)) return null;
+  if (my > opp) return 'win';
+  if (my < opp) return 'lose';
+  return 'draw';
+}
+
 function NewAttendanceForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -23,12 +35,19 @@ function NewAttendanceForm() {
   const [myTeamScore, setMyTeamScore] = useState('');
   const [opponentScore, setOpponentScore] = useState('');
   const [watchType, setWatchType] = useState<'stadium' | 'home'>('stadium');
-  const [result, setResult] = useState('win');
+  const [result, setResult] = useState<ResultValue>('win');
+  const [resultManuallySet, setResultManuallySet] = useState(false);
   const [companions, setCompanions] = useState<SelectedCompanion[]>([]);
   const [photo, setPhoto] = useState<File | null>(null);
   const [photoPreviewUrl, setPhotoPreviewUrl] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (resultManuallySet) return;
+    const inferred = inferResult(myTeamScore, opponentScore);
+    if (inferred) setResult(inferred);
+  }, [myTeamScore, opponentScore, resultManuallySet]);
 
   useEffect(() => {
     if (!photo) {
@@ -39,10 +58,13 @@ function NewAttendanceForm() {
     const objectUrl = URL.createObjectURL(photo);
     setPhotoPreviewUrl(objectUrl);
 
-    return () => {
-      URL.revokeObjectURL(objectUrl);
-    };
+    return () => URL.revokeObjectURL(objectUrl);
   }, [photo]);
+
+  function pickResult(value: ResultValue) {
+    setResult(value);
+    setResultManuallySet(true);
+  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -84,93 +106,201 @@ function NewAttendanceForm() {
 
   return (
     <main className="app-shell">
-      <section className="editor-panel">
-        <Link className="back-link" href={`/games/${gameId}`}>
-          경기 상세로
-        </Link>
+      <Link className="back-link" href={`/games/${gameId}`}>
+        경기 상세로
+      </Link>
+
+      <header className="app-page-header">
+        <span className="eyebrow">New Attendance</span>
         <h1>직관 기록 작성</h1>
-        <form className="form-stack" onSubmit={handleSubmit}>
-          <label>
-            관람 유형
-            <select
-              onChange={(event) =>
-                setWatchType(event.target.value === 'home' ? 'home' : 'stadium')
-              }
-              value={watchType}
+        <p>오늘 경기에서 남기고 싶은 순간을 정리해보세요.</p>
+      </header>
+
+      <form className="form-grid" onSubmit={handleSubmit}>
+        <section className="card stack">
+          <div className="section-heading" style={{ marginBottom: 0 }}>
+            <h2>관람 유형</h2>
+          </div>
+          <div className="choice-group" role="radiogroup" aria-label="관람 유형">
+            <button
+              aria-checked={watchType === 'stadium'}
+              className={`choice-button ${watchType === 'stadium' ? 'is-selected' : ''}`}
+              onClick={() => setWatchType('stadium')}
+              role="radio"
+              type="button"
             >
-              <option value="stadium">야구장 직관</option>
-              <option value="home">집관</option>
-            </select>
-          </label>
-          <label>
-            직관 사진
-            <input
-              accept="image/*"
-              onChange={(event) => setPhoto(event.target.files?.[0] ?? null)}
-              type="file"
-            />
-          </label>
+              야구장 직관
+            </button>
+            <button
+              aria-checked={watchType === 'home'}
+              className={`choice-button ${watchType === 'home' ? 'is-selected' : ''}`}
+              onClick={() => setWatchType('home')}
+              role="radio"
+              type="button"
+            >
+              집관
+            </button>
+          </div>
+        </section>
+
+        <section className="card stack">
+          <div className="section-heading" style={{ marginBottom: 0 }}>
+            <div>
+              <h2>직관 사진</h2>
+              <p>사진을 올리면 캘린더 셀에 썸네일로 노출돼요.</p>
+            </div>
+          </div>
           {photoPreviewUrl ? (
-            <img
-              alt="선택한 직관 사진 미리보기"
-              className="attendance-preview"
-              src={photoPreviewUrl}
-            />
+            <div className="photo-preview-wrap">
+              <img alt="선택한 직관 사진 미리보기" src={photoPreviewUrl} />
+              <div className="photo-preview-actions">
+                <button
+                  className="btn btn-ghost btn-sm"
+                  onClick={() => setPhoto(null)}
+                  type="button"
+                >
+                  사진 다시 선택
+                </button>
+              </div>
+            </div>
+          ) : (
+            <label className="photo-dropzone" htmlFor="photo-input">
+              <span aria-hidden="true" style={{ fontSize: 28 }}>
+                ⊕
+              </span>
+              <strong>사진 가져오기</strong>
+              <span>JPG, PNG 등 모바일에서는 카메라 바로 가능</span>
+              <input
+                accept="image/*"
+                id="photo-input"
+                onChange={(event) => setPhoto(event.target.files?.[0] ?? null)}
+                type="file"
+              />
+            </label>
+          )}
+        </section>
+
+        <section className="card stack">
+          <div className="section-heading" style={{ marginBottom: 0 }}>
+            <div>
+              <h2>스코어와 결과</h2>
+              <p>점수를 입력하면 결과는 자동으로 추정해요. 수동 선택도 가능합니다.</p>
+            </div>
+          </div>
+          <div className="score-input-group">
+            <label className="score-input-cell">
+              <span>내 팀</span>
+              <input
+                inputMode="numeric"
+                min="0"
+                onChange={(event) => {
+                  setMyTeamScore(event.target.value);
+                  setResultManuallySet(false);
+                }}
+                placeholder="0"
+                type="number"
+                value={myTeamScore}
+              />
+            </label>
+            <span aria-hidden="true" className="score-divider">
+              :
+            </span>
+            <label className="score-input-cell">
+              <span>상대</span>
+              <input
+                inputMode="numeric"
+                min="0"
+                onChange={(event) => {
+                  setOpponentScore(event.target.value);
+                  setResultManuallySet(false);
+                }}
+                placeholder="0"
+                type="number"
+                value={opponentScore}
+              />
+            </label>
+          </div>
+          <div
+            className="choice-group result-toggle"
+            role="radiogroup"
+            aria-label="경기 결과"
+          >
+            {(['win', 'lose', 'draw'] as const).map((value) => (
+              <button
+                aria-checked={result === value}
+                className={`choice-button ${result === value ? 'is-selected' : ''}`}
+                data-result={value}
+                key={value}
+                onClick={() => pickResult(value)}
+                role="radio"
+                type="button"
+              >
+                <span className="dot" aria-hidden="true" />
+                {value === 'win' ? '승리' : value === 'lose' ? '패배' : '무승부'}
+              </button>
+            ))}
+          </div>
+          {!resultManuallySet && inferResult(myTeamScore, opponentScore) ? (
+            <p className="score-input-hint">
+              스코어로 자동 계산된 결과예요. 변경하면 수동 선택으로 고정됩니다.
+            </p>
           ) : null}
+        </section>
+
+        <section className="card">
           <CompanionPicker
             onChange={setCompanions}
             selectedCompanions={companions}
           />
-          <label>
-            내 팀 점수
-            <input
-              min="0"
-              onChange={(event) => setMyTeamScore(event.target.value)}
-              type="number"
-              value={myTeamScore}
-            />
-          </label>
-          <label>
-            상대 점수
-            <input
-              min="0"
-              onChange={(event) => setOpponentScore(event.target.value)}
-              type="number"
-              value={opponentScore}
-            />
-          </label>
-          <label>
-            결과
-            <select
-              onChange={(event) => setResult(event.target.value)}
-              value={result}
-            >
-              <option value="win">승리</option>
-              <option value="lose">패배</option>
-              <option value="draw">무승부</option>
-            </select>
-          </label>
-          <label>
-            메모
+        </section>
+
+        <section className="card stack">
+          <div className="section-heading" style={{ marginBottom: 0 }}>
+            <h2>메모</h2>
+          </div>
+          <div className="field">
+            <label className="field-label" htmlFor="memo-input">
+              직관 메모
+            </label>
             <textarea
+              className="form-textarea"
+              id="memo-input"
               onChange={(event) => setMemo(event.target.value)}
-              rows={8}
+              placeholder="응원가, 분위기, 음식, 함께한 사람 등 자유롭게"
+              rows={6}
               value={memo}
             />
-          </label>
-          {errorMessage ? <p className="form-error">{errorMessage}</p> : null}
-          <button disabled={isSubmitting || !gameId} type="submit">
-            {isSubmitting ? '저장 중' : '저장'}
+          </div>
+        </section>
+
+        {errorMessage ? <p className="form-error">{errorMessage}</p> : null}
+
+        <div className="action-bar">
+          <button
+            className="btn btn-primary btn-lg"
+            disabled={isSubmitting || !gameId}
+            type="submit"
+          >
+            {isSubmitting ? '저장 중' : '직관 기록 저장'}
           </button>
-        </form>
-      </section>
+          <Link className="btn btn-ghost btn-lg" href={`/games/${gameId}`}>
+            취소
+          </Link>
+        </div>
+      </form>
     </main>
   );
 }
 
 export default function NewAttendancePage() {
   return (
-    <Suspense fallback={<main className="app-shell">불러오는 중</main>}>
+    <Suspense
+      fallback={
+        <main className="app-shell">
+          <p className="loading-text">불러오는 중</p>
+        </main>
+      }
+    >
       <NewAttendanceForm />
     </Suspense>
   );

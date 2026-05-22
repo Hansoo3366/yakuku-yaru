@@ -26,6 +26,47 @@ export async function runMigrations() {
     );
   }
 
+  const hasTeamTicketUrl = await columnExists('teams', 'ticket_url');
+
+  if (!hasTeamTicketUrl) {
+    await db.execute(
+      `ALTER TABLE teams
+       ADD COLUMN ticket_url VARCHAR(500) NULL AFTER primary_color`,
+    );
+  }
+
+  const hasProfileImageUrl = await columnExists('users', 'profile_image_url');
+
+  if (!hasProfileImageUrl) {
+    await db.execute(
+      `ALTER TABLE users
+       ADD COLUMN profile_image_url VARCHAR(500) NULL AFTER nickname`,
+    );
+  }
+
+  await db.execute(
+    `UPDATE teams
+     SET ticket_url = CASE short_name
+       WHEN 'LG' THEN 'https://www.ticketlink.co.kr/sports/137/59'
+       WHEN '두산' THEN 'https://ticket.interpark.com/Contents/Sports/GoodsInfo?SportsCode=07001&TeamCode=PB004'
+       WHEN 'KIA' THEN 'https://www.ticketlink.co.kr/sports/137/58'
+       WHEN '삼성' THEN 'https://www.ticketlink.co.kr/sports/137/57'
+       WHEN '한화' THEN 'https://www.ticketlink.co.kr/sports/137/63'
+       WHEN '롯데' THEN 'https://ticket.giantsclub.com/loginForm.do'
+       WHEN 'SSG' THEN 'https://ticket.ssg.com/ticket'
+       WHEN 'NC' THEN 'https://ticket.ncdinos.com/games'
+       WHEN 'KT' THEN 'https://www.ticketlink.co.kr/sports/137/62'
+       WHEN '키움' THEN 'https://ticket.interpark.com/Contents/Sports/GoodsInfo?SportsCode=07001&TeamCode=PB003'
+       ELSE ticket_url
+     END
+     WHERE short_name IN ('LG', '두산', 'KIA', '삼성', '한화', '롯데', 'SSG', 'NC', 'KT', '키움')`,
+  );
+
+  await db.execute(
+    `UPDATE games SET ticket_url = NULL
+     WHERE ticket_url = 'https://www.ticketlink.co.kr/sports/baseball'`,
+  );
+
   await db.execute(
     `CREATE TABLE IF NOT EXISTS stadium_guides (
       id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,

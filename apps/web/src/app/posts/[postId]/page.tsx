@@ -15,6 +15,8 @@ import {
   type CommentItem,
   type PostDetail,
 } from '@/lib/post-api';
+import { Skeleton } from '@/components/Skeleton';
+import { EmptyState } from '@/components/EmptyState';
 
 export default function PostDetailPage() {
   const params = useParams<{ postId: string }>();
@@ -25,13 +27,13 @@ export default function PostDetailPage() {
   const [currentUser, setCurrentUser] = useState<PublicUser | null>(null);
   const [commentContent, setCommentContent] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     fetchPost(postId).then((response) => setPost(response.post));
     listComments(postId).then((response) => setComments(response.items));
 
     const token = getAccessToken();
-
     if (token) {
       fetchMe(token)
         .then((response) => setCurrentUser(response.user))
@@ -41,11 +43,12 @@ export default function PostDetailPage() {
 
   async function handleDeletePost() {
     const token = getAccessToken();
-
     if (!token) {
       router.push('/login');
       return;
     }
+
+    if (!window.confirm('이 글을 삭제할까요? 되돌릴 수 없어요.')) return;
 
     await deletePost(postId, token);
     router.push('/posts');
@@ -54,13 +57,13 @@ export default function PostDetailPage() {
   async function handleCreateComment(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const token = getAccessToken();
-
     if (!token) {
       router.push('/login');
       return;
     }
 
     setErrorMessage('');
+    setIsSubmitting(true);
 
     try {
       const response = await createComment(postId, commentContent, token);
@@ -72,12 +75,13 @@ export default function PostDetailPage() {
       } else {
         setErrorMessage('댓글 작성 중 오류가 발생했습니다.');
       }
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
   async function handleDeleteComment(commentId: number) {
     const token = getAccessToken();
-
     if (!token) {
       router.push('/login');
       return;
@@ -92,7 +96,9 @@ export default function PostDetailPage() {
   if (!post) {
     return (
       <main className="app-shell">
-        <p className="loading-text">게시글을 불러오는 중</p>
+        <Skeleton height={32} width="60%" />
+        <Skeleton height={16} width="40%" />
+        <Skeleton height={200} radius={10} />
       </main>
     );
   }
@@ -101,67 +107,112 @@ export default function PostDetailPage() {
 
   return (
     <main className="app-shell">
-      <article className="detail-panel">
-        <Link className="back-link" href="/posts">
-          게시판으로
-        </Link>
-        <div className="detail-heading">
+      <Link className="back-link" href="/posts">
+        게시판으로
+      </Link>
+
+      <article className="card">
+        <header className="post-detail-header">
           <div>
             <h1>{post.title}</h1>
-            <p>
+            <p className="post-detail-meta">
               {post.authorNickname} ·{' '}
               {new Date(post.createdAt).toLocaleString('ko-KR')}
             </p>
           </div>
           {isAuthor ? (
-            <div className="inline-actions">
-              <Link href={`/posts/${post.id}/edit`}>수정</Link>
-              <button type="button" onClick={handleDeletePost}>
+            <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+              <Link
+                className="btn btn-ghost btn-sm"
+                href={`/posts/${post.id}/edit`}
+              >
+                수정
+              </Link>
+              <button
+                className="btn btn-danger btn-sm"
+                onClick={handleDeletePost}
+                type="button"
+              >
                 삭제
               </button>
             </div>
           ) : null}
-        </div>
+        </header>
         <p className="post-content">{post.content}</p>
       </article>
 
-      <section className="comments-panel">
-        <h2>댓글</h2>
-        <form className="comment-form" onSubmit={handleCreateComment}>
-          <textarea
-            onChange={(event) => setCommentContent(event.target.value)}
-            placeholder="댓글을 입력하세요"
-            required
-            rows={3}
-            value={commentContent}
-          />
-          {errorMessage ? <p className="form-error">{errorMessage}</p> : null}
-          <button type="submit">댓글 작성</button>
-        </form>
-
-        <div className="comment-list">
-          {comments.length ? (
-            comments.map((comment) => (
-              <div className="comment-item" key={comment.id}>
-                <p>{comment.content}</p>
-                <span>
-                  {comment.authorNickname} ·{' '}
-                  {new Date(comment.createdAt).toLocaleString('ko-KR')}
-                </span>
-                {currentUser?.id === comment.userId ? (
-                  <button
-                    type="button"
-                    onClick={() => handleDeleteComment(comment.id)}
-                  >
-                    삭제
-                  </button>
-                ) : null}
-              </div>
-            ))
-          ) : (
-            <p className="empty-text">아직 댓글이 없습니다.</p>
-          )}
+      <section className="card">
+        <div className="section-heading">
+          <h2>댓글 {comments.length}</h2>
         </div>
+
+        {currentUser ? (
+          <form
+            className="form-grid-tight"
+            onSubmit={handleCreateComment}
+            style={{ marginBottom: 'var(--space-4)' }}
+          >
+            <textarea
+              className="form-textarea"
+              onChange={(event) => setCommentContent(event.target.value)}
+              placeholder="댓글을 입력하세요"
+              required
+              rows={3}
+              value={commentContent}
+            />
+            {errorMessage ? <p className="form-error">{errorMessage}</p> : null}
+            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+              <button
+                className="btn btn-primary btn-sm"
+                disabled={isSubmitting}
+                type="submit"
+              >
+                {isSubmitting ? '등록 중' : '댓글 작성'}
+              </button>
+            </div>
+          </form>
+        ) : (
+          <p
+            className="muted"
+            style={{
+              fontSize: 'var(--text-sm)',
+              marginBottom: 'var(--space-3)',
+            }}
+          >
+            댓글을 남기려면 <Link href="/login">로그인</Link>이 필요해요.
+          </p>
+        )}
+
+        {comments.length ? (
+          <div className="comment-list">
+            {comments.map((comment) => (
+              <div className="comment-card" key={comment.id}>
+                <p>{comment.content}</p>
+                <div className="comment-card-meta">
+                  <span>
+                    {comment.authorNickname} ·{' '}
+                    {new Date(comment.createdAt).toLocaleString('ko-KR')}
+                  </span>
+                  {currentUser?.id === comment.userId ? (
+                    <button
+                      className="btn btn-ghost btn-sm"
+                      onClick={() => handleDeleteComment(comment.id)}
+                      type="button"
+                    >
+                      삭제
+                    </button>
+                  ) : null}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <EmptyState
+            icon="✎"
+            title="아직 댓글이 없어요"
+            description="가장 먼저 댓글을 남겨보세요."
+          />
+        )}
       </section>
     </main>
   );

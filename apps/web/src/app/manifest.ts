@@ -2,27 +2,33 @@ import type { MetadataRoute } from 'next';
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'Yakuku Yaru',
-    short_name: 'Yakuku',
-    description: '야구 직관 기록 캘린더',
+    name: '야크크 야르~ 섹시야구',
+    short_name: '야크크 야르',
+    description: 'KBO 직관과 집관을 캘린더와 포토 티켓으로 기록하는 야구 팬 PWA',
     start_url: '/calendar',
     scope: '/',
     display: 'standalone',
     background_color: '#fbfaf6',
-    theme_color: '#0f6b4f',
+    theme_color: '#14213d',
     orientation: 'portrait',
     icons: [
       {
-        src: '/icons/icon.svg',
-        sizes: 'any',
-        type: 'image/svg+xml',
+        src: '/icons/main_icon.png',
+        sizes: '512x512',
+        type: 'image/png',
         purpose: 'any',
+      },
+      {
+        src: '/icons/main_icon.png',
+        sizes: '512x512',
+        type: 'image/png',
+        purpose: 'maskable',
       },
       {
         src: '/icons/icon.svg',
         sizes: 'any',
         type: 'image/svg+xml',
-        purpose: 'maskable',
+        purpose: 'any',
       },
     ],
   };

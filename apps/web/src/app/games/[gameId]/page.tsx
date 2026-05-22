@@ -17,6 +17,7 @@ import {
   deleteGameReminder,
   fetchGameReminder,
 } from '@/lib/reminder-api';
+import { Skeleton } from '@/components/Skeleton';
 
 function formatDateTime(value: string) {
   return new Date(value).toLocaleString('ko-KR', {
@@ -33,6 +34,7 @@ export default function GameDetailPage() {
     useState<AttendanceRecord | null>(null);
   const [reminderEnabled, setReminderEnabled] = useState(false);
   const [reminderMessage, setReminderMessage] = useState('');
+  const [isToggling, setIsToggling] = useState(false);
 
   useEffect(() => {
     fetchGame(gameId).then((response) => setGame(response.game));
@@ -58,71 +60,160 @@ export default function GameDetailPage() {
       return;
     }
 
-    if (!game) {
-      return;
-    }
+    if (!game) return;
 
-    if (reminderEnabled) {
-      await deleteGameReminder(game.id, token);
-      setReminderEnabled(false);
-      setReminderMessage('경기 알림을 해제했습니다.');
-      return;
+    setIsToggling(true);
+    try {
+      if (reminderEnabled) {
+        await deleteGameReminder(game.id, token);
+        setReminderEnabled(false);
+        setReminderMessage('경기 알림을 해제했어요.');
+      } else {
+        await createGameReminder(game.id, token);
+        setReminderEnabled(true);
+        setReminderMessage('경기 당일에 알림을 보내드릴게요.');
+      }
+    } finally {
+      setIsToggling(false);
     }
-
-    await createGameReminder(game.id, token);
-    setReminderEnabled(true);
-    setReminderMessage('경기 알림을 설정했습니다.');
   }
 
   if (!game) {
     return (
       <main className="app-shell">
-        <p className="loading-text">경기 정보를 불러오는 중</p>
+        <Skeleton height={220} radius={10} />
+        <Skeleton height={140} radius={10} />
+        <Skeleton height={120} radius={10} />
       </main>
     );
   }
 
-  const scoreText =
-    game.homeScore === null || game.awayScore === null
-      ? '경기 예정'
-      : `${game.awayScore} : ${game.homeScore}`;
+  const isFinished = game.homeScore !== null && game.awayScore !== null;
+  const scoreText = isFinished
+    ? `${game.awayScore} : ${game.homeScore}`
+    : null;
 
   return (
     <main className="app-shell">
-      <section className="game-detail-panel">
-        <Link className="back-link" href="/calendar">
-          캘린더로
-        </Link>
-        <p className="eyebrow">Game Detail</p>
-        <h1>
-          {game.awayTeam.name} @ {game.homeTeam.name}
-        </h1>
-        <div className="scoreboard-line">
-          <span>
-            <img alt="" src={getTeamLogoSrc(game.awayTeam)} />
-            {game.awayTeam.shortName}
-          </span>
-          <strong>{scoreText}</strong>
-          <span>
-            <img alt="" src={getTeamLogoSrc(game.homeTeam)} />
-            {game.homeTeam.shortName}
-          </span>
+      <Link className="back-link" href="/calendar">
+        캘린더로
+      </Link>
+
+      <section aria-label="경기 매치업" className="match-hero">
+        <div>
+          <span className="eyebrow">Game Detail</span>
+          <h1>
+            {game.awayTeam.name} vs {game.homeTeam.name}
+          </h1>
+          <p className="match-hero-stadium">
+            {formatDateTime(game.gameDate)} · {game.stadium}
+          </p>
         </div>
 
-        <dl className="info-list">
+        <div className="match-scoreboard">
+          <div className="match-team">
+            <img alt="" src={getTeamLogoSrc(game.awayTeam)} />
+            <strong>{game.awayTeam.shortName}</strong>
+            <small>Away</small>
+          </div>
+          <div className="match-score">
+            {isFinished ? (
+              <>
+                <span className="match-score-label">FINAL</span>
+                <span>{scoreText}</span>
+              </>
+            ) : (
+              <>
+                <span className="match-score-label">Scheduled</span>
+                <span className="match-score-vs">VS</span>
+              </>
+            )}
+          </div>
+          <div className="match-team">
+            <img alt="" src={getTeamLogoSrc(game.homeTeam)} />
+            <strong>{game.homeTeam.shortName}</strong>
+            <small>Home</small>
+          </div>
+        </div>
+      </section>
+
+      <section className="card stack">
+        <div className="action-bar">
+          {attendanceRecord ? (
+            <Link
+              className="btn btn-primary btn-lg"
+              href={`/attendance/${attendanceRecord.id}/edit`}
+            >
+              직관 기록 수정
+            </Link>
+          ) : (
+            <Link
+              className="btn btn-primary btn-lg"
+              href={`/attendance/new?gameId=${game.id}`}
+            >
+              직관 기록 작성
+            </Link>
+          )}
+          {game.ticketUrl ? (
+            <a
+              className="btn btn-ghost btn-lg"
+              href={game.ticketUrl}
+              rel="noreferrer"
+              target="_blank"
+            >
+              예매처 열기
+            </a>
+          ) : null}
+        </div>
+
+        <div className="reminder-row">
           <div>
+            <strong>경기 알림</strong>
+            <p>경기 당일 관전 알림을 받으실래요?</p>
+          </div>
+          <button
+            aria-checked={reminderEnabled}
+            aria-label="경기 알림 토글"
+            className="toggle-switch"
+            disabled={isToggling}
+            onClick={handleReminderToggle}
+            role="switch"
+            type="button"
+          />
+        </div>
+        {reminderMessage ? (
+          <p className="muted" style={{ fontSize: 'var(--text-xs)' }}>
+            {reminderMessage}
+          </p>
+        ) : null}
+      </section>
+
+      <section className="card">
+        <div className="section-heading">
+          <h2>경기 정보</h2>
+        </div>
+        <dl style={{ margin: 0 }}>
+          <div className="info-row">
             <dt>경기 일시</dt>
             <dd>{formatDateTime(game.gameDate)}</dd>
           </div>
-          <div>
+          <div className="info-row">
             <dt>구장</dt>
             <dd>{game.stadium}</dd>
           </div>
-          <div>
+          <div className="info-row">
             <dt>경기 상태</dt>
-            <dd>{game.status === 'finished' ? '종료' : '예정'}</dd>
+            <dd>
+              <span
+                className={`badge ${
+                  game.status === 'finished' ? 'badge-navy' : 'badge-green'
+                }`}
+              >
+                {game.status === 'finished' ? '종료' : '예정'}
+              </span>
+            </dd>
           </div>
-          <div>
+          <div className="info-row">
             <dt>예매 오픈</dt>
             <dd>
               {game.ticketOpenAt
@@ -131,45 +222,38 @@ export default function GameDetailPage() {
             </dd>
           </div>
         </dl>
+      </section>
 
-        <div className="game-actions">
-          {game.ticketUrl ? (
-            <a href={game.ticketUrl} rel="noreferrer" target="_blank">
-              예매처 보기
-            </a>
-          ) : null}
-          {attendanceRecord ? (
-            <Link href={`/attendance/${attendanceRecord.id}/edit`}>
-              직관 기록 수정
-            </Link>
-          ) : (
-            <Link href={`/attendance/new?gameId=${game.id}`}>직관 기록 작성</Link>
-          )}
-          <button type="button" onClick={handleReminderToggle}>
-            {reminderEnabled ? '알림 해제' : '알림 설정'}
-          </button>
-        </div>
-        {reminderMessage ? <p className="game-notice">{reminderMessage}</p> : null}
-
-        {game.stadiumGuide ? (
-          <section className="stadium-guide-panel">
-            <h2>구장 정보</h2>
+      {game.stadiumGuide ? (
+        <section className="card">
+          <div className="section-heading">
             <div>
+              <h2>구장 가이드</h2>
+              <p>주변 맛집과 주차 정보</p>
+            </div>
+            {game.stadiumGuide.mapUrl ? (
+              <a
+                className="btn btn-ghost btn-sm"
+                href={game.stadiumGuide.mapUrl}
+                rel="noreferrer"
+                target="_blank"
+              >
+                지도 열기
+              </a>
+            ) : null}
+          </div>
+          <div className="stadium-info">
+            <div className="stadium-info-row">
               <strong>맛집 메모</strong>
               <p>{game.stadiumGuide.foodSummary}</p>
             </div>
-            <div>
+            <div className="stadium-info-row">
               <strong>주차 정보</strong>
               <p>{game.stadiumGuide.parkingSummary}</p>
             </div>
-            {game.stadiumGuide.mapUrl ? (
-              <a href={game.stadiumGuide.mapUrl} rel="noreferrer" target="_blank">
-                지도에서 보기
-              </a>
-            ) : null}
-          </section>
-        ) : null}
-      </section>
+          </div>
+        </section>
+      ) : null}
     </main>
   );
 }

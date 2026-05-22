@@ -4,15 +4,27 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { FormEvent, useState } from 'react';
+import { FormEvent, useEffect, useState } from 'react';
 import { ApiError } from '@/lib/api';
 import { register } from '@/lib/auth-api';
 import { listTeams, type Team } from '@/lib/baseball-api';
 import { getTeamLogoSrc } from '@/lib/team-logo';
-import { useEffect } from 'react';
+import { applyTeamTheme } from '@/lib/team-theme';
+import {
+  EMAIL_MAX_LENGTH,
+  NICKNAME_MAX_LENGTH,
+  PASSWORD_MAX_LENGTH,
+  PASSWORD_MIN_LENGTH,
+  validateEmailClient,
+  validateNicknameClient,
+  validatePasswordClient,
+} from '@/lib/user-input';
+
+type Step = 'account' | 'team' | 'done';
 
 export default function RegisterPage() {
   const router = useRouter();
+  const [step, setStep] = useState<Step>('account');
   const [email, setEmail] = useState('');
   const [nickname, setNickname] = useState('');
   const [password, setPassword] = useState('');
@@ -21,15 +33,30 @@ export default function RegisterPage() {
   const [errorMessage, setErrorMessage] = useState('');
   const [verificationToken, setVerificationToken] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [tokenCopied, setTokenCopied] = useState(false);
 
   useEffect(() => {
     listTeams().then((response) => setTeams(response.items));
   }, []);
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  function handleAccountNext(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setErrorMessage('');
-    setVerificationToken('');
+
+    const emailError = validateEmailClient(email);
+    const nicknameError = validateNicknameClient(nickname);
+    const passwordError = validatePasswordClient(password);
+
+    if (emailError || nicknameError || passwordError) {
+      setErrorMessage(emailError ?? nicknameError ?? passwordError ?? '');
+      return;
+    }
+
+    setStep('team');
+  }
+
+  async function handleSubmit() {
+    setErrorMessage('');
     setIsSubmitting(true);
 
     try {
@@ -40,72 +67,138 @@ export default function RegisterPage() {
         favoriteTeamId,
       });
       setVerificationToken(response.verificationToken);
+      setStep('done');
     } catch (error) {
       if (error instanceof ApiError) {
         setErrorMessage(error.message);
       } else {
         setErrorMessage('회원가입 중 오류가 발생했습니다.');
       }
+      setStep('account');
     } finally {
       setIsSubmitting(false);
     }
   }
 
+  async function copyToken() {
+    try {
+      await navigator.clipboard.writeText(verificationToken);
+      setTokenCopied(true);
+      setTimeout(() => setTokenCopied(false), 2000);
+    } catch {
+      setTokenCopied(false);
+    }
+  }
+
   return (
     <main className="auth-shell">
-      <section className="auth-panel">
-        <Link className="back-link" href="/">
-          Yakuku Yaru
-        </Link>
-        <h1>회원가입</h1>
-        <p>좋아하는 팀을 고르기 전, 먼저 계정을 만들어주세요.</p>
+      <Link className="back-link" href="/">
+        홈으로
+      </Link>
+      <section className="auth-card">
+        <header className="auth-header">
+          <span className="eyebrow">Sign up</span>
+          <h1>야크크 야르 시작하기</h1>
+          <p>좋아하는 팀을 고르고, 직관 기록을 캘린더에 남겨보세요.</p>
+        </header>
 
-        <form className="form-stack" onSubmit={handleSubmit}>
-          <label>
-            이메일
-            <input
-              autoComplete="email"
-              name="email"
-              onChange={(event) => setEmail(event.target.value)}
-              required
-              type="email"
-              value={email}
-            />
-          </label>
-          <label>
-            닉네임
-            <input
-              autoComplete="nickname"
-              name="nickname"
-              onChange={(event) => setNickname(event.target.value)}
-              required
-              type="text"
-              value={nickname}
-            />
-          </label>
-          <label>
-            비밀번호
-            <input
-              autoComplete="new-password"
-              minLength={8}
-              name="password"
-              onChange={(event) => setPassword(event.target.value)}
-              required
-              type="password"
-              value={password}
-            />
-          </label>
-          <fieldset className="team-card-fieldset">
-            <legend>응원 팀</legend>
-            <div className="team-card-grid">
+        <ol className="auth-step-list">
+          <li className={`auth-step ${step === 'account' ? 'is-active' : ''}`}>
+            1. 계정 만들기
+          </li>
+          <li className={`auth-step ${step === 'team' ? 'is-active' : ''}`}>
+            2. 응원 팀 선택
+          </li>
+          <li className={`auth-step ${step === 'done' ? 'is-active' : ''}`}>
+            3. 인증 완료
+          </li>
+        </ol>
+
+        {step === 'account' ? (
+          <form className="form-grid" onSubmit={handleAccountNext}>
+            <div className="field">
+              <label className="field-label" htmlFor="email">
+                이메일
+              </label>
+              <input
+                autoComplete="email"
+                className="form-input"
+                id="email"
+                maxLength={EMAIL_MAX_LENGTH}
+                name="email"
+                onChange={(event) => setEmail(event.target.value)}
+                placeholder="you@example.com"
+                required
+                type="email"
+                value={email}
+              />
+            </div>
+            <div className="field">
+              <label className="field-label" htmlFor="nickname">
+                닉네임
+              </label>
+              <input
+                autoComplete="nickname"
+                className="form-input"
+                id="nickname"
+                maxLength={NICKNAME_MAX_LENGTH}
+                name="nickname"
+                onChange={(event) => setNickname(event.target.value)}
+                placeholder="동행자 검색에 노출됩니다"
+                required
+                type="text"
+                value={nickname}
+              />
+              <span className="field-hint">한글·영문·숫자·_만, 2~20자.</span>
+            </div>
+            <div className="field">
+              <label className="field-label" htmlFor="password">
+                비밀번호
+              </label>
+              <input
+                autoComplete="new-password"
+                className="form-input"
+                id="password"
+                maxLength={PASSWORD_MAX_LENGTH}
+                minLength={PASSWORD_MIN_LENGTH}
+                name="password"
+                onChange={(event) => setPassword(event.target.value)}
+                placeholder={`${PASSWORD_MIN_LENGTH}자 이상`}
+                required
+                type="password"
+                value={password}
+              />
+            </div>
+            {errorMessage ? <p className="form-error">{errorMessage}</p> : null}
+            <button className="btn btn-primary btn-lg btn-block" type="submit">
+              다음
+            </button>
+          </form>
+        ) : null}
+
+        {step === 'team' ? (
+          <div className="form-grid">
+            <div>
+              <h2 className="auth-section-title">응원하는 팀 선택</h2>
+              <p
+                className="muted"
+                style={{ fontSize: 'var(--text-sm)', marginTop: 4 }}
+              >
+                나중에 마이페이지에서 언제든 변경할 수 있어요.
+              </p>
+            </div>
+            <fieldset className="team-grid">
               {teams.map((team) => {
                 const isSelected = favoriteTeamId === team.id;
                 return (
                   <button
                     aria-pressed={isSelected}
-                    className={isSelected ? 'selected' : ''}
+                    className={`team-grid-card ${isSelected ? 'is-selected' : ''}`}
                     key={team.id}
-                    onClick={() => setFavoriteTeamId(team.id)}
+                    onClick={() => {
+                      setFavoriteTeamId(team.id);
+                      applyTeamTheme(team.primaryColor);
+                    }}
                     type="button"
                   >
                     <img alt="" src={getTeamLogoSrc(team)} />
@@ -113,27 +206,68 @@ export default function RegisterPage() {
                   </button>
                 );
               })}
+            </fieldset>
+            {errorMessage ? <p className="form-error">{errorMessage}</p> : null}
+            <div className="action-bar">
+              <button
+                className="btn btn-primary btn-lg"
+                disabled={isSubmitting}
+                onClick={handleSubmit}
+                type="button"
+              >
+                {isSubmitting ? '가입 중' : '회원가입 완료'}
+              </button>
+              <button
+                className="btn btn-ghost btn-lg"
+                onClick={() => setStep('account')}
+                type="button"
+              >
+                이전
+              </button>
             </div>
-          </fieldset>
-          {errorMessage ? <p className="form-error">{errorMessage}</p> : null}
-          <button disabled={isSubmitting} type="submit">
-            {isSubmitting ? '가입 중' : '회원가입'}
-          </button>
-        </form>
+            <p
+              className="muted"
+              style={{ fontSize: 'var(--text-xs)', textAlign: 'center' }}
+            >
+              팀을 고르지 않고 가입할 수도 있어요.
+            </p>
+          </div>
+        ) : null}
 
-        {verificationToken ? (
-          <div className="notice-box">
-            <strong>개발용 이메일 인증 토큰</strong>
-            <p>{verificationToken}</p>
-            <button type="button" onClick={() => router.push('/login')}>
+        {step === 'done' ? (
+          <div className="form-grid">
+            <div className="notice-card">
+              <strong>개발용 이메일 인증 토큰</strong>
+              <div className="notice-card-token">
+                <code>{verificationToken}</code>
+                <button
+                  className="btn btn-ghost btn-sm"
+                  onClick={copyToken}
+                  type="button"
+                >
+                  {tokenCopied ? '복사됨' : '복사'}
+                </button>
+              </div>
+              <span className="muted" style={{ fontSize: 'var(--text-xs)' }}>
+                실제 환경에서는 이메일로 발송되는 토큰입니다. 지금은 학습 단계라
+                직접 보여드립니다.
+              </span>
+            </div>
+            <button
+              className="btn btn-primary btn-lg btn-block"
+              onClick={() => router.push('/login')}
+              type="button"
+            >
               로그인하러 가기
             </button>
           </div>
         ) : null}
 
-        <p className="auth-footnote">
-          이미 계정이 있다면 <Link href="/login">로그인</Link>
-        </p>
+        {step !== 'done' ? (
+          <p className="auth-footnote">
+            이미 계정이 있다면 <Link href="/login">로그인</Link>
+          </p>
+        ) : null}
       </section>
     </main>
   );

@@ -9,10 +9,12 @@ export type GameRow = RowDataPacket & {
   home_team_name: string;
   home_team_short_name: string;
   home_team_color: string | null;
+  home_team_ticket_url: string | null;
   away_team_id: number;
   away_team_name: string;
   away_team_short_name: string;
   away_team_color: string | null;
+  away_team_ticket_url: string | null;
   home_score: number | null;
   away_score: number | null;
   status: string;
@@ -34,12 +36,14 @@ export type Game = {
     name: string;
     shortName: string;
     primaryColor: string | null;
+    ticketUrl: string | null;
   };
   awayTeam: {
     id: number;
     name: string;
     shortName: string;
     primaryColor: string | null;
+    ticketUrl: string | null;
   };
   homeScore: number | null;
   awayScore: number | null;
@@ -62,14 +66,16 @@ function gameSelectSql() {
       ht.name AS home_team_name,
       ht.short_name AS home_team_short_name,
       ht.primary_color AS home_team_color,
+      ht.ticket_url AS home_team_ticket_url,
       g.away_team_id,
       at.name AS away_team_name,
       at.short_name AS away_team_short_name,
       at.primary_color AS away_team_color,
+      at.ticket_url AS away_team_ticket_url,
       g.home_score,
       g.away_score,
       g.status,
-      g.ticket_url,
+      COALESCE(g.ticket_url, ht.ticket_url) AS ticket_url,
       g.ticket_open_at,
       sg.food_summary AS stadium_food_summary,
       sg.parking_summary AS stadium_parking_summary,
@@ -92,12 +98,14 @@ export function toGame(row: GameRow): Game {
       name: row.home_team_name,
       shortName: row.home_team_short_name,
       primaryColor: row.home_team_color,
+      ticketUrl: row.home_team_ticket_url,
     },
     awayTeam: {
       id: row.away_team_id,
       name: row.away_team_name,
       shortName: row.away_team_short_name,
       primaryColor: row.away_team_color,
+      ticketUrl: row.away_team_ticket_url,
     },
     homeScore: row.home_score,
     awayScore: row.away_score,

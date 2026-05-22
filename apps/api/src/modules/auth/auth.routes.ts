@@ -12,9 +12,15 @@ import {
   createUser,
   findUserByEmail,
   findUserById,
+  findUserByNickname,
   markUserEmailVerified,
   toPublicUser,
 } from '../users/user.repository.js';
+import {
+  validateEmail,
+  validateNickname,
+  validatePassword,
+} from '../../utils/user-input.js';
 import { findTeamById } from '../teams/team.repository.js';
 
 export const authRouter = Router();
@@ -32,18 +38,20 @@ authRouter.post('/register', async (req, res, next) => {
       throw new HttpError(400, 'INVALID_INPUT', '필수 값을 입력해주세요.');
     }
 
-    if (password.length < 8) {
-      throw new HttpError(
-        400,
-        'WEAK_PASSWORD',
-        '비밀번호는 8자 이상이어야 합니다.',
-      );
-    }
+    const normalizedEmail = validateEmail(email);
+    const normalizedPassword = validatePassword(password);
+    const normalizedNickname = validateNickname(nickname);
 
-    const existingUser = await findUserByEmail(email);
+    const existingUser = await findUserByEmail(normalizedEmail);
 
     if (existingUser) {
       throw new HttpError(409, 'EMAIL_ALREADY_EXISTS', '이미 사용 중인 이메일입니다.');
+    }
+
+    const nicknameTaken = await findUserByNickname(normalizedNickname);
+
+    if (nicknameTaken) {
+      throw new HttpError(409, 'NICKNAME_ALREADY_EXISTS', '이미 사용 중인 닉네임입니다.');
     }
 
     if (favoriteTeamId) {
@@ -54,11 +62,11 @@ authRouter.post('/register', async (req, res, next) => {
       }
     }
 
-    const passwordHash = await hashPassword(password);
+    const passwordHash = await hashPassword(normalizedPassword);
     const user = await createUser({
-      email,
+      email: normalizedEmail,
       passwordHash,
-      nickname,
+      nickname: normalizedNickname,
       favoriteTeamId: favoriteTeamId ?? null,
     });
 

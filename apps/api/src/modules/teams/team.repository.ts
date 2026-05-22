@@ -6,6 +6,7 @@ export type TeamRow = RowDataPacket & {
   name: string;
   short_name: string;
   primary_color: string | null;
+  ticket_url: string | null;
   created_at: Date;
 };
 
@@ -14,6 +15,7 @@ export type Team = {
   name: string;
   shortName: string;
   primaryColor: string | null;
+  ticketUrl: string | null;
 };
 
 export function toTeam(row: TeamRow): Team {
@@ -22,12 +24,15 @@ export function toTeam(row: TeamRow): Team {
     name: row.name,
     shortName: row.short_name,
     primaryColor: row.primary_color,
+    ticketUrl: row.ticket_url,
   };
 }
 
+const baseColumns = `id, name, short_name, primary_color, ticket_url, created_at`;
+
 export async function listTeams() {
   const [rows] = await db.query<TeamRow[]>(
-    `SELECT id, name, short_name, primary_color, created_at
+    `SELECT ${baseColumns}
      FROM teams
      ORDER BY id ASC`,
   );
@@ -37,7 +42,7 @@ export async function listTeams() {
 
 export async function findTeamById(id: number) {
   const [rows] = await db.query<TeamRow[]>(
-    `SELECT id, name, short_name, primary_color, created_at
+    `SELECT ${baseColumns}
      FROM teams
      WHERE id = ?
      LIMIT 1`,

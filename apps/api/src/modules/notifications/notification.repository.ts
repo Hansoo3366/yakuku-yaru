@@ -96,3 +96,33 @@ export async function markNotificationsRead(userId: number) {
     [userId],
   );
 }
+
+export async function markNotificationRead(input: {
+  id: number;
+  userId: number;
+}) {
+  await db.execute(
+    `UPDATE notifications
+     SET read_at = COALESCE(read_at, CURRENT_TIMESTAMP)
+     WHERE id = ?
+       AND user_id = ?`,
+    [input.id, input.userId],
+  );
+}
+
+export async function deleteNotification(input: {
+  id: number;
+  userId: number;
+}) {
+  await db.execute(
+    `DELETE FROM notifications WHERE id = ? AND user_id = ?`,
+    [input.id, input.userId],
+  );
+}
+
+export async function deleteAllNotifications(userId: number) {
+  await db.execute(
+    `DELETE FROM notifications WHERE user_id = ?`,
+    [userId],
+  );
+}

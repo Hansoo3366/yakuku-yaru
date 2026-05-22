@@ -24,3 +24,24 @@ export function markNotificationsRead(token: string) {
     token,
   });
 }
+
+export function markNotificationRead(notificationId: number, token: string) {
+  return request<{ ok: boolean }>(`/notifications/${notificationId}/read`, {
+    method: 'PATCH',
+    token,
+  });
+}
+
+export function deleteNotification(notificationId: number, token: string) {
+  return request<void>(`/notifications/${notificationId}`, {
+    method: 'DELETE',
+    token,
+  });
+}
+
+export function deleteAllNotifications(token: string) {
+  return request<void>('/notifications', {
+    method: 'DELETE',
+    token,
+  });
+}

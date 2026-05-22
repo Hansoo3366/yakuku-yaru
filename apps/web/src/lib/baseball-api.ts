@@ -6,6 +6,7 @@ export type Team = {
   name: string;
   shortName: string;
   primaryColor: string | null;
+  ticketUrl: string | null;
 };
 
 export type Game = {

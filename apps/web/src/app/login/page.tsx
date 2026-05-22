@@ -36,38 +36,54 @@ export default function LoginPage() {
 
   return (
     <main className="auth-shell">
-      <section className="auth-panel">
-        <Link className="back-link" href="/">
-          Yakuku Yaru
-        </Link>
-        <h1>로그인</h1>
-        <p>직관 캘린더와 승률 기록을 이어서 확인하세요.</p>
+      <Link className="back-link" href="/">
+        홈으로
+      </Link>
+      <section className="auth-card">
+        <header className="auth-header">
+          <span className="eyebrow">Sign in</span>
+          <h1>다시 만나서 반가워요</h1>
+          <p>직관 캘린더와 승률 기록을 이어서 확인하세요.</p>
+        </header>
 
-        <form className="form-stack" onSubmit={handleSubmit}>
-          <label>
-            이메일
+        <form className="form-grid" onSubmit={handleSubmit}>
+          <div className="field">
+            <label className="field-label" htmlFor="email">
+              이메일
+            </label>
             <input
               autoComplete="email"
+              className="form-input"
+              id="email"
               name="email"
               onChange={(event) => setEmail(event.target.value)}
+              placeholder="you@example.com"
               required
               type="email"
               value={email}
             />
-          </label>
-          <label>
-            비밀번호
+          </div>
+          <div className="field">
+            <label className="field-label" htmlFor="password">
+              비밀번호
+            </label>
             <input
               autoComplete="current-password"
+              className="form-input"
+              id="password"
               name="password"
               onChange={(event) => setPassword(event.target.value)}
               required
               type="password"
               value={password}
             />
-          </label>
+          </div>
           {errorMessage ? <p className="form-error">{errorMessage}</p> : null}
-          <button disabled={isSubmitting} type="submit">
+          <button
+            className="btn btn-primary btn-lg btn-block"
+            disabled={isSubmitting}
+            type="submit"
+          >
             {isSubmitting ? '로그인 중' : '로그인'}
           </button>
         </form>

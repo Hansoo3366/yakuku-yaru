@@ -171,13 +171,25 @@ attendanceRouter.post('/', authenticate, async (req, res, next) => {
 
 attendanceRouter.get('/:recordId', authenticate, async (req, res, next) => {
   try {
-    const record = await findAttendanceRecordById(Number(req.params.recordId));
+    const recordId = Number(req.params.recordId);
+    const userId = req.user?.id ?? 0;
+    const record = await findAttendanceRecordById(recordId);
 
     if (!record) {
       throw new HttpError(404, 'ATTENDANCE_NOT_FOUND', '직관 기록을 찾을 수 없습니다.');
     }
 
-    assertOwner(record, req.user?.id ?? 0);
+    if (record.userId !== userId) {
+      const companion = await findCompanionForUser({ recordId, userId });
+
+      if (!companion) {
+        throw new HttpError(
+          403,
+          'FORBIDDEN',
+          '본인이 작성하거나 태그된 직관 기록만 조회할 수 있습니다.',
+        );
+      }
+    }
 
     res.json({
       record,

@@ -5,6 +5,7 @@ CREATE TABLE IF NOT EXISTS teams (
   name VARCHAR(50) NOT NULL,
   short_name VARCHAR(20) NOT NULL,
   primary_color VARCHAR(20) NULL,
+  ticket_url VARCHAR(500) NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
   UNIQUE KEY uq_teams_name (name)
@@ -15,6 +16,7 @@ CREATE TABLE IF NOT EXISTS users (
   email VARCHAR(255) NOT NULL,
   password_hash VARCHAR(255) NOT NULL,
   nickname VARCHAR(50) NOT NULL,
+  profile_image_url VARCHAR(500) NULL,
   favorite_team_id BIGINT UNSIGNED NULL,
   email_verified_at DATETIME NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,

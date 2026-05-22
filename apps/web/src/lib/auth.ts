@@ -6,6 +6,7 @@ export type PublicUser = {
   id: number;
   email: string;
   nickname: string;
+  profileImageUrl: string | null;
   favoriteTeamId: number | null;
   emailVerifiedAt: string | null;
 };
