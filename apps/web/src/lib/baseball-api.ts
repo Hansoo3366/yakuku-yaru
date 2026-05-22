@@ -19,6 +19,11 @@ export type Game = {
   status: string;
   ticketUrl: string | null;
   ticketOpenAt: string | null;
+  stadiumGuide: {
+    foodSummary: string | null;
+    parkingSummary: string | null;
+    mapUrl: string | null;
+  } | null;
 };
 
 export function listTeams() {

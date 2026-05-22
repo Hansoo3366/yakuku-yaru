@@ -34,15 +34,21 @@
 ## Core Features
 
 - 회원가입, 로그인, JWT 인증
-- 내 팀 설정
+- 회원가입 시 내 팀 설정
+- 마이페이지 내 팀 변경
 - 내 팀 경기 일정 캘린더 조회
+- 팀 로고 기반 경기 일정 표시
+- 캘린더 일정 범위/기록 유형 필터
 - 직관 기록 작성, 수정, 삭제
+- 야구장 직관/집관 기록 구분
 - 직관 사진 업로드 및 캘린더 썸네일 표시
 - 경기 스코어 표시 및 사용자 수정
 - 직관 승률 계산
 - 승률 50% 이상 `승리요정` 타이틀 표시
 - 직관 후기 게시판과 댓글
 - 경기 상세에서 알림 설정 정보, 예매처, 예매 오픈 시간 확인
+- 경기 알림 설정/해제
+- 경기 상세에서 구장 맛집 메모와 주차 정보 확인
 - 모바일 홈 화면에 설치 가능한 PWA
 
 ## MVP Scope
@@ -123,10 +129,10 @@ npm run dev:api
 
 | Service | URL |
 | --- | --- |
-| Web | `http://34.133.199.4:3000` |
-| API health | `http://34.133.199.4:4000/api/health` |
-| Swagger | `http://34.133.199.4:4000/api-docs` |
-| OpenAPI JSON | `http://34.133.199.4:4000/api-docs.json` |
+| Web | `https://yakuku-yaru.today` |
+| API health | `https://yakuku-yaru.today/api/health` |
+| Swagger | `https://yakuku-yaru.today/api-docs` |
+| OpenAPI JSON | `https://yakuku-yaru.today/api-docs.json` |
 
 배포 구조:
 
@@ -136,8 +142,9 @@ npm run dev:api
 - Express API container
 - MySQL 8.4 container
 - GitHub Actions 자동 배포
+- Caddy HTTPS reverse proxy
 
-현재는 도메인 없이 서버 IP와 포트로 접근합니다. 추후 Caddy 또는 Nginx reverse proxy를 추가하면 `80/443` 포트와 HTTPS 중심으로 전환할 예정입니다.
+현재는 Caddy reverse proxy를 통해 `80/443` 포트와 HTTPS 중심으로 접근합니다. `3000`, `4000` 포트는 외부 직접 접근을 닫고 내부 컨테이너 통신용으로만 사용하는 것을 권장합니다.
 
 ## Verification
 
@@ -153,14 +160,18 @@ MVP 기능은 대부분 구현되어 있습니다.
 
 - 인증, 게시판, 댓글, 페이징
 - MySQL 기반 DB 관계
-- 내 팀 설정, 경기 일정, 경기 상세
+- 내 팀 설정, 경기 일정, 경기 상세, 팀 로고 표시
 - 직관 기록 CRUD, 사진 업로드, 캘린더 썸네일
+- 집관 기록 유형 추가
+- 직관/집관 통계 분리
+- 경기 알림 설정
+- 구장별 맛집/주차 정보 seed 데이터
 - 승률 계산과 `승리요정` 타이틀
 - PWA 기본 설정
 - Google Cloud VM 수동 배포
 - GitHub Actions 자동 배포
 
-남은 큰 작업은 HTTPS/reverse proxy, 디자인 고도화, 집관/동행 태그/구장 정보 기능 확장입니다.
+남은 큰 작업은 디자인 고도화, KBO 일정 동기화, 동행 태그/구장 정보 기능 확장입니다.
 
 ## Naming
 

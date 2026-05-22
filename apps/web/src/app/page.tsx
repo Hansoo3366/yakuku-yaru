@@ -8,7 +8,7 @@ const featureItems = [
 ];
 
 const milestoneItems = [
-  '회원가입/로그인 테텥테스트',
+  '회원가입/로그인',
   '게시판과 댓글',
   '경기 일정 캘린더',
   '직관 기록',
@@ -19,11 +19,11 @@ export default function HomePage() {
     <main className="page-shell">
       <section className="hero">
         <div className="hero-copy">
-          <p className="eyebrow">PWA Baseball Attendance Log</p>
-          <h1>Yakuku Yaru</h1>
+          <p className="eyebrow">KBO 직관 기록 PWA</p>
+          <h1>야크크 야르</h1>
           <p className="description">
-            야구장 직관 기록을 캘린더에 남기고 사진, 스코어, 승률을 한곳에서
-            관리하는 웹앱입니다.
+            내 팀 경기 일정부터 직관 사진, 스코어, 승률까지 한 화면에서 이어지는
+            야구 기록 웹앱입니다.
           </p>
           <div className="actions">
             <Link href="/calendar">캘린더 보기</Link>
@@ -36,9 +36,9 @@ export default function HomePage() {
           </div>
         </div>
         <div className="score-card" aria-label="직관 통계 미리보기">
-          <span>직관 승률</span>
+          <span>승리요정 기준</span>
           <strong>50%</strong>
-          <p>승리요정 타이틀 준비 중</p>
+          <p>직관 승률이 50% 이상이면 마이페이지에서 타이틀이 열립니다.</p>
         </div>
       </section>
 

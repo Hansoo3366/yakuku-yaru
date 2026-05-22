@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from 'next';
+import { AppFooter, AppHeader } from '@/components/AppChrome';
 import { ServiceWorkerRegister } from '@/components/ServiceWorkerRegister';
 import './globals.css';
 
@@ -31,7 +32,9 @@ export default function RootLayout({
   return (
     <html lang="ko">
       <body>
+        <AppHeader />
         {children}
+        <AppFooter />
         <ServiceWorkerRegister />
       </body>
     </html>

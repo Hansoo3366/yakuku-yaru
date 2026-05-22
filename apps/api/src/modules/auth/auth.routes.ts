@@ -15,15 +15,17 @@ import {
   markUserEmailVerified,
   toPublicUser,
 } from '../users/user.repository.js';
+import { findTeamById } from '../teams/team.repository.js';
 
 export const authRouter = Router();
 
 authRouter.post('/register', async (req, res, next) => {
   try {
-    const { email, password, nickname } = req.body as {
+    const { email, password, nickname, favoriteTeamId } = req.body as {
       email?: string;
       password?: string;
       nickname?: string;
+      favoriteTeamId?: number;
     };
 
     if (!email || !password || !nickname) {
@@ -44,11 +46,20 @@ authRouter.post('/register', async (req, res, next) => {
       throw new HttpError(409, 'EMAIL_ALREADY_EXISTS', '이미 사용 중인 이메일입니다.');
     }
 
+    if (favoriteTeamId) {
+      const favoriteTeam = await findTeamById(favoriteTeamId);
+
+      if (!favoriteTeam) {
+        throw new HttpError(404, 'TEAM_NOT_FOUND', '팀을 찾을 수 없습니다.');
+      }
+    }
+
     const passwordHash = await hashPassword(password);
     const user = await createUser({
       email,
       passwordHash,
       nickname,
+      favoriteTeamId: favoriteTeamId ?? null,
     });
 
     if (!user) {

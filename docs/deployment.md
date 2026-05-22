@@ -12,7 +12,7 @@ Cloud Server
   └─ mysql  MySQL 8.4
 ```
 
-초기 과제 제출용 배포는 서버 IP와 포트로 접근하는 방식을 기준으로 합니다.
+초기 테스트 배포는 서버 IP와 포트로 접근할 수 있습니다.
 
 ```txt
 http://SERVER_IP:3000       Web
@@ -20,12 +20,12 @@ http://SERVER_IP:4000/api   API
 http://SERVER_IP:4000/api-docs Swagger
 ```
 
-도메인과 HTTPS를 붙인 뒤에는 아래 형태로 접근합니다.
+현재 제출용 배포는 도메인과 HTTPS를 기준으로 합니다.
 
 ```txt
-https://YOUR_DOMAIN          Web
-https://YOUR_DOMAIN/api      API
-https://YOUR_DOMAIN/api-docs Swagger
+https://yakuku-yaru.today          Web
+https://yakuku-yaru.today/api      API
+https://yakuku-yaru.today/api-docs Swagger
 ```
 
 ## 1. 서버 준비
@@ -65,8 +65,8 @@ MYSQL_ROOT_PASSWORD=replace-with-strong-root-password
 도메인을 연결한 뒤에는 `NEXT_PUBLIC_API_URL`을 도메인 기준으로 바꿉니다.
 
 ```env
-NEXT_PUBLIC_API_URL=https://YOUR_DOMAIN/api
-APP_DOMAIN=YOUR_DOMAIN
+NEXT_PUBLIC_API_URL=https://yakuku-yaru.today/api
+APP_DOMAIN=yakuku-yaru.today
 ```
 
 ## 4. 컨테이너 실행
@@ -100,10 +100,10 @@ http://SERVER_IP:4000/api-docs
 도메인 연결 후에는 아래 주소를 확인합니다.
 
 ```txt
-https://YOUR_DOMAIN
-https://YOUR_DOMAIN/api/health
-https://YOUR_DOMAIN/api-docs
-https://YOUR_DOMAIN/uploads/<uploaded-file-name>
+https://yakuku-yaru.today
+https://yakuku-yaru.today/api/health
+https://yakuku-yaru.today/api-docs
+https://yakuku-yaru.today/uploads/<uploaded-file-name>
 ```
 
 ## 8. 업데이트 배포

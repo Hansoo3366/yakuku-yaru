@@ -22,6 +22,7 @@ export function register(input: {
   email: string;
   password: string;
   nickname: string;
+  favoriteTeamId?: number | null;
 }) {
   return request<RegisterResponse>('/auth/register', {
     method: 'POST',

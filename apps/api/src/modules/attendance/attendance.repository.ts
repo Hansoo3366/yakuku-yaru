@@ -5,6 +5,7 @@ export type AttendanceRecordRow = RowDataPacket & {
   id: number;
   user_id: number;
   game_id: number;
+  watch_type: string;
   photo_url: string | null;
   memo: string | null;
   my_team_score: number | null;
@@ -27,6 +28,7 @@ export type AttendanceRecord = {
   id: number;
   userId: number;
   gameId: number;
+  watchType: string;
   photoUrl: string | null;
   memo: string | null;
   myTeamScore: number | null;
@@ -56,6 +58,7 @@ function attendanceSelectSql() {
       ar.id,
       ar.user_id,
       ar.game_id,
+      ar.watch_type,
       ar.photo_url,
       ar.memo,
       ar.my_team_score,
@@ -83,6 +86,7 @@ export function toAttendanceRecord(row: AttendanceRecordRow): AttendanceRecord {
     id: row.id,
     userId: row.user_id,
     gameId: row.game_id,
+    watchType: row.watch_type,
     photoUrl: row.photo_url,
     memo: row.memo,
     myTeamScore: row.my_team_score,
@@ -111,6 +115,7 @@ export function toAttendanceRecord(row: AttendanceRecordRow): AttendanceRecord {
 export async function createAttendanceRecord(input: {
   userId: number;
   gameId: number;
+  watchType?: string;
   memo?: string | null;
   myTeamScore?: number | null;
   opponentScore?: number | null;
@@ -121,16 +126,18 @@ export async function createAttendanceRecord(input: {
     `INSERT INTO attendance_records (
       user_id,
       game_id,
+      watch_type,
       memo,
       my_team_score,
       opponent_score,
       result,
       is_score_modified
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       input.userId,
       input.gameId,
+      input.watchType ?? 'stadium',
       input.memo ?? null,
       input.myTeamScore ?? null,
       input.opponentScore ?? null,
@@ -194,6 +201,7 @@ export async function findAttendanceRecordByGame(input: {
 
 export async function updateAttendanceRecord(input: {
   id: number;
+  watchType?: string;
   memo?: string | null;
   myTeamScore?: number | null;
   opponentScore?: number | null;
@@ -203,6 +211,7 @@ export async function updateAttendanceRecord(input: {
   await db.execute(
     `UPDATE attendance_records
      SET memo = ?,
+         watch_type = ?,
          my_team_score = ?,
          opponent_score = ?,
          result = ?,
@@ -210,6 +219,7 @@ export async function updateAttendanceRecord(input: {
      WHERE id = ?`,
     [
       input.memo ?? null,
+      input.watchType ?? 'stadium',
       input.myTeamScore ?? null,
       input.opponentScore ?? null,
       input.result ?? null,
@@ -254,9 +264,13 @@ export async function getAttendanceStats(userId: number) {
   >(
     `SELECT
        COUNT(*) AS total_count,
+       SUM(CASE WHEN watch_type = 'stadium' THEN 1 ELSE 0 END) AS stadium_count,
+       SUM(CASE WHEN watch_type = 'home' THEN 1 ELSE 0 END) AS home_count,
        SUM(CASE WHEN result = 'win' THEN 1 ELSE 0 END) AS win_count,
        SUM(CASE WHEN result = 'lose' THEN 1 ELSE 0 END) AS lose_count,
-       SUM(CASE WHEN result = 'draw' THEN 1 ELSE 0 END) AS draw_count
+       SUM(CASE WHEN result = 'draw' THEN 1 ELSE 0 END) AS draw_count,
+       SUM(CASE WHEN watch_type = 'stadium' AND result = 'win' THEN 1 ELSE 0 END) AS stadium_win_count,
+       SUM(CASE WHEN watch_type = 'home' AND result = 'win' THEN 1 ELSE 0 END) AS home_win_count
      FROM attendance_records
      WHERE user_id = ?`,
     [userId],
@@ -268,17 +282,31 @@ export async function getAttendanceStats(userId: number) {
     draw_count: 0,
   };
   const totalCount = Number(stats.total_count);
+  const stadiumCount = Number(stats.stadium_count);
+  const homeCount = Number(stats.home_count);
   const winCount = Number(stats.win_count);
   const loseCount = Number(stats.lose_count);
   const drawCount = Number(stats.draw_count);
+  const stadiumWinCount = Number(stats.stadium_win_count);
+  const homeWinCount = Number(stats.home_win_count);
   const winRate = totalCount ? Math.round((winCount / totalCount) * 1000) / 10 : 0;
+  const stadiumWinRate = stadiumCount
+    ? Math.round((stadiumWinCount / stadiumCount) * 1000) / 10
+    : 0;
+  const homeWinRate = homeCount
+    ? Math.round((homeWinCount / homeCount) * 1000) / 10
+    : 0;
 
   return {
     totalCount,
+    stadiumCount,
+    homeCount,
     winCount,
     loseCount,
     drawCount,
     winRate,
+    stadiumWinRate,
+    homeWinRate,
     title: totalCount > 0 && winRate >= 50 ? '승리요정' : null,
   };
 }

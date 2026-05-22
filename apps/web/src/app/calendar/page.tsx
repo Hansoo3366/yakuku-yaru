@@ -19,6 +19,7 @@ import {
   type AttendanceRecord,
 } from '@/lib/attendance-api';
 import { getAssetUrl } from '@/lib/api';
+import { getTeamLogoSrc } from '@/lib/team-logo';
 import { BottomNav } from '@/components/BottomNav';
 
 const initialMonth = new Date(2026, 4, 1);
@@ -63,6 +64,13 @@ export default function CalendarPage() {
   const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>(
     [],
   );
+  const [scheduleScope, setScheduleScope] = useState<'favorite' | 'all'>(
+    'favorite',
+  );
+  const [watchTypeFilter, setWatchTypeFilter] = useState<
+    'all' | 'stadium' | 'home'
+  >('all');
+  const [recordsOnly, setRecordsOnly] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [message, setMessage] = useState('');
 
@@ -87,7 +95,10 @@ export default function CalendarPage() {
         return Promise.all([
           listGames({
             ...range,
-            teamId: meResponse.user.favoriteTeamId,
+            teamId:
+              scheduleScope === 'favorite'
+                ? meResponse.user.favoriteTeamId
+                : undefined,
           }),
           listAttendanceRecords(range, token),
         ]);
@@ -114,7 +125,7 @@ export default function CalendarPage() {
     return () => {
       isMounted = false;
     };
-  }, [calendarMonth, router]);
+  }, [calendarMonth, router, scheduleScope]);
 
   async function handleTeamChange(teamId: number) {
     if (!teamId) {
@@ -136,17 +147,12 @@ export default function CalendarPage() {
     const [gamesResponse, attendanceResponse] = await Promise.all([
       listGames({
         ...range,
-        teamId,
+        teamId: scheduleScope === 'favorite' ? teamId : undefined,
       }),
       listAttendanceRecords(range, token),
     ]);
     setGames(gamesResponse.items);
     setAttendanceRecords(attendanceResponse.items);
-  }
-
-  function handleLogout() {
-    clearAccessToken();
-    router.replace('/login');
   }
 
   function moveMonth(amount: number) {
@@ -164,18 +170,35 @@ export default function CalendarPage() {
   }
 
   const days = getCalendarDays(calendarMonth);
+  const filteredAttendanceRecords = attendanceRecords.filter((record) =>
+    watchTypeFilter === 'all' ? true : record.watchType === watchTypeFilter,
+  );
+  const currentMonthRecords = attendanceRecords.filter((record) => {
+    const recordDate = new Date(record.game.gameDate);
+    return (
+      recordDate.getFullYear() === calendarMonth.getFullYear() &&
+      recordDate.getMonth() === calendarMonth.getMonth()
+    );
+  });
+  const currentMonthRecordCount = currentMonthRecords.length;
+  const currentMonthWinCount = currentMonthRecords.filter(
+    (record) => record.result === 'win',
+  ).length;
+  const currentMonthWinRate = currentMonthRecordCount
+    ? Math.round((currentMonthWinCount / currentMonthRecordCount) * 100)
+    : 0;
   const gamesByDate = games.reduce<Record<string, Game[]>>((acc, game) => {
     const key = game.gameDate.slice(0, 10);
     acc[key] = [...(acc[key] ?? []), game];
     return acc;
   }, {});
-  const attendanceByGameId = attendanceRecords.reduce<
+  const attendanceByGameId = filteredAttendanceRecords.reduce<
     Record<number, AttendanceRecord>
   >((acc, record) => {
     acc[record.gameId] = record;
     return acc;
   }, {});
-  const attendanceByDate = attendanceRecords.reduce<
+  const attendanceByDate = filteredAttendanceRecords.reduce<
     Record<string, AttendanceRecord[]>
   >((acc, record) => {
     const key = record.game.gameDate.slice(0, 10);
@@ -197,11 +220,23 @@ export default function CalendarPage() {
           <Link className="ghost-button" href="/me">
             마이페이지
           </Link>
-          <button className="ghost-button" type="button" onClick={handleLogout}>
-            로그아웃
-          </button>
         </div>
       </header>
+
+      <section className="calendar-summary" aria-label="이번 달 직관 요약">
+        <div>
+          <span>이번 달 경기</span>
+          <strong>{games.length}</strong>
+        </div>
+        <div>
+          <span>기록한 경기</span>
+          <strong>{currentMonthRecordCount}</strong>
+        </div>
+        <div>
+          <span>기록 승률</span>
+          <strong>{currentMonthWinRate}%</strong>
+        </div>
+      </section>
 
       <section className="team-setting-panel">
         <label>
@@ -221,6 +256,47 @@ export default function CalendarPage() {
         {message ? <p>{message}</p> : null}
       </section>
 
+      <section className="calendar-filter-panel" aria-label="캘린더 필터">
+        <div>
+          <span>일정 범위</span>
+          <button
+            className={scheduleScope === 'favorite' ? 'selected' : ''}
+            onClick={() => setScheduleScope('favorite')}
+            type="button"
+          >
+            내 팀
+          </button>
+          <button
+            className={scheduleScope === 'all' ? 'selected' : ''}
+            onClick={() => setScheduleScope('all')}
+            type="button"
+          >
+            전체
+          </button>
+        </div>
+        <div>
+          <span>기록 유형</span>
+          {(['all', 'stadium', 'home'] as const).map((type) => (
+            <button
+              className={watchTypeFilter === type ? 'selected' : ''}
+              key={type}
+              onClick={() => setWatchTypeFilter(type)}
+              type="button"
+            >
+              {type === 'all' ? '전체' : type === 'stadium' ? '직관' : '집관'}
+            </button>
+          ))}
+        </div>
+        <label>
+          <input
+            checked={recordsOnly}
+            onChange={(event) => setRecordsOnly(event.target.checked)}
+            type="checkbox"
+          />
+          기록 있는 날만
+        </label>
+      </section>
+
       <section className="calendar-placeholder">
         <div className="calendar-toolbar">
           <button type="button" onClick={() => moveMonth(-1)}>
@@ -234,11 +310,19 @@ export default function CalendarPage() {
             다음
           </button>
         </div>
+        <div className="calendar-weekdays" aria-hidden="true">
+          {['일', '월', '화', '수', '목', '금', '토'].map((weekday) => (
+            <span key={weekday}>{weekday}</span>
+          ))}
+        </div>
         <div className="calendar-grid-preview" aria-label="캘린더 미리보기">
           {days.map((date) => {
             const key = formatDateInput(date);
             const dayGames = gamesByDate[key] ?? [];
             const dayRecords = attendanceByDate[key] ?? [];
+            if (recordsOnly && dayRecords.length === 0) {
+              return null;
+            }
             const visibleGameIds = new Set(dayGames.map((game) => game.id));
             const extraRecords = dayRecords.filter(
               (record) => !visibleGameIds.has(record.gameId),
@@ -248,20 +332,37 @@ export default function CalendarPage() {
               <div
                 key={key}
                 className={
-                  date.getMonth() === calendarMonth.getMonth()
-                    ? 'current-month'
-                    : 'outside-month'
+                  [
+                    date.getMonth() === calendarMonth.getMonth()
+                      ? 'current-month'
+                      : 'outside-month',
+                    dayRecords.length ? 'has-record' : '',
+                    dayGames.length ? 'has-game' : '',
+                  ]
+                    .filter(Boolean)
+                    .join(' ')
                 }
               >
                 <span>{date.getDate()}</span>
                 {dayGames.map((game) => (
                   <Link href={`/games/${game.id}`} key={game.id}>
+                    <span className="calendar-team-logos" aria-hidden="true">
+                      <img alt="" src={getTeamLogoSrc(game.awayTeam)} />
+                      <img alt="" src={getTeamLogoSrc(game.homeTeam)} />
+                    </span>
                     {attendanceByGameId[game.id]?.photoUrl ? (
                       <img
                         alt="직관 사진 미리보기"
                         className="calendar-photo-preview"
                         src={getAssetUrl(attendanceByGameId[game.id].photoUrl)}
                       />
+                    ) : null}
+                    {attendanceByGameId[game.id] ? (
+                      <em>
+                        {attendanceByGameId[game.id].watchType === 'home'
+                          ? '집관'
+                          : '직관'}
+                      </em>
                     ) : null}
                     <strong>
                       {game.awayTeam.shortName} @ {game.homeTeam.shortName}
@@ -270,6 +371,10 @@ export default function CalendarPage() {
                 ))}
                 {extraRecords.map((record) => (
                   <Link href={`/attendance/${record.id}/edit`} key={record.id}>
+                    <span className="calendar-team-logos" aria-hidden="true">
+                      <img alt="" src={getTeamLogoSrc(record.game.awayTeam)} />
+                      <img alt="" src={getTeamLogoSrc(record.game.homeTeam)} />
+                    </span>
                     {record.photoUrl ? (
                       <img
                         alt="직관 사진 미리보기"
@@ -277,6 +382,7 @@ export default function CalendarPage() {
                         src={getAssetUrl(record.photoUrl)}
                       />
                     ) : null}
+                    <em>{record.watchType === 'home' ? '집관' : '직관'}</em>
                     <strong>
                       {record.game.awayTeam.shortName} @{' '}
                       {record.game.homeTeam.shortName}

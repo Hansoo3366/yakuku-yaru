@@ -58,11 +58,17 @@ export async function createUser(input: {
   email: string;
   passwordHash: string;
   nickname: string;
+  favoriteTeamId?: number | null;
 }) {
   const [result] = await db.execute<ResultSetHeader>(
-    `INSERT INTO users (email, password_hash, nickname)
-     VALUES (?, ?, ?)`,
-    [input.email, input.passwordHash, input.nickname],
+    `INSERT INTO users (email, password_hash, nickname, favorite_team_id)
+     VALUES (?, ?, ?, ?)`,
+    [
+      input.email,
+      input.passwordHash,
+      input.nickname,
+      input.favoriteTeamId ?? null,
+    ],
   );
 
   return findUserById(result.insertId);

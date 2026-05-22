@@ -11,6 +11,7 @@ import { authRouter } from './modules/auth/auth.routes.js';
 import { gameRouter } from './modules/games/game.routes.js';
 import { meRouter } from './modules/me/me.routes.js';
 import { postRouter } from './modules/posts/post.routes.js';
+import { reminderRouter } from './modules/reminders/reminder.routes.js';
 import { teamRouter } from './modules/teams/team.routes.js';
 import { healthRouter } from './routes/health.js';
 
@@ -46,6 +47,7 @@ export function createApp() {
   app.use('/api/teams', teamRouter);
   app.use('/api/games', gameRouter);
   app.use('/api/attendance-records', attendanceRouter);
+  app.use('/api/reminders', reminderRouter);
 
   app.use(errorHandler);
 

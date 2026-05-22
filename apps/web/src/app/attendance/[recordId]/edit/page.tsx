@@ -23,6 +23,7 @@ export default function EditAttendancePage() {
   const [memo, setMemo] = useState('');
   const [myTeamScore, setMyTeamScore] = useState('');
   const [opponentScore, setOpponentScore] = useState('');
+  const [watchType, setWatchType] = useState<'stadium' | 'home'>('stadium');
   const [result, setResult] = useState('win');
   const [photo, setPhoto] = useState<File | null>(null);
   const [photoPreviewUrl, setPhotoPreviewUrl] = useState('');
@@ -41,6 +42,7 @@ export default function EditAttendancePage() {
       setMemo(response.record.memo ?? '');
       setMyTeamScore(String(response.record.myTeamScore ?? ''));
       setOpponentScore(String(response.record.opponentScore ?? ''));
+      setWatchType(response.record.watchType);
       setResult(response.record.result ?? 'win');
     });
   }, [recordId, router]);
@@ -77,6 +79,7 @@ export default function EditAttendancePage() {
           memo,
           myTeamScore: myTeamScore ? Number(myTeamScore) : null,
           opponentScore: opponentScore ? Number(opponentScore) : null,
+          watchType,
           result,
         },
         token,
@@ -127,6 +130,18 @@ export default function EditAttendancePage() {
           />
         ) : null}
         <form className="form-stack" onSubmit={handleSubmit}>
+          <label>
+            관람 유형
+            <select
+              onChange={(event) =>
+                setWatchType(event.target.value === 'home' ? 'home' : 'stadium')
+              }
+              value={watchType}
+            >
+              <option value="stadium">야구장 직관</option>
+              <option value="home">집관</option>
+            </select>
+          </label>
           <label>
             직관 사진 변경
             <input

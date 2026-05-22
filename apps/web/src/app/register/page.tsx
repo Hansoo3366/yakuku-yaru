@@ -1,19 +1,30 @@
 'use client';
 
+/* eslint-disable @next/next/no-img-element */
+
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { FormEvent, useState } from 'react';
 import { ApiError } from '@/lib/api';
 import { register } from '@/lib/auth-api';
+import { listTeams, type Team } from '@/lib/baseball-api';
+import { getTeamLogoSrc } from '@/lib/team-logo';
+import { useEffect } from 'react';
 
 export default function RegisterPage() {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [nickname, setNickname] = useState('');
   const [password, setPassword] = useState('');
+  const [favoriteTeamId, setFavoriteTeamId] = useState<number | null>(null);
+  const [teams, setTeams] = useState<Team[]>([]);
   const [errorMessage, setErrorMessage] = useState('');
   const [verificationToken, setVerificationToken] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    listTeams().then((response) => setTeams(response.items));
+  }, []);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -22,7 +33,12 @@ export default function RegisterPage() {
     setIsSubmitting(true);
 
     try {
-      const response = await register({ email, nickname, password });
+      const response = await register({
+        email,
+        nickname,
+        password,
+        favoriteTeamId,
+      });
       setVerificationToken(response.verificationToken);
     } catch (error) {
       if (error instanceof ApiError) {
@@ -79,6 +95,26 @@ export default function RegisterPage() {
               value={password}
             />
           </label>
+          <fieldset className="team-card-fieldset">
+            <legend>응원 팀</legend>
+            <div className="team-card-grid">
+              {teams.map((team) => {
+                const isSelected = favoriteTeamId === team.id;
+                return (
+                  <button
+                    aria-pressed={isSelected}
+                    className={isSelected ? 'selected' : ''}
+                    key={team.id}
+                    onClick={() => setFavoriteTeamId(team.id)}
+                    type="button"
+                  >
+                    <img alt="" src={getTeamLogoSrc(team)} />
+                    <span>{team.shortName}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </fieldset>
           {errorMessage ? <p className="form-error">{errorMessage}</p> : null}
           <button disabled={isSubmitting} type="submit">
             {isSubmitting ? '가입 중' : '회원가입'}

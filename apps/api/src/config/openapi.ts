@@ -17,6 +17,7 @@ export const openApiDocument = {
     { name: 'Comments' },
     { name: 'Baseball' },
     { name: 'Attendance' },
+    { name: 'Reminders' },
     { name: 'System' },
   ],
   paths: {
@@ -320,6 +321,54 @@ export const openApiDocument = {
         },
       },
     },
+    '/reminders/games/{gameId}': {
+      get: {
+        tags: ['Reminders'],
+        summary: 'Get my reminder for a game',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ $ref: '#/components/parameters/GameId' }],
+        responses: {
+          '200': {
+            description: 'Reminder state',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/GameReminderResponse' },
+              },
+            },
+          },
+        },
+      },
+      post: {
+        tags: ['Reminders'],
+        summary: 'Create or keep my reminder for a game',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ $ref: '#/components/parameters/GameId' }],
+        responses: {
+          '201': {
+            description: 'Reminder saved',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/GameReminderResponse' },
+              },
+            },
+          },
+          '404': {
+            description: 'Game not found',
+          },
+        },
+      },
+      delete: {
+        tags: ['Reminders'],
+        summary: 'Delete my reminder for a game',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ $ref: '#/components/parameters/GameId' }],
+        responses: {
+          '204': {
+            description: 'Reminder deleted',
+          },
+        },
+      },
+    },
     '/attendance-records': {
       get: {
         tags: ['Attendance'],
@@ -481,6 +530,7 @@ export const openApiDocument = {
           email: { type: 'string', format: 'email' },
           password: { type: 'string', minLength: 8 },
           nickname: { type: 'string' },
+          favoriteTeamId: { type: 'integer', nullable: true },
         },
       },
       LoginRequest: {
@@ -562,11 +612,35 @@ export const openApiDocument = {
           teamId: { type: 'integer' },
         },
       },
+      GameReminder: {
+        type: 'object',
+        properties: {
+          id: { type: 'integer' },
+          user_id: { type: 'integer' },
+          game_id: { type: 'integer' },
+          reminder_type: { type: 'string' },
+          created_at: { type: 'string' },
+        },
+      },
+      GameReminderResponse: {
+        type: 'object',
+        properties: {
+          enabled: { type: 'boolean' },
+          reminder: {
+            oneOf: [{ $ref: '#/components/schemas/GameReminder' }, { type: 'null' }],
+          },
+        },
+      },
       AttendanceWriteRequest: {
         type: 'object',
         required: ['memo', 'result'],
         properties: {
           gameId: { type: 'integer' },
+          watchType: {
+            type: 'string',
+            enum: ['stadium', 'home'],
+            description: '관람 유형. stadium은 야구장 직관, home은 집관입니다.',
+          },
           memo: { type: 'string' },
           myTeamScore: { type: 'integer', nullable: true },
           opponentScore: { type: 'integer', nullable: true },

@@ -18,6 +18,7 @@ function NewAttendanceForm() {
   const [memo, setMemo] = useState('');
   const [myTeamScore, setMyTeamScore] = useState('');
   const [opponentScore, setOpponentScore] = useState('');
+  const [watchType, setWatchType] = useState<'stadium' | 'home'>('stadium');
   const [result, setResult] = useState('win');
   const [photo, setPhoto] = useState<File | null>(null);
   const [photoPreviewUrl, setPhotoPreviewUrl] = useState('');
@@ -57,6 +58,7 @@ function NewAttendanceForm() {
           memo,
           myTeamScore: myTeamScore ? Number(myTeamScore) : null,
           opponentScore: opponentScore ? Number(opponentScore) : null,
+          watchType,
           result,
         },
         token,
@@ -82,6 +84,18 @@ function NewAttendanceForm() {
         </Link>
         <h1>직관 기록 작성</h1>
         <form className="form-stack" onSubmit={handleSubmit}>
+          <label>
+            관람 유형
+            <select
+              onChange={(event) =>
+                setWatchType(event.target.value === 'home' ? 'home' : 'stadium')
+              }
+              value={watchType}
+            >
+              <option value="stadium">야구장 직관</option>
+              <option value="home">집관</option>
+            </select>
+          </label>
           <label>
             직관 사진
             <input

@@ -154,12 +154,13 @@ production 환경에서 service worker를 등록합니다. 개발 중 service wo
 
 배포 URL:
 
-- Web: `http://34.133.199.4:3000`
-- API health: `http://34.133.199.4:4000/api/health`
-- Swagger: `http://34.133.199.4:4000/api-docs`
+- Web: `https://yakuku-yaru.today`
+- API health: `https://yakuku-yaru.today/api/health`
+- Swagger: `https://yakuku-yaru.today/api-docs`
 
 구성:
 
+- `caddy`: HTTPS reverse proxy
 - `web`: Next.js production server
 - `api`: Express API server
 - `mysql`: MySQL 8.4
@@ -175,4 +176,4 @@ GitHub Actions는 `main` 브랜치 push 시 VM에 SSH로 접속해 최신 코드
 - 예매처/예매 오픈 시간은 seed 데이터 기반입니다.
 - 업로드 파일은 로컬 디스크 저장 방식입니다. 배포 환경에서는 object storage로 확장하는 것이 좋습니다.
 - 디자인은 기능 검증용 MVP 수준이며 추후 개선 예정입니다.
-- 현재는 도메인과 HTTPS 없이 서버 IP와 포트로 접근합니다.
+- 현재는 단일 VM 배포이므로 배포 중 짧은 다운타임이 발생할 수 있습니다.

@@ -35,6 +35,10 @@ function assertOwner(record: { userId: number }, userId: number) {
   }
 }
 
+function normalizeWatchType(value: unknown) {
+  return value === 'home' ? 'home' : 'stadium';
+}
+
 attendanceRouter.get('/', authenticate, async (req, res, next) => {
   try {
     const from = typeof req.query.from === 'string' ? req.query.from : undefined;
@@ -65,9 +69,10 @@ attendanceRouter.get('/stats/me', authenticate, async (req, res, next) => {
 
 attendanceRouter.post('/', authenticate, async (req, res, next) => {
   try {
-    const { gameId, memo, result } = req.body as {
+    const { gameId, memo, result, watchType } = req.body as {
       gameId?: number;
       memo?: string;
+      watchType?: string;
       myTeamScore?: number;
       opponentScore?: number;
       result?: string;
@@ -96,6 +101,7 @@ attendanceRouter.post('/', authenticate, async (req, res, next) => {
     const record = await createAttendanceRecord({
       userId,
       gameId,
+      watchType: normalizeWatchType(watchType),
       memo: memo?.trim() || null,
       myTeamScore: normalizeNumber(req.body.myTeamScore),
       opponentScore: normalizeNumber(req.body.opponentScore),
@@ -139,12 +145,14 @@ attendanceRouter.patch('/:recordId', authenticate, async (req, res, next) => {
 
     assertOwner(record, req.user?.id ?? 0);
 
-    const { memo, result } = req.body as {
+    const { memo, result, watchType } = req.body as {
       memo?: string;
+      watchType?: string;
       result?: string;
     };
     const updatedRecord = await updateAttendanceRecord({
       id: record.id,
+      watchType: normalizeWatchType(watchType),
       memo: memo?.trim() || null,
       myTeamScore: normalizeNumber(req.body.myTeamScore),
       opponentScore: normalizeNumber(req.body.opponentScore),

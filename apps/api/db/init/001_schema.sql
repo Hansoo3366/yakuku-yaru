@@ -65,10 +65,23 @@ CREATE TABLE IF NOT EXISTS games (
     FOREIGN KEY (away_team_id) REFERENCES teams(id)
 );
 
+CREATE TABLE IF NOT EXISTS stadium_guides (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  stadium VARCHAR(100) NOT NULL,
+  food_summary TEXT NULL,
+  parking_summary TEXT NULL,
+  map_url VARCHAR(500) NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_stadium_guides_stadium (stadium)
+);
+
 CREATE TABLE IF NOT EXISTS attendance_records (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   user_id BIGINT UNSIGNED NOT NULL,
   game_id BIGINT UNSIGNED NOT NULL,
+  watch_type VARCHAR(20) NOT NULL DEFAULT 'stadium',
   photo_url VARCHAR(500) NULL,
   memo TEXT NULL,
   my_team_score INT NULL,
@@ -84,6 +97,23 @@ CREATE TABLE IF NOT EXISTS attendance_records (
     FOREIGN KEY (user_id) REFERENCES users(id)
     ON DELETE CASCADE,
   CONSTRAINT fk_attendance_game
+    FOREIGN KEY (game_id) REFERENCES games(id)
+    ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS game_reminders (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  user_id BIGINT UNSIGNED NOT NULL,
+  game_id BIGINT UNSIGNED NOT NULL,
+  reminder_type VARCHAR(20) NOT NULL DEFAULT 'game_day',
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_game_reminders_user_game_type (user_id, game_id, reminder_type),
+  KEY idx_game_reminders_game_id (game_id),
+  CONSTRAINT fk_game_reminders_user
+    FOREIGN KEY (user_id) REFERENCES users(id)
+    ON DELETE CASCADE,
+  CONSTRAINT fk_game_reminders_game
     FOREIGN KEY (game_id) REFERENCES games(id)
     ON DELETE CASCADE
 );

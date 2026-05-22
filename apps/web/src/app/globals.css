@@ -3,6 +3,8 @@
   --color-field-700: #0f6b4f;
   --color-field-800: #0a4a3a;
   --color-field-100: #e4f3ec;
+  --team-color: var(--color-field-700);
+  --team-color-soft: var(--color-field-100);
   --color-score-red: #d63b2a;
   --color-ticket-gold: #d9a441;
   --color-night-navy: #14213d;
@@ -11,6 +13,7 @@
   --color-line: #d8ded8;
   --color-ink: #18201c;
   --color-muted: #66736d;
+  --shadow-soft: 0 16px 40px rgba(20, 33, 61, 0.08);
 }
 
 * {
@@ -34,6 +37,10 @@ body {
     "Segoe UI",
     Arial,
     sans-serif;
+}
+
+body {
+  padding-top: 70px;
 }
 
 a {
@@ -63,6 +70,121 @@ button:disabled {
   opacity: 0.62;
 }
 
+.site-header {
+  background: rgba(251, 250, 246, 0.94);
+  border-bottom: 1px solid var(--color-line);
+  left: 0;
+  position: fixed;
+  right: 0;
+  top: 0;
+  z-index: 40;
+}
+
+.site-header-inner {
+  align-items: center;
+  display: grid;
+  gap: 16px;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  margin: 0 auto;
+  max-width: 1120px;
+  min-height: 70px;
+  padding: 0 20px;
+}
+
+.brand-link {
+  align-items: center;
+  color: var(--color-night-navy);
+  display: inline-flex;
+  font-weight: 900;
+  gap: 10px;
+  min-width: max-content;
+}
+
+.brand-link span {
+  align-items: center;
+  background: var(--team-color);
+  border-radius: 8px;
+  color: var(--color-white);
+  display: inline-flex;
+  height: 34px;
+  justify-content: center;
+  width: 34px;
+}
+
+.site-nav {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+  min-width: 0;
+}
+
+.site-nav a,
+.account-actions a,
+.account-actions button {
+  align-items: center;
+  border-radius: 6px;
+  color: var(--color-muted);
+  display: inline-flex;
+  font-weight: 900;
+  min-height: 38px;
+  padding: 0 12px;
+}
+
+.site-nav a.active {
+  background: var(--team-color-soft);
+  color: var(--color-night-navy);
+}
+
+.account-actions {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  min-width: max-content;
+}
+
+.account-actions button {
+  background: transparent;
+  border: 0;
+}
+
+.account-actions .account-pill {
+  background: var(--color-night-navy);
+  color: var(--color-white);
+}
+
+.site-footer {
+  align-items: center;
+  border-top: 1px solid var(--color-line);
+  color: var(--color-muted);
+  display: flex;
+  gap: 18px;
+  justify-content: space-between;
+  margin: 24px auto 0;
+  max-width: 1120px;
+  padding: 28px 20px 48px;
+}
+
+.site-footer strong {
+  color: var(--color-night-navy);
+}
+
+.site-footer p {
+  margin: 6px 0 0;
+}
+
+.site-footer nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+.site-footer a {
+  color: var(--color-night-navy);
+  font-weight: 900;
+}
+
 .page-shell {
   margin: 0 auto;
   max-width: 1120px;
@@ -73,7 +195,7 @@ button:disabled {
 .app-shell {
   margin: 0 auto;
   max-width: 960px;
-  min-height: 100vh;
+  min-height: calc(100vh - 70px);
   padding: 28px 18px 56px;
 }
 
@@ -97,7 +219,7 @@ button:disabled {
 }
 
 .back-link {
-  color: var(--color-field-700);
+  color: var(--team-color);
   display: inline-flex;
   font-size: 0.92rem;
   font-weight: 800;
@@ -132,6 +254,52 @@ button:disabled {
   gap: 8px;
 }
 
+.team-card-fieldset {
+  border: 0;
+  margin: 0;
+  padding: 0;
+}
+
+.team-card-fieldset legend {
+  color: var(--color-ink);
+  font-size: 0.92rem;
+  font-weight: 800;
+  margin-bottom: 8px;
+}
+
+.team-card-grid {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.team-card-grid button {
+  align-items: center;
+  background: var(--color-white);
+  border: 1px solid var(--color-line);
+  border-radius: 8px;
+  color: var(--color-night-navy);
+  display: grid;
+  font-weight: 900;
+  gap: 6px;
+  justify-items: center;
+  min-height: 78px;
+  padding: 8px 4px;
+}
+
+.team-card-grid button.selected,
+.team-card-grid button[aria-pressed='true'] {
+  background: var(--team-color-soft);
+  border-color: var(--team-color);
+  color: var(--color-night-navy);
+}
+
+.team-card-grid img {
+  height: 34px;
+  max-width: 42px;
+  object-fit: contain;
+}
+
 .form-stack input {
   background: var(--color-paper);
   border: 1px solid var(--color-line);
@@ -155,8 +323,8 @@ button:disabled {
 .comment-form textarea:focus,
 .search-row input:focus,
 .team-setting-panel select:focus {
-  border-color: var(--color-field-700);
-  outline: 3px solid var(--color-field-100);
+  border-color: var(--team-color);
+  outline: 3px solid var(--team-color-soft);
 }
 
 .form-stack button,
@@ -169,8 +337,8 @@ button:disabled {
 
 .form-stack button,
 .notice-box button {
-  background: var(--color-field-700);
-  border: 1px solid var(--color-field-700);
+  background: var(--team-color);
+  border: 1px solid var(--team-color);
   color: var(--color-white);
   font-weight: 800;
 }
@@ -191,12 +359,12 @@ button:disabled {
 }
 
 .auth-footnote a {
-  color: var(--color-field-700);
+  color: var(--team-color);
   font-weight: 800;
 }
 
 .notice-box {
-  background: var(--color-field-100);
+  background: var(--team-color-soft);
   border: 1px solid #b9ddd0;
   border-radius: 8px;
   display: grid;
@@ -261,6 +429,76 @@ button:disabled {
   margin-bottom: 16px;
 }
 
+.calendar-summary {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-bottom: 16px;
+}
+
+.calendar-filter-panel {
+  background: var(--color-white);
+  border: 1px solid var(--color-line);
+  border-radius: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 16px;
+  padding: 14px;
+}
+
+.calendar-filter-panel div,
+.calendar-filter-panel label {
+  align-items: center;
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.calendar-filter-panel span,
+.calendar-filter-panel label {
+  color: var(--color-muted);
+  font-weight: 900;
+}
+
+.calendar-filter-panel button {
+  background: var(--color-white);
+  border: 1px solid var(--color-line);
+  border-radius: 999px;
+  color: var(--color-night-navy);
+  font-weight: 900;
+  min-height: 34px;
+  padding: 0 12px;
+}
+
+.calendar-filter-panel button.selected {
+  background: var(--team-color-soft);
+  border-color: var(--team-color);
+}
+
+.calendar-summary div {
+  background: var(--color-white);
+  border: 1px solid var(--color-line);
+  border-radius: 8px;
+  box-shadow: var(--shadow-soft);
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  padding: 16px;
+}
+
+.calendar-summary span {
+  color: var(--color-muted);
+  font-size: 0.86rem;
+  font-weight: 900;
+}
+
+.calendar-summary strong {
+  color: var(--color-night-navy);
+  font-size: 1.7rem;
+  line-height: 1;
+}
+
 .team-setting-panel label {
   color: var(--color-night-navy);
   display: grid;
@@ -304,7 +542,7 @@ button:disabled {
 }
 
 .team-setting-panel p {
-  color: var(--color-field-700);
+  color: var(--team-color);
   font-weight: 800;
   margin: 10px 0 0;
 }
@@ -322,6 +560,22 @@ button:disabled {
   gap: 8px;
   grid-template-columns: 72px minmax(0, 1fr) 72px;
   margin-bottom: 14px;
+}
+
+.calendar-weekdays {
+  color: var(--color-muted);
+  display: grid;
+  font-size: 0.78rem;
+  font-weight: 900;
+  gap: 1px;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  margin-bottom: 1px;
+  text-align: center;
+}
+
+.calendar-weekdays span {
+  background: #eef3ef;
+  padding: 8px 0;
 }
 
 .calendar-toolbar button {
@@ -345,8 +599,17 @@ button:disabled {
 
 .calendar-grid-preview > div {
   background: var(--color-paper);
+  border: 1px solid transparent;
   min-height: 84px;
   padding: 8px;
+}
+
+.calendar-grid-preview > .has-game {
+  background: #f6faf7;
+}
+
+.calendar-grid-preview > .has-record {
+  border-color: var(--team-color);
 }
 
 .calendar-grid-preview > .outside-month {
@@ -362,7 +625,7 @@ button:disabled {
 }
 
 .calendar-grid-preview strong {
-  background: var(--color-field-700);
+  background: var(--team-color);
   border-radius: 4px;
   color: var(--color-white);
   display: block;
@@ -371,10 +634,42 @@ button:disabled {
   padding: 6px;
 }
 
+.calendar-grid-preview em {
+  background: var(--color-ticket-gold);
+  border-radius: 999px;
+  color: var(--color-night-navy);
+  display: inline-flex;
+  font-size: 0.68rem;
+  font-style: normal;
+  font-weight: 900;
+  margin-bottom: 4px;
+  padding: 2px 6px;
+}
+
+.calendar-grid-preview .has-record strong {
+  background: var(--color-night-navy);
+}
+
 .calendar-grid-preview a {
   display: block;
   min-width: 0;
+  overflow: hidden;
   width: 100%;
+}
+
+.calendar-team-logos {
+  display: flex !important;
+  gap: 2px;
+  margin-bottom: 4px;
+}
+
+.calendar-team-logos img {
+  background: var(--color-white);
+  border-radius: 999px;
+  height: 18px;
+  object-fit: contain;
+  padding: 2px;
+  width: 18px;
 }
 
 .calendar-photo-preview {
@@ -393,8 +688,8 @@ button:disabled {
 
 .solid-link {
   align-items: center;
-  background: var(--color-field-700);
-  border: 1px solid var(--color-field-700);
+  background: var(--team-color);
+  border: 1px solid var(--team-color);
   border-radius: 6px;
   color: var(--color-white);
   display: inline-flex;
@@ -605,7 +900,17 @@ button:disabled {
 }
 
 .scoreboard-line span {
+  align-items: center;
+  display: inline-grid;
+  gap: 6px;
   font-weight: 900;
+  justify-items: center;
+}
+
+.scoreboard-line img {
+  height: 46px;
+  max-width: 64px;
+  object-fit: contain;
 }
 
 .scoreboard-line strong {
@@ -643,11 +948,48 @@ button:disabled {
   margin-top: 20px;
 }
 
+.game-notice {
+  color: var(--team-color);
+  font-weight: 900;
+  margin: 12px 0 0;
+}
+
+.stadium-guide-panel,
+.stats-split-panel {
+  background: var(--color-white);
+  border: 1px solid var(--color-line);
+  border-radius: 8px;
+  display: grid;
+  gap: 14px;
+  margin-top: 18px;
+  padding: 18px;
+}
+
+.stadium-guide-panel h2 {
+  margin: 0;
+}
+
+.stadium-guide-panel strong,
+.stats-split-panel span {
+  color: var(--color-muted);
+  font-weight: 900;
+}
+
+.stadium-guide-panel p {
+  line-height: 1.65;
+  margin: 6px 0 0;
+}
+
+.stadium-guide-panel a {
+  color: var(--team-color);
+  font-weight: 900;
+}
+
 .game-actions a,
 .game-actions button {
   align-items: center;
-  background: var(--color-field-700);
-  border: 1px solid var(--color-field-700);
+  background: var(--team-color);
+  border: 1px solid var(--team-color);
   border-radius: 6px;
   color: var(--color-white);
   display: inline-flex;
@@ -664,6 +1006,16 @@ button:disabled {
   gap: 8px;
   margin-bottom: 16px;
   padding: 24px;
+  position: relative;
+}
+
+.stats-team-logo {
+  height: 58px;
+  object-fit: contain;
+  position: absolute;
+  right: 22px;
+  top: 22px;
+  width: 70px;
 }
 
 .stats-hero span {
@@ -708,6 +1060,40 @@ button:disabled {
   font-size: 1.4rem;
 }
 
+.stats-split-panel {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-bottom: 16px;
+}
+
+.stats-split-panel div {
+  display: grid;
+  gap: 8px;
+}
+
+.stats-split-panel strong {
+  color: var(--color-night-navy);
+  font-size: 1.5rem;
+}
+
+.team-preference-panel {
+  background: var(--color-white);
+  border: 1px solid var(--color-line);
+  border-radius: 8px;
+  display: grid;
+  gap: 16px;
+  margin-top: 16px;
+  padding: 22px;
+}
+
+.team-preference-panel h2 {
+  margin-bottom: 8px;
+}
+
+.team-preference-panel p {
+  color: var(--color-muted);
+  margin: 0;
+}
+
 .bottom-nav {
   align-items: center;
   background: rgba(255, 255, 255, 0.96);
@@ -731,15 +1117,27 @@ button:disabled {
   align-items: center;
   border-radius: 6px;
   color: var(--color-muted);
-  display: inline-flex;
+  display: grid;
   font-weight: 900;
+  gap: 2px;
   justify-content: center;
   min-height: 44px;
+  text-align: center;
+}
+
+.bottom-nav a span {
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.bottom-nav a strong {
+  font-size: 0.8rem;
+  line-height: 1.2;
 }
 
 .bottom-nav a.active {
-  background: var(--color-field-100);
-  color: var(--color-field-800);
+  background: var(--team-color-soft);
+  color: var(--color-night-navy);
 }
 
 .offline-shell {
@@ -930,6 +1328,48 @@ li {
 }
 
 @media (max-width: 760px) {
+  body {
+    padding-top: 112px;
+  }
+
+  .site-header-inner {
+    gap: 8px;
+    grid-template-columns: 1fr;
+    min-height: 112px;
+    padding: 10px 14px;
+  }
+
+  .brand-link {
+    justify-self: center;
+  }
+
+  .site-nav {
+    justify-content: center;
+    overflow-x: auto;
+  }
+
+  .site-nav a,
+  .account-actions a,
+  .account-actions button {
+    min-height: 34px;
+    padding: 0 10px;
+  }
+
+  .account-actions {
+    justify-content: center;
+    min-width: 0;
+  }
+
+  .site-footer {
+    align-items: flex-start;
+    display: grid;
+    padding-bottom: 112px;
+  }
+
+  .site-footer nav {
+    justify-content: flex-start;
+  }
+
   .page-shell {
     padding: 16px 14px 36px;
   }
@@ -947,5 +1387,61 @@ li {
 
   .score-card strong {
     font-size: 4rem;
+  }
+
+  .app-header {
+    display: grid;
+  }
+
+  .header-actions {
+    justify-content: stretch;
+  }
+
+  .header-actions > * {
+    justify-content: center;
+  }
+
+  .calendar-summary {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .calendar-summary div {
+    padding: 12px 10px;
+  }
+
+  .calendar-summary span {
+    font-size: 0.74rem;
+  }
+
+  .calendar-summary strong {
+    font-size: 1.25rem;
+  }
+
+  .calendar-grid-preview > div {
+    min-height: 76px;
+    padding: 5px;
+  }
+
+  .calendar-grid-preview span {
+    font-size: 0.74rem;
+    margin-bottom: 5px;
+  }
+
+  .calendar-grid-preview strong {
+    font-size: 0.68rem;
+    padding: 5px;
+  }
+
+  .calendar-photo-preview {
+    min-height: 34px;
+  }
+
+  .team-card-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .stats-team-logo {
+    height: 44px;
+    width: 54px;
   }
 }

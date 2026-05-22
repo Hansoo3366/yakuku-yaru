@@ -4,6 +4,7 @@ export type AttendanceRecord = {
   id: number;
   userId: number;
   gameId: number;
+  watchType: 'stadium' | 'home';
   photoUrl: string | null;
   memo: string | null;
   myTeamScore: number | null;
@@ -30,6 +31,7 @@ export type AttendanceRecord = {
 
 export type AttendanceInput = {
   gameId?: number;
+  watchType: 'stadium' | 'home';
   memo: string;
   myTeamScore: number | null;
   opponentScore: number | null;
@@ -38,10 +40,14 @@ export type AttendanceInput = {
 
 export type AttendanceStats = {
   totalCount: number;
+  stadiumCount: number;
+  homeCount: number;
   winCount: number;
   loseCount: number;
   drawCount: number;
   winRate: number;
+  stadiumWinRate: number;
+  homeWinRate: number;
   title: string | null;
 };
 

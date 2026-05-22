@@ -18,6 +18,9 @@ export type GameRow = RowDataPacket & {
   status: string;
   ticket_url: string | null;
   ticket_open_at: Date | null;
+  stadium_food_summary: string | null;
+  stadium_parking_summary: string | null;
+  stadium_map_url: string | null;
   created_at: Date;
   updated_at: Date;
 };
@@ -43,6 +46,11 @@ export type Game = {
   status: string;
   ticketUrl: string | null;
   ticketOpenAt: Date | null;
+  stadiumGuide: {
+    foodSummary: string | null;
+    parkingSummary: string | null;
+    mapUrl: string | null;
+  } | null;
 };
 
 function gameSelectSql() {
@@ -63,11 +71,15 @@ function gameSelectSql() {
       g.status,
       g.ticket_url,
       g.ticket_open_at,
+      sg.food_summary AS stadium_food_summary,
+      sg.parking_summary AS stadium_parking_summary,
+      sg.map_url AS stadium_map_url,
       g.created_at,
       g.updated_at
     FROM games g
     JOIN teams ht ON ht.id = g.home_team_id
-    JOIN teams at ON at.id = g.away_team_id`;
+    JOIN teams at ON at.id = g.away_team_id
+    LEFT JOIN stadium_guides sg ON sg.stadium = g.stadium`;
 }
 
 export function toGame(row: GameRow): Game {
@@ -92,6 +104,14 @@ export function toGame(row: GameRow): Game {
     status: row.status,
     ticketUrl: row.ticket_url,
     ticketOpenAt: row.ticket_open_at,
+    stadiumGuide:
+      row.stadium_food_summary || row.stadium_parking_summary || row.stadium_map_url
+        ? {
+            foodSummary: row.stadium_food_summary,
+            parkingSummary: row.stadium_parking_summary,
+            mapUrl: row.stadium_map_url,
+          }
+        : null,
   };
 }
 
