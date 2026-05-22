@@ -59,6 +59,26 @@ services:
     ports:
       - '${WEB_PORT:-3000}:3000'
 
+  caddy:
+    image: caddy:2.9-alpine
+    profiles:
+      - proxy
+    restart: unless-stopped
+    depends_on:
+      - web
+      - api
+    environment:
+      APP_DOMAIN: ${APP_DOMAIN}
+    ports:
+      - '80:80'
+      - '443:443'
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
 volumes:
   mysql_data:
   api_uploads:
+  caddy_data:
+  caddy_config:

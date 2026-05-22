@@ -148,6 +148,26 @@ PWA 구성:
 
 production 환경에서 service worker를 등록합니다. 개발 중 service worker 캐시가 방해되지 않도록 dev 모드에서는 등록하지 않습니다.
 
+## Deployment
+
+현재 배포는 Google Cloud Compute Engine 단일 VM에서 Docker Compose로 구성합니다.
+
+배포 URL:
+
+- Web: `http://34.133.199.4:3000`
+- API health: `http://34.133.199.4:4000/api/health`
+- Swagger: `http://34.133.199.4:4000/api-docs`
+
+구성:
+
+- `web`: Next.js production server
+- `api`: Express API server
+- `mysql`: MySQL 8.4
+
+GitHub Actions는 `main` 브랜치 push 시 VM에 SSH로 접속해 최신 코드를 반영하고 Docker Compose를 다시 실행합니다.
+
+현재는 단일 VM 구조이므로 배포 중 짧은 다운타임이 발생할 수 있습니다. 무중단 배포가 필요하면 Caddy/Nginx 기반 blue-green 배포 또는 Load Balancer와 다중 인스턴스 구조로 확장할 수 있습니다.
+
 ## Current Limitations
 
 - 이메일 인증은 실제 SMTP 발송 전 단계이며, 개발용 인증 토큰을 응답으로 보여줍니다.
@@ -155,3 +175,4 @@ production 환경에서 service worker를 등록합니다. 개발 중 service wo
 - 예매처/예매 오픈 시간은 seed 데이터 기반입니다.
 - 업로드 파일은 로컬 디스크 저장 방식입니다. 배포 환경에서는 object storage로 확장하는 것이 좋습니다.
 - 디자인은 기능 검증용 MVP 수준이며 추후 개선 예정입니다.
+- 현재는 도메인과 HTTPS 없이 서버 IP와 포트로 접근합니다.

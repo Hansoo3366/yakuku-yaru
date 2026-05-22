@@ -117,6 +117,28 @@ npm run dev:api
 | PWA manifest | `http://localhost:3000/manifest.webmanifest` |
 | Offline fallback | `http://localhost:3000/offline` |
 
+## Production Deployment
+
+현재 Google Cloud Compute Engine VM에 Docker Compose 기반으로 배포되어 있습니다.
+
+| Service | URL |
+| --- | --- |
+| Web | `http://34.133.199.4:3000` |
+| API health | `http://34.133.199.4:4000/api/health` |
+| Swagger | `http://34.133.199.4:4000/api-docs` |
+| OpenAPI JSON | `http://34.133.199.4:4000/api-docs.json` |
+
+배포 구조:
+
+- Google Cloud Compute Engine
+- Docker Compose
+- Next.js web container
+- Express API container
+- MySQL 8.4 container
+- GitHub Actions 자동 배포
+
+현재는 도메인 없이 서버 IP와 포트로 접근합니다. 추후 Caddy 또는 Nginx reverse proxy를 추가하면 `80/443` 포트와 HTTPS 중심으로 전환할 예정입니다.
+
 ## Verification
 
 ```bash
@@ -135,8 +157,10 @@ MVP 기능은 대부분 구현되어 있습니다.
 - 직관 기록 CRUD, 사진 업로드, 캘린더 썸네일
 - 승률 계산과 `승리요정` 타이틀
 - PWA 기본 설정
+- Google Cloud VM 수동 배포
+- GitHub Actions 자동 배포
 
-남은 큰 작업은 production 배포, GitHub Actions 자동 배포, 디자인 고도화입니다.
+남은 큰 작업은 HTTPS/reverse proxy, 디자인 고도화, 집관/동행 태그/구장 정보 기능 확장입니다.
 
 ## Naming
 

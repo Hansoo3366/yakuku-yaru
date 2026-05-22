@@ -6,6 +6,7 @@
 
 ```txt
 Cloud Server
+  ├─ caddy  HTTPS reverse proxy
   ├─ web    Next.js production server
   ├─ api    Express API server
   └─ mysql  MySQL 8.4
@@ -17,6 +18,14 @@ Cloud Server
 http://SERVER_IP:3000       Web
 http://SERVER_IP:4000/api   API
 http://SERVER_IP:4000/api-docs Swagger
+```
+
+도메인과 HTTPS를 붙인 뒤에는 아래 형태로 접근합니다.
+
+```txt
+https://YOUR_DOMAIN          Web
+https://YOUR_DOMAIN/api      API
+https://YOUR_DOMAIN/api-docs Swagger
 ```
 
 ## 1. 서버 준비
@@ -47,9 +56,17 @@ cp .env.production.example .env.production
 
 ```env
 NEXT_PUBLIC_API_URL=http://YOUR_SERVER_IP:4000/api
+APP_DOMAIN=YOUR_DOMAIN
 JWT_SECRET=replace-with-a-long-random-secret
 MYSQL_PASSWORD=replace-with-strong-password
 MYSQL_ROOT_PASSWORD=replace-with-strong-root-password
+```
+
+도메인을 연결한 뒤에는 `NEXT_PUBLIC_API_URL`을 도메인 기준으로 바꿉니다.
+
+```env
+NEXT_PUBLIC_API_URL=https://YOUR_DOMAIN/api
+APP_DOMAIN=YOUR_DOMAIN
 ```
 
 ## 4. 컨테이너 실행
@@ -80,6 +97,15 @@ http://SERVER_IP:4000/api/health
 http://SERVER_IP:4000/api-docs
 ```
 
+도메인 연결 후에는 아래 주소를 확인합니다.
+
+```txt
+https://YOUR_DOMAIN
+https://YOUR_DOMAIN/api/health
+https://YOUR_DOMAIN/api-docs
+https://YOUR_DOMAIN/uploads/<uploaded-file-name>
+```
+
 ## 8. 업데이트 배포
 
 ```bash
@@ -106,6 +132,7 @@ DEPLOY_USER      VM SSH 사용자명
 DEPLOY_SSH_KEY   VM에 접속할 private key
 DEPLOY_PATH      서버의 repository 절대 경로
 DEPLOY_PORT      SSH 포트, 기본값은 22
+DEPLOY_COMPOSE_PROFILES  선택 값. Caddy를 켤 때 proxy
 ```
 
 예시:
@@ -115,6 +142,7 @@ DEPLOY_HOST=34.000.000.000
 DEPLOY_USER=hanso3366
 DEPLOY_PATH=/home/hanso3366/yakuku-yaru
 DEPLOY_PORT=22
+DEPLOY_COMPOSE_PROFILES=proxy
 ```
 
 `DEPLOY_SSH_KEY`는 GitHub가 서버에 접속할 때 사용할 private key입니다. 서버에서 배포용 key를 새로 만들고 공개키를 `~/.ssh/authorized_keys`에 추가한 뒤, private key 내용을 GitHub Secret에 넣는 방식을 권장합니다.
@@ -129,12 +157,44 @@ cat ~/.ssh/github_actions_yakuku_yaru
 
 수동으로 자동 배포를 테스트하려면 GitHub Actions 화면에서 `Deploy to Google Cloud VM` workflow의 `Run workflow`를 실행합니다.
 
-## 10. 데이터 보존
+## 10. DuckDNS and HTTPS
+
+도메인 구매 비용을 줄이려면 DuckDNS 무료 서브도메인을 사용할 수 있습니다.
+
+1. DuckDNS에서 서브도메인을 생성합니다.
+2. DuckDNS의 IP 값을 Google Cloud VM 외부 IP로 설정합니다.
+3. Google Cloud 방화벽에서 `80`, `443` 포트가 열려 있는지 확인합니다.
+4. 서버의 `.env.production`에서 도메인 값을 수정합니다.
+
+```env
+NEXT_PUBLIC_API_URL=https://YOUR_SUBDOMAIN.duckdns.org/api
+APP_DOMAIN=YOUR_SUBDOMAIN.duckdns.org
+```
+
+5. 서버에서 다시 배포합니다.
+
+```bash
+docker compose --env-file .env.production -f docker-compose.prod.yml --profile proxy up -d --build
+```
+
+Caddy는 `APP_DOMAIN` 기준으로 Let's Encrypt 인증서를 자동 발급하고 갱신합니다.
+
+GitHub Actions 자동 배포에서도 Caddy를 함께 실행하려면 repository secret에 아래 값을 추가합니다.
+
+```txt
+DEPLOY_COMPOSE_PROFILES=proxy
+```
+
+도메인 HTTPS 접속이 확인되면 Google Cloud 방화벽에서 `3000`, `4000` 포트는 닫고 `80`, `443`만 외부에 열어두는 것을 권장합니다.
+
+## 11. 데이터 보존
 
 MySQL 데이터와 업로드 파일은 Docker volume에 저장됩니다.
 
 - `mysql_data`
 - `api_uploads`
+- `caddy_data`
+- `caddy_config`
 
 컨테이너를 재빌드해도 volume은 유지됩니다.
 
@@ -146,13 +206,10 @@ docker compose -f docker-compose.prod.yml down -v
 
 위 명령은 DB와 업로드 파일 volume을 삭제합니다.
 
-## 11. 다음 개선
+## 12. 다음 개선
 
 실서비스 수준으로 올릴 때는 아래 구성을 추가하는 것이 좋습니다.
 
-- Nginx reverse proxy
-- HTTPS 인증서
-- 도메인 연결
 - MySQL managed DB 또는 별도 DB 서버
 - 업로드 파일 object storage
-- GitHub Actions 자동 배포
+- Blue-green 배포

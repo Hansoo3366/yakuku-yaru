@@ -37,6 +37,9 @@ jobs:
           script: |
             set -e
             cd ${{ secrets.DEPLOY_PATH }}
+            if [ -n "${{ secrets.DEPLOY_COMPOSE_PROFILES }}" ]; then
+              export COMPOSE_PROFILES="${{ secrets.DEPLOY_COMPOSE_PROFILES }}"
+            fi
             git fetch origin main
             git reset --hard origin/main
             docker compose -f docker-compose.prod.yml --env-file .env.production up -d --build
