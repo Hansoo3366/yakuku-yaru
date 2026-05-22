@@ -5,6 +5,7 @@ export type AppNotification = {
   userId: number;
   actorUserId: number | null;
   attendanceRecordId: number | null;
+  postId: number | null;
   type: string;
   message: string;
   readAt: string | null;

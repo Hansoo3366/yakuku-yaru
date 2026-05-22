@@ -101,6 +101,7 @@ export default function AttendanceDetailPage() {
   }
 
   const isOwner = record.viewerRelation === 'owner';
+  const canEdit = record.canEdit;
   const acceptedCompanions = record.companions.filter(
     (companion) => companion.status === 'accepted',
   );
@@ -225,30 +226,47 @@ export default function AttendanceDetailPage() {
           </div>
         </div>
         <p className="muted" style={{ fontSize: 'var(--text-xs)' }}>
-          최근 수정 · {new Date(record.updatedAt).toLocaleString('ko-KR')}
+          최근 수정 · {record.lastModifiedByNickname ?? record.ownerNickname} ·{' '}
+          {new Date(record.updatedAt).toLocaleString('ko-KR')}
         </p>
       </section>
 
-      {isOwner ? (
-        <div className="action-bar">
+      {canEdit ? (
+        <div className="icon-action-group action-icon-row" aria-label="직관 기록 관리">
           <Link
-            className="btn btn-primary btn-lg"
+            aria-label="직관 기록 수정"
+            className="icon-btn icon-btn-primary"
             href={`/attendance/${record.id}/edit`}
+            title="수정"
           >
-            수정하기
+            <svg aria-hidden="true" viewBox="0 0 24 24">
+              <path
+                d="M4 20h4.2L19.1 9.1a2.4 2.4 0 0 0 0-3.4l-.8-.8a2.4 2.4 0 0 0-3.4 0L4 15.8V20Zm2-2v-1.4L16.3 6.3a.4.4 0 0 1 .6 0l.8.8a.4.4 0 0 1 0 .6L7.4 18H6Z"
+                fill="currentColor"
+              />
+            </svg>
           </Link>
-          <button
-            className="btn btn-ghost btn-lg"
-            disabled={isDeleting}
-            onClick={handleDelete}
-            type="button"
-          >
-            삭제
-          </button>
+          {isOwner ? (
+            <button
+              aria-label="직관 기록 삭제"
+              className="icon-btn icon-btn-danger"
+              disabled={isDeleting}
+              onClick={handleDelete}
+              title="삭제"
+              type="button"
+            >
+              <svg aria-hidden="true" viewBox="0 0 24 24">
+                <path
+                  d="M9 3h6l1 2h4v2H4V5h4l1-2Zm-2 6h10l-.7 11H7.7L7 9Zm2.1 2 .45 7h4.9l.45-7h-5.8Z"
+                  fill="currentColor"
+                />
+              </svg>
+            </button>
+          ) : null}
         </div>
       ) : (
         <p className="muted" style={{ fontSize: 'var(--text-xs)' }}>
-          동행 태그로 공유받은 기록은 작성자만 수정할 수 있어요.
+          동행 태그를 수락하면 기록을 함께 수정할 수 있어요.
         </p>
       )}
 

@@ -26,6 +26,24 @@ export async function runMigrations() {
     );
   }
 
+  const hasLastModifiedByUserId = await columnExists(
+    'attendance_records',
+    'last_modified_by_user_id',
+  );
+
+  if (!hasLastModifiedByUserId) {
+    await db.execute(
+      `ALTER TABLE attendance_records
+       ADD COLUMN last_modified_by_user_id BIGINT UNSIGNED NULL AFTER user_id`,
+    );
+
+    await db.execute(
+      `UPDATE attendance_records
+       SET last_modified_by_user_id = user_id
+       WHERE last_modified_by_user_id IS NULL`,
+    );
+  }
+
   const hasTeamTicketUrl = await columnExists('teams', 'ticket_url');
 
   if (!hasTeamTicketUrl) {
@@ -144,6 +162,7 @@ export async function runMigrations() {
       user_id BIGINT UNSIGNED NOT NULL,
       actor_user_id BIGINT UNSIGNED NULL,
       attendance_record_id BIGINT UNSIGNED NULL,
+      post_id BIGINT UNSIGNED NULL,
       type VARCHAR(50) NOT NULL,
       message VARCHAR(255) NOT NULL,
       read_at DATETIME NULL,
@@ -151,6 +170,7 @@ export async function runMigrations() {
       PRIMARY KEY (id),
       KEY idx_notifications_user_read (user_id, read_at, created_at),
       KEY idx_notifications_attendance_record_id (attendance_record_id),
+      KEY idx_notifications_post_id (post_id),
       CONSTRAINT fk_notifications_user
         FOREIGN KEY (user_id) REFERENCES users(id)
         ON DELETE CASCADE,
@@ -162,6 +182,16 @@ export async function runMigrations() {
         ON DELETE CASCADE
     )`,
   );
+
+  const hasNotificationPostId = await columnExists('notifications', 'post_id');
+
+  if (!hasNotificationPostId) {
+    await db.execute(
+      `ALTER TABLE notifications
+       ADD COLUMN post_id BIGINT UNSIGNED NULL AFTER attendance_record_id,
+       ADD KEY idx_notifications_post_id (post_id)`,
+    );
+  }
 
   await db.execute(
     `INSERT INTO stadium_guides (stadium, food_summary, parking_summary, map_url)

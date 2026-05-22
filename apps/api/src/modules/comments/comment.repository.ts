@@ -7,6 +7,7 @@ export type CommentRow = RowDataPacket & {
   user_id: number;
   content: string;
   author_nickname: string;
+  author_profile_image_url: string | null;
   created_at: Date;
   updated_at: Date;
 };
@@ -17,6 +18,7 @@ export type CommentItem = {
   userId: number;
   content: string;
   authorNickname: string;
+  authorProfileImageUrl: string | null;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -28,6 +30,7 @@ export function toCommentItem(row: CommentRow): CommentItem {
     userId: row.user_id,
     content: row.content,
     authorNickname: row.author_nickname,
+    authorProfileImageUrl: row.author_profile_image_url,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -49,7 +52,15 @@ export async function createComment(input: {
 
 export async function listCommentsByPostId(postId: number) {
   const [rows] = await db.query<CommentRow[]>(
-    `SELECT c.id, c.post_id, c.user_id, c.content, u.nickname AS author_nickname, c.created_at, c.updated_at
+    `SELECT
+       c.id,
+       c.post_id,
+       c.user_id,
+       c.content,
+       u.nickname AS author_nickname,
+       u.profile_image_url AS author_profile_image_url,
+       c.created_at,
+       c.updated_at
      FROM comments c
      JOIN users u ON u.id = c.user_id
      WHERE c.post_id = ?
@@ -62,7 +73,15 @@ export async function listCommentsByPostId(postId: number) {
 
 export async function findCommentById(id: number) {
   const [rows] = await db.query<CommentRow[]>(
-    `SELECT c.id, c.post_id, c.user_id, c.content, u.nickname AS author_nickname, c.created_at, c.updated_at
+    `SELECT
+       c.id,
+       c.post_id,
+       c.user_id,
+       c.content,
+       u.nickname AS author_nickname,
+       u.profile_image_url AS author_profile_image_url,
+       c.created_at,
+       c.updated_at
      FROM comments c
      JOIN users u ON u.id = c.user_id
      WHERE c.id = ?

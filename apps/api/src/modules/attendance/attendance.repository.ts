@@ -8,6 +8,7 @@ import {
 export type AttendanceRecordRow = RowDataPacket & {
   id: number;
   user_id: number;
+  last_modified_by_user_id: number | null;
   game_id: number;
   watch_type: string;
   photo_url: string | null;
@@ -27,7 +28,9 @@ export type AttendanceRecordRow = RowDataPacket & {
   away_team_name: string;
   away_team_short_name: string;
   owner_nickname: string;
+  last_modified_by_nickname: string | null;
   viewer_relation?: 'owner' | 'companion';
+  can_edit?: boolean;
 };
 
 export type AttendanceRecord = {
@@ -44,7 +47,10 @@ export type AttendanceRecord = {
   createdAt: Date;
   updatedAt: Date;
   ownerNickname: string;
+  lastModifiedByUserId: number | null;
+  lastModifiedByNickname: string | null;
   viewerRelation: 'owner' | 'companion';
+  canEdit: boolean;
   companions: AttendanceCompanion[];
   game: {
     gameDate: Date;
@@ -66,6 +72,7 @@ function attendanceSelectSql() {
   return `SELECT
       ar.id,
       ar.user_id,
+      ar.last_modified_by_user_id,
       ar.game_id,
       ar.watch_type,
       ar.photo_url,
@@ -84,9 +91,11 @@ function attendanceSelectSql() {
       at.id AS away_team_id,
       at.name AS away_team_name,
       at.short_name AS away_team_short_name,
-      u.nickname AS owner_nickname
+      u.nickname AS owner_nickname,
+      lmu.nickname AS last_modified_by_nickname
     FROM attendance_records ar
     JOIN users u ON u.id = ar.user_id
+    LEFT JOIN users lmu ON lmu.id = ar.last_modified_by_user_id
     JOIN games g ON g.id = ar.game_id
     JOIN teams ht ON ht.id = g.home_team_id
     JOIN teams at ON at.id = g.away_team_id`;
@@ -107,7 +116,10 @@ export function toAttendanceRecord(row: AttendanceRecordRow): AttendanceRecord {
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     ownerNickname: row.owner_nickname,
+    lastModifiedByUserId: row.last_modified_by_user_id,
+    lastModifiedByNickname: row.last_modified_by_nickname,
     viewerRelation: row.viewer_relation ?? 'owner',
+    canEdit: row.can_edit ?? true,
     companions: [],
     game: {
       gameDate: row.game_date,
@@ -150,6 +162,7 @@ export async function createAttendanceRecord(input: {
   const [result] = await db.execute<ResultSetHeader>(
     `INSERT INTO attendance_records (
       user_id,
+      last_modified_by_user_id,
       game_id,
       watch_type,
       memo,
@@ -158,8 +171,9 @@ export async function createAttendanceRecord(input: {
       result,
       is_score_modified
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
+      input.userId,
       input.userId,
       input.gameId,
       input.watchType ?? 'stadium',
@@ -205,6 +219,7 @@ export async function listAttendanceRecords(input: {
         ...row,
         viewer_relation:
           row.user_id === input.userId ? 'owner' : 'companion',
+        can_edit: true,
       }),
     ),
   );
@@ -249,6 +264,7 @@ export async function updateAttendanceRecord(input: {
   opponentScore?: number | null;
   result?: string | null;
   isScoreModified?: boolean;
+  lastModifiedByUserId?: number | null;
 }) {
   await db.execute(
     `UPDATE attendance_records
@@ -257,7 +273,8 @@ export async function updateAttendanceRecord(input: {
          my_team_score = ?,
          opponent_score = ?,
          result = ?,
-         is_score_modified = ?
+         is_score_modified = ?,
+         last_modified_by_user_id = ?
      WHERE id = ?`,
     [
       input.memo ?? null,
@@ -266,6 +283,7 @@ export async function updateAttendanceRecord(input: {
       input.opponentScore ?? null,
       input.result ?? null,
       input.isScoreModified ?? false,
+      input.lastModifiedByUserId ?? null,
       input.id,
     ],
   );
@@ -276,12 +294,14 @@ export async function updateAttendanceRecord(input: {
 export async function updateAttendancePhoto(input: {
   id: number;
   photoUrl: string;
+  lastModifiedByUserId?: number | null;
 }) {
   await db.execute(
     `UPDATE attendance_records
-     SET photo_url = ?
+     SET photo_url = ?,
+         last_modified_by_user_id = ?
      WHERE id = ?`,
-    [input.photoUrl, input.id],
+    [input.photoUrl, input.lastModifiedByUserId ?? null, input.id],
   );
 
   return findAttendanceRecordById(input.id);

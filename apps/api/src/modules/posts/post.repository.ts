@@ -7,6 +7,8 @@ export type PostRow = RowDataPacket & {
   title: string;
   content: string;
   author_nickname: string;
+  author_profile_image_url: string | null;
+  comment_count: number;
   created_at: Date;
   updated_at: Date;
 };
@@ -16,6 +18,8 @@ export type PostListItem = {
   userId: number;
   title: string;
   authorNickname: string;
+  authorProfileImageUrl: string | null;
+  commentCount: number;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -30,6 +34,8 @@ export function toPostListItem(row: PostRow): PostListItem {
     userId: row.user_id,
     title: row.title,
     authorNickname: row.author_nickname,
+    authorProfileImageUrl: row.author_profile_image_url,
+    commentCount: Number(row.comment_count ?? 0),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -67,10 +73,21 @@ export async function listPosts(input: {
   const whereParams = keyword ? [keyword, keyword] : [];
 
   const [rows] = await db.query<PostRow[]>(
-    `SELECT p.id, p.user_id, p.title, p.content, u.nickname AS author_nickname, p.created_at, p.updated_at
+    `SELECT
+       p.id,
+       p.user_id,
+       p.title,
+       p.content,
+       u.nickname AS author_nickname,
+       u.profile_image_url AS author_profile_image_url,
+       COUNT(c.id) AS comment_count,
+       p.created_at,
+       p.updated_at
      FROM posts p
      JOIN users u ON u.id = p.user_id
+     LEFT JOIN comments c ON c.post_id = p.id
      ${whereClause}
+     GROUP BY p.id, p.user_id, p.title, p.content, u.nickname, u.profile_image_url, p.created_at, p.updated_at
      ORDER BY p.created_at DESC
      LIMIT ? OFFSET ?`,
     [...whereParams, input.size, offset],
@@ -91,10 +108,21 @@ export async function listPosts(input: {
 
 export async function findPostById(id: number) {
   const [rows] = await db.query<PostRow[]>(
-    `SELECT p.id, p.user_id, p.title, p.content, u.nickname AS author_nickname, p.created_at, p.updated_at
+    `SELECT
+       p.id,
+       p.user_id,
+       p.title,
+       p.content,
+       u.nickname AS author_nickname,
+       u.profile_image_url AS author_profile_image_url,
+       COUNT(c.id) AS comment_count,
+       p.created_at,
+       p.updated_at
      FROM posts p
      JOIN users u ON u.id = p.user_id
+     LEFT JOIN comments c ON c.post_id = p.id
      WHERE p.id = ?
+     GROUP BY p.id, p.user_id, p.title, p.content, u.nickname, u.profile_image_url, p.created_at, p.updated_at
      LIMIT 1`,
     [id],
   );

@@ -1,9 +1,12 @@
 'use client';
 
+/* eslint-disable @next/next/no-img-element */
+
 import Link from 'next/link';
 import { FormEvent, useEffect, useState } from 'react';
 import { listPosts, type PostListItem } from '@/lib/post-api';
 import { getAccessToken } from '@/lib/auth';
+import { getAuthorProfileImageSrc } from '@/lib/profile-image';
 import { EmptyState } from '@/components/EmptyState';
 import { SkeletonCard } from '@/components/Skeleton';
 
@@ -86,8 +89,17 @@ export default function PostsPage() {
             <Link className="post-card" href={`/posts/${post.id}`} key={post.id}>
               <span className="post-card-title">{post.title}</span>
               <span className="post-card-meta">
-                {post.authorNickname} ·{' '}
-                {new Date(post.createdAt).toLocaleDateString('ko-KR')}
+                <span className="author-inline">
+                  <img
+                    alt=""
+                    src={getAuthorProfileImageSrc(post.authorProfileImageUrl)}
+                  />
+                  {post.authorNickname}
+                </span>
+                <span>댓글 {post.commentCount}</span>
+                <time dateTime={post.createdAt}>
+                  {new Date(post.createdAt).toLocaleDateString('ko-KR')}
+                </time>
               </span>
             </Link>
           ))}

@@ -1,11 +1,14 @@
 'use client';
 
+/* eslint-disable @next/next/no-img-element */
+
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { FormEvent, useEffect, useState } from 'react';
 import { ApiError } from '@/lib/api';
 import { fetchMe } from '@/lib/auth-api';
 import { getAccessToken, type PublicUser } from '@/lib/auth';
+import { getAuthorProfileImageSrc } from '@/lib/profile-image';
 import {
   createComment,
   deleteComment,
@@ -116,24 +119,45 @@ export default function PostDetailPage() {
           <div>
             <h1>{post.title}</h1>
             <p className="post-detail-meta">
-              {post.authorNickname} ·{' '}
+              <span className="author-inline">
+                <img
+                  alt=""
+                  src={getAuthorProfileImageSrc(post.authorProfileImageUrl)}
+                />
+                {post.authorNickname}
+              </span>
+              {' · '}
               {new Date(post.createdAt).toLocaleString('ko-KR')}
             </p>
           </div>
           {isAuthor ? (
-            <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+            <div className="icon-action-group" aria-label="게시글 관리">
               <Link
-                className="btn btn-ghost btn-sm"
+                aria-label="게시글 수정"
+                className="icon-btn"
                 href={`/posts/${post.id}/edit`}
+                title="수정"
               >
-                수정
+                <svg aria-hidden="true" viewBox="0 0 24 24">
+                  <path
+                    d="M4 20h4.2L19.1 9.1a2.4 2.4 0 0 0 0-3.4l-.8-.8a2.4 2.4 0 0 0-3.4 0L4 15.8V20Zm2-2v-1.4L16.3 6.3a.4.4 0 0 1 .6 0l.8.8a.4.4 0 0 1 0 .6L7.4 18H6Z"
+                    fill="currentColor"
+                  />
+                </svg>
               </Link>
               <button
-                className="btn btn-danger btn-sm"
+                aria-label="게시글 삭제"
+                className="icon-btn icon-btn-danger"
                 onClick={handleDeletePost}
+                title="삭제"
                 type="button"
               >
-                삭제
+                <svg aria-hidden="true" viewBox="0 0 24 24">
+                  <path
+                    d="M9 3h6l1 2h4v2H4V5h4l1-2Zm-2 6h10l-.7 11H7.7L7 9Zm2.1 2 .45 7h4.9l.45-7h-5.8Z"
+                    fill="currentColor"
+                  />
+                </svg>
               </button>
             </div>
           ) : null}
@@ -146,11 +170,57 @@ export default function PostDetailPage() {
           <h2>댓글 {comments.length}</h2>
         </div>
 
+        {comments.length ? (
+          <div className="comment-list">
+            {comments.map((comment) => (
+              <div className="comment-card" key={comment.id}>
+                <p>{comment.content}</p>
+                <div className="comment-card-meta">
+                  <span>
+                    <span className="author-inline">
+                      <img
+                        alt=""
+                        src={getAuthorProfileImageSrc(
+                          comment.authorProfileImageUrl,
+                        )}
+                      />
+                      {comment.authorNickname}
+                    </span>
+                    {' · '}
+                    {new Date(comment.createdAt).toLocaleString('ko-KR')}
+                  </span>
+                  {currentUser?.id === comment.userId ? (
+                    <button
+                      aria-label="댓글 삭제"
+                      className="icon-btn icon-btn-subtle"
+                      onClick={() => handleDeleteComment(comment.id)}
+                      title="삭제"
+                      type="button"
+                    >
+                      <svg aria-hidden="true" viewBox="0 0 24 24">
+                        <path
+                          d="M9 3h6l1 2h4v2H4V5h4l1-2Zm-2 6h10l-.7 11H7.7L7 9Zm2.1 2 .45 7h4.9l.45-7h-5.8Z"
+                          fill="currentColor"
+                        />
+                      </svg>
+                    </button>
+                  ) : null}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <EmptyState
+            icon="✎"
+            title="아직 댓글이 없어요"
+            description="가장 먼저 댓글을 남겨보세요."
+          />
+        )}
+
         {currentUser ? (
           <form
-            className="form-grid-tight"
+            className="form-grid-tight comment-write-form"
             onSubmit={handleCreateComment}
-            style={{ marginBottom: 'var(--space-4)' }}
           >
             <textarea
               className="form-textarea"
@@ -172,46 +242,9 @@ export default function PostDetailPage() {
             </div>
           </form>
         ) : (
-          <p
-            className="muted"
-            style={{
-              fontSize: 'var(--text-sm)',
-              marginBottom: 'var(--space-3)',
-            }}
-          >
+          <p className="muted comment-login-note">
             댓글을 남기려면 <Link href="/login">로그인</Link>이 필요해요.
           </p>
-        )}
-
-        {comments.length ? (
-          <div className="comment-list">
-            {comments.map((comment) => (
-              <div className="comment-card" key={comment.id}>
-                <p>{comment.content}</p>
-                <div className="comment-card-meta">
-                  <span>
-                    {comment.authorNickname} ·{' '}
-                    {new Date(comment.createdAt).toLocaleString('ko-KR')}
-                  </span>
-                  {currentUser?.id === comment.userId ? (
-                    <button
-                      className="btn btn-ghost btn-sm"
-                      onClick={() => handleDeleteComment(comment.id)}
-                      type="button"
-                    >
-                      삭제
-                    </button>
-                  ) : null}
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <EmptyState
-            icon="✎"
-            title="아직 댓글이 없어요"
-            description="가장 먼저 댓글을 남겨보세요."
-          />
         )}
       </section>
     </main>

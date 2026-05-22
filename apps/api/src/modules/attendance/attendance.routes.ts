@@ -42,6 +42,27 @@ function assertOwner(record: { userId: number }, userId: number) {
   }
 }
 
+async function assertCanEdit(record: { id: number; userId: number }, userId: number) {
+  if (record.userId === userId) {
+    return;
+  }
+
+  const companion = await findCompanionForUser({
+    recordId: record.id,
+    userId,
+  });
+
+  if (companion?.status === 'accepted') {
+    return;
+  }
+
+  throw new HttpError(
+    403,
+    'FORBIDDEN',
+    '작성자 또는 수락한 동행자만 수정할 수 있습니다.',
+  );
+}
+
 function normalizeWatchType(value: unknown) {
   return value === 'home' ? 'home' : 'stadium';
 }
@@ -189,6 +210,11 @@ attendanceRouter.get('/:recordId', authenticate, async (req, res, next) => {
           '본인이 작성하거나 태그된 직관 기록만 조회할 수 있습니다.',
         );
       }
+
+      record.viewerRelation = 'companion';
+      record.canEdit = companion.status === 'accepted';
+    } else {
+      record.canEdit = true;
     }
 
     res.json({
@@ -207,7 +233,7 @@ attendanceRouter.patch('/:recordId', authenticate, async (req, res, next) => {
       throw new HttpError(404, 'ATTENDANCE_NOT_FOUND', '직관 기록을 찾을 수 없습니다.');
     }
 
-    assertOwner(record, req.user?.id ?? 0);
+    await assertCanEdit(record, req.user?.id ?? 0);
 
     const { memo, result, watchType } = req.body as {
       memo?: string;
@@ -223,9 +249,10 @@ attendanceRouter.patch('/:recordId', authenticate, async (req, res, next) => {
       opponentScore: normalizeNumber(req.body.opponentScore),
       result: result || null,
       isScoreModified: true,
+      lastModifiedByUserId: req.user?.id ?? 0,
     });
 
-    if (updatedRecord) {
+    if (updatedRecord && updatedRecord.userId === req.user?.id) {
       await saveCompanionsAndNotify({
         recordId: updatedRecord.id,
         ownerId: record.userId,
@@ -274,7 +301,7 @@ attendanceRouter.post(
         throw new HttpError(404, 'ATTENDANCE_NOT_FOUND', '직관 기록을 찾을 수 없습니다.');
       }
 
-      assertOwner(record, req.user?.id ?? 0);
+      await assertCanEdit(record, req.user?.id ?? 0);
 
       if (!req.file) {
         throw new HttpError(400, 'INVALID_INPUT', '사진 파일을 선택해주세요.');
@@ -283,6 +310,7 @@ attendanceRouter.post(
       const updatedRecord = await updateAttendancePhoto({
         id: record.id,
         photoUrl: `/uploads/${req.file.filename}`,
+        lastModifiedByUserId: req.user?.id ?? 0,
       });
 
       res.json({

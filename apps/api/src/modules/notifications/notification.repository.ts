@@ -6,6 +6,7 @@ export type Notification = {
   userId: number;
   actorUserId: number | null;
   attendanceRecordId: number | null;
+  postId: number | null;
   type: string;
   message: string;
   readAt: Date | null;
@@ -17,6 +18,7 @@ type NotificationRow = RowDataPacket & {
   user_id: number;
   actor_user_id: number | null;
   attendance_record_id: number | null;
+  post_id: number | null;
   type: string;
   message: string;
   read_at: Date | null;
@@ -29,6 +31,7 @@ function toNotification(row: NotificationRow): Notification {
     userId: row.user_id,
     actorUserId: row.actor_user_id,
     attendanceRecordId: row.attendance_record_id,
+    postId: row.post_id,
     type: row.type,
     message: row.message,
     readAt: row.read_at,
@@ -40,6 +43,7 @@ export async function createNotification(input: {
   userId: number;
   actorUserId?: number | null;
   attendanceRecordId?: number | null;
+  postId?: number | null;
   type: string;
   message: string;
 }) {
@@ -48,14 +52,16 @@ export async function createNotification(input: {
       user_id,
       actor_user_id,
       attendance_record_id,
+      post_id,
       type,
       message
     )
-    VALUES (?, ?, ?, ?, ?)`,
+    VALUES (?, ?, ?, ?, ?, ?)`,
     [
       input.userId,
       input.actorUserId ?? null,
       input.attendanceRecordId ?? null,
+      input.postId ?? null,
       input.type,
       input.message,
     ],
@@ -64,7 +70,7 @@ export async function createNotification(input: {
 
 export async function listNotifications(userId: number) {
   const [rows] = await db.query<NotificationRow[]>(
-    `SELECT id, user_id, actor_user_id, attendance_record_id, type, message, read_at, created_at
+    `SELECT id, user_id, actor_user_id, attendance_record_id, post_id, type, message, read_at, created_at
      FROM notifications
      WHERE user_id = ?
      ORDER BY created_at DESC

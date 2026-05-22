@@ -13,3 +13,13 @@ export function getProfileImageSrc(
 
   return getTeamLogoSrc(team ?? null);
 }
+
+export function getAuthorProfileImageSrc(
+  profileImageUrl: string | null | undefined,
+) {
+  if (profileImageUrl) {
+    return getAssetUrl(profileImageUrl);
+  }
+
+  return '/icons/main_icon.png';
+}

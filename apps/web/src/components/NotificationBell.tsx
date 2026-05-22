@@ -49,11 +49,12 @@ export function NotificationBell({ userId }: NotificationBellProps) {
       setRespondedRecords({});
       return;
     }
-    const token = getAccessToken();
-    if (!token) return;
+    const accessToken = getAccessToken();
+    if (!accessToken) return;
+    const token = accessToken;
 
     let cancelled = false;
-    (async () => {
+    async function loadNotifications() {
       try {
         const response = await listNotifications(token);
         if (cancelled) return;
@@ -94,10 +95,16 @@ export function NotificationBell({ userId }: NotificationBellProps) {
       } catch {
         /* noop */
       }
-    })();
+    }
+
+    void loadNotifications();
+    const intervalId = window.setInterval(() => {
+      void loadNotifications();
+    }, 30000);
 
     return () => {
       cancelled = true;
+      window.clearInterval(intervalId);
     };
   }, [userId]);
 
@@ -235,6 +242,7 @@ export function NotificationBell({ userId }: NotificationBellProps) {
             <ul className="notification-popover-list">
               {notifications.map((notification) => {
                 const recordId = notification.attendanceRecordId;
+                const postId = notification.postId;
                 const respondedStatus = recordId
                   ? respondedRecords[recordId]
                   : undefined;
@@ -299,6 +307,15 @@ export function NotificationBell({ userId }: NotificationBellProps) {
                         onClick={() => setOpen(false)}
                       >
                         기록 보기
+                      </Link>
+                    ) : null}
+                    {postId ? (
+                      <Link
+                        className="link-btn"
+                        href={`/posts/${postId}`}
+                        onClick={() => setOpen(false)}
+                      >
+                        글 보기
                       </Link>
                     ) : null}
                   </li>

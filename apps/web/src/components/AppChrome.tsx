@@ -9,6 +9,7 @@ import { fetchMe } from '@/lib/auth-api';
 import { clearAccessToken, getAccessToken, type PublicUser } from '@/lib/auth';
 import { listTeams, type Team } from '@/lib/baseball-api';
 import { applyTeamTheme, useTeamTheme } from '@/lib/team-theme';
+import { getProfileImageSrc } from '@/lib/profile-image';
 import { NotificationBell } from '@/components/NotificationBell';
 
 const primaryLinks = [
@@ -105,7 +106,14 @@ export function AppHeader() {
           <div className="auth-only-authed">
             <NotificationBell userId={user?.id ?? null} />
             <Link className="account-link account-name" href="/me">
-              {user?.nickname ?? '\u00A0\u00A0\u00A0'}
+              {user ? (
+                <img
+                  alt=""
+                  className="account-avatar"
+                  src={getProfileImageSrc(user, favoriteTeam)}
+                />
+              ) : null}
+              <span>{user?.nickname ?? '\u00A0\u00A0\u00A0'}</span>
             </Link>
             <button
               className="account-link account-logout"

@@ -158,6 +158,7 @@ export default function EditAttendancePage() {
   }
 
   const matchupTitle = `${record.game.awayTeam.shortName} vs ${record.game.homeTeam.shortName}`;
+  const isOwner = record.viewerRelation === 'owner';
 
   return (
     <main className="app-shell">
@@ -313,7 +314,10 @@ export default function EditAttendancePage() {
             <div className="section-heading" style={{ marginBottom: 0 }}>
               <div>
                 <h2>동행자 응답</h2>
-                <p>현재 응답 상태입니다. 새 동행자는 아래에서 추가하세요.</p>
+                <p>
+                  현재 응답 상태입니다.
+                  {isOwner ? ' 새 동행자는 아래에서 추가하세요.' : ''}
+                </p>
               </div>
             </div>
             <div className="companion-status-list">
@@ -337,12 +341,14 @@ export default function EditAttendancePage() {
           </section>
         ) : null}
 
-        <section className="card">
-          <CompanionPicker
-            onChange={setCompanions}
-            selectedCompanions={companions}
-          />
-        </section>
+        {isOwner ? (
+          <section className="card">
+            <CompanionPicker
+              onChange={setCompanions}
+              selectedCompanions={companions}
+            />
+          </section>
+        ) : null}
 
         <section className="card stack">
           <div className="section-heading" style={{ marginBottom: 0 }}>
@@ -373,13 +379,22 @@ export default function EditAttendancePage() {
           >
             {isSubmitting ? '저장 중' : '수정 완료'}
           </button>
-          <button
-            className="btn btn-danger btn-lg"
-            onClick={handleDelete}
-            type="button"
-          >
-            기록 삭제
-          </button>
+          {isOwner ? (
+            <button
+              aria-label="직관 기록 삭제"
+              className="icon-btn icon-btn-danger icon-btn-lg"
+              onClick={handleDelete}
+              title="삭제"
+              type="button"
+            >
+              <svg aria-hidden="true" viewBox="0 0 24 24">
+                <path
+                  d="M9 3h6l1 2h4v2H4V5h4l1-2Zm-2 6h10l-.7 11H7.7L7 9Zm2.1 2 .45 7h4.9l.45-7h-5.8Z"
+                  fill="currentColor"
+                />
+              </svg>
+            </button>
+          ) : null}
         </div>
       </form>
     </main>

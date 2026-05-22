@@ -743,15 +743,17 @@ export const openApiDocument = {
           userId: { type: 'integer' },
           actorUserId: { type: 'integer', nullable: true },
           attendanceRecordId: { type: 'integer', nullable: true },
+          postId: { type: 'integer', nullable: true },
           type: {
             type: 'string',
             enum: [
               'attendance_tagged',
               'companion_accepted',
               'companion_rejected',
+              'post_commented',
             ],
             description:
-              'attendance_tagged: 동행 태그 수신, companion_accepted/companion_rejected: 호스트가 받는 태그 응답 결과',
+              'attendance_tagged: 동행 태그 수신, companion_accepted/companion_rejected: 호스트가 받는 태그 응답 결과, post_commented: 내 게시글 댓글',
           },
           message: { type: 'string' },
           readAt: { type: 'string', nullable: true },

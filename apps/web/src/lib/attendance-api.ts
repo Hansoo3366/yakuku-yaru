@@ -14,7 +14,10 @@ export type AttendanceRecord = {
   createdAt: string;
   updatedAt: string;
   ownerNickname: string;
+  lastModifiedByUserId: number | null;
+  lastModifiedByNickname: string | null;
   viewerRelation: 'owner' | 'companion';
+  canEdit: boolean;
   companions: AttendanceCompanion[];
   game: {
     gameDate: string;

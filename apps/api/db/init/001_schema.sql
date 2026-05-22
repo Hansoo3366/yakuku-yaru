@@ -82,6 +82,7 @@ CREATE TABLE IF NOT EXISTS stadium_guides (
 CREATE TABLE IF NOT EXISTS attendance_records (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   user_id BIGINT UNSIGNED NOT NULL,
+  last_modified_by_user_id BIGINT UNSIGNED NULL,
   game_id BIGINT UNSIGNED NOT NULL,
   watch_type VARCHAR(20) NOT NULL DEFAULT 'stadium',
   photo_url VARCHAR(500) NULL,
@@ -98,6 +99,9 @@ CREATE TABLE IF NOT EXISTS attendance_records (
   CONSTRAINT fk_attendance_user
     FOREIGN KEY (user_id) REFERENCES users(id)
     ON DELETE CASCADE,
+  CONSTRAINT fk_attendance_last_modified_by
+    FOREIGN KEY (last_modified_by_user_id) REFERENCES users(id)
+    ON DELETE SET NULL,
   CONSTRAINT fk_attendance_game
     FOREIGN KEY (game_id) REFERENCES games(id)
     ON DELETE CASCADE
@@ -126,6 +130,7 @@ CREATE TABLE IF NOT EXISTS notifications (
   user_id BIGINT UNSIGNED NOT NULL,
   actor_user_id BIGINT UNSIGNED NULL,
   attendance_record_id BIGINT UNSIGNED NULL,
+  post_id BIGINT UNSIGNED NULL,
   type VARCHAR(50) NOT NULL,
   message VARCHAR(255) NOT NULL,
   read_at DATETIME NULL,
@@ -133,6 +138,7 @@ CREATE TABLE IF NOT EXISTS notifications (
   PRIMARY KEY (id),
   KEY idx_notifications_user_read (user_id, read_at, created_at),
   KEY idx_notifications_attendance_record_id (attendance_record_id),
+  KEY idx_notifications_post_id (post_id),
   CONSTRAINT fk_notifications_user
     FOREIGN KEY (user_id) REFERENCES users(id)
     ON DELETE CASCADE,

@@ -12,7 +12,9 @@ import {
 import {
   createComment,
   listCommentsByPostId,
+  toCommentItem,
 } from '../comments/comment.repository.js';
+import { createNotification } from '../notifications/notification.repository.js';
 
 export const postRouter = Router();
 
@@ -189,8 +191,18 @@ postRouter.post('/:postId/comments', authenticate, async (req, res, next) => {
       content: content.trim(),
     });
 
+    if (comment && post.user_id !== req.user?.id) {
+      await createNotification({
+        userId: post.user_id,
+        actorUserId: req.user?.id ?? null,
+        postId: post.id,
+        type: 'post_commented',
+        message: `${comment.author_nickname}님이 내 글에 댓글을 남겼어요.`,
+      });
+    }
+
     res.status(201).json({
-      comment,
+      comment: comment ? toCommentItem(comment) : null,
     });
   } catch (error) {
     next(error);
