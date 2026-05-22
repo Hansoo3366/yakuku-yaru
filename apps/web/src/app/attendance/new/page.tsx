@@ -10,6 +10,10 @@ import {
   createAttendanceRecord,
   uploadAttendancePhoto,
 } from '@/lib/attendance-api';
+import {
+  CompanionPicker,
+  type SelectedCompanion,
+} from '@/components/CompanionPicker';
 
 function NewAttendanceForm() {
   const router = useRouter();
@@ -20,6 +24,7 @@ function NewAttendanceForm() {
   const [opponentScore, setOpponentScore] = useState('');
   const [watchType, setWatchType] = useState<'stadium' | 'home'>('stadium');
   const [result, setResult] = useState('win');
+  const [companions, setCompanions] = useState<SelectedCompanion[]>([]);
   const [photo, setPhoto] = useState<File | null>(null);
   const [photoPreviewUrl, setPhotoPreviewUrl] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
@@ -60,6 +65,7 @@ function NewAttendanceForm() {
           opponentScore: opponentScore ? Number(opponentScore) : null,
           watchType,
           result,
+          companionUserIds: companions.map((companion) => companion.id),
         },
         token,
       );
@@ -111,6 +117,10 @@ function NewAttendanceForm() {
               src={photoPreviewUrl}
             />
           ) : null}
+          <CompanionPicker
+            onChange={setCompanions}
+            selectedCompanions={companions}
+          />
           <label>
             내 팀 점수
             <input

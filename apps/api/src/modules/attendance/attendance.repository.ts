@@ -1,5 +1,9 @@
 import type { ResultSetHeader, RowDataPacket } from 'mysql2';
 import { db } from '../../config/database.js';
+import {
+  listCompanionsByRecordIds,
+  type AttendanceCompanion,
+} from './companion.repository.js';
 
 export type AttendanceRecordRow = RowDataPacket & {
   id: number;
@@ -22,6 +26,8 @@ export type AttendanceRecordRow = RowDataPacket & {
   away_team_id: number;
   away_team_name: string;
   away_team_short_name: string;
+  owner_nickname: string;
+  viewer_relation?: 'owner' | 'companion';
 };
 
 export type AttendanceRecord = {
@@ -37,6 +43,9 @@ export type AttendanceRecord = {
   isScoreModified: boolean;
   createdAt: Date;
   updatedAt: Date;
+  ownerNickname: string;
+  viewerRelation: 'owner' | 'companion';
+  companions: AttendanceCompanion[];
   game: {
     gameDate: Date;
     stadium: string;
@@ -74,8 +83,10 @@ function attendanceSelectSql() {
       ht.short_name AS home_team_short_name,
       at.id AS away_team_id,
       at.name AS away_team_name,
-      at.short_name AS away_team_short_name
+      at.short_name AS away_team_short_name,
+      u.nickname AS owner_nickname
     FROM attendance_records ar
+    JOIN users u ON u.id = ar.user_id
     JOIN games g ON g.id = ar.game_id
     JOIN teams ht ON ht.id = g.home_team_id
     JOIN teams at ON at.id = g.away_team_id`;
@@ -95,6 +106,9 @@ export function toAttendanceRecord(row: AttendanceRecordRow): AttendanceRecord {
     isScoreModified: Boolean(row.is_score_modified),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+    ownerNickname: row.owner_nickname,
+    viewerRelation: row.viewer_relation ?? 'owner',
+    companions: [],
     game: {
       gameDate: row.game_date,
       stadium: row.stadium,
@@ -110,6 +124,17 @@ export function toAttendanceRecord(row: AttendanceRecordRow): AttendanceRecord {
       },
     },
   };
+}
+
+async function attachCompanions(records: AttendanceRecord[]) {
+  const companionsByRecordId = await listCompanionsByRecordIds(
+    records.map((record) => record.id),
+  );
+
+  return records.map((record) => ({
+    ...record,
+    companions: companionsByRecordId.get(record.id) ?? [],
+  }));
 }
 
 export async function createAttendanceRecord(input: {
@@ -154,7 +179,7 @@ export async function listAttendanceRecords(input: {
   from?: string;
   to?: string;
 }) {
-  const params: Array<number | string> = [input.userId];
+  const params: Array<number | string> = [input.userId, input.userId];
   const dateFilter =
     input.from && input.to ? 'AND g.game_date >= ? AND g.game_date < ?' : '';
 
@@ -164,13 +189,25 @@ export async function listAttendanceRecords(input: {
 
   const [rows] = await db.query<AttendanceRecordRow[]>(
     `${attendanceSelectSql()}
-     WHERE ar.user_id = ?
+     LEFT JOIN attendance_companions viewer_ac
+       ON viewer_ac.attendance_record_id = ar.id
+      AND viewer_ac.user_id = ?
+      AND viewer_ac.status = 'accepted'
+     WHERE (ar.user_id = ? OR viewer_ac.user_id IS NOT NULL)
        ${dateFilter}
      ORDER BY g.game_date ASC`,
     params,
   );
 
-  return rows.map(toAttendanceRecord);
+  return attachCompanions(
+    rows.map((row) =>
+      toAttendanceRecord({
+        ...row,
+        viewer_relation:
+          row.user_id === input.userId ? 'owner' : 'companion',
+      }),
+    ),
+  );
 }
 
 export async function findAttendanceRecordById(id: number) {
@@ -181,7 +218,12 @@ export async function findAttendanceRecordById(id: number) {
     [id],
   );
 
-  return rows[0] ? toAttendanceRecord(rows[0]) : null;
+  if (!rows[0]) {
+    return null;
+  }
+
+  const [record] = await attachCompanions([toAttendanceRecord(rows[0])]);
+  return record;
 }
 
 export async function findAttendanceRecordByGame(input: {

@@ -13,6 +13,9 @@ export type AttendanceRecord = {
   isScoreModified: boolean;
   createdAt: string;
   updatedAt: string;
+  ownerNickname: string;
+  viewerRelation: 'owner' | 'companion';
+  companions: AttendanceCompanion[];
   game: {
     gameDate: string;
     stadium: string;
@@ -29,6 +32,18 @@ export type AttendanceRecord = {
   };
 };
 
+export type CompanionStatus = 'pending' | 'accepted' | 'rejected';
+
+export type AttendanceCompanion = {
+  id: number;
+  userId: number;
+  nickname: string;
+  email: string;
+  status: CompanionStatus;
+  respondedAt: string | null;
+  createdAt: string;
+};
+
 export type AttendanceInput = {
   gameId?: number;
   watchType: 'stadium' | 'home';
@@ -36,6 +51,7 @@ export type AttendanceInput = {
   myTeamScore: number | null;
   opponentScore: number | null;
   result: string;
+  companionUserIds?: number[];
 };
 
 export type AttendanceStats = {
@@ -110,6 +126,21 @@ export function updateAttendanceRecord(
 export function deleteAttendanceRecord(recordId: number, token: string) {
   return request<void>(`/attendance-records/${recordId}`, {
     method: 'DELETE',
+    token,
+  });
+}
+
+export function respondAttendanceCompanion(
+  recordId: number,
+  status: 'accepted' | 'rejected',
+  token: string,
+) {
+  return request<{
+    companion: AttendanceCompanion;
+    record: AttendanceRecord | null;
+  }>(`/attendance-records/${recordId}/companions/me`, {
+    method: 'PATCH',
+    body: { status },
     token,
   });
 }

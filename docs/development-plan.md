@@ -77,7 +77,24 @@
 - 구장별 주차 정보 seed 데이터
 - 경기 상세 구장 정보 UI
 
-## Phase 7. PWA and Deployment
+## Phase 7. Companion Tags and Notifications
+
+- 회원 검색 API
+- 직관 기록 동행자 태그 테이블 추가
+- 태그 알림 API
+- 태그된 기록을 내 캘린더에 표시
+- 마이페이지 알림 목록 UI
+
+## Phase 7-1. Companion Tag Approval
+
+- `attendance_companions` 상태 컬럼 (`pending`/`accepted`/`rejected`) 운영 정책 정리
+- 동행 태그 수락/거절 API
+- 캘린더는 `accepted` 상태만 노출
+- 호스트에게 응답 결과 알림 (`companion_accepted`/`companion_rejected`)
+- 마이페이지 알림 수락/거절 UI
+- 직관 기록 수정 화면 동행자 응답 상태 표시
+
+## Phase 8. PWA and Deployment
 
 - Manifest 설정
 - 아이콘 추가
@@ -98,14 +115,6 @@
 ## Planned Backlog
 
 아래 단계는 이번 스터디 프로젝트에서 추가 개발할 예정이지만, 오늘 작업 범위에는 포함하지 않는다.
-
-### Phase 8. Companion Tags and Notifications
-
-- 회원 검색 API
-- 직관 기록 동행자 태그 테이블 추가
-- 태그 알림 API
-- 태그 수락/거절 또는 자동 반영 정책 결정
-- 내가 태그된 기록을 내 캘린더에 표시
 
 ### Phase 9. Real Schedule Sync
 

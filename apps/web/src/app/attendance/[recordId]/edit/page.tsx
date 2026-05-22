@@ -14,6 +14,11 @@ import {
   type AttendanceRecord,
 } from '@/lib/attendance-api';
 import { getAssetUrl } from '@/lib/api';
+import {
+  CompanionPicker,
+  toSelectedCompanions,
+  type SelectedCompanion,
+} from '@/components/CompanionPicker';
 
 export default function EditAttendancePage() {
   const params = useParams<{ recordId: string }>();
@@ -25,6 +30,7 @@ export default function EditAttendancePage() {
   const [opponentScore, setOpponentScore] = useState('');
   const [watchType, setWatchType] = useState<'stadium' | 'home'>('stadium');
   const [result, setResult] = useState('win');
+  const [companions, setCompanions] = useState<SelectedCompanion[]>([]);
   const [photo, setPhoto] = useState<File | null>(null);
   const [photoPreviewUrl, setPhotoPreviewUrl] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
@@ -44,6 +50,7 @@ export default function EditAttendancePage() {
       setOpponentScore(String(response.record.opponentScore ?? ''));
       setWatchType(response.record.watchType);
       setResult(response.record.result ?? 'win');
+      setCompanions(toSelectedCompanions(response.record.companions));
     });
   }, [recordId, router]);
 
@@ -81,6 +88,7 @@ export default function EditAttendancePage() {
           opponentScore: opponentScore ? Number(opponentScore) : null,
           watchType,
           result,
+          companionUserIds: companions.map((companion) => companion.id),
         },
         token,
       );
@@ -150,6 +158,38 @@ export default function EditAttendancePage() {
               type="file"
             />
           </label>
+          {record.companions.length ? (
+            <div className="companion-status-panel">
+              <span>동행자 응답 현황</span>
+              <div className="companion-chips">
+                {record.companions.map((companion) => (
+                  <span
+                    className={
+                      companion.status === 'accepted'
+                        ? 'status-accepted'
+                        : companion.status === 'rejected'
+                          ? 'status-rejected'
+                          : 'status-pending'
+                    }
+                    key={companion.id}
+                  >
+                    {companion.nickname}
+                    <em>
+                      {companion.status === 'accepted'
+                        ? '수락'
+                        : companion.status === 'rejected'
+                          ? '거절'
+                          : '대기'}
+                    </em>
+                  </span>
+                ))}
+              </div>
+            </div>
+          ) : null}
+          <CompanionPicker
+            onChange={setCompanions}
+            selectedCompanions={companions}
+          />
           <label>
             내 팀 점수
             <input

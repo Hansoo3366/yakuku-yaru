@@ -123,16 +123,20 @@ Request:
 ```json
 {
   "gameId": 1,
+  "watchType": "stadium",
   "memo": "올 시즌 첫 직관",
   "myTeamScore": 5,
   "opponentScore": 3,
-  "result": "win"
+  "result": "win",
+  "companionUserIds": [12, 34]
 }
 ```
 
+`companionUserIds` 에 포함된 회원에게 동행 태그 알림이 발송되며, 응답을 수락하기 전까지는 동행자의 캘린더에 표시되지 않습니다.
+
 ### PATCH /attendance-records/:recordId
 
-직관 기록을 수정합니다.
+직관 기록을 수정합니다. 본인 기록만 가능하며 동행자 태그 변경 시 새로 추가된 회원에게만 알림이 발송됩니다. 기존 동행자의 응답 상태는 그대로 유지됩니다.
 
 ### DELETE /attendance-records/:recordId
 
@@ -143,6 +147,67 @@ Request:
 직관 사진을 업로드합니다.
 
 Content-Type: `multipart/form-data`
+
+### PATCH /attendance-records/:recordId/companions/me
+
+본인이 받은 동행 태그를 수락하거나 거절합니다.
+
+Request:
+
+```json
+{
+  "status": "accepted"
+}
+```
+
+`status`는 `accepted` 또는 `rejected`만 허용됩니다. 응답이 저장되면 호스트에게 `companion_accepted` 또는 `companion_rejected` 알림이 발송되고, `accepted`인 경우 동행자의 캘린더에 `동행` 배지가 노출됩니다.
+
+## Users
+
+### GET /users/search
+
+닉네임이나 이메일을 부분 일치로 검색해 동행자 후보를 찾습니다. 인증이 필요합니다.
+
+Query:
+
+| Name | Required | Description |
+| --- | --- | --- |
+| keyword | true | 2자 이상 검색어. 본인은 결과에서 제외됩니다. |
+
+## Notifications
+
+### GET /notifications
+
+내 알림 목록과 읽지 않은 개수를 반환합니다. 최대 30건까지 최신순으로 조회합니다.
+
+Response:
+
+```json
+{
+  "items": [
+    {
+      "id": 21,
+      "type": "attendance_tagged",
+      "message": "야구팬님이 나를 직관 기록에 태그했어요. 마이페이지에서 수락 또는 거절을 선택해주세요.",
+      "attendanceRecordId": 5,
+      "actorUserId": 1,
+      "readAt": null,
+      "createdAt": "2026-05-20T11:23:00.000Z"
+    }
+  ],
+  "unreadCount": 1
+}
+```
+
+`type` 값:
+
+- `attendance_tagged`: 동행 태그를 받았을 때
+- `companion_accepted`: 호스트가 받는 동행 수락 결과
+- `companion_rejected`: 호스트가 받는 동행 거절 결과
+
+### PATCH /notifications/read
+
+내 모든 알림을 읽음 상태로 변경합니다.
 
 ## Stats
 

@@ -151,6 +151,19 @@ button:disabled {
 .account-actions .account-pill {
   background: var(--color-night-navy);
   color: var(--color-white);
+  gap: 8px;
+}
+
+.account-actions .account-pill span {
+  align-items: center;
+  background: var(--team-color);
+  border-radius: 999px;
+  display: inline-flex;
+  font-size: 0.72rem;
+  height: 20px;
+  justify-content: center;
+  min-width: 20px;
+  padding: 0 6px;
 }
 
 .site-footer {
@@ -341,6 +354,73 @@ button:disabled {
   border: 1px solid var(--team-color);
   color: var(--color-white);
   font-weight: 800;
+}
+
+.companion-picker {
+  display: grid;
+  gap: 10px;
+}
+
+.companion-picker > p {
+  color: var(--color-muted);
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+.companion-results {
+  border: 1px solid var(--color-line);
+  border-radius: 8px;
+  display: grid;
+  overflow: hidden;
+}
+
+.companion-results button {
+  align-items: center;
+  background: var(--color-white);
+  border: 0;
+  border-bottom: 1px solid var(--color-line);
+  color: var(--color-night-navy);
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+  min-height: 46px;
+  padding: 8px 12px;
+  text-align: left;
+}
+
+.companion-results button:last-child {
+  border-bottom: 0;
+}
+
+.companion-results span {
+  color: var(--color-muted);
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.companion-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.companion-chips button {
+  align-items: center;
+  background: var(--team-color-soft);
+  border: 1px solid var(--team-color);
+  border-radius: 999px;
+  color: var(--color-night-navy);
+  display: inline-flex;
+  font-size: 0.9rem;
+  font-weight: 900;
+  gap: 8px;
+  min-height: 36px;
+  padding: 0 12px;
+}
+
+.companion-chips span {
+  color: var(--color-muted);
+  font-size: 0.75rem;
 }
 
 .form-error {
@@ -1073,6 +1153,166 @@ button:disabled {
 .stats-split-panel strong {
   color: var(--color-night-navy);
   font-size: 1.5rem;
+}
+
+.notification-panel {
+  background: var(--color-white);
+  border: 1px solid var(--color-line);
+  border-radius: 8px;
+  display: grid;
+  gap: 16px;
+  margin-top: 16px;
+  padding: 22px;
+}
+
+.section-heading-row {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.section-heading-row h2 {
+  color: var(--color-night-navy);
+  margin: 0 0 8px;
+}
+
+.section-heading-row p,
+.empty-note {
+  color: var(--color-muted);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.section-heading-row button {
+  background: var(--team-color);
+  border: 1px solid var(--team-color);
+  border-radius: 6px;
+  color: var(--color-white);
+  font-weight: 900;
+  min-height: 38px;
+  padding: 0 12px;
+}
+
+.notification-list {
+  display: grid;
+  gap: 8px;
+}
+
+.notification-list div {
+  background: var(--color-paper);
+  border: 1px solid var(--color-line);
+  border-radius: 8px;
+  display: grid;
+  gap: 6px;
+  padding: 12px;
+}
+
+.notification-list div.unread {
+  background: var(--team-color-soft);
+  border-color: var(--team-color);
+}
+
+.notification-list p {
+  color: var(--color-night-navy);
+  font-weight: 900;
+  margin: 0;
+}
+
+.notification-list span,
+.notification-list a {
+  color: var(--color-muted);
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+
+.notification-actions {
+  display: flex !important;
+  flex-direction: row;
+  gap: 8px;
+  margin-top: 4px;
+  padding: 0 !important;
+}
+
+.notification-actions button {
+  background: var(--team-color);
+  border: 1px solid var(--team-color);
+  border-radius: 999px;
+  color: var(--color-white);
+  font-weight: 900;
+  min-height: 34px;
+  padding: 0 14px;
+}
+
+.notification-actions button.ghost {
+  background: var(--color-white);
+  border-color: var(--color-line);
+  color: var(--color-night-navy);
+}
+
+.companion-response-status {
+  color: var(--team-color);
+  font-size: 0.86rem !important;
+  font-weight: 800;
+  margin: 0;
+}
+
+.companion-chips .status-pending {
+  background: var(--color-paper);
+  border-color: var(--color-line);
+  color: var(--color-muted);
+}
+
+.companion-chips .status-rejected {
+  background: #fff0ed;
+  border-color: #f2b8ae;
+  color: var(--color-score-red);
+}
+
+.companion-status-panel {
+  display: grid;
+  gap: 8px;
+}
+
+.companion-status-panel > span {
+  color: var(--color-ink);
+  font-size: 0.92rem;
+  font-weight: 800;
+}
+
+.companion-status-panel .companion-chips span {
+  align-items: center;
+  background: var(--team-color-soft);
+  border: 1px solid var(--team-color);
+  border-radius: 999px;
+  color: var(--color-night-navy);
+  display: inline-flex;
+  font-size: 0.86rem;
+  font-weight: 800;
+  gap: 6px;
+  min-height: 32px;
+  padding: 0 12px;
+}
+
+.companion-status-panel .status-pending {
+  background: var(--color-paper);
+  border-color: var(--color-line);
+  color: var(--color-muted);
+}
+
+.companion-status-panel .status-rejected {
+  background: #fff0ed;
+  border-color: #f2b8ae;
+  color: var(--color-score-red);
+}
+
+.companion-status-panel em {
+  background: var(--color-white);
+  border-radius: 999px;
+  font-size: 0.74rem;
+  font-style: normal;
+  font-weight: 900;
+  padding: 2px 8px;
 }
 
 .team-preference-panel {

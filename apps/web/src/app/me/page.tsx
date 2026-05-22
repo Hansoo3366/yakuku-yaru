@@ -9,8 +9,14 @@ import { fetchMe } from '@/lib/auth-api';
 import { clearAccessToken, getAccessToken, type PublicUser } from '@/lib/auth';
 import {
   fetchAttendanceStats,
+  respondAttendanceCompanion,
   type AttendanceStats,
 } from '@/lib/attendance-api';
+import {
+  listNotifications,
+  markNotificationsRead,
+  type AppNotification,
+} from '@/lib/notification-api';
 import {
   listTeams,
   updateFavoriteTeam,
@@ -24,8 +30,16 @@ export default function MyPage() {
   const [user, setUser] = useState<PublicUser | null>(null);
   const [stats, setStats] = useState<AttendanceStats | null>(null);
   const [teams, setTeams] = useState<Team[]>([]);
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
   const [statusMessage, setStatusMessage] = useState('');
   const [isLoading, setIsLoading] = useState(true);
+  const [respondedRecords, setRespondedRecords] = useState<
+    Record<number, 'accepted' | 'rejected'>
+  >({});
+  const [respondingRecordId, setRespondingRecordId] = useState<number | null>(
+    null,
+  );
 
   useEffect(() => {
     const token = getAccessToken();
@@ -35,11 +49,18 @@ export default function MyPage() {
       return;
     }
 
-    Promise.all([fetchMe(token), fetchAttendanceStats(token), listTeams()])
-      .then(([meResponse, statsResponse, teamsResponse]) => {
+    Promise.all([
+      fetchMe(token),
+      fetchAttendanceStats(token),
+      listTeams(),
+      listNotifications(token),
+    ])
+      .then(([meResponse, statsResponse, teamsResponse, notificationResponse]) => {
         setUser(meResponse.user);
         setStats(statsResponse);
         setTeams(teamsResponse.items);
+        setNotifications(notificationResponse.items);
+        setUnreadCount(notificationResponse.unreadCount);
       })
       .catch(() => {
         clearAccessToken();
@@ -71,6 +92,46 @@ export default function MyPage() {
     const response = await updateFavoriteTeam(teamId, token);
     setUser(response.user);
     setStatusMessage('내 팀이 변경되었습니다.');
+  }
+
+  async function handleReadNotifications() {
+    const token = getAccessToken();
+
+    if (!token) {
+      router.replace('/login');
+      return;
+    }
+
+    await markNotificationsRead(token);
+    const response = await listNotifications(token);
+    setNotifications(response.items);
+    setUnreadCount(response.unreadCount);
+  }
+
+  async function handleCompanionResponse(
+    recordId: number,
+    status: 'accepted' | 'rejected',
+  ) {
+    const token = getAccessToken();
+
+    if (!token) {
+      router.replace('/login');
+      return;
+    }
+
+    setRespondingRecordId(recordId);
+
+    try {
+      await respondAttendanceCompanion(recordId, status, token);
+      setRespondedRecords((current) => ({ ...current, [recordId]: status }));
+      const response = await listNotifications(token);
+      setNotifications(response.items);
+      setUnreadCount(response.unreadCount);
+    } catch {
+      setStatusMessage('동행 태그 응답에 실패했어요. 잠시 후 다시 시도해주세요.');
+    } finally {
+      setRespondingRecordId(null);
+    }
   }
 
   return (
@@ -134,6 +195,88 @@ export default function MyPage() {
           <span>집관 승률</span>
           <strong>{stats.homeWinRate}%</strong>
         </div>
+      </section>
+
+      <section className="notification-panel">
+        <div className="section-heading-row">
+          <div>
+            <h2>알림</h2>
+            <p>동행 태그와 경기 알림 상태를 확인합니다.</p>
+          </div>
+          <button
+            disabled={!unreadCount}
+            onClick={handleReadNotifications}
+            type="button"
+          >
+            모두 읽음
+          </button>
+        </div>
+        {notifications.length ? (
+          <div className="notification-list">
+            {notifications.map((notification) => {
+              const recordId = notification.attendanceRecordId;
+              const respondedStatus = recordId
+                ? respondedRecords[recordId]
+                : undefined;
+              const showCompanionActions =
+                notification.type === 'attendance_tagged' && recordId !== null;
+
+              return (
+                <div
+                  className={notification.readAt ? '' : 'unread'}
+                  key={notification.id}
+                >
+                  <p>{notification.message}</p>
+                  <span>
+                    {new Date(notification.createdAt).toLocaleDateString(
+                      'ko-KR',
+                    )}
+                  </span>
+                  {showCompanionActions && recordId ? (
+                    respondedStatus ? (
+                      <p className="companion-response-status">
+                        {respondedStatus === 'accepted'
+                          ? '동행 태그를 수락했어요.'
+                          : '동행 태그를 거절했어요.'}
+                      </p>
+                    ) : (
+                      <div className="notification-actions">
+                        <button
+                          disabled={respondingRecordId === recordId}
+                          onClick={() =>
+                            handleCompanionResponse(recordId, 'accepted')
+                          }
+                          type="button"
+                        >
+                          수락
+                        </button>
+                        <button
+                          className="ghost"
+                          disabled={respondingRecordId === recordId}
+                          onClick={() =>
+                            handleCompanionResponse(recordId, 'rejected')
+                          }
+                          type="button"
+                        >
+                          거절
+                        </button>
+                      </div>
+                    )
+                  ) : null}
+                  {recordId && respondedStatus === 'accepted' ? (
+                    <Link href="/calendar">캘린더에서 보기</Link>
+                  ) : null}
+                  {recordId &&
+                  notification.type !== 'attendance_tagged' ? (
+                    <Link href="/calendar">캘린더에서 보기</Link>
+                  ) : null}
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <p className="empty-note">아직 받은 알림이 없습니다.</p>
+        )}
       </section>
 
       <section className="team-preference-panel">

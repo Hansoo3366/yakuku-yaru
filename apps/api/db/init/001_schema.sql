@@ -101,6 +101,47 @@ CREATE TABLE IF NOT EXISTS attendance_records (
     ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS attendance_companions (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  attendance_record_id BIGINT UNSIGNED NOT NULL,
+  user_id BIGINT UNSIGNED NOT NULL,
+  status VARCHAR(20) NOT NULL DEFAULT 'pending',
+  responded_at DATETIME NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_attendance_companions_record_user (attendance_record_id, user_id),
+  KEY idx_attendance_companions_user_id (user_id),
+  CONSTRAINT fk_attendance_companions_record
+    FOREIGN KEY (attendance_record_id) REFERENCES attendance_records(id)
+    ON DELETE CASCADE,
+  CONSTRAINT fk_attendance_companions_user
+    FOREIGN KEY (user_id) REFERENCES users(id)
+    ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS notifications (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  user_id BIGINT UNSIGNED NOT NULL,
+  actor_user_id BIGINT UNSIGNED NULL,
+  attendance_record_id BIGINT UNSIGNED NULL,
+  type VARCHAR(50) NOT NULL,
+  message VARCHAR(255) NOT NULL,
+  read_at DATETIME NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_notifications_user_read (user_id, read_at, created_at),
+  KEY idx_notifications_attendance_record_id (attendance_record_id),
+  CONSTRAINT fk_notifications_user
+    FOREIGN KEY (user_id) REFERENCES users(id)
+    ON DELETE CASCADE,
+  CONSTRAINT fk_notifications_actor_user
+    FOREIGN KEY (actor_user_id) REFERENCES users(id)
+    ON DELETE SET NULL,
+  CONSTRAINT fk_notifications_attendance_record
+    FOREIGN KEY (attendance_record_id) REFERENCES attendance_records(id)
+    ON DELETE CASCADE
+);
+
 CREATE TABLE IF NOT EXISTS game_reminders (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   user_id BIGINT UNSIGNED NOT NULL,

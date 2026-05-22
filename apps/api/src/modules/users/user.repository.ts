@@ -20,6 +20,13 @@ export type PublicUser = {
   emailVerifiedAt: Date | null;
 };
 
+export type UserSearchResult = {
+  id: number;
+  email: string;
+  nickname: string;
+  favoriteTeamId: number | null;
+};
+
 export function toPublicUser(user: UserRow): PublicUser {
   return {
     id: user.id,
@@ -92,4 +99,35 @@ export async function updateUserFavoriteTeam(userId: number, teamId: number) {
   );
 
   return findUserById(userId);
+}
+
+export async function searchUsers(input: {
+  keyword: string;
+  excludeUserId: number;
+  limit?: number;
+}) {
+  const keyword = `%${input.keyword}%`;
+  const [rows] = await db.query<
+    (RowDataPacket & {
+      id: number;
+      email: string;
+      nickname: string;
+      favorite_team_id: number | null;
+    })[]
+  >(
+    `SELECT id, email, nickname, favorite_team_id
+     FROM users
+     WHERE id <> ?
+       AND (nickname LIKE ? OR email LIKE ?)
+     ORDER BY nickname ASC
+     LIMIT ?`,
+    [input.excludeUserId, keyword, keyword, input.limit ?? 10],
+  );
+
+  return rows.map<UserSearchResult>((row) => ({
+    id: row.id,
+    email: row.email,
+    nickname: row.nickname,
+    favoriteTeamId: row.favorite_team_id,
+  }));
 }

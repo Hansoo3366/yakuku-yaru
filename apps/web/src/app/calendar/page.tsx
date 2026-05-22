@@ -344,8 +344,15 @@ export default function CalendarPage() {
                 }
               >
                 <span>{date.getDate()}</span>
-                {dayGames.map((game) => (
-                  <Link href={`/games/${game.id}`} key={game.id}>
+                {dayGames.map((game) => {
+                  const attendance = attendanceByGameId[game.id];
+                  const href =
+                    attendance?.viewerRelation === 'owner'
+                      ? `/attendance/${attendance.id}/edit`
+                      : `/games/${game.id}`;
+
+                  return (
+                  <Link href={href} key={game.id}>
                     <span className="calendar-team-logos" aria-hidden="true">
                       <img alt="" src={getTeamLogoSrc(game.awayTeam)} />
                       <img alt="" src={getTeamLogoSrc(game.homeTeam)} />
@@ -359,7 +366,10 @@ export default function CalendarPage() {
                     ) : null}
                     {attendanceByGameId[game.id] ? (
                       <em>
-                        {attendanceByGameId[game.id].watchType === 'home'
+                        {attendanceByGameId[game.id].viewerRelation ===
+                        'companion'
+                          ? '동행'
+                          : attendanceByGameId[game.id].watchType === 'home'
                           ? '집관'
                           : '직관'}
                       </em>
@@ -368,9 +378,17 @@ export default function CalendarPage() {
                       {game.awayTeam.shortName} @ {game.homeTeam.shortName}
                     </strong>
                   </Link>
-                ))}
+                  );
+                })}
                 {extraRecords.map((record) => (
-                  <Link href={`/attendance/${record.id}/edit`} key={record.id}>
+                  <Link
+                    href={
+                      record.viewerRelation === 'owner'
+                        ? `/attendance/${record.id}/edit`
+                        : `/games/${record.gameId}`
+                    }
+                    key={record.id}
+                  >
                     <span className="calendar-team-logos" aria-hidden="true">
                       <img alt="" src={getTeamLogoSrc(record.game.awayTeam)} />
                       <img alt="" src={getTeamLogoSrc(record.game.homeTeam)} />
@@ -382,7 +400,13 @@ export default function CalendarPage() {
                         src={getAssetUrl(record.photoUrl)}
                       />
                     ) : null}
-                    <em>{record.watchType === 'home' ? '집관' : '직관'}</em>
+                    <em>
+                      {record.viewerRelation === 'companion'
+                        ? '동행'
+                        : record.watchType === 'home'
+                          ? '집관'
+                          : '직관'}
+                    </em>
                     <strong>
                       {record.game.awayTeam.shortName} @{' '}
                       {record.game.homeTeam.shortName}

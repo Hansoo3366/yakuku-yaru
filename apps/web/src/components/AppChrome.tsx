@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import { fetchMe } from '@/lib/auth-api';
 import { clearAccessToken, getAccessToken, type PublicUser } from '@/lib/auth';
 import { listTeams, type Team } from '@/lib/baseball-api';
+import { listNotifications } from '@/lib/notification-api';
 
 const primaryLinks = [
   { href: '/calendar', label: '캘린더' },
@@ -22,6 +23,7 @@ export function AppHeader() {
   const router = useRouter();
   const [user, setUser] = useState<PublicUser | null>(null);
   const [teams, setTeams] = useState<Team[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
@@ -34,11 +36,12 @@ export function AppHeader() {
       return;
     }
 
-    Promise.all([fetchMe(token), listTeams()])
-      .then(([response, teamsResponse]) => {
+    Promise.all([fetchMe(token), listTeams(), listNotifications(token)])
+      .then(([response, teamsResponse, notificationsResponse]) => {
         if (isMounted) {
           setUser(response.user);
           setTeams(teamsResponse.items);
+          setUnreadCount(notificationsResponse.unreadCount);
         }
       })
       .catch(() => {
@@ -105,6 +108,7 @@ export function AppHeader() {
             <>
               <Link className="account-pill" href="/me">
                 {user.nickname}
+                {unreadCount ? <span>{unreadCount}</span> : null}
               </Link>
               <button type="button" onClick={handleLogout}>
                 로그아웃

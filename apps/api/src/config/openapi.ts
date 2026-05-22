@@ -13,10 +13,12 @@ export const openApiDocument = {
   ],
   tags: [
     { name: 'Auth' },
+    { name: 'Users' },
     { name: 'Posts' },
     { name: 'Comments' },
     { name: 'Baseball' },
     { name: 'Attendance' },
+    { name: 'Notifications' },
     { name: 'Reminders' },
     { name: 'System' },
   ],
@@ -293,6 +295,55 @@ export const openApiDocument = {
         },
       },
     },
+    '/users/search': {
+      get: {
+        tags: ['Users'],
+        summary: 'Search users by nickname or email',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'keyword', in: 'query', schema: { type: 'string' } },
+        ],
+        responses: {
+          '200': {
+            description: 'User search results',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/UserSearchResponse' },
+              },
+            },
+          },
+        },
+      },
+    },
+    '/notifications': {
+      get: {
+        tags: ['Notifications'],
+        summary: 'List my notifications',
+        security: [{ bearerAuth: [] }],
+        responses: {
+          '200': {
+            description: 'Notification list',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/NotificationListResponse' },
+              },
+            },
+          },
+        },
+      },
+    },
+    '/notifications/read': {
+      patch: {
+        tags: ['Notifications'],
+        summary: 'Mark my notifications as read',
+        security: [{ bearerAuth: [] }],
+        responses: {
+          '200': {
+            description: 'Notifications marked as read',
+          },
+        },
+      },
+    },
     '/games': {
       get: {
         tags: ['Baseball'],
@@ -446,6 +497,42 @@ export const openApiDocument = {
         },
       },
     },
+    '/attendance-records/{recordId}/companions/me': {
+      patch: {
+        tags: ['Attendance'],
+        summary: 'Respond to a companion tag (accept or reject)',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ $ref: '#/components/parameters/RecordId' }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                $ref: '#/components/schemas/CompanionResponseRequest',
+              },
+            },
+          },
+        },
+        responses: {
+          '200': {
+            description: 'Companion tag response saved',
+            content: {
+              'application/json': {
+                schema: {
+                  $ref: '#/components/schemas/CompanionResponseResult',
+                },
+              },
+            },
+          },
+          '400': {
+            description: 'Invalid status',
+          },
+          '404': {
+            description: 'Companion tag not found',
+          },
+        },
+      },
+    },
     '/attendance-records/{recordId}/photo': {
       post: {
         tags: ['Attendance'],
@@ -551,6 +638,24 @@ export const openApiDocument = {
           emailVerifiedAt: { type: 'string', nullable: true },
         },
       },
+      UserSearchItem: {
+        type: 'object',
+        properties: {
+          id: { type: 'integer' },
+          email: { type: 'string' },
+          nickname: { type: 'string' },
+          favoriteTeamId: { type: 'integer', nullable: true },
+        },
+      },
+      UserSearchResponse: {
+        type: 'object',
+        properties: {
+          items: {
+            type: 'array',
+            items: { $ref: '#/components/schemas/UserSearchItem' },
+          },
+        },
+      },
       AuthResponse: {
         type: 'object',
         properties: {
@@ -631,6 +736,38 @@ export const openApiDocument = {
           },
         },
       },
+      Notification: {
+        type: 'object',
+        properties: {
+          id: { type: 'integer' },
+          userId: { type: 'integer' },
+          actorUserId: { type: 'integer', nullable: true },
+          attendanceRecordId: { type: 'integer', nullable: true },
+          type: {
+            type: 'string',
+            enum: [
+              'attendance_tagged',
+              'companion_accepted',
+              'companion_rejected',
+            ],
+            description:
+              'attendance_tagged: 동행 태그 수신, companion_accepted/companion_rejected: 호스트가 받는 태그 응답 결과',
+          },
+          message: { type: 'string' },
+          readAt: { type: 'string', nullable: true },
+          createdAt: { type: 'string' },
+        },
+      },
+      NotificationListResponse: {
+        type: 'object',
+        properties: {
+          unreadCount: { type: 'integer' },
+          items: {
+            type: 'array',
+            items: { $ref: '#/components/schemas/Notification' },
+          },
+        },
+      },
       AttendanceWriteRequest: {
         type: 'object',
         required: ['memo', 'result'],
@@ -647,6 +784,45 @@ export const openApiDocument = {
           result: {
             type: 'string',
             enum: ['win', 'lose', 'draw'],
+          },
+          companionUserIds: {
+            type: 'array',
+            items: { type: 'integer' },
+          },
+        },
+      },
+      AttendanceCompanion: {
+        type: 'object',
+        properties: {
+          id: { type: 'integer' },
+          userId: { type: 'integer' },
+          nickname: { type: 'string' },
+          email: { type: 'string' },
+          status: {
+            type: 'string',
+            enum: ['pending', 'accepted', 'rejected'],
+          },
+          respondedAt: { type: 'string', nullable: true },
+          createdAt: { type: 'string' },
+        },
+      },
+      CompanionResponseRequest: {
+        type: 'object',
+        required: ['status'],
+        properties: {
+          status: {
+            type: 'string',
+            enum: ['accepted', 'rejected'],
+          },
+        },
+      },
+      CompanionResponseResult: {
+        type: 'object',
+        properties: {
+          companion: { $ref: '#/components/schemas/AttendanceCompanion' },
+          record: {
+            description: '응답 후의 직관 기록 (호스트 입장의 단건)',
+            nullable: true,
           },
         },
       },

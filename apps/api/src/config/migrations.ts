@@ -60,6 +60,69 @@ export async function runMigrations() {
   );
 
   await db.execute(
+    `CREATE TABLE IF NOT EXISTS attendance_companions (
+      id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+      attendance_record_id BIGINT UNSIGNED NOT NULL,
+      user_id BIGINT UNSIGNED NOT NULL,
+      status VARCHAR(20) NOT NULL DEFAULT 'pending',
+      responded_at DATETIME NULL,
+      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (id),
+      UNIQUE KEY uq_attendance_companions_record_user (attendance_record_id, user_id),
+      KEY idx_attendance_companions_user_id (user_id),
+      CONSTRAINT fk_attendance_companions_record
+        FOREIGN KEY (attendance_record_id) REFERENCES attendance_records(id)
+        ON DELETE CASCADE,
+      CONSTRAINT fk_attendance_companions_user
+        FOREIGN KEY (user_id) REFERENCES users(id)
+        ON DELETE CASCADE
+    )`,
+  );
+
+  const hasCompanionRespondedAt = await columnExists(
+    'attendance_companions',
+    'responded_at',
+  );
+
+  if (!hasCompanionRespondedAt) {
+    await db.execute(
+      `ALTER TABLE attendance_companions
+       ADD COLUMN responded_at DATETIME NULL AFTER status`,
+    );
+  }
+
+  await db.execute(
+    `UPDATE attendance_companions
+     SET status = 'pending'
+     WHERE status NOT IN ('pending', 'accepted', 'rejected')`,
+  );
+
+  await db.execute(
+    `CREATE TABLE IF NOT EXISTS notifications (
+      id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+      user_id BIGINT UNSIGNED NOT NULL,
+      actor_user_id BIGINT UNSIGNED NULL,
+      attendance_record_id BIGINT UNSIGNED NULL,
+      type VARCHAR(50) NOT NULL,
+      message VARCHAR(255) NOT NULL,
+      read_at DATETIME NULL,
+      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (id),
+      KEY idx_notifications_user_read (user_id, read_at, created_at),
+      KEY idx_notifications_attendance_record_id (attendance_record_id),
+      CONSTRAINT fk_notifications_user
+        FOREIGN KEY (user_id) REFERENCES users(id)
+        ON DELETE CASCADE,
+      CONSTRAINT fk_notifications_actor_user
+        FOREIGN KEY (actor_user_id) REFERENCES users(id)
+        ON DELETE SET NULL,
+      CONSTRAINT fk_notifications_attendance_record
+        FOREIGN KEY (attendance_record_id) REFERENCES attendance_records(id)
+        ON DELETE CASCADE
+    )`,
+  );
+
+  await db.execute(
     `INSERT INTO stadium_guides (stadium, food_summary, parking_summary, map_url)
      VALUES
        ('잠실야구장', '종합운동장역 주변 분식, 치킨, 맥주 포장 매장이 많습니다. 경기 전에는 새내역 방면 식당도 선택지가 좋습니다.', '종합운동장 부설 주차장은 경기일 혼잡이 심합니다. 대중교통 이용을 권장하고, 차량 이용 시 탄천 주차장과 주변 공영주차장을 함께 확인하세요.', 'https://map.naver.com/p/search/잠실야구장'),

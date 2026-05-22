@@ -14,7 +14,14 @@ import {
   updateAttendancePhoto,
   updateAttendanceRecord,
 } from './attendance.repository.js';
+import {
+  findCompanionForUser,
+  replaceAttendanceCompanions,
+  updateCompanionStatus,
+} from './companion.repository.js';
+import { createNotification } from '../notifications/notification.repository.js';
 import { upload } from './upload.js';
+import { findUserById } from '../users/user.repository.js';
 
 export const attendanceRouter = Router();
 
@@ -37,6 +44,41 @@ function assertOwner(record: { userId: number }, userId: number) {
 
 function normalizeWatchType(value: unknown) {
   return value === 'home' ? 'home' : 'stadium';
+}
+
+function normalizeCompanionUserIds(value: unknown) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .map((item) => Number(item))
+    .filter((item) => Number.isInteger(item) && item > 0);
+}
+
+async function saveCompanionsAndNotify(input: {
+  recordId: number;
+  ownerId: number;
+  ownerLabel: string;
+  companionUserIds: number[];
+}) {
+  const { newUserIds } = await replaceAttendanceCompanions({
+    recordId: input.recordId,
+    ownerId: input.ownerId,
+    companionUserIds: input.companionUserIds,
+  });
+
+  await Promise.all(
+    newUserIds.map((userId) =>
+      createNotification({
+        userId,
+        actorUserId: input.ownerId,
+        attendanceRecordId: input.recordId,
+        type: 'attendance_tagged',
+        message: `${input.ownerLabel}님이 나를 직관 기록에 태그했어요. 마이페이지에서 수락 또는 거절을 선택해주세요.`,
+      }),
+    ),
+  );
 }
 
 attendanceRouter.get('/', authenticate, async (req, res, next) => {
@@ -76,6 +118,7 @@ attendanceRouter.post('/', authenticate, async (req, res, next) => {
       myTeamScore?: number;
       opponentScore?: number;
       result?: string;
+      companionUserIds?: number[];
     };
     const userId = req.user?.id ?? 0;
 
@@ -109,8 +152,17 @@ attendanceRouter.post('/', authenticate, async (req, res, next) => {
       isScoreModified: true,
     });
 
+    if (record) {
+      await saveCompanionsAndNotify({
+        recordId: record.id,
+        ownerId: userId,
+        ownerLabel: record.ownerNickname,
+        companionUserIds: normalizeCompanionUserIds(req.body.companionUserIds),
+      });
+    }
+
     res.status(201).json({
-      record,
+      record: record ? await findAttendanceRecordById(record.id) : record,
     });
   } catch (error) {
     next(error);
@@ -149,6 +201,7 @@ attendanceRouter.patch('/:recordId', authenticate, async (req, res, next) => {
       memo?: string;
       watchType?: string;
       result?: string;
+      companionUserIds?: number[];
     };
     const updatedRecord = await updateAttendanceRecord({
       id: record.id,
@@ -160,8 +213,19 @@ attendanceRouter.patch('/:recordId', authenticate, async (req, res, next) => {
       isScoreModified: true,
     });
 
+    if (updatedRecord) {
+      await saveCompanionsAndNotify({
+        recordId: updatedRecord.id,
+        ownerId: record.userId,
+        ownerLabel: record.ownerNickname,
+        companionUserIds: normalizeCompanionUserIds(req.body.companionUserIds),
+      });
+    }
+
     res.json({
-      record: updatedRecord,
+      record: updatedRecord
+        ? await findAttendanceRecordById(updatedRecord.id)
+        : updatedRecord,
     });
   } catch (error) {
     next(error);
@@ -211,6 +275,86 @@ attendanceRouter.post(
 
       res.json({
         record: updatedRecord,
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+attendanceRouter.patch(
+  '/:recordId/companions/me',
+  authenticate,
+  async (req, res, next) => {
+    try {
+      const recordId = Number(req.params.recordId);
+      const userId = req.user?.id ?? 0;
+      const { status } = req.body as { status?: unknown };
+
+      if (status !== 'accepted' && status !== 'rejected') {
+        throw new HttpError(
+          400,
+          'INVALID_INPUT',
+          '수락 또는 거절 중 하나를 선택해주세요.',
+        );
+      }
+
+      const companion = await findCompanionForUser({ recordId, userId });
+
+      if (!companion) {
+        throw new HttpError(
+          404,
+          'COMPANION_NOT_FOUND',
+          '본인이 태그된 동행 기록만 응답할 수 있습니다.',
+        );
+      }
+
+      if (companion.status === status) {
+        const record = await findAttendanceRecordById(recordId);
+        res.json({
+          companion: { ...companion },
+          record,
+        });
+        return;
+      }
+
+      const updated = await updateCompanionStatus({
+        recordId,
+        userId,
+        status,
+      });
+
+      if (!updated) {
+        throw new HttpError(
+          404,
+          'COMPANION_NOT_FOUND',
+          '본인이 태그된 동행 기록만 응답할 수 있습니다.',
+        );
+      }
+
+      const record = await findAttendanceRecordById(recordId);
+
+      if (record) {
+        const responder = await findUserById(userId);
+        const responderLabel = responder?.nickname ?? '동행자';
+        const message =
+          status === 'accepted'
+            ? `${responderLabel}님이 동행 태그를 수락했어요.`
+            : `${responderLabel}님이 동행 태그를 거절했어요.`;
+
+        await createNotification({
+          userId: record.userId,
+          actorUserId: userId,
+          attendanceRecordId: recordId,
+          type:
+            status === 'accepted' ? 'companion_accepted' : 'companion_rejected',
+          message,
+        });
+      }
+
+      res.json({
+        companion: { ...companion, status, respondedAt: new Date() },
+        record,
       });
     } catch (error) {
       next(error);
