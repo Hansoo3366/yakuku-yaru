@@ -9,8 +9,10 @@
     "start": "node dist/server.js",
     "lint": "eslint \"src/**/*.ts\"",
     "typecheck": "tsc --noEmit",
-    "sync:kbo-schedule": "tsx src/scripts/sync-kbo-schedule.ts",
-    "db:reset-users": "tsx src/scripts/reset-users-and-seed-admin.ts"
+    "sync:kbo-schedule": "node dist/scripts/sync-kbo-schedule.js",
+    "db:reset-users": "node dist/scripts/reset-users-and-seed-admin.js",
+    "sync:kbo-schedule:dev": "tsx src/scripts/sync-kbo-schedule.ts",
+    "db:reset-users:dev": "tsx src/scripts/reset-users-and-seed-admin.ts"
   },
   "dependencies": {
     "@types/multer": "^2.1.0",

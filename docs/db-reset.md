@@ -44,34 +44,35 @@ docker compose up -d
 cd apps/api && npm run db:reset-users
 ```
 
-## 라이브 (production)
+## 라이브 (production · GCP SSH)
 
 **주의: 되돌릴 수 없습니다. 백업 후 실행하세요.**
 
+GCP SSH에서는 **호스트에서 `npm run` 하지 마세요.** 루트 `package.json`에 `db:reset-users`가 없어 `Missing script`가 납니다. **반드시 API 컨테이너 안**에서 실행합니다.
+
 ```bash
-cd /path/to/yakuku-yaru   # 서버의 DEPLOY_PATH
+cd ~/yakuku-yaru   # 서버 DEPLOY_PATH
 
-# 1) 사용자 관련 데이터만 비우기
-docker compose -f docker-compose.prod.yml --env-file .env.production exec -T mysql \
-  mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE" \
-  < apps/api/db/scripts/clear-user-data.sql
+# 최신 코드·이미지 반영 (dist 스크립트 포함)
+git pull
+docker compose -f docker-compose.prod.yml --env-file .env.production up -d --build api
 
-# 2) 관리자 1계정 생성 (비밀번호는 반드시 직접 지정)
-docker compose -f docker-compose.prod.yml --env-file .env.production exec -T api \
-  env ADMIN_EMAIL='admin@yakuku-yaru.today' \
-      ADMIN_PASSWORD='여기에-강한-비밀번호' \
-      ADMIN_NICKNAME='관리자' \
-  npm run db:reset-users
+# 사용자 데이터 비우기 + 관리자 1명 생성
+docker compose -f docker-compose.prod.yml --env-file .env.production exec -T \
+  -e ADMIN_EMAIL='admin@yakuku-yaru.today' \
+  -e ADMIN_PASSWORD='여기에-강한-비밀번호' \
+  -e ADMIN_NICKNAME='관리자' \
+  api sh -c 'cd apps/api && npm run db:reset-users'
 ```
 
-`db:reset-users`는 1번 truncate를 다시 하므로, **라이브에서는 아래 한 줄만** 써도 됩니다.
+`dist/scripts/`가 없으면(옛 이미지) 위 `node`로 직접 실행:
 
 ```bash
-docker compose -f docker-compose.prod.yml --env-file .env.production exec -T api \
-  env ADMIN_EMAIL='admin@yakuku-yaru.today' \
-      ADMIN_PASSWORD='여기에-강한-비밀번호' \
-      ADMIN_NICKNAME='관리자' \
-  npm run db:reset-users
+docker compose -f docker-compose.prod.yml --env-file .env.production exec -T \
+  -e ADMIN_EMAIL='admin@yakuku-yaru.today' \
+  -e ADMIN_PASSWORD='여기에-강한-비밀번호' \
+  -e ADMIN_NICKNAME='관리자' \
+  api node apps/api/dist/scripts/reset-users-and-seed-admin.js
 ```
 
 경기 일정까지 전부 지우고 시드부터 다시 (극단적):

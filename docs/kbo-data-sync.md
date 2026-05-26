@@ -57,11 +57,12 @@ npm run sync:kbo-schedule -- --mode=today
 npm run sync:kbo-schedule -- --year=2026 --month=5
 ```
 
-운영 Docker:
+운영 Docker (GCP SSH, API 컨테이너 안):
 
 ```bash
-docker compose --env-file .env.production -f docker-compose.prod.yml exec -T api \
-  npm run sync:kbo-schedule -- --mode=today
+cd ~/yakuku-yaru
+docker compose -f docker-compose.prod.yml --env-file .env.production exec -T api \
+  sh -c 'cd apps/api && npm run sync:kbo-schedule -- --mode=season'
 ```
 
 ## 파싱·DB
