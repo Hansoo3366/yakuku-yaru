@@ -16,6 +16,7 @@ import {
   listAttendanceRecords,
   type AttendanceRecord,
 } from '@/lib/attendance-api';
+import { CalendarAgendaView } from '@/components/CalendarAgendaView';
 import { CalendarEventCard } from '@/components/CalendarEventCard';
 import { CalendarOutcomeLegend } from '@/components/CalendarOutcomeLegend';
 import { EmptyState } from '@/components/EmptyState';
@@ -31,6 +32,7 @@ import {
   getWeekStart,
   isSameDay,
 } from '@/lib/calendar-range';
+import { useMediaQuery } from '@/lib/use-media-query';
 
 const initialAnchor = new Date(2026, 4, 1);
 const weekdayLabels = ['일', '월', '화', '수', '목', '금', '토'];
@@ -66,6 +68,7 @@ export default function CalendarPage() {
   >('all');
   const [recordsOnly, setRecordsOnly] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const isMobile = useMediaQuery('(max-width: 720px)');
 
   const monthStart = useMemo(() => getMonthStart(anchorDate), [anchorDate]);
   const weekStart = useMemo(() => getWeekStart(anchorDate), [anchorDate]);
@@ -258,7 +261,7 @@ export default function CalendarPage() {
   const periodLabel = viewMode === 'month' ? '이번 달' : '이번 주';
 
   return (
-    <main className="app-shell">
+    <main className="app-shell app-shell--calendar with-bottom-nav">
       <header className="app-page-header">
         <span className="eyebrow">Calendar</span>
         <h1>
@@ -310,6 +313,7 @@ export default function CalendarPage() {
       </section>
 
       <section className="calendar-filter-bar" aria-label="캘린더 필터">
+        <div className="calendar-filter-groups">
         <div className="filter-group">
           <span className="filter-group-label">보기</span>
           <button
@@ -371,13 +375,25 @@ export default function CalendarPage() {
           />
           기록 있는 날만
         </label>
+        </div>
         {user?.favoriteTeamId ? <CalendarOutcomeLegend /> : null}
       </section>
 
       {isLoading ? (
         <div className="card">
-          <Skeleton height={viewMode === 'week' ? 520 : 420} radius={10} />
+          <Skeleton height={isMobile ? 360 : viewMode === 'week' ? 520 : 420} radius={10} />
         </div>
+      ) : isMobile ? (
+        <CalendarAgendaView
+          attendanceByDate={attendanceByDate}
+          attendanceByGameId={attendanceByGameId}
+          days={days}
+          favoriteTeamId={user?.favoriteTeamId}
+          gamesByDate={gamesByDate}
+          recordsOnly={recordsOnly}
+          referenceMonth={viewMode === 'month' ? monthStart : undefined}
+          showOutsideDays={viewMode === 'week'}
+        />
       ) : (
         <section
           className={`calendar-card${viewMode === 'week' ? ' calendar-card--week' : ''}`}
