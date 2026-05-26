@@ -109,9 +109,9 @@ export default function GameDetailPage() {
           {attendanceRecord ? (
             <Link
               className="btn btn-primary btn-lg"
-              href={`/attendance/${attendanceRecord.id}/edit`}
+              href={`/attendance/${attendanceRecord.id}`}
             >
-              직관 기록 수정
+              직관 기록 보기
             </Link>
           ) : (
             <Link

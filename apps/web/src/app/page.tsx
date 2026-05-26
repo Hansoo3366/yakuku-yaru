@@ -29,6 +29,19 @@ import {
   getGameStatusLabel,
   getGameStatusTone,
 } from '@/lib/game-status';
+import { resolveAttendanceOutcome } from '@/lib/attendance-score';
+
+function formatAttendanceResultLabel(
+  record: AttendanceRecord,
+  favoriteTeamId: number | null | undefined,
+) {
+  const outcome = resolveAttendanceOutcome(record, favoriteTeamId);
+
+  if (outcome === 'win') return '승';
+  if (outcome === 'lose') return '패';
+  if (outcome === 'draw') return '무';
+  return '결과 미입력';
+}
 
 const features = [
   {
@@ -43,8 +56,8 @@ const features = [
   },
   {
     icon: '★',
-    title: '승리요정 타이틀',
-    description: '직관 승률 50% 이상이면 마이페이지에 타이틀이 뜹니다.',
+    title: '승리요정 · 패배요정',
+    description: '승률에 따라 마이페이지에 승리요정 또는 패배요정 타이틀이 붙어요.',
   },
 ];
 
@@ -327,7 +340,7 @@ export default function HomePage() {
                   <p style={{ color: 'rgba(255,255,255,0.78)', fontSize: 'var(--text-sm)', marginTop: 6 }}>
                     {stats.title
                       ? `${stats.title} 타이틀 보유 중`
-                      : '50%까지 조금만 더 응원해보세요'}
+                      : '직관 기록을 남기면 타이틀이 열려요'}
                   </p>
                 </>
               ) : (
@@ -382,13 +395,10 @@ export default function HomePage() {
                       </span>
                       <span>
                         {record.watchType === 'home' ? '집관' : '직관'} ·{' '}
-                        {record.result === 'win'
-                          ? '승'
-                          : record.result === 'lose'
-                            ? '패'
-                            : record.result === 'draw'
-                              ? '무'
-                              : '결과 미입력'}
+                        {formatAttendanceResultLabel(
+                          record,
+                          favoriteTeam?.id,
+                        )}
                       </span>
                     </div>
                     {record.photoUrl ? (

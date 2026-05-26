@@ -1,37 +1,11 @@
 import type { AttendanceRecord } from '@/lib/attendance-api';
+import { resolveAttendanceOutcome } from '@/lib/attendance-score';
 import { getFavoriteTeamGameOutcome, type GameOutcome } from '@/lib/game-outcome';
-
-function getEffectiveAttendanceResult(
-  record: AttendanceRecord,
-  favoriteTeamId: number | null | undefined,
-): 'win' | 'lose' | 'draw' | null {
-  if (isDecidedAttendanceResult(record.result)) {
-    return record.result;
-  }
-
-  if (!favoriteTeamId) {
-    return null;
-  }
-
-  const outcome = getFavoriteTeamGameOutcome(
-    record.game,
-    favoriteTeamId,
-    record.result,
-  );
-
-  return isDecidedTeamOutcome(outcome) ? outcome : null;
-}
 
 export type WinRateSnapshot = {
   rate: number | null;
   decidedCount: number;
 };
-
-function isDecidedAttendanceResult(
-  result: string | null,
-): result is 'win' | 'lose' | 'draw' {
-  return result === 'win' || result === 'lose' || result === 'draw';
-}
 
 function isDecidedTeamOutcome(
   outcome: GameOutcome,
@@ -61,7 +35,7 @@ function getAttendanceWinRateByWatchType(
       record.viewerRelation === 'owner' && record.watchType === watchType,
   );
   const decided = filtered
-    .map((record) => getEffectiveAttendanceResult(record, favoriteTeamId))
+    .map((record) => resolveAttendanceOutcome(record, favoriteTeamId))
     .filter((result): result is 'win' | 'lose' | 'draw' => result !== null);
 
   if (!decided.length) {

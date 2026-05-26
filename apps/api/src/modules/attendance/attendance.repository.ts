@@ -1,5 +1,10 @@
 import type { ResultSetHeader, RowDataPacket } from 'mysql2';
 import { db } from '../../config/database.js';
+import { findUserById } from '../users/user.repository.js';
+import {
+  resolveAttendanceOutcome,
+  resolveAttendanceTitle,
+} from './attendance-score.js';
 import {
   listCompanionsByRecordIds,
   type AttendanceCompanion,
@@ -327,42 +332,83 @@ export async function deleteAttendanceRecord(id: number) {
   );
 }
 
-export async function getAttendanceStats(userId: number) {
-  const [rows] = await db.query<
-    (RowDataPacket & {
-      total_count: number;
-      win_count: number;
-      lose_count: number;
-      draw_count: number;
-    })[]
-  >(
-    `SELECT
-       COUNT(*) AS total_count,
-       SUM(CASE WHEN watch_type = 'stadium' THEN 1 ELSE 0 END) AS stadium_count,
-       SUM(CASE WHEN watch_type = 'home' THEN 1 ELSE 0 END) AS home_count,
-       SUM(CASE WHEN result = 'win' THEN 1 ELSE 0 END) AS win_count,
-       SUM(CASE WHEN result = 'lose' THEN 1 ELSE 0 END) AS lose_count,
-       SUM(CASE WHEN result = 'draw' THEN 1 ELSE 0 END) AS draw_count,
-       SUM(CASE WHEN watch_type = 'stadium' AND result = 'win' THEN 1 ELSE 0 END) AS stadium_win_count,
-       SUM(CASE WHEN watch_type = 'home' AND result = 'win' THEN 1 ELSE 0 END) AS home_win_count
-     FROM attendance_records
-     WHERE user_id = ?`,
+async function listOwnerAttendanceRecordsForStats(userId: number) {
+  const [rows] = await db.query<AttendanceRecordRow[]>(
+    `${attendanceSelectSql()}
+     WHERE ar.user_id = ?
+     ORDER BY g.game_date ASC`,
     [userId],
   );
-  const stats = rows[0] ?? {
-    total_count: 0,
-    win_count: 0,
-    lose_count: 0,
-    draw_count: 0,
-  };
-  const totalCount = Number(stats.total_count);
-  const stadiumCount = Number(stats.stadium_count);
-  const homeCount = Number(stats.home_count);
-  const winCount = Number(stats.win_count);
-  const loseCount = Number(stats.lose_count);
-  const drawCount = Number(stats.draw_count);
-  const stadiumWinCount = Number(stats.stadium_win_count);
-  const homeWinCount = Number(stats.home_win_count);
+
+  return rows.map((row) => toAttendanceRecord(row));
+}
+
+async function reconcileAttendanceResultsForUser(
+  userId: number,
+  favoriteTeamId: number | null,
+) {
+  const records = await listOwnerAttendanceRecordsForStats(userId);
+
+  for (const record of records) {
+    const outcome = resolveAttendanceOutcome(record, favoriteTeamId);
+
+    if (!outcome || outcome === record.result) {
+      continue;
+    }
+
+    await db.execute(
+      `UPDATE attendance_records
+       SET result = ?
+       WHERE id = ?`,
+      [outcome, record.id],
+    );
+    record.result = outcome;
+  }
+}
+
+export async function getAttendanceStats(userId: number) {
+  const user = await findUserById(userId);
+  const favoriteTeamId = user?.favoriteTeamId ?? null;
+
+  await reconcileAttendanceResultsForUser(userId, favoriteTeamId);
+
+  const records = await listOwnerAttendanceRecordsForStats(userId);
+  let stadiumCount = 0;
+  let homeCount = 0;
+  let winCount = 0;
+  let loseCount = 0;
+  let drawCount = 0;
+  let stadiumWinCount = 0;
+  let homeWinCount = 0;
+
+  for (const record of records) {
+    if (record.watchType === 'stadium') {
+      stadiumCount += 1;
+    } else if (record.watchType === 'home') {
+      homeCount += 1;
+    }
+
+    const outcome = resolveAttendanceOutcome(record, favoriteTeamId);
+
+    if (!outcome) {
+      continue;
+    }
+
+    if (outcome === 'win') {
+      winCount += 1;
+      if (record.watchType === 'stadium') {
+        stadiumWinCount += 1;
+      } else if (record.watchType === 'home') {
+        homeWinCount += 1;
+      }
+    } else if (outcome === 'lose') {
+      loseCount += 1;
+    } else {
+      drawCount += 1;
+    }
+  }
+
+  const totalCount = records.length;
   const winRate = totalCount ? Math.round((winCount / totalCount) * 1000) / 10 : 0;
   const stadiumWinRate = stadiumCount
     ? Math.round((stadiumWinCount / stadiumCount) * 1000) / 10
@@ -381,6 +427,6 @@ export async function getAttendanceStats(userId: number) {
     winRate,
     stadiumWinRate,
     homeWinRate,
-    title: totalCount > 0 && winRate >= 50 ? '승리요정' : null,
+    title: resolveAttendanceTitle(totalCount, winRate),
   };
 }

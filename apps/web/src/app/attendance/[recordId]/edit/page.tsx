@@ -24,6 +24,7 @@ import {
 } from '@/components/CompanionPicker';
 import { Skeleton } from '@/components/Skeleton';
 import {
+  inferResultFromScores,
   resolveAttendanceScoresFromGame,
   type AttendanceResult,
 } from '@/lib/attendance-score';
@@ -101,6 +102,23 @@ export default function EditAttendancePage() {
 
     return () => URL.revokeObjectURL(objectUrl);
   }, [photo]);
+
+  useEffect(() => {
+    if (scoreLocked || resultManuallySet) {
+      return;
+    }
+
+    const my =
+      myTeamScore === '' ? Number.NaN : Number(myTeamScore);
+    const opp =
+      opponentScore === '' ? Number.NaN : Number(opponentScore);
+
+    if (!Number.isFinite(my) || !Number.isFinite(opp)) {
+      return;
+    }
+
+    setResult(inferResultFromScores(my, opp));
+  }, [myTeamScore, opponentScore, scoreLocked, resultManuallySet]);
 
   function pickResult(value: AttendanceResult) {
     setResult(value);

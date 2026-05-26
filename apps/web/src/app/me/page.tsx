@@ -268,13 +268,18 @@ export default function MyPage() {
             <strong>{stats.winRate}%</strong>
           </div>
           {stats.title ? (
-            <span className="profile-title-pill">{stats.title}</span>
+            <span
+              className="profile-title-pill"
+              data-kind={stats.title === '패배요정' ? 'lose' : 'win'}
+            >
+              {stats.title}
+            </span>
           ) : (
             <span
               className="muted"
               style={{ fontSize: 'var(--text-xs)', justifySelf: 'end' }}
             >
-              승률 50%부터 타이틀이 열려요
+              기록을 남기면 승리요정·패배요정이 붙어요
             </span>
           )}
         </div>

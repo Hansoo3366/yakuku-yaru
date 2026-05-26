@@ -250,20 +250,15 @@ export default function CalendarPage() {
     };
   }, [yearRangeKey, user?.favoriteTeamId]);
 
-  const ownAttendanceRecords = useMemo(
-    () => attendanceRecords.filter((record) => record.viewerRelation === 'owner'),
-    [attendanceRecords],
-  );
-
   const filteredAttendanceRecords = useMemo(() => {
     if (watchTypeFilter === 'all') {
-      return ownAttendanceRecords;
+      return attendanceRecords;
     }
 
-    return ownAttendanceRecords.filter(
+    return attendanceRecords.filter(
       (record) => record.watchType === watchTypeFilter,
     );
-  }, [ownAttendanceRecords, watchTypeFilter]);
+  }, [attendanceRecords, watchTypeFilter]);
 
   const scheduleScopedAttendanceRecords = useMemo(
     () =>
@@ -290,7 +285,7 @@ export default function CalendarPage() {
       byId.set(record.id, record);
     }
 
-    for (const record of ownAttendanceRecords) {
+    for (const record of attendanceRecords) {
       const recordYear = new Date(record.game.gameDate).getFullYear();
 
       if (recordYear === statsYear) {
@@ -299,7 +294,7 @@ export default function CalendarPage() {
     }
 
     return [...byId.values()];
-  }, [yearAttendanceRecords, ownAttendanceRecords, statsYear]);
+  }, [yearAttendanceRecords, attendanceRecords, statsYear]);
 
   const yearStadiumWinRate = useMemo(
     () =>

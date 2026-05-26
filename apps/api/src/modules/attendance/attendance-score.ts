@@ -26,6 +26,10 @@ export function inferResultFromScores(
   return 'draw';
 }
 
+function normalizeTeamId(value: number) {
+  return Number(value);
+}
+
 export function resolveAttendanceScoresFromGame(
   game: GameForAttendanceScore,
   favoriteTeamId: number | null,
@@ -40,8 +44,11 @@ export function resolveAttendanceScoresFromGame(
 
   const homeScore = game.homeScore as number;
   const awayScore = game.awayScore as number;
+  const favoriteId = normalizeTeamId(favoriteTeamId);
+  const homeTeamId = normalizeTeamId(game.homeTeam.id);
+  const awayTeamId = normalizeTeamId(game.awayTeam.id);
 
-  if (favoriteTeamId === game.homeTeam.id) {
+  if (favoriteId === homeTeamId) {
     return {
       myTeamScore: homeScore,
       opponentScore: awayScore,
@@ -49,7 +56,7 @@ export function resolveAttendanceScoresFromGame(
     };
   }
 
-  if (favoriteTeamId === game.awayTeam.id) {
+  if (favoriteId === awayTeamId) {
     return {
       myTeamScore: awayScore,
       opponentScore: homeScore,
@@ -58,6 +65,54 @@ export function resolveAttendanceScoresFromGame(
   }
 
   return null;
+}
+
+export type AttendanceRecordForOutcome = {
+  myTeamScore: number | null;
+  opponentScore: number | null;
+  result: string | null;
+  game: GameForAttendanceScore;
+};
+
+/** 공식·입력 스코어를 우선해 승패를 맞춥니다 (저장된 result 단독 신뢰 X). */
+export function resolveAttendanceOutcome(
+  record: AttendanceRecordForOutcome,
+  favoriteTeamId: number | null,
+): AttendanceResult | null {
+  const fromGame = resolveAttendanceScoresFromGame(record.game, favoriteTeamId);
+
+  if (fromGame) {
+    return fromGame.result;
+  }
+
+  if (record.myTeamScore !== null && record.opponentScore !== null) {
+    return inferResultFromScores(record.myTeamScore, record.opponentScore);
+  }
+
+  if (
+    record.result === 'win' ||
+    record.result === 'lose' ||
+    record.result === 'draw'
+  ) {
+    return record.result;
+  }
+
+  return null;
+}
+
+export function resolveAttendanceTitle(
+  totalCount: number,
+  winRate: number,
+): string | null {
+  if (totalCount <= 0) {
+    return null;
+  }
+
+  if (winRate > 50) {
+    return '승리요정';
+  }
+
+  return '패배요정';
 }
 
 export function buildAttendanceScoreFields(input: {
@@ -85,11 +140,15 @@ export function buildAttendanceScoreFields(input: {
   const myTeamScore = input.normalizeNumber(input.body.myTeamScore);
   const opponentScore = input.normalizeNumber(input.body.opponentScore);
   const hasManualScore = myTeamScore !== null || opponentScore !== null;
+  const result =
+    myTeamScore !== null && opponentScore !== null
+      ? inferResultFromScores(myTeamScore, opponentScore)
+      : input.body.result || null;
 
   return {
     myTeamScore,
     opponentScore,
-    result: input.body.result || null,
+    result,
     isScoreModified: input.body.isScoreModified === true || hasManualScore,
   };
 }

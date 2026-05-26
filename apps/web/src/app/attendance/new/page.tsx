@@ -15,6 +15,7 @@ import {
 } from '@/lib/attendance-api';
 import { fetchGame } from '@/lib/baseball-api';
 import {
+  inferResultFromScores,
   resolveAttendanceScoresFromGame,
   type AttendanceResult,
 } from '@/lib/attendance-score';
@@ -84,6 +85,23 @@ function NewAttendanceForm() {
 
     return () => URL.revokeObjectURL(objectUrl);
   }, [photo]);
+
+  useEffect(() => {
+    if (scoreLocked || resultManuallySet) {
+      return;
+    }
+
+    const my =
+      myTeamScore === '' ? Number.NaN : Number(myTeamScore);
+    const opp =
+      opponentScore === '' ? Number.NaN : Number(opponentScore);
+
+    if (!Number.isFinite(my) || !Number.isFinite(opp)) {
+      return;
+    }
+
+    setResult(inferResultFromScores(my, opp));
+  }, [myTeamScore, opponentScore, scoreLocked, resultManuallySet]);
 
   function pickResult(value: AttendanceResult) {
     setResult(value);

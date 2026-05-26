@@ -4,6 +4,7 @@ import Link from 'next/link';
 import type { AttendanceRecord } from '@/lib/attendance-api';
 import { getAssetUrl } from '@/lib/api';
 import { formatGameTime } from '@/lib/calendar-range';
+import { resolveAttendanceOutcome } from '@/lib/attendance-score';
 import {
   getFavoriteTeamGameOutcome,
   getGameOutcomeLabel,
@@ -53,11 +54,10 @@ export function CalendarEventCard({
   attendance,
   dense = false,
 }: Props) {
-  const outcome: GameOutcome = getFavoriteTeamGameOutcome(
-    game,
-    favoriteTeamId ?? null,
-    attendance?.result,
-  );
+  const outcome: GameOutcome = attendance
+    ? (resolveAttendanceOutcome(attendance, favoriteTeamId) ??
+      getFavoriteTeamGameOutcome(game, favoriteTeamId ?? null, attendance.result))
+    : getFavoriteTeamGameOutcome(game, favoriteTeamId ?? null, null);
   const outcomeLabel = getGameOutcomeLabel(outcome);
   const matchupLabel = `${game.awayTeam.shortName} vs ${game.homeTeam.shortName}`;
   const timeLabel = formatGameTime(game.gameDate);

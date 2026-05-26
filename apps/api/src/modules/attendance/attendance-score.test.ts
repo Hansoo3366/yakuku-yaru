@@ -3,7 +3,9 @@ import {
   buildAttendanceScoreFields,
   gameHasOfficialScores,
   inferResultFromScores,
+  resolveAttendanceOutcome,
   resolveAttendanceScoresFromGame,
+  resolveAttendanceTitle,
 } from './attendance-score.js';
 import type { Game } from '../games/game.repository.js';
 
@@ -56,5 +58,31 @@ const manual = buildAttendanceScoreFields({
 });
 assert.equal(manual.myTeamScore, 2);
 assert.equal(manual.isScoreModified, true);
+
+const wrongResultBody = buildAttendanceScoreFields({
+  game: { ...baseGame, homeScore: null, awayScore: null },
+  favoriteTeamId: 1,
+  body: { myTeamScore: 1, opponentScore: 4, result: 'win' },
+  normalizeNumber: (v) => (v === '' || v == null ? null : Number(v)),
+});
+assert.equal(wrongResultBody.result, 'lose');
+
+assert.equal(
+  resolveAttendanceOutcome(
+    {
+      myTeamScore: 5,
+      opponentScore: 3,
+      result: 'lose',
+      game: baseGame,
+    },
+    1,
+  ),
+  'win',
+);
+
+assert.equal(resolveAttendanceTitle(0, 80), null);
+assert.equal(resolveAttendanceTitle(5, 60), '승리요정');
+assert.equal(resolveAttendanceTitle(5, 50), '패배요정');
+assert.equal(resolveAttendanceTitle(5, 20), '패배요정');
 
 console.log('attendance-score.test.ts: ok');

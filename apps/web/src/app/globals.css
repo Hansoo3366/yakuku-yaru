@@ -3224,6 +3224,11 @@ img {
   text-transform: uppercase;
 }
 
+.profile-title-pill[data-kind='lose'] {
+  background: color-mix(in srgb, var(--color-lose) 22%, var(--color-white));
+  color: var(--color-night-navy);
+}
+
 .stat-grid {
   display: grid;
   gap: var(--space-2);
