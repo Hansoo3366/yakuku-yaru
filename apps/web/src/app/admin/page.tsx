@@ -6,6 +6,7 @@ import {
   createAdminGame,
   deleteAdminComment,
   deleteAdminPost,
+  deleteAdminUser,
   fetchAdminSummary,
   listAdminComments,
   listAdminGames,
@@ -68,6 +69,7 @@ export default function AdminPage() {
   const [teams, setTeams] = useState<Team[]>([]);
   const [keyword, setKeyword] = useState('');
   const [message, setMessage] = useState('');
+  const [currentUserId, setCurrentUserId] = useState<number | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [editingGameId, setEditingGameId] = useState<number | null>(null);
@@ -105,6 +107,7 @@ export default function AdminPage() {
           return;
         }
         setIsAdmin(true);
+        setCurrentUserId(me.user.id);
         setTeams(teamResponse.items);
         return loadAll('');
       })
@@ -233,6 +236,23 @@ export default function AdminPage() {
                   <option value="user">user</option>
                   <option value="admin">admin</option>
                 </select>
+                <button
+                  className="btn btn-ghost btn-sm"
+                  disabled={user.id === currentUserId}
+                  onClick={async () => {
+                    if (!token || user.id === currentUserId) return;
+                    const ok = window.confirm(
+                      `${user.nickname} 사용자를 삭제할까요? 게시글, 댓글, 직관 기록도 함께 삭제될 수 있어요.`,
+                    );
+                    if (!ok) return;
+                    await deleteAdminUser(user.id, token);
+                    setMessage('사용자가 삭제되었습니다.');
+                    await loadAll();
+                  }}
+                  type="button"
+                >
+                  삭제
+                </button>
               </div>
             ))}
           </div>

@@ -54,6 +54,14 @@ export async function updateUserRole(userId: number, role: string) {
   );
 }
 
+export async function deleteAdminUser(userId: number) {
+  await db.execute(
+    `DELETE FROM users
+     WHERE id = ?`,
+    [userId],
+  );
+}
+
 export async function listAdminPosts(keyword?: string) {
   const q = keyword ? `%${keyword}%` : null;
   const [rows] = await db.query<RowDataPacket[]>(

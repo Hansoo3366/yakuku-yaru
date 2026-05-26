@@ -90,6 +90,13 @@ export function updateAdminUserRole(userId: number, role: string, token: string)
   });
 }
 
+export function deleteAdminUser(userId: number, token: string) {
+  return request<void>(`/admin/users/${userId}`, {
+    method: 'DELETE',
+    token,
+  });
+}
+
 export function listAdminPosts(token: string, keyword = '') {
   return request<{ items: AdminPost[] }>(withKeyword('/admin/posts', keyword), {
     token,

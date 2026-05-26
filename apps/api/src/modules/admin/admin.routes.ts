@@ -7,6 +7,7 @@ import { deleteComment } from '../comments/comment.repository.js';
 import { deletePost } from '../posts/post.repository.js';
 import {
   createAdminGame,
+  deleteAdminUser,
   getAdminSummary,
   listAdminComments,
   listAdminGames,
@@ -91,6 +92,21 @@ adminRouter.patch('/users/:userId/role', adminWriteLimit, async (req, res, next)
 
     await updateUserRole(Number(req.params.userId), role);
     res.json({ ok: true });
+  } catch (error) {
+    next(error);
+  }
+});
+
+adminRouter.delete('/users/:userId', adminWriteLimit, async (req, res, next) => {
+  try {
+    const userId = Number(req.params.userId);
+
+    if (userId === req.user?.id) {
+      throw new HttpError(400, 'INVALID_INPUT', '자기 자신은 삭제할 수 없습니다.');
+    }
+
+    await deleteAdminUser(userId);
+    res.status(204).send();
   } catch (error) {
     next(error);
   }
