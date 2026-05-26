@@ -20,6 +20,7 @@
   --color-win: #d63b2a;
   --color-lose: #3662b8;
   --color-draw: #737373;
+  --color-cancelled: #8a8f98;
 
   /* Surfaces */
   --color-paper: #faf7f0;
@@ -1402,6 +1403,12 @@ img {
   padding: var(--space-4);
 }
 
+.score-input-group--locked input:disabled,
+.choice-group .choice-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.72;
+}
+
 .score-input-cell {
   align-items: center;
   display: grid;
@@ -1840,8 +1847,74 @@ img {
   text-decoration: none;
 }
 
+.calendar-event[data-outcome='win'] {
+  background: color-mix(in srgb, var(--color-win) 16%, var(--color-paper-deep));
+  box-shadow: inset 3px 0 0 var(--color-win);
+}
+
+.calendar-event[data-outcome='lose'] {
+  background: color-mix(in srgb, var(--color-lose) 16%, var(--color-paper-deep));
+  box-shadow: inset 3px 0 0 var(--color-lose);
+}
+
+.calendar-event[data-outcome='draw'] {
+  background: color-mix(in srgb, var(--color-draw) 18%, var(--color-paper-deep));
+  box-shadow: inset 3px 0 0 var(--color-draw);
+}
+
+.calendar-event[data-outcome='cancelled'] {
+  background: color-mix(in srgb, var(--color-cancelled) 14%, var(--color-paper-deep));
+  box-shadow: inset 3px 0 0 var(--color-cancelled);
+  opacity: 0.88;
+}
+
+.calendar-event[data-outcome='scheduled'] {
+  box-shadow: inset 3px 0 0 var(--color-line-strong);
+}
+
 .calendar-event:hover {
-  background: var(--color-line);
+  filter: brightness(0.97);
+}
+
+.calendar-outcome-legend {
+  align-items: center;
+  display: inline-flex;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.calendar-outcome-swatch {
+  border-radius: 3px;
+  display: block;
+  height: 14px;
+  width: 14px;
+}
+
+.calendar-outcome-swatch[data-outcome='win'] {
+  background: var(--color-win);
+}
+
+.calendar-outcome-swatch[data-outcome='lose'] {
+  background: var(--color-lose);
+}
+
+.calendar-outcome-swatch[data-outcome='draw'] {
+  background: var(--color-draw);
+}
+
+.calendar-outcome-swatch[data-outcome='cancelled'] {
+  background: repeating-linear-gradient(
+    -45deg,
+    var(--color-cancelled),
+    var(--color-cancelled) 2px,
+    var(--color-line) 2px,
+    var(--color-line) 4px
+  );
+}
+
+.calendar-outcome-swatch[data-outcome='scheduled'] {
+  background: var(--color-paper-deep);
+  border: 2px solid var(--color-line-strong);
 }
 
 .calendar-event-logos {

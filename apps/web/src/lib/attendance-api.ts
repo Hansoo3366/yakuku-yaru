@@ -32,6 +32,9 @@ export type AttendanceRecord = {
       name: string;
       shortName: string;
     };
+    homeScore: number | null;
+    awayScore: number | null;
+    status: string;
   };
 };
 
@@ -54,6 +57,7 @@ export type AttendanceInput = {
   myTeamScore: number | null;
   opponentScore: number | null;
   result: string;
+  isScoreModified?: boolean;
   companionUserIds?: number[];
 };
 

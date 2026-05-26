@@ -23,6 +23,7 @@ import {
 import { createNotification } from '../notifications/notification.repository.js';
 import { attendancePhotoUpload } from './upload.js';
 import { findUserById } from '../users/user.repository.js';
+import { buildAttendanceScoreFields } from './attendance-score.js';
 
 export const attendanceRouter = Router();
 
@@ -180,15 +181,23 @@ attendanceRouter.post(
         throw new HttpError(409, 'ATTENDANCE_ALREADY_EXISTS', '이미 직관 기록이 있습니다.');
       }
 
+      const user = await findUserById(userId);
+      const scoreFields = buildAttendanceScoreFields({
+        game,
+        favoriteTeamId: user?.favoriteTeamId ?? null,
+        body: req.body,
+        normalizeNumber,
+      });
+
       const record = await createAttendanceRecord({
         userId,
         gameId,
         watchType: normalizeWatchType(watchType),
         memo: memo?.trim() || null,
-        myTeamScore: normalizeNumber(req.body.myTeamScore),
-        opponentScore: normalizeNumber(req.body.opponentScore),
-        result: result || null,
-        isScoreModified: true,
+        myTeamScore: scoreFields.myTeamScore,
+        opponentScore: scoreFields.opponentScore,
+        result: scoreFields.result,
+        isScoreModified: scoreFields.isScoreModified,
       });
 
       if (record) {
@@ -264,14 +273,27 @@ attendanceRouter.patch(
         result?: string;
         companionUserIds?: number[];
       };
+      const game = await findGameById(record.gameId);
+      if (!game) {
+        throw new HttpError(404, 'GAME_NOT_FOUND', '경기를 찾을 수 없습니다.');
+      }
+
+      const owner = await findUserById(record.userId);
+      const scoreFields = buildAttendanceScoreFields({
+        game,
+        favoriteTeamId: owner?.favoriteTeamId ?? null,
+        body: req.body,
+        normalizeNumber,
+      });
+
       const updatedRecord = await updateAttendanceRecord({
         id: record.id,
         watchType: normalizeWatchType(watchType),
         memo: memo?.trim() || null,
-        myTeamScore: normalizeNumber(req.body.myTeamScore),
-        opponentScore: normalizeNumber(req.body.opponentScore),
-        result: result || null,
-        isScoreModified: true,
+        myTeamScore: scoreFields.myTeamScore,
+        opponentScore: scoreFields.opponentScore,
+        result: scoreFields.result,
+        isScoreModified: scoreFields.isScoreModified,
         lastModifiedByUserId: req.user?.id ?? 0,
       });
 

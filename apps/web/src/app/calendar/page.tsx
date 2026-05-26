@@ -20,8 +20,13 @@ import {
 } from '@/lib/attendance-api';
 import { getAssetUrl } from '@/lib/api';
 import { getTeamLogoSrc } from '@/lib/team-logo';
+import { CalendarOutcomeLegend } from '@/components/CalendarOutcomeLegend';
 import { EmptyState } from '@/components/EmptyState';
 import { Skeleton } from '@/components/Skeleton';
+import {
+  getFavoriteTeamGameOutcome,
+  getGameOutcomeLabel,
+} from '@/lib/game-outcome';
 
 const initialMonth = new Date(2026, 4, 1);
 
@@ -278,6 +283,7 @@ export default function CalendarPage() {
           />
           기록 있는 날만
         </label>
+        {user?.favoriteTeamId ? <CalendarOutcomeLegend /> : null}
       </section>
 
       {isLoading ? (
@@ -331,10 +337,25 @@ export default function CalendarPage() {
                           ? 'companion'
                           : attendance.watchType
                         : null;
+                      const outcome = getFavoriteTeamGameOutcome(
+                        game,
+                        user?.favoriteTeamId,
+                        attendance?.result,
+                      );
+                      const outcomeLabel = getGameOutcomeLabel(outcome);
+                      const matchupLabel = `${game.awayTeam.shortName} vs ${game.homeTeam.shortName}`;
 
                       return (
                         <Link
+                          aria-label={
+                            outcomeLabel
+                              ? `${matchupLabel}, ${outcomeLabel}`
+                              : matchupLabel
+                          }
                           className="calendar-event"
+                          data-outcome={
+                            outcome !== 'unknown' ? outcome : undefined
+                          }
                           href={href}
                           key={game.id}
                         >
@@ -378,9 +399,32 @@ export default function CalendarPage() {
                           ? 'companion'
                           : record.watchType;
                       const href = `/attendance/${record.id}`;
+                      const gameForOutcome = {
+                        homeTeam: record.game.homeTeam,
+                        awayTeam: record.game.awayTeam,
+                        homeScore: record.game.homeScore,
+                        awayScore: record.game.awayScore,
+                        status: record.game.status,
+                      };
+                      const outcome = getFavoriteTeamGameOutcome(
+                        gameForOutcome,
+                        user?.favoriteTeamId,
+                        record.result,
+                      );
+                      const outcomeLabel = getGameOutcomeLabel(outcome);
+                      const matchupLabel = `${record.game.awayTeam.shortName} vs ${record.game.homeTeam.shortName}`;
+
                       return (
                         <Link
+                          aria-label={
+                            outcomeLabel
+                              ? `${matchupLabel}, ${outcomeLabel}`
+                              : matchupLabel
+                          }
                           className="calendar-event"
+                          data-outcome={
+                            outcome !== 'unknown' ? outcome : undefined
+                          }
                           href={href}
                           key={record.id}
                         >

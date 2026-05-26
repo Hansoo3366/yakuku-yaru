@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { FormEvent, useEffect, useState } from 'react';
 import { getAccessToken } from '@/lib/auth';
+import { fetchMe } from '@/lib/auth-api';
 import { useAuthGuard } from '@/lib/use-auth-guard';
 import {
   ATTENDANCE_PHOTO_ACCEPT,
@@ -22,18 +23,11 @@ import {
   type SelectedCompanion,
 } from '@/components/CompanionPicker';
 import { Skeleton } from '@/components/Skeleton';
-
-type ResultValue = 'win' | 'lose' | 'draw';
-
-function inferResult(myScore: string, opponentScore: string): ResultValue | null {
-  if (myScore === '' || opponentScore === '') return null;
-  const my = Number(myScore);
-  const opp = Number(opponentScore);
-  if (Number.isNaN(my) || Number.isNaN(opp)) return null;
-  if (my > opp) return 'win';
-  if (my < opp) return 'lose';
-  return 'draw';
-}
+import {
+  resolveAttendanceScoresFromGame,
+  type AttendanceResult,
+} from '@/lib/attendance-score';
+import { AttendanceScoreSection } from '@/components/AttendanceScoreSection';
 
 export default function EditAttendancePage() {
   const params = useParams<{ recordId: string }>();
@@ -45,8 +39,9 @@ export default function EditAttendancePage() {
   const [myTeamScore, setMyTeamScore] = useState('');
   const [opponentScore, setOpponentScore] = useState('');
   const [watchType, setWatchType] = useState<'stadium' | 'home'>('stadium');
-  const [result, setResult] = useState<ResultValue>('win');
+  const [result, setResult] = useState<AttendanceResult>('win');
   const [resultManuallySet, setResultManuallySet] = useState(true);
+  const [scoreLocked, setScoreLocked] = useState(false);
   const [companions, setCompanions] = useState<SelectedCompanion[]>([]);
   const [photo, setPhoto] = useState<File | null>(null);
   const [photoPreviewUrl, setPhotoPreviewUrl] = useState('');
@@ -61,24 +56,39 @@ export default function EditAttendancePage() {
       return;
     }
 
-    fetchAttendanceRecord(recordId, token).then((response) => {
-      const r = response.record;
-      setRecord(r);
-      setMemo(r.memo ?? '');
-      setMyTeamScore(String(r.myTeamScore ?? ''));
-      setOpponentScore(String(r.opponentScore ?? ''));
-      setWatchType(r.watchType);
-      const initialResult = (r.result as ResultValue) ?? 'win';
-      setResult(initialResult);
-      setCompanions(toSelectedCompanions(r.companions));
-    });
-  }, [recordId, router]);
+    Promise.all([fetchAttendanceRecord(recordId, token), fetchMe(token)]).then(
+      ([response, meResponse]) => {
+        const r = response.record;
+        setRecord(r);
+        setMemo(r.memo ?? '');
+        setWatchType(r.watchType);
+        setCompanions(toSelectedCompanions(r.companions));
 
-  useEffect(() => {
-    if (resultManuallySet) return;
-    const inferred = inferResult(myTeamScore, opponentScore);
-    if (inferred) setResult(inferred);
-  }, [myTeamScore, opponentScore, resultManuallySet]);
+        const gameForScore = {
+          homeTeam: r.game.homeTeam,
+          awayTeam: r.game.awayTeam,
+          homeScore: r.game.homeScore,
+          awayScore: r.game.awayScore,
+        };
+        const official = resolveAttendanceScoresFromGame(
+          gameForScore,
+          meResponse.user.favoriteTeamId,
+        );
+
+        if (official) {
+          setMyTeamScore(String(official.myTeamScore));
+          setOpponentScore(String(official.opponentScore));
+          setResult(official.result);
+          setResultManuallySet(true);
+          setScoreLocked(true);
+        } else {
+          setMyTeamScore(String(r.myTeamScore ?? ''));
+          setOpponentScore(String(r.opponentScore ?? ''));
+          setResult((r.result as AttendanceResult) ?? 'win');
+        }
+      },
+    );
+  }, [recordId, router]);
 
   useEffect(() => {
     if (!photo) {
@@ -92,9 +102,18 @@ export default function EditAttendancePage() {
     return () => URL.revokeObjectURL(objectUrl);
   }, [photo]);
 
-  function pickResult(value: ResultValue) {
+  function pickResult(value: AttendanceResult) {
     setResult(value);
     setResultManuallySet(true);
+  }
+
+  function handleScoreChange(side: 'my' | 'opponent', value: string) {
+    if (side === 'my') {
+      setMyTeamScore(value);
+    } else {
+      setOpponentScore(value);
+    }
+    setResultManuallySet(false);
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -115,10 +134,15 @@ export default function EditAttendancePage() {
         recordId,
         {
           memo,
-          myTeamScore: myTeamScore ? Number(myTeamScore) : null,
-          opponentScore: opponentScore ? Number(opponentScore) : null,
+          myTeamScore: scoreLocked ? null : myTeamScore ? Number(myTeamScore) : null,
+          opponentScore: scoreLocked
+            ? null
+            : opponentScore
+              ? Number(opponentScore)
+              : null,
           watchType,
           result,
+          isScoreModified: !scoreLocked,
           companionUserIds: companions.map((companion) => companion.id),
         },
         token,
@@ -255,67 +279,16 @@ export default function EditAttendancePage() {
           )}
         </section>
 
-        <section className="card stack">
-          <div className="section-heading" style={{ marginBottom: 0 }}>
-            <div>
-              <h2>스코어와 결과</h2>
-              <p>점수를 바꾸면 결과를 자동으로 다시 계산할 수 있어요.</p>
-            </div>
-          </div>
-          <div className="score-input-group">
-            <label className="score-input-cell">
-              <span>내 팀</span>
-              <input
-                inputMode="numeric"
-                min="0"
-                onChange={(event) => {
-                  setMyTeamScore(event.target.value);
-                  setResultManuallySet(false);
-                }}
-                placeholder="0"
-                type="number"
-                value={myTeamScore}
-              />
-            </label>
-            <span aria-hidden="true" className="score-divider">
-              :
-            </span>
-            <label className="score-input-cell">
-              <span>상대</span>
-              <input
-                inputMode="numeric"
-                min="0"
-                onChange={(event) => {
-                  setOpponentScore(event.target.value);
-                  setResultManuallySet(false);
-                }}
-                placeholder="0"
-                type="number"
-                value={opponentScore}
-              />
-            </label>
-          </div>
-          <div
-            className="choice-group result-toggle"
-            role="radiogroup"
-            aria-label="경기 결과"
-          >
-            {(['win', 'lose', 'draw'] as const).map((value) => (
-              <button
-                aria-checked={result === value}
-                className={`choice-button ${result === value ? 'is-selected' : ''}`}
-                data-result={value}
-                key={value}
-                onClick={() => pickResult(value)}
-                role="radio"
-                type="button"
-              >
-                <span className="dot" aria-hidden="true" />
-                {value === 'win' ? '승리' : value === 'lose' ? '패배' : '무승부'}
-              </button>
-            ))}
-          </div>
-        </section>
+        <AttendanceScoreSection
+          myTeamScore={myTeamScore}
+          opponentScore={opponentScore}
+          onMyTeamScoreChange={(value) => handleScoreChange('my', value)}
+          onOpponentScoreChange={(value) => handleScoreChange('opponent', value)}
+          onPickResult={pickResult}
+          result={result}
+          resultManuallySet={resultManuallySet}
+          scoreLocked={scoreLocked}
+        />
 
         {record.companions.length ? (
           <section className="card stack-sm">

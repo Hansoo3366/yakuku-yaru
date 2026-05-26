@@ -1,6 +1,7 @@
 import type { ResultSetHeader, RowDataPacket } from 'mysql2';
 import { db } from '../../config/database.js';
 import type { ParsedKboGame } from './parse-schedule.js';
+import { syncAttendanceScoresForGame } from '../attendance/attendance-score.js';
 
 export const KBO_EXTERNAL_SOURCE = 'kbo';
 
@@ -106,10 +107,14 @@ export async function upsertKboGame(
       ],
     );
 
+    if (game.homeScore !== null && game.awayScore !== null) {
+      await syncAttendanceScoresForGame(existingId);
+    }
+
     return 'updated';
   }
 
-  await db.execute<ResultSetHeader>(
+  const [insertResult] = await db.execute<ResultSetHeader>(
     `INSERT INTO games (
        game_date,
        stadium,
@@ -134,6 +139,14 @@ export async function upsertKboGame(
       game.externalId,
     ],
   );
+
+  if (
+    insertResult.insertId &&
+    game.homeScore !== null &&
+    game.awayScore !== null
+  ) {
+    await syncAttendanceScoresForGame(insertResult.insertId);
+  }
 
   return 'inserted';
 }

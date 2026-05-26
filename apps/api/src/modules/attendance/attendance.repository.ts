@@ -24,9 +24,12 @@ export type AttendanceRecordRow = RowDataPacket & {
   home_team_id: number;
   home_team_name: string;
   home_team_short_name: string;
+  home_score: number | null;
   away_team_id: number;
   away_team_name: string;
   away_team_short_name: string;
+  away_score: number | null;
+  game_status: string;
   owner_nickname: string;
   last_modified_by_nickname: string | null;
   viewer_relation?: 'owner' | 'companion';
@@ -65,6 +68,9 @@ export type AttendanceRecord = {
       name: string;
       shortName: string;
     };
+    homeScore: number | null;
+    awayScore: number | null;
+    status: string;
   };
 };
 
@@ -88,9 +94,12 @@ function attendanceSelectSql() {
       ht.id AS home_team_id,
       ht.name AS home_team_name,
       ht.short_name AS home_team_short_name,
+      g.home_score,
       at.id AS away_team_id,
       at.name AS away_team_name,
       at.short_name AS away_team_short_name,
+      g.away_score,
+      g.status AS game_status,
       u.nickname AS owner_nickname,
       lmu.nickname AS last_modified_by_nickname
     FROM attendance_records ar
@@ -134,6 +143,9 @@ export function toAttendanceRecord(row: AttendanceRecordRow): AttendanceRecord {
         name: row.away_team_name,
         shortName: row.away_team_short_name,
       },
+      homeScore: row.home_score,
+      awayScore: row.away_score,
+      status: row.game_status,
     },
   };
 }

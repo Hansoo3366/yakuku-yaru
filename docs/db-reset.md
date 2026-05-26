@@ -1,5 +1,23 @@
 # DB 초기화
 
+## 6월 등에 “가짜” 경기가 보일 때
+
+초기 DB 시드(`003_seed_games.sql`)로 넣었던 **샘플 경기**는 `external_source`가 없습니다.  
+`season` 동기화만 돌리면 **겹치지 않는 시드 row는 DB에 그대로** 남고, 예전에는 캘린더 API가 그것까지 보여줬습니다.
+
+**지금:** 경기 목록 API는 `external_source = 'kbo'` 만 반환합니다 (배포 후).  
+DB에서 완전히 지우려면:
+
+```bash
+docker compose -f docker-compose.prod.yml --env-file .env.production exec -T mysql \
+  mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE" -e \
+  "DELETE FROM games WHERE external_source IS NULL OR external_source <> 'kbo';"
+```
+
+이후 `npm run db:reset-games` 또는 `sync:kbo-schedule -- --mode=season`.
+
+---
+
 ## 경기만 비우고 KBO 전체 재적재 (라이브 · 사용자 유지)
 
 **사용자·게시판·관리자는 그대로** 두고, 경기 일정만 지운 뒤 KBO `season` + `week` + `today` 동기화합니다.  

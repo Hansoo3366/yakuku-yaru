@@ -140,6 +140,7 @@ export async function listGames(input: {
     `${gameSelectSql()}
      WHERE g.game_date >= ?
        AND g.game_date < ?
+       AND g.external_source = 'kbo'
        ${teamFilter}
      ORDER BY g.game_date ASC`,
     params,
