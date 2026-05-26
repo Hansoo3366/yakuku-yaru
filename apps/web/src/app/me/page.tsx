@@ -78,6 +78,11 @@ export default function MyPage() {
   }
 
   async function handleFavoriteTeamChange(teamId: number) {
+    if (user?.favoriteTeamId === teamId) {
+      setShowTeamPicker(false);
+      return;
+    }
+
     const token = getAccessToken();
     if (!token) {
       router.replace('/login');
@@ -94,6 +99,7 @@ export default function MyPage() {
   }
 
   async function handleNicknameSave() {
+    if (isSavingNickname) return;
     const token = getAccessToken();
     if (!token) {
       router.replace('/login');
@@ -124,6 +130,7 @@ export default function MyPage() {
 
   async function handleProfilePhotoChange(file: File | undefined) {
     if (!file) return;
+    if (isUploadingPhoto) return;
     const token = getAccessToken();
     if (!token) {
       router.replace('/login');

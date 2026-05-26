@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import { Router } from 'express';
 import { authenticate } from '../../middleware/authenticate.js';
+import { rateLimit } from '../../middleware/rate-limit.js';
 import { env } from '../../config/env.js';
 import { findGameById } from '../games/game.repository.js';
 import { HttpError } from '../../utils/http-error.js';
@@ -26,6 +27,19 @@ import { findUserById } from '../users/user.repository.js';
 export const attendanceRouter = Router();
 
 fs.mkdirSync(env.uploadDir, { recursive: true });
+
+const attendanceWriteRateLimit = rateLimit({
+  scope: 'attendance:write',
+  windowMs: 10 * 60 * 1000,
+  max: 30,
+});
+
+const attendancePhotoRateLimit = rateLimit({
+  scope: 'attendance:photo',
+  windowMs: 10 * 60 * 1000,
+  max: 12,
+  message: '사진 업로드 요청이 너무 많습니다. 잠시 후 다시 시도해주세요.',
+});
 
 function normalizeNumber(value: unknown) {
   if (value === undefined || value === null || value === '') {
@@ -130,65 +144,70 @@ attendanceRouter.get('/stats/me', authenticate, async (req, res, next) => {
   }
 });
 
-attendanceRouter.post('/', authenticate, async (req, res, next) => {
-  try {
-    const { gameId, memo, result, watchType } = req.body as {
-      gameId?: number;
-      memo?: string;
-      watchType?: string;
-      myTeamScore?: number;
-      opponentScore?: number;
-      result?: string;
-      companionUserIds?: number[];
-    };
-    const userId = req.user?.id ?? 0;
+attendanceRouter.post(
+  '/',
+  authenticate,
+  attendanceWriteRateLimit,
+  async (req, res, next) => {
+    try {
+      const { gameId, memo, result, watchType } = req.body as {
+        gameId?: number;
+        memo?: string;
+        watchType?: string;
+        myTeamScore?: number;
+        opponentScore?: number;
+        result?: string;
+        companionUserIds?: number[];
+      };
+      const userId = req.user?.id ?? 0;
 
-    if (!Number.isInteger(gameId) || !gameId) {
-      throw new HttpError(400, 'INVALID_INPUT', '경기를 선택해주세요.');
-    }
+      if (!Number.isInteger(gameId) || !gameId) {
+        throw new HttpError(400, 'INVALID_INPUT', '경기를 선택해주세요.');
+      }
 
-    const game = await findGameById(gameId);
+      const game = await findGameById(gameId);
 
-    if (!game) {
-      throw new HttpError(404, 'GAME_NOT_FOUND', '경기를 찾을 수 없습니다.');
-    }
+      if (!game) {
+        throw new HttpError(404, 'GAME_NOT_FOUND', '경기를 찾을 수 없습니다.');
+      }
 
-    const existingRecord = await findAttendanceRecordByGame({
-      userId,
-      gameId,
-    });
-
-    if (existingRecord) {
-      throw new HttpError(409, 'ATTENDANCE_ALREADY_EXISTS', '이미 직관 기록이 있습니다.');
-    }
-
-    const record = await createAttendanceRecord({
-      userId,
-      gameId,
-      watchType: normalizeWatchType(watchType),
-      memo: memo?.trim() || null,
-      myTeamScore: normalizeNumber(req.body.myTeamScore),
-      opponentScore: normalizeNumber(req.body.opponentScore),
-      result: result || null,
-      isScoreModified: true,
-    });
-
-    if (record) {
-      await saveCompanionsAndNotify({
-        recordId: record.id,
-        ownerId: userId,
-        ownerLabel: record.ownerNickname,
-        companionUserIds: normalizeCompanionUserIds(req.body.companionUserIds),
+      const existingRecord = await findAttendanceRecordByGame({
+        userId,
+        gameId,
       });
-    }
 
-    res.status(201).json({
-      record: record ? await findAttendanceRecordById(record.id) : record,
-    });
-  } catch (error) {
-    next(error);
-  }
-});
+      if (existingRecord) {
+        throw new HttpError(409, 'ATTENDANCE_ALREADY_EXISTS', '이미 직관 기록이 있습니다.');
+      }
+
+      const record = await createAttendanceRecord({
+        userId,
+        gameId,
+        watchType: normalizeWatchType(watchType),
+        memo: memo?.trim() || null,
+        myTeamScore: normalizeNumber(req.body.myTeamScore),
+        opponentScore: normalizeNumber(req.body.opponentScore),
+        result: result || null,
+        isScoreModified: true,
+      });
+
+      if (record) {
+        await saveCompanionsAndNotify({
+          recordId: record.id,
+          ownerId: userId,
+          ownerLabel: record.ownerNickname,
+          companionUserIds: normalizeCompanionUserIds(req.body.companionUserIds),
+        });
+      }
+
+      res.status(201).json({
+        record: record ? await findAttendanceRecordById(record.id) : record,
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
 
 attendanceRouter.get('/:recordId', authenticate, async (req, res, next) => {
   try {
@@ -225,51 +244,56 @@ attendanceRouter.get('/:recordId', authenticate, async (req, res, next) => {
   }
 });
 
-attendanceRouter.patch('/:recordId', authenticate, async (req, res, next) => {
-  try {
-    const record = await findAttendanceRecordById(Number(req.params.recordId));
+attendanceRouter.patch(
+  '/:recordId',
+  authenticate,
+  attendanceWriteRateLimit,
+  async (req, res, next) => {
+    try {
+      const record = await findAttendanceRecordById(Number(req.params.recordId));
 
-    if (!record) {
-      throw new HttpError(404, 'ATTENDANCE_NOT_FOUND', '직관 기록을 찾을 수 없습니다.');
-    }
+      if (!record) {
+        throw new HttpError(404, 'ATTENDANCE_NOT_FOUND', '직관 기록을 찾을 수 없습니다.');
+      }
 
-    await assertCanEdit(record, req.user?.id ?? 0);
+      await assertCanEdit(record, req.user?.id ?? 0);
 
-    const { memo, result, watchType } = req.body as {
-      memo?: string;
-      watchType?: string;
-      result?: string;
-      companionUserIds?: number[];
-    };
-    const updatedRecord = await updateAttendanceRecord({
-      id: record.id,
-      watchType: normalizeWatchType(watchType),
-      memo: memo?.trim() || null,
-      myTeamScore: normalizeNumber(req.body.myTeamScore),
-      opponentScore: normalizeNumber(req.body.opponentScore),
-      result: result || null,
-      isScoreModified: true,
-      lastModifiedByUserId: req.user?.id ?? 0,
-    });
-
-    if (updatedRecord && updatedRecord.userId === req.user?.id) {
-      await saveCompanionsAndNotify({
-        recordId: updatedRecord.id,
-        ownerId: record.userId,
-        ownerLabel: record.ownerNickname,
-        companionUserIds: normalizeCompanionUserIds(req.body.companionUserIds),
+      const { memo, result, watchType } = req.body as {
+        memo?: string;
+        watchType?: string;
+        result?: string;
+        companionUserIds?: number[];
+      };
+      const updatedRecord = await updateAttendanceRecord({
+        id: record.id,
+        watchType: normalizeWatchType(watchType),
+        memo: memo?.trim() || null,
+        myTeamScore: normalizeNumber(req.body.myTeamScore),
+        opponentScore: normalizeNumber(req.body.opponentScore),
+        result: result || null,
+        isScoreModified: true,
+        lastModifiedByUserId: req.user?.id ?? 0,
       });
-    }
 
-    res.json({
-      record: updatedRecord
-        ? await findAttendanceRecordById(updatedRecord.id)
-        : updatedRecord,
-    });
-  } catch (error) {
-    next(error);
-  }
-});
+      if (updatedRecord && updatedRecord.userId === req.user?.id) {
+        await saveCompanionsAndNotify({
+          recordId: updatedRecord.id,
+          ownerId: record.userId,
+          ownerLabel: record.ownerNickname,
+          companionUserIds: normalizeCompanionUserIds(req.body.companionUserIds),
+        });
+      }
+
+      res.json({
+        record: updatedRecord
+          ? await findAttendanceRecordById(updatedRecord.id)
+          : updatedRecord,
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
 
 attendanceRouter.delete('/:recordId', authenticate, async (req, res, next) => {
   try {
@@ -292,6 +316,7 @@ attendanceRouter.delete('/:recordId', authenticate, async (req, res, next) => {
 attendanceRouter.post(
   '/:recordId/photo',
   authenticate,
+  attendancePhotoRateLimit,
   attendancePhotoUpload.single('photo'),
   async (req, res, next) => {
     try {

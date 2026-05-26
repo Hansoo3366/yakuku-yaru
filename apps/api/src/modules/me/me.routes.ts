@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import { Router } from 'express';
 import { authenticate } from '../../middleware/authenticate.js';
+import { rateLimit } from '../../middleware/rate-limit.js';
 import { env } from '../../config/env.js';
 import { HttpError } from '../../utils/http-error.js';
 import { validateNickname } from '../../utils/user-input.js';
@@ -18,7 +19,20 @@ export const meRouter = Router();
 
 fs.mkdirSync(env.uploadDir, { recursive: true });
 
-meRouter.patch('/favorite-team', authenticate, async (req, res, next) => {
+const profileUpdateRateLimit = rateLimit({
+  scope: 'users:profile-update',
+  windowMs: 10 * 60 * 1000,
+  max: 20,
+});
+
+const profilePhotoRateLimit = rateLimit({
+  scope: 'users:profile-photo',
+  windowMs: 10 * 60 * 1000,
+  max: 8,
+  message: '프로필 사진 변경 요청이 너무 많습니다. 잠시 후 다시 시도해주세요.',
+});
+
+meRouter.patch('/favorite-team', authenticate, profileUpdateRateLimit, async (req, res, next) => {
   try {
     const { teamId } = req.body as {
       teamId?: number;
@@ -48,7 +62,7 @@ meRouter.patch('/favorite-team', authenticate, async (req, res, next) => {
   }
 });
 
-meRouter.patch('/nickname', authenticate, async (req, res, next) => {
+meRouter.patch('/nickname', authenticate, profileUpdateRateLimit, async (req, res, next) => {
   try {
     const { nickname } = req.body as { nickname?: string };
     const userId = req.user?.id ?? 0;
@@ -81,6 +95,7 @@ meRouter.patch('/nickname', authenticate, async (req, res, next) => {
 meRouter.post(
   '/profile-photo',
   authenticate,
+  profilePhotoRateLimit,
   profilePhotoUpload.single('photo'),
   async (req, res, next) => {
     try {

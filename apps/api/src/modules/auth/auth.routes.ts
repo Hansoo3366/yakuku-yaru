@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { authenticate } from '../../middleware/authenticate.js';
+import { rateLimit } from '../../middleware/rate-limit.js';
 import { HttpError } from '../../utils/http-error.js';
 import { signAccessToken } from '../../utils/jwt.js';
 import { comparePassword, hashPassword } from '../../utils/password.js';
@@ -25,7 +26,27 @@ import { findTeamById } from '../teams/team.repository.js';
 
 export const authRouter = Router();
 
-authRouter.post('/register', async (req, res, next) => {
+const registerRateLimit = rateLimit({
+  scope: 'auth:register',
+  windowMs: 60 * 60 * 1000,
+  max: 5,
+  message: '회원가입 요청이 너무 많습니다. 잠시 후 다시 시도해주세요.',
+});
+
+const loginRateLimit = rateLimit({
+  scope: 'auth:login',
+  windowMs: 5 * 60 * 1000,
+  max: 15,
+  message: '로그인 요청이 너무 많습니다. 잠시 후 다시 시도해주세요.',
+});
+
+const verifyEmailRateLimit = rateLimit({
+  scope: 'auth:verify-email',
+  windowMs: 10 * 60 * 1000,
+  max: 20,
+});
+
+authRouter.post('/register', registerRateLimit, async (req, res, next) => {
   try {
     const { email, password, nickname, favoriteTeamId } = req.body as {
       email?: string;
@@ -85,7 +106,7 @@ authRouter.post('/register', async (req, res, next) => {
   }
 });
 
-authRouter.post('/login', async (req, res, next) => {
+authRouter.post('/login', loginRateLimit, async (req, res, next) => {
   try {
     const { email, password } = req.body as {
       email?: string;
@@ -138,7 +159,7 @@ authRouter.get('/me', authenticate, async (req, res, next) => {
   }
 });
 
-authRouter.post('/verify-email', async (req, res, next) => {
+authRouter.post('/verify-email', verifyEmailRateLimit, async (req, res, next) => {
   try {
     const { token } = req.body as {
       token?: string;

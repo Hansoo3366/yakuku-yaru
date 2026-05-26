@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { authenticate } from '../../middleware/authenticate.js';
+import { rateLimit } from '../../middleware/rate-limit.js';
 import { HttpError } from '../../utils/http-error.js';
 import {
   validateCommentContent,
@@ -22,6 +23,26 @@ import {
 import { createNotification } from '../notifications/notification.repository.js';
 
 export const postRouter = Router();
+
+const createPostRateLimit = rateLimit({
+  scope: 'posts:create',
+  windowMs: 60 * 1000,
+  max: 5,
+  message: '게시글 작성 요청이 너무 많습니다. 잠시 후 다시 시도해주세요.',
+});
+
+const updatePostRateLimit = rateLimit({
+  scope: 'posts:update',
+  windowMs: 5 * 60 * 1000,
+  max: 20,
+});
+
+const createCommentRateLimit = rateLimit({
+  scope: 'comments:create',
+  windowMs: 60 * 1000,
+  max: 10,
+  message: '댓글 작성 요청이 너무 많습니다. 잠시 후 다시 시도해주세요.',
+});
 
 function parsePositiveInt(value: unknown, fallback: number) {
   const parsed = Number(value);
@@ -56,37 +77,42 @@ postRouter.get('/', async (req, res, next) => {
   }
 });
 
-postRouter.post('/', authenticate, async (req, res, next) => {
-  try {
-    const { title, content } = req.body as {
-      title?: string;
-      content?: string;
-    };
+postRouter.post(
+  '/',
+  authenticate,
+  createPostRateLimit,
+  async (req, res, next) => {
+    try {
+      const { title, content } = req.body as {
+        title?: string;
+        content?: string;
+      };
 
-    const safeTitle = validatePostTitle(title ?? '');
-    const safeContent = validatePostContent(content ?? '');
+      const safeTitle = validatePostTitle(title ?? '');
+      const safeContent = validatePostContent(content ?? '');
 
-    if (!safeTitle || !safeContent) {
-      throw new HttpError(400, 'INVALID_INPUT', '제목과 본문을 입력해주세요.');
+      if (!safeTitle || !safeContent) {
+        throw new HttpError(400, 'INVALID_INPUT', '제목과 본문을 입력해주세요.');
+      }
+
+      const post = await createPost({
+        userId: req.user?.id ?? 0,
+        title: safeTitle,
+        content: safeContent,
+      });
+
+      if (!post) {
+        throw new HttpError(500, 'POST_CREATE_FAILED', '게시글 작성에 실패했습니다.');
+      }
+
+      res.status(201).json({
+        post: toPostDetail(post),
+      });
+    } catch (error) {
+      next(error);
     }
-
-    const post = await createPost({
-      userId: req.user?.id ?? 0,
-      title: safeTitle,
-      content: safeContent,
-    });
-
-    if (!post) {
-      throw new HttpError(500, 'POST_CREATE_FAILED', '게시글 작성에 실패했습니다.');
-    }
-
-    res.status(201).json({
-      post: toPostDetail(post),
-    });
-  } catch (error) {
-    next(error);
-  }
-});
+  },
+);
 
 postRouter.get('/:postId', async (req, res, next) => {
   try {
@@ -104,43 +130,48 @@ postRouter.get('/:postId', async (req, res, next) => {
   }
 });
 
-postRouter.patch('/:postId', authenticate, async (req, res, next) => {
-  try {
-    const post = await findPostById(Number(req.params.postId));
+postRouter.patch(
+  '/:postId',
+  authenticate,
+  updatePostRateLimit,
+  async (req, res, next) => {
+    try {
+      const post = await findPostById(Number(req.params.postId));
 
-    if (!post) {
-      throw new HttpError(404, 'POST_NOT_FOUND', '게시글을 찾을 수 없습니다.');
+      if (!post) {
+        throw new HttpError(404, 'POST_NOT_FOUND', '게시글을 찾을 수 없습니다.');
+      }
+
+      if (post.user_id !== req.user?.id) {
+        throw new HttpError(403, 'FORBIDDEN', '본인이 작성한 글만 수정할 수 있습니다.');
+      }
+
+      const { title, content } = req.body as {
+        title?: string;
+        content?: string;
+      };
+
+      const safeTitle = validatePostTitle(title ?? '');
+      const safeContent = validatePostContent(content ?? '');
+
+      if (!safeTitle || !safeContent) {
+        throw new HttpError(400, 'INVALID_INPUT', '제목과 본문을 입력해주세요.');
+      }
+
+      const updatedPost = await updatePost({
+        id: post.id,
+        title: safeTitle,
+        content: safeContent,
+      });
+
+      res.json({
+        post: updatedPost ? toPostDetail(updatedPost) : null,
+      });
+    } catch (error) {
+      next(error);
     }
-
-    if (post.user_id !== req.user?.id) {
-      throw new HttpError(403, 'FORBIDDEN', '본인이 작성한 글만 수정할 수 있습니다.');
-    }
-
-    const { title, content } = req.body as {
-      title?: string;
-      content?: string;
-    };
-
-    const safeTitle = validatePostTitle(title ?? '');
-    const safeContent = validatePostContent(content ?? '');
-
-    if (!safeTitle || !safeContent) {
-      throw new HttpError(400, 'INVALID_INPUT', '제목과 본문을 입력해주세요.');
-    }
-
-    const updatedPost = await updatePost({
-      id: post.id,
-      title: safeTitle,
-      content: safeContent,
-    });
-
-    res.json({
-      post: updatedPost ? toPostDetail(updatedPost) : null,
-    });
-  } catch (error) {
-    next(error);
-  }
-});
+  },
+);
 
 postRouter.delete('/:postId', authenticate, async (req, res, next) => {
   try {
@@ -180,44 +211,49 @@ postRouter.get('/:postId/comments', async (req, res, next) => {
   }
 });
 
-postRouter.post('/:postId/comments', authenticate, async (req, res, next) => {
-  try {
-    const post = await findPostById(Number(req.params.postId));
+postRouter.post(
+  '/:postId/comments',
+  authenticate,
+  createCommentRateLimit,
+  async (req, res, next) => {
+    try {
+      const post = await findPostById(Number(req.params.postId));
 
-    if (!post) {
-      throw new HttpError(404, 'POST_NOT_FOUND', '게시글을 찾을 수 없습니다.');
-    }
+      if (!post) {
+        throw new HttpError(404, 'POST_NOT_FOUND', '게시글을 찾을 수 없습니다.');
+      }
 
-    const { content } = req.body as {
-      content?: string;
-    };
+      const { content } = req.body as {
+        content?: string;
+      };
 
-    const safeContent = validateCommentContent(content ?? '');
+      const safeContent = validateCommentContent(content ?? '');
 
-    if (!safeContent) {
-      throw new HttpError(400, 'INVALID_INPUT', '댓글 내용을 입력해주세요.');
-    }
+      if (!safeContent) {
+        throw new HttpError(400, 'INVALID_INPUT', '댓글 내용을 입력해주세요.');
+      }
 
-    const comment = await createComment({
-      postId: post.id,
-      userId: req.user?.id ?? 0,
-      content: safeContent,
-    });
-
-    if (comment && post.user_id !== req.user?.id) {
-      await createNotification({
-        userId: post.user_id,
-        actorUserId: req.user?.id ?? null,
+      const comment = await createComment({
         postId: post.id,
-        type: 'post_commented',
-        message: `${comment.author_nickname}님이 내 글에 댓글을 남겼어요.`,
+        userId: req.user?.id ?? 0,
+        content: safeContent,
       });
-    }
 
-    res.status(201).json({
-      comment: comment ? toCommentItem(comment) : null,
-    });
-  } catch (error) {
-    next(error);
-  }
-});
+      if (comment && post.user_id !== req.user?.id) {
+        await createNotification({
+          userId: post.user_id,
+          actorUserId: req.user?.id ?? null,
+          postId: post.id,
+          type: 'post_commented',
+          message: `${comment.author_nickname}님이 내 글에 댓글을 남겼어요.`,
+        });
+      }
+
+      res.status(201).json({
+        comment: comment ? toCommentItem(comment) : null,
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+);

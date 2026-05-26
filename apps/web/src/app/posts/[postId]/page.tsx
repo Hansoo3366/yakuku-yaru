@@ -59,6 +59,7 @@ export default function PostDetailPage() {
 
   async function handleCreateComment(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (isSubmitting) return;
     const token = getAccessToken();
     if (!token) {
       router.push('/login');

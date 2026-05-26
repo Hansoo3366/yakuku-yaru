@@ -1,0 +1,67 @@
+import type { RequestHandler } from 'express';
+import { HttpError } from '../utils/http-error.js';
+
+type RateLimitOptions = {
+  windowMs: number;
+  max: number;
+  scope: string;
+  message?: string;
+};
+
+type RateLimitBucket = {
+  count: number;
+  resetAt: number;
+};
+
+const buckets = new Map<string, RateLimitBucket>();
+
+function getClientKey(scope: string, req: Parameters<RequestHandler>[0]) {
+  const userKey = req.user ? `user:${req.user.id}` : `ip:${req.ip}`;
+  return `${scope}:${userKey}`;
+}
+
+function cleanupExpiredBuckets(now: number) {
+  if (buckets.size < 1000) return;
+
+  for (const [key, bucket] of buckets) {
+    if (bucket.resetAt <= now) {
+      buckets.delete(key);
+    }
+  }
+}
+
+export function rateLimit(options: RateLimitOptions): RequestHandler {
+  return (req, res, next) => {
+    const now = Date.now();
+    cleanupExpiredBuckets(now);
+
+    const key = getClientKey(options.scope, req);
+    const bucket = buckets.get(key);
+
+    if (!bucket || bucket.resetAt <= now) {
+      buckets.set(key, {
+        count: 1,
+        resetAt: now + options.windowMs,
+      });
+      next();
+      return;
+    }
+
+    bucket.count += 1;
+
+    if (bucket.count > options.max) {
+      const retryAfterSeconds = Math.ceil((bucket.resetAt - now) / 1000);
+      res.setHeader('Retry-After', String(retryAfterSeconds));
+      next(
+        new HttpError(
+          429,
+          'RATE_LIMITED',
+          options.message ?? '요청이 너무 많습니다. 잠시 후 다시 시도해주세요.',
+        ),
+      );
+      return;
+    }
+
+    next();
+  };
+}

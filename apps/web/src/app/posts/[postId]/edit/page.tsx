@@ -34,6 +34,7 @@ export default function EditPostPage() {
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (isSubmitting) return;
     const token = getAccessToken();
 
     if (!token) {
