@@ -37,6 +37,7 @@ export type AttendanceRecordRow = RowDataPacket & {
   away_score: number | null;
   game_status: string;
   owner_nickname: string;
+  owner_favorite_team_id: number | null;
   last_modified_by_nickname: string | null;
   viewer_relation?: 'owner' | 'companion';
   can_edit?: boolean;
@@ -56,6 +57,7 @@ export type AttendanceRecord = {
   createdAt: Date;
   updatedAt: Date;
   ownerNickname: string;
+  ownerFavoriteTeamId: number | null;
   lastModifiedByUserId: number | null;
   lastModifiedByNickname: string | null;
   viewerRelation: 'owner' | 'companion';
@@ -107,6 +109,7 @@ function attendanceSelectSql() {
       g.away_score,
       g.status AS game_status,
       u.nickname AS owner_nickname,
+      u.favorite_team_id AS owner_favorite_team_id,
       lmu.nickname AS last_modified_by_nickname
     FROM attendance_records ar
     JOIN users u ON u.id = ar.user_id
@@ -131,6 +134,7 @@ export function toAttendanceRecord(row: AttendanceRecordRow): AttendanceRecord {
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     ownerNickname: row.owner_nickname,
+    ownerFavoriteTeamId: row.owner_favorite_team_id,
     lastModifiedByUserId: row.last_modified_by_user_id,
     lastModifiedByNickname: row.last_modified_by_nickname,
     viewerRelation: row.viewer_relation ?? 'owner',
@@ -350,6 +354,54 @@ async function listOwnerAttendanceRecordsForStats(userId: number) {
   return rows.map((row) => toAttendanceRecord(row));
 }
 
+async function reconcileAttendanceRecord(
+  record: AttendanceRecord,
+  favoriteTeamId: number | null,
+) {
+  const fromGame = resolveAttendanceScoresFromGame(record.game, favoriteTeamId);
+
+  if (fromGame) {
+    const needsUpdate =
+      record.myTeamScore !== fromGame.myTeamScore ||
+      record.opponentScore !== fromGame.opponentScore ||
+      record.result !== fromGame.result ||
+      record.isScoreModified;
+
+    if (!needsUpdate) {
+      return;
+    }
+
+    await db.execute(
+      `UPDATE attendance_records
+       SET my_team_score = ?,
+           opponent_score = ?,
+           result = ?,
+           is_score_modified = 0
+       WHERE id = ?`,
+      [
+        fromGame.myTeamScore,
+        fromGame.opponentScore,
+        fromGame.result,
+        record.id,
+      ],
+    );
+    return;
+  }
+
+  const outcome = resolveAttendanceOutcome(record, favoriteTeamId);
+
+  if (!outcome || outcome === record.result) {
+    return;
+  }
+
+  await db.execute(
+    `UPDATE attendance_records
+     SET result = ?
+     WHERE id = ?`,
+    [outcome, record.id],
+  );
+}
+
 async function reconcileAttendanceScoresForUser(
   userId: number,
   favoriteTeamId: number | null,
@@ -357,54 +409,23 @@ async function reconcileAttendanceScoresForUser(
   const records = await listOwnerAttendanceRecordsForStats(userId);
 
   for (const record of records) {
-    const fromGame = resolveAttendanceScoresFromGame(record.game, favoriteTeamId);
-
-    if (fromGame) {
-      const needsUpdate =
-        record.myTeamScore !== fromGame.myTeamScore ||
-        record.opponentScore !== fromGame.opponentScore ||
-        record.result !== fromGame.result ||
-        record.isScoreModified;
-
-      if (!needsUpdate) {
-        continue;
-      }
-
-      await db.execute(
-        `UPDATE attendance_records
-         SET my_team_score = ?,
-             opponent_score = ?,
-             result = ?,
-             is_score_modified = 0
-         WHERE id = ?`,
-        [
-          fromGame.myTeamScore,
-          fromGame.opponentScore,
-          fromGame.result,
-          record.id,
-        ],
-      );
-      record.myTeamScore = fromGame.myTeamScore;
-      record.opponentScore = fromGame.opponentScore;
-      record.result = fromGame.result;
-      record.isScoreModified = false;
-      continue;
-    }
-
-    const outcome = resolveAttendanceOutcome(record, favoriteTeamId);
-
-    if (!outcome || outcome === record.result) {
-      continue;
-    }
-
-    await db.execute(
-      `UPDATE attendance_records
-       SET result = ?
-       WHERE id = ?`,
-      [outcome, record.id],
-    );
-    record.result = outcome;
+    await reconcileAttendanceRecord(record, favoriteTeamId);
   }
+}
+
+export async function reconcileAttendanceRecordById(recordId: number) {
+  const record = await findAttendanceRecordById(recordId);
+
+  if (!record) {
+    return null;
+  }
+
+  await reconcileAttendanceRecord(record, record.ownerFavoriteTeamId);
+  const [refreshed] = await attachCompanions([
+    (await findAttendanceRecordById(recordId))!,
+  ]);
+
+  return refreshed;
 }
 
 export async function getAttendanceStats(userId: number) {

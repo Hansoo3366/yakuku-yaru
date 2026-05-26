@@ -11,6 +11,7 @@ import {
   findAttendanceRecordByGame,
   findAttendanceRecordById,
   getAttendanceStats,
+  reconcileAttendanceRecordById,
   listAttendanceRecords,
   updateAttendancePhoto,
   updateAttendanceRecord,
@@ -222,7 +223,7 @@ attendanceRouter.get('/:recordId', authenticate, async (req, res, next) => {
   try {
     const recordId = Number(req.params.recordId);
     const userId = req.user?.id ?? 0;
-    const record = await findAttendanceRecordById(recordId);
+    const record = await reconcileAttendanceRecordById(recordId);
 
     if (!record) {
       throw new HttpError(404, 'ATTENDANCE_NOT_FOUND', '직관 기록을 찾을 수 없습니다.');

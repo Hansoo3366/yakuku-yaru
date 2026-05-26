@@ -102,6 +102,42 @@ export function resolveAttendanceOutcome(
   return null;
 }
 
+export function getAttendanceTicketView(
+  record: AttendanceRecordForOutcome & {
+    ownerFavoriteTeamId?: number | null;
+  },
+  viewerFavoriteTeamId: number | null | undefined,
+) {
+  const favoriteTeamId =
+    record.ownerFavoriteTeamId ?? viewerFavoriteTeamId ?? null;
+  const official = resolveAttendanceScoresFromGame(record.game, favoriteTeamId);
+  const outcome = resolveAttendanceOutcome(record, favoriteTeamId);
+
+  if (official) {
+    return {
+      myTeamScore: official.myTeamScore,
+      opponentScore: official.opponentScore,
+      outcome: official.result,
+    };
+  }
+
+  if (record.myTeamScore !== null && record.opponentScore !== null) {
+    return {
+      myTeamScore: record.myTeamScore,
+      opponentScore: record.opponentScore,
+      outcome:
+        outcome ??
+        inferResultFromScores(record.myTeamScore, record.opponentScore),
+    };
+  }
+
+  return {
+    myTeamScore: null,
+    opponentScore: null,
+    outcome,
+  };
+}
+
 export function resolveAttendanceTitle(
   totalCount: number,
   winRate: number,

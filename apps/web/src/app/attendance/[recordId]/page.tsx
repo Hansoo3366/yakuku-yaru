@@ -12,6 +12,8 @@ import {
   fetchAttendanceRecord,
   type AttendanceRecord,
 } from '@/lib/attendance-api';
+import { fetchMe } from '@/lib/auth-api';
+import { getAttendanceTicketView } from '@/lib/attendance-score';
 import { getAssetUrl } from '@/lib/api';
 import { getTeamLogoSrc } from '@/lib/team-logo';
 import { Skeleton } from '@/components/Skeleton';
@@ -51,6 +53,9 @@ export default function AttendanceDetailPage() {
   useAuthGuard();
   const recordId = Number(params.recordId);
   const [record, setRecord] = useState<AttendanceRecord | null>(null);
+  const [viewerFavoriteTeamId, setViewerFavoriteTeamId] = useState<
+    number | null
+  >(null);
   const [errorMessage, setErrorMessage] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -62,8 +67,11 @@ export default function AttendanceDetailPage() {
       return;
     }
 
-    fetchAttendanceRecord(recordId, token)
-      .then((response) => setRecord(response.record))
+    Promise.all([fetchAttendanceRecord(recordId, token), fetchMe(token)])
+      .then(([attendanceResponse, meResponse]) => {
+        setRecord(attendanceResponse.record);
+        setViewerFavoriteTeamId(meResponse.user.favoriteTeamId);
+      })
       .catch(() => setErrorMessage('직관 기록을 불러오지 못했어요.'))
       .finally(() => setIsLoading(false));
   }, [recordId, router]);
@@ -107,10 +115,11 @@ export default function AttendanceDetailPage() {
   const acceptedCompanions = record.companions.filter(
     (companion) => companion.status === 'accepted',
   );
-  const winLossClass = record.result ? `is-${record.result}` : 'is-blank';
+  const ticket = getAttendanceTicketView(record, viewerFavoriteTeamId);
+  const winLossClass = ticket.outcome ? `is-${ticket.outcome}` : 'is-blank';
   const watchLabel = record.watchType === 'home' ? '집관' : '직관';
-  const myScore = record.myTeamScore;
-  const oppScore = record.opponentScore;
+  const myScore = ticket.myTeamScore;
+  const oppScore = ticket.opponentScore;
   const hasScore = myScore !== null && oppScore !== null;
 
   return (
@@ -122,7 +131,9 @@ export default function AttendanceDetailPage() {
       <article className={`photo-ticket ${winLossClass}`} aria-label="직관 포토 티켓">
         <div className="photo-ticket-stub">
           <span className="photo-ticket-stub-label">{watchLabel}</span>
-          <span className="photo-ticket-stub-result">{resultLabel(record.result)}</span>
+          <span className="photo-ticket-stub-result">
+            {resultLabel(ticket.outcome)}
+          </span>
           <span className="photo-ticket-stub-meta">
             {new Date(record.game.gameDate).toLocaleDateString('ko-KR', {
               month: '2-digit',

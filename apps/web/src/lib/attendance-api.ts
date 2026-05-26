@@ -14,6 +14,7 @@ export type AttendanceRecord = {
   createdAt: string;
   updatedAt: string;
   ownerNickname: string;
+  ownerFavoriteTeamId?: number | null;
   lastModifiedByUserId: number | null;
   lastModifiedByNickname: string | null;
   viewerRelation: 'owner' | 'companion';
