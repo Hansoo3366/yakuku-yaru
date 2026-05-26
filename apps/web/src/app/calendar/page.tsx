@@ -1,7 +1,5 @@
 'use client';
 
-/* eslint-disable @next/next/no-img-element */
-
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
@@ -18,63 +16,42 @@ import {
   listAttendanceRecords,
   type AttendanceRecord,
 } from '@/lib/attendance-api';
-import { getAssetUrl } from '@/lib/api';
-import { getTeamLogoSrc } from '@/lib/team-logo';
+import { CalendarEventCard } from '@/components/CalendarEventCard';
 import { CalendarOutcomeLegend } from '@/components/CalendarOutcomeLegend';
 import { EmptyState } from '@/components/EmptyState';
 import { Skeleton } from '@/components/Skeleton';
 import {
-  getFavoriteTeamGameOutcome,
-  getGameOutcomeLabel,
-} from '@/lib/game-outcome';
+  formatDateInput,
+  formatWeekLabel,
+  getCalendarMonthDays,
+  getMonthRange,
+  getMonthStart,
+  getWeekDays,
+  getWeekRange,
+  getWeekStart,
+  isSameDay,
+} from '@/lib/calendar-range';
 
-const initialMonth = new Date(2026, 4, 1);
-
+const initialAnchor = new Date(2026, 4, 1);
 const weekdayLabels = ['일', '월', '화', '수', '목', '금', '토'];
 
-function formatDateInput(date: Date) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-}
+type ViewMode = 'month' | 'week';
 
-function getMonthRange(month: Date) {
-  const from = new Date(month.getFullYear(), month.getMonth(), 1);
-  const to = new Date(month.getFullYear(), month.getMonth() + 1, 1);
-  return { from: formatDateInput(from), to: formatDateInput(to) };
-}
+function shiftAnchor(date: Date, viewMode: ViewMode, amount: number) {
+  if (viewMode === 'month') {
+    return new Date(date.getFullYear(), date.getMonth() + amount, 1);
+  }
 
-function getCalendarDays(month: Date) {
-  const firstDay = new Date(month.getFullYear(), month.getMonth(), 1);
-  const startOffset = firstDay.getDay();
-  const start = new Date(firstDay);
-  start.setDate(firstDay.getDate() - startOffset);
-
-  const lastDay = new Date(month.getFullYear(), month.getMonth() + 1, 0);
-  const lastOffset = 6 - lastDay.getDay();
-  const totalDays = startOffset + lastDay.getDate() + lastOffset;
-  const length = totalDays > 35 ? 42 : 35;
-
-  return Array.from({ length }, (_, index) => {
-    const date = new Date(start);
-    date.setDate(start.getDate() + index);
-    return date;
-  });
-}
-
-function isSameDay(a: Date, b: Date) {
-  return (
-    a.getFullYear() === b.getFullYear() &&
-    a.getMonth() === b.getMonth() &&
-    a.getDate() === b.getDate()
-  );
+  const next = new Date(date);
+  next.setDate(next.getDate() + amount * 7);
+  return getWeekStart(next);
 }
 
 export default function CalendarPage() {
   const router = useRouter();
   useAuthGuard();
-  const [calendarMonth, setCalendarMonth] = useState(initialMonth);
+  const [viewMode, setViewMode] = useState<ViewMode>('month');
+  const [anchorDate, setAnchorDate] = useState(initialAnchor);
   const [user, setUser] = useState<PublicUser | null>(null);
   const [teams, setTeams] = useState<Team[]>([]);
   const [games, setGames] = useState<Game[]>([]);
@@ -89,6 +66,15 @@ export default function CalendarPage() {
   >('all');
   const [recordsOnly, setRecordsOnly] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+
+  const monthStart = useMemo(() => getMonthStart(anchorDate), [anchorDate]);
+  const weekStart = useMemo(() => getWeekStart(anchorDate), [anchorDate]);
+  const range = useMemo(
+    () =>
+      viewMode === 'month' ? getMonthRange(monthStart) : getWeekRange(weekStart),
+    [viewMode, monthStart, weekStart],
+  );
+  const rangeKey = `${viewMode}:${range.from}:${range.to}`;
 
   useEffect(() => {
     let isMounted = true;
@@ -107,7 +93,6 @@ export default function CalendarPage() {
 
         setUser(meResponse.user);
         setTeams(teamsResponse.items);
-        const range = getMonthRange(calendarMonth);
         return Promise.all([
           listGames({
             ...range,
@@ -136,34 +121,27 @@ export default function CalendarPage() {
     return () => {
       isMounted = false;
     };
-  }, [calendarMonth, router, scheduleScope]);
-
-  function moveMonth(amount: number) {
-    setCalendarMonth(
-      (current) => new Date(current.getFullYear(), current.getMonth() + amount, 1),
-    );
-  }
-
-  const days = useMemo(() => getCalendarDays(calendarMonth), [calendarMonth]);
+  }, [rangeKey, router, scheduleScope]);
 
   const filteredAttendanceRecords = attendanceRecords.filter((record) =>
     watchTypeFilter === 'all' ? true : record.watchType === watchTypeFilter,
   );
 
-  const currentMonthRecords = attendanceRecords.filter((record) => {
-    const recordDate = new Date(record.game.gameDate);
-    return (
-      recordDate.getFullYear() === calendarMonth.getFullYear() &&
-      recordDate.getMonth() === calendarMonth.getMonth()
-    );
-  });
+  const periodRecords = useMemo(() => {
+    const fromMs = new Date(`${range.from}T00:00:00`).getTime();
+    const toMs = new Date(`${range.to}T00:00:00`).getTime();
 
-  const currentMonthRecordCount = currentMonthRecords.length;
-  const currentMonthWinCount = currentMonthRecords.filter(
+    return attendanceRecords.filter((record) => {
+      const ms = new Date(record.game.gameDate).getTime();
+      return ms >= fromMs && ms < toMs;
+    });
+  }, [attendanceRecords, range.from, range.to]);
+
+  const periodWinCount = periodRecords.filter(
     (record) => record.result === 'win',
   ).length;
-  const currentMonthWinRate = currentMonthRecordCount
-    ? Math.round((currentMonthWinCount / currentMonthRecordCount) * 100)
+  const periodWinRate = periodRecords.length
+    ? Math.round((periodWinCount / periodRecords.length) * 100)
     : 0;
 
   const gamesByDate = games.reduce<Record<string, Game[]>>((acc, game) => {
@@ -171,12 +149,14 @@ export default function CalendarPage() {
     acc[key] = [...(acc[key] ?? []), game];
     return acc;
   }, {});
+
   const attendanceByGameId = filteredAttendanceRecords.reduce<
     Record<number, AttendanceRecord>
   >((acc, record) => {
     acc[record.gameId] = record;
     return acc;
   }, {});
+
   const attendanceByDate = filteredAttendanceRecords.reduce<
     Record<string, AttendanceRecord[]>
   >((acc, record) => {
@@ -185,7 +165,97 @@ export default function CalendarPage() {
     return acc;
   }, {});
 
+  const days =
+    viewMode === 'month'
+      ? getCalendarMonthDays(monthStart)
+      : getWeekDays(weekStart);
+
   const favoriteTeam = teams.find((team) => team.id === user?.favoriteTeamId);
+
+  function renderDayCell(date: Date, options: { dense: boolean; inMonth: boolean }) {
+    const key = formatDateInput(date);
+    const dayGames = gamesByDate[key] ?? [];
+    const dayRecords = attendanceByDate[key] ?? [];
+
+    if (recordsOnly && dayRecords.length === 0 && dayGames.length === 0) {
+      return (
+        <div
+          className={`calendar-day is-empty${options.inMonth ? '' : ' is-outside'}`}
+          key={key}
+        />
+      );
+    }
+
+    const visibleGameIds = new Set(dayGames.map((game) => game.id));
+    const extraRecords = dayRecords.filter(
+      (record) => !visibleGameIds.has(record.gameId),
+    );
+    const isOutside = !options.inMonth;
+    const isToday = isSameDay(date, new Date());
+    const dayOfWeek = date.getDay();
+    const classNames = [
+      'calendar-day',
+      viewMode === 'week' ? 'calendar-day--week' : '',
+      isOutside ? 'is-outside' : '',
+      isToday ? 'is-today' : '',
+      dayRecords.length ? 'has-record' : '',
+      dayOfWeek === 0 ? 'is-sunday' : '',
+      dayOfWeek === 6 ? 'is-saturday' : '',
+    ]
+      .filter(Boolean)
+      .join(' ');
+
+    return (
+      <div className={classNames} key={key}>
+        <span className="calendar-day-number">{date.getDate()}</span>
+        <div className="calendar-events">
+          {dayGames.map((game) => {
+            const attendance = attendanceByGameId[game.id];
+            const href = attendance
+              ? `/attendance/${attendance.id}`
+              : `/games/${game.id}`;
+
+            return (
+              <CalendarEventCard
+                attendance={attendance}
+                dense={options.dense}
+                favoriteTeamId={user?.favoriteTeamId}
+                game={game}
+                href={href}
+                key={game.id}
+              />
+            );
+          })}
+          {extraRecords.map((record) => (
+            <CalendarEventCard
+              attendance={record}
+              dense={options.dense}
+              favoriteTeamId={user?.favoriteTeamId}
+              game={{
+                id: record.gameId,
+                gameDate: record.game.gameDate,
+                stadium: record.game.stadium,
+                homeTeam: record.game.homeTeam,
+                awayTeam: record.game.awayTeam,
+                homeScore: record.game.homeScore,
+                awayScore: record.game.awayScore,
+                status: record.game.status,
+              }}
+              href={`/attendance/${record.id}`}
+              key={`record-${record.id}`}
+            />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  const toolbarTitle =
+    viewMode === 'month'
+      ? `${anchorDate.getFullYear()}.${String(anchorDate.getMonth() + 1).padStart(2, '0')}`
+      : formatWeekLabel(weekStart);
+
+  const periodLabel = viewMode === 'month' ? '이번 달' : '이번 주';
 
   return (
     <main className="app-shell">
@@ -196,48 +266,43 @@ export default function CalendarPage() {
         </h1>
         <p>
           {user?.nickname
-            ? `${user.nickname}님의 ${calendarMonth.getFullYear()}년 ${calendarMonth.getMonth() + 1}월 일정과 기록`
+            ? `${user.nickname}님의 ${viewMode === 'month' ? '월간' : '주간'} 일정과 기록`
             : '경기 일정과 기록을 한 번에 확인하세요.'}
         </p>
       </header>
 
-      <section className="calendar-summary-row" aria-label="이번 달 요약">
+      <section className="calendar-summary-row" aria-label="기간 요약">
         <div className="calendar-summary-card">
-          <span>이번 달 경기</span>
+          <span>{periodLabel} 경기</span>
           <strong>{games.length}</strong>
         </div>
         <div className="calendar-summary-card">
           <span>기록한 경기</span>
-          <strong>{currentMonthRecordCount}</strong>
+          <strong>{periodRecords.length}</strong>
         </div>
         <div className="calendar-summary-card">
-          <span>월간 승률</span>
-          <strong>{currentMonthWinRate}%</strong>
+          <span>{viewMode === 'month' ? '월간' : '주간'} 승률</span>
+          <strong>{periodWinRate}%</strong>
         </div>
       </section>
 
-      <section className="calendar-toolbar" aria-label="월 이동">
+      <section className="calendar-toolbar" aria-label="기간 이동">
         <button
-          aria-label="이전 달"
+          aria-label={viewMode === 'month' ? '이전 달' : '이전 주'}
           className="icon-button"
-          onClick={() => moveMonth(-1)}
+          onClick={() => setAnchorDate((current) => shiftAnchor(current, viewMode, -1))}
           type="button"
         >
           ←
         </button>
         <div className="calendar-month-label">
-          <small>
-            {calendarMonth.toLocaleDateString('en-US', { month: 'long' })}
-          </small>
-          <span>
-            {calendarMonth.getFullYear()}.
-            {String(calendarMonth.getMonth() + 1).padStart(2, '0')}
-          </span>
+          <small>{viewMode === 'month' ? 'Monthly' : 'Weekly'}</small>
+          <span>{toolbarTitle}</span>
         </div>
         <button
-          aria-label="다음 달"
+          aria-label={viewMode === 'month' ? '다음 달' : '다음 주'}
           className="icon-button"
-          onClick={() => moveMonth(1)}
+          onClick={() => setAnchorDate((current) => shiftAnchor(current, viewMode, 1))}
           type="button"
         >
           →
@@ -245,6 +310,29 @@ export default function CalendarPage() {
       </section>
 
       <section className="calendar-filter-bar" aria-label="캘린더 필터">
+        <div className="filter-group">
+          <span className="filter-group-label">보기</span>
+          <button
+            className={`filter-pill ${viewMode === 'month' ? 'is-selected' : ''}`}
+            onClick={() => {
+              setViewMode('month');
+              setAnchorDate(getMonthStart(anchorDate));
+            }}
+            type="button"
+          >
+            월간
+          </button>
+          <button
+            className={`filter-pill ${viewMode === 'week' ? 'is-selected' : ''}`}
+            onClick={() => {
+              setViewMode('week');
+              setAnchorDate(getWeekStart(anchorDate));
+            }}
+            type="button"
+          >
+            주간
+          </button>
+        </div>
         <div className="filter-group">
           <span className="filter-group-label">경기</span>
           <button
@@ -288,182 +376,27 @@ export default function CalendarPage() {
 
       {isLoading ? (
         <div className="card">
-          <Skeleton height={420} radius={10} />
+          <Skeleton height={viewMode === 'week' ? 520 : 420} radius={10} />
         </div>
       ) : (
-        <section className="calendar-card" aria-label="월간 캘린더">
+        <section
+          className={`calendar-card${viewMode === 'week' ? ' calendar-card--week' : ''}`}
+          aria-label={viewMode === 'month' ? '월간 캘린더' : '주간 캘린더'}
+        >
           <div className="calendar-weekdays" aria-hidden="true">
             {weekdayLabels.map((weekday) => (
               <span key={weekday}>{weekday}</span>
             ))}
           </div>
           <div className="calendar-grid">
-            {days.map((date) => {
-              const key = formatDateInput(date);
-              const dayGames = gamesByDate[key] ?? [];
-              const dayRecords = attendanceByDate[key] ?? [];
-              if (recordsOnly && dayRecords.length === 0) {
-                return <div className="calendar-day is-outside" key={key} />;
-              }
-              const visibleGameIds = new Set(dayGames.map((game) => game.id));
-              const extraRecords = dayRecords.filter(
-                (record) => !visibleGameIds.has(record.gameId),
-              );
-              const isOutside = date.getMonth() !== calendarMonth.getMonth();
-              const isToday = isSameDay(date, new Date());
-              const dayOfWeek = date.getDay();
-              const classNames = [
-                'calendar-day',
-                isOutside ? 'is-outside' : '',
-                isToday ? 'is-today' : '',
-                dayRecords.length ? 'has-record' : '',
-                dayOfWeek === 0 ? 'is-sunday' : '',
-                dayOfWeek === 6 ? 'is-saturday' : '',
-              ]
-                .filter(Boolean)
-                .join(' ');
-
-              return (
-                <div className={classNames} key={key}>
-                  <span className="calendar-day-number">{date.getDate()}</span>
-                  <div className="calendar-events">
-                    {dayGames.map((game) => {
-                      const attendance = attendanceByGameId[game.id];
-                      const href = attendance
-                        ? `/attendance/${attendance.id}`
-                        : `/games/${game.id}`;
-                      const tagKind = attendance
-                        ? attendance.viewerRelation === 'companion'
-                          ? 'companion'
-                          : attendance.watchType
-                        : null;
-                      const outcome = getFavoriteTeamGameOutcome(
-                        game,
-                        user?.favoriteTeamId,
-                        attendance?.result,
-                      );
-                      const outcomeLabel = getGameOutcomeLabel(outcome);
-                      const matchupLabel = `${game.awayTeam.shortName} vs ${game.homeTeam.shortName}`;
-
-                      return (
-                        <Link
-                          aria-label={
-                            outcomeLabel
-                              ? `${matchupLabel}, ${outcomeLabel}`
-                              : matchupLabel
-                          }
-                          className="calendar-event"
-                          data-outcome={
-                            outcome !== 'unknown' ? outcome : undefined
-                          }
-                          href={href}
-                          key={game.id}
-                        >
-                          <span
-                            aria-hidden="true"
-                            className="calendar-event-logos"
-                          >
-                            <img alt="" src={getTeamLogoSrc(game.awayTeam)} />
-                            <img alt="" src={getTeamLogoSrc(game.homeTeam)} />
-                          </span>
-                          <span className="calendar-event-title">
-                            {game.awayTeam.shortName} vs {game.homeTeam.shortName}
-                          </span>
-                          {attendance?.photoUrl ? (
-                            <img
-                              alt="직관 사진"
-                              className="calendar-event-photo"
-                              src={getAssetUrl(attendance.photoUrl)}
-                              style={{ gridColumn: '1 / -1' }}
-                            />
-                          ) : null}
-                          {tagKind ? (
-                            <span
-                              className="calendar-event-tag"
-                              data-kind={tagKind}
-                              style={{ gridColumn: '1 / -1', justifySelf: 'start' }}
-                            >
-                              {tagKind === 'home'
-                                ? '집관'
-                                : tagKind === 'companion'
-                                  ? '동행'
-                                  : '직관'}
-                            </span>
-                          ) : null}
-                        </Link>
-                      );
-                    })}
-                    {extraRecords.map((record) => {
-                      const tagKind =
-                        record.viewerRelation === 'companion'
-                          ? 'companion'
-                          : record.watchType;
-                      const href = `/attendance/${record.id}`;
-                      const gameForOutcome = {
-                        homeTeam: record.game.homeTeam,
-                        awayTeam: record.game.awayTeam,
-                        homeScore: record.game.homeScore,
-                        awayScore: record.game.awayScore,
-                        status: record.game.status,
-                      };
-                      const outcome = getFavoriteTeamGameOutcome(
-                        gameForOutcome,
-                        user?.favoriteTeamId,
-                        record.result,
-                      );
-                      const outcomeLabel = getGameOutcomeLabel(outcome);
-                      const matchupLabel = `${record.game.awayTeam.shortName} vs ${record.game.homeTeam.shortName}`;
-
-                      return (
-                        <Link
-                          aria-label={
-                            outcomeLabel
-                              ? `${matchupLabel}, ${outcomeLabel}`
-                              : matchupLabel
-                          }
-                          className="calendar-event"
-                          data-outcome={
-                            outcome !== 'unknown' ? outcome : undefined
-                          }
-                          href={href}
-                          key={record.id}
-                        >
-                          <span
-                            aria-hidden="true"
-                            className="calendar-event-logos"
-                          >
-                            <img alt="" src={getTeamLogoSrc(record.game.awayTeam)} />
-                            <img alt="" src={getTeamLogoSrc(record.game.homeTeam)} />
-                          </span>
-                          <span className="calendar-event-title">
-                            {record.game.awayTeam.shortName} vs {record.game.homeTeam.shortName}
-                          </span>
-                          {record.photoUrl ? (
-                            <img
-                              alt="직관 사진"
-                              className="calendar-event-photo"
-                              src={getAssetUrl(record.photoUrl)}
-                              style={{ gridColumn: '1 / -1' }}
-                            />
-                          ) : null}
-                          <span
-                            className="calendar-event-tag"
-                            data-kind={tagKind}
-                            style={{ gridColumn: '1 / -1', justifySelf: 'start' }}
-                          >
-                            {tagKind === 'home'
-                              ? '집관'
-                              : tagKind === 'companion'
-                                ? '동행'
-                                : '직관'}
-                          </span>
-                        </Link>
-                      );
-                    })}
-                  </div>
-                </div>
-              );
-            })}
+            {days.map((date) =>
+              renderDayCell(date, {
+                dense: viewMode === 'month',
+                inMonth:
+                  viewMode === 'week' ||
+                  date.getMonth() === monthStart.getMonth(),
+              }),
+            )}
           </div>
         </section>
       )}
@@ -471,8 +404,12 @@ export default function CalendarPage() {
       {!isLoading && games.length === 0 ? (
         <EmptyState
           icon="◌"
-          title="이번 달엔 경기 일정이 없어요"
-          description="시즌 휴식기일 수 있어요. 다른 달로 이동해보세요."
+          title={
+            viewMode === 'month'
+              ? '이번 달엔 경기 일정이 없어요'
+              : '이번 주엔 경기 일정이 없어요'
+          }
+          description="다른 기간으로 이동해보세요."
         />
       ) : null}
     </main>

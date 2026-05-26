@@ -67,7 +67,7 @@ export function getGameOutcomeLabel(outcome: GameOutcome) {
     case 'cancelled':
       return '취소';
     case 'scheduled':
-      return '예정';
+      return '경기전';
     default:
       return '';
   }

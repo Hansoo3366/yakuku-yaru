@@ -3,7 +3,7 @@ const items = [
   { outcome: 'lose', label: '패' },
   { outcome: 'draw', label: '무' },
   { outcome: 'cancelled', label: '취소' },
-  { outcome: 'scheduled', label: '예정' },
+  { outcome: 'scheduled', label: '경기전' },
 ] as const;
 
 export function CalendarOutcomeLegend() {
@@ -20,7 +20,7 @@ export function CalendarOutcomeLegend() {
             className="calendar-outcome-swatch"
             data-outcome={item.outcome}
           />
-          <span className="sr-only">{item.label}</span>
+          <span className="calendar-outcome-legend-label">{item.label}</span>
         </span>
       ))}
     </div>
