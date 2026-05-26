@@ -16,6 +16,20 @@ type GameLike = {
   status: Game['status'];
 };
 
+function normalizeTeamId(value: number) {
+  return Number(value);
+}
+
+function normalizeScore(value: GameLike['homeScore']) {
+  if (value === null || value === undefined) {
+    return null;
+  }
+
+  const parsed = Number(value);
+
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
 export function getFavoriteTeamGameOutcome(
   game: GameLike,
   favoriteTeamId: number | null | undefined,
@@ -25,8 +39,9 @@ export function getFavoriteTeamGameOutcome(
     return 'unknown';
   }
 
-  const isHome = game.homeTeam.id === favoriteTeamId;
-  const isAway = game.awayTeam.id === favoriteTeamId;
+  const teamId = normalizeTeamId(favoriteTeamId);
+  const isHome = normalizeTeamId(game.homeTeam.id) === teamId;
+  const isAway = normalizeTeamId(game.awayTeam.id) === teamId;
 
   if (!isHome && !isAway) {
     return 'unknown';
@@ -36,9 +51,12 @@ export function getFavoriteTeamGameOutcome(
     return 'cancelled';
   }
 
-  if (game.homeScore !== null && game.awayScore !== null) {
-    const myScore = isHome ? game.homeScore : game.awayScore;
-    const oppScore = isHome ? game.awayScore : game.homeScore;
+  const homeScore = normalizeScore(game.homeScore);
+  const awayScore = normalizeScore(game.awayScore);
+
+  if (homeScore !== null && awayScore !== null) {
+    const myScore = isHome ? homeScore : awayScore;
+    const oppScore = isHome ? awayScore : homeScore;
 
     if (myScore > oppScore) return 'win';
     if (myScore < oppScore) return 'lose';

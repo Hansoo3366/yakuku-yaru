@@ -221,7 +221,7 @@ export default function AdminPage() {
           <h2>유저 관리</h2>
           <div className="admin-table">
             {users.map((user) => (
-              <div className="admin-row" key={user.id}>
+              <div className="admin-row admin-row--user" key={user.id}>
                 <strong>{user.nickname}</strong>
                 <span>{user.email}</span>
                 <span>{user.favoriteTeamShortName ?? '팀 없음'}</span>

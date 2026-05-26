@@ -8,13 +8,6 @@ export type OpponentInsightItem = {
   games: number;
 };
 
-export type CalendarOpponentInsights = {
-  teamWinRateHigh: OpponentInsightItem | null;
-  teamWinRateLow: OpponentInsightItem | null;
-  stadiumWinRateHigh: OpponentInsightItem | null;
-  stadiumWinRateLow: OpponentInsightItem | null;
-};
-
 type OpponentAccumulator = {
   teamId: number;
   shortName: string;
@@ -49,7 +42,7 @@ function isDecidedTeamOutcome(
   return outcome === 'win' || outcome === 'lose' || outcome === 'draw';
 }
 
-function pickExtreme(
+export function pickOpponentExtreme(
   entries: OpponentAccumulator[],
   direction: 'high' | 'low',
 ): OpponentInsightItem | null {
@@ -75,24 +68,21 @@ function pickExtreme(
   })[0];
 }
 
-export function getCalendarOpponentInsights(
+export function getStadiumAttendanceOpponentInsights(
   records: AttendanceRecord[],
   favoriteTeamId: number | null | undefined,
-): CalendarOpponentInsights {
+): {
+  stadiumWinRateHigh: OpponentInsightItem | null;
+  stadiumWinRateLow: OpponentInsightItem | null;
+} {
   if (!favoriteTeamId) {
-    return {
-      teamWinRateHigh: null,
-      teamWinRateLow: null,
-      stadiumWinRateHigh: null,
-      stadiumWinRateLow: null,
-    };
+    return { stadiumWinRateHigh: null, stadiumWinRateLow: null };
   }
 
-  const teamStats = new Map<number, OpponentAccumulator>();
-  const stadiumStats = new Map<number, OpponentAccumulator>();
+  const stadiumOpponentStats = new Map<number, OpponentAccumulator>();
 
   for (const record of records) {
-    if (record.viewerRelation !== 'owner') {
+    if (record.viewerRelation !== 'owner' || record.watchType !== 'stadium') {
       continue;
     }
 
@@ -108,27 +98,11 @@ export function getCalendarOpponentInsights(
       record.result,
     );
 
-    if (isDecidedTeamOutcome(teamOutcome)) {
-      const current = teamStats.get(opponent.id) ?? {
-        teamId: opponent.id,
-        shortName: opponent.shortName,
-        wins: 0,
-        decided: 0,
-      };
-      current.decided += 1;
-
-      if (teamOutcome === 'win') {
-        current.wins += 1;
-      }
-
-      teamStats.set(opponent.id, current);
-    }
-
-    if (record.watchType !== 'stadium' || !isDecidedTeamOutcome(teamOutcome)) {
+    if (!isDecidedTeamOutcome(teamOutcome)) {
       continue;
     }
 
-    const stadiumCurrent = stadiumStats.get(opponent.id) ?? {
+    const stadiumCurrent = stadiumOpponentStats.get(opponent.id) ?? {
       teamId: opponent.id,
       shortName: opponent.shortName,
       wins: 0,
@@ -140,24 +114,13 @@ export function getCalendarOpponentInsights(
       stadiumCurrent.wins += 1;
     }
 
-    stadiumStats.set(opponent.id, stadiumCurrent);
+    stadiumOpponentStats.set(opponent.id, stadiumCurrent);
   }
 
-  const teamEntries = [...teamStats.values()];
-  const stadiumEntries = [...stadiumStats.values()];
+  const stadiumEntries = [...stadiumOpponentStats.values()];
 
   return {
-    teamWinRateHigh: pickExtreme(teamEntries, 'high'),
-    teamWinRateLow: pickExtreme(teamEntries, 'low'),
-    stadiumWinRateHigh: pickExtreme(stadiumEntries, 'high'),
-    stadiumWinRateLow: pickExtreme(stadiumEntries, 'low'),
+    stadiumWinRateHigh: pickOpponentExtreme(stadiumEntries, 'high'),
+    stadiumWinRateLow: pickOpponentExtreme(stadiumEntries, 'low'),
   };
-}
-
-export function formatOpponentInsight(item: OpponentInsightItem | null) {
-  if (!item) {
-    return '—';
-  }
-
-  return `${item.shortName} ${item.rate}%`;
 }

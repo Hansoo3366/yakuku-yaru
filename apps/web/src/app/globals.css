@@ -168,6 +168,8 @@ img {
  * ========================================================= */
 
 .page-shell {
+  display: grid;
+  gap: var(--space-6);
   margin: 0 auto;
   max-width: var(--container-max);
   padding: var(--space-6) var(--space-4) var(--space-7);
@@ -2194,7 +2196,7 @@ img {
   padding: var(--space-3) var(--space-4);
 }
 
-.calendar-summary-card span {
+.calendar-summary-card > span {
   color: var(--color-muted);
   font-size: var(--text-xs);
   font-weight: var(--weight-black);
@@ -2207,6 +2209,34 @@ img {
   font-size: var(--text-2xl);
   font-weight: var(--weight-black);
   letter-spacing: -0.02em;
+}
+
+.calendar-opponent-insight {
+  align-items: center;
+  color: var(--color-night-navy);
+  display: inline-flex;
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-black);
+  gap: 8px;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+.calendar-opponent-insight__logo {
+  flex-shrink: 0;
+  height: 28px;
+  object-fit: contain;
+  width: 28px;
+}
+
+.calendar-opponent-insight__text {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.2em 0.35em;
+}
+
+.calendar-opponent-insight__rate {
+  font-variant-numeric: tabular-nums;
 }
 
 .calendar-agenda {
@@ -2664,8 +2694,17 @@ img {
   border-radius: var(--radius-sm);
   display: grid;
   gap: var(--space-2);
-  grid-template-columns: 1.4fr 1fr 0.8fr 0.8fr auto auto;
+  grid-template-columns: 1.4fr 1fr 0.8fr 0.8fr auto;
   padding: var(--space-3);
+}
+
+.admin-row--user {
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1.2fr) minmax(72px, 0.7fr) minmax(96px, 0.85fr) 92px 112px auto;
+}
+
+.admin-row .btn {
+  justify-self: start;
+  width: max-content;
 }
 
 .admin-row strong,
@@ -2688,7 +2727,8 @@ img {
   .admin-summary-grid,
   .admin-toolbar,
   .admin-game-form,
-  .admin-row {
+  .admin-row,
+  .admin-row--user {
     grid-template-columns: 1fr;
   }
 }
@@ -3662,13 +3702,22 @@ img {
     padding: var(--space-3);
   }
 
-  .calendar-summary-card span {
+  .calendar-summary-card > span {
     font-size: 10px;
     letter-spacing: 0.02em;
   }
 
   .calendar-summary-card strong {
     font-size: var(--text-lg);
+  }
+
+  .calendar-opponent-insight {
+    font-size: var(--text-lg);
+  }
+
+  .calendar-opponent-insight__logo {
+    height: 22px;
+    width: 22px;
   }
 
   .app-shell--calendar {
@@ -3813,6 +3862,10 @@ img {
   .calendar-summary-row {
     grid-template-columns: 1fr 1fr 1fr;
     gap: 6px;
+  }
+
+  .calendar-summary-row--quad {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .calendar-summary-card {
