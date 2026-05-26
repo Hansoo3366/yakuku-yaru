@@ -1513,29 +1513,27 @@ img {
   gap: var(--space-3);
 }
 
-.companion-search {
-  position: relative;
+.companion-search-bar {
+  align-items: stretch;
+  display: grid;
+  gap: var(--space-2);
+  grid-template-columns: minmax(0, 1fr) auto;
 }
 
-.companion-search input {
-  background: var(--color-white);
-  border: 1px solid var(--color-line);
-  border-radius: var(--radius-sm);
-  font-size: var(--text-base);
+.companion-search-input-wrap {
+  min-width: 0;
+}
+
+.companion-search-input-wrap .form-input {
   height: 46px;
-  padding: 0 var(--space-3) 0 40px;
   width: 100%;
 }
 
-.companion-search::before {
-  color: var(--color-muted);
-  content: '⌕';
-  font-size: 16px;
-  inset: 0 auto 0 14px;
-  pointer-events: none;
-  position: absolute;
-  display: grid;
-  align-items: center;
+.companion-search-button {
+  flex-shrink: 0;
+  height: 46px;
+  min-width: 72px;
+  padding-inline: var(--space-4);
 }
 
 .companion-result-list {
@@ -1583,31 +1581,49 @@ img {
   gap: var(--space-2);
 }
 
-.companion-chip {
+.companion-chip--picked {
   align-items: center;
   background: var(--color-night-navy);
-  border: 0;
   border-radius: var(--radius-pill);
   color: var(--color-white);
   display: inline-flex;
   font-size: var(--text-sm);
   font-weight: var(--weight-bold);
-  gap: 6px;
-  height: 32px;
-  padding: 0 6px 0 12px;
+  gap: 8px;
+  min-height: 36px;
+  padding: 4px 6px 4px 14px;
 }
 
-.companion-chip-remove {
+.companion-chip-remove-btn {
   align-items: center;
-  background: rgba(255, 255, 255, 0.18);
+  background: var(--color-white);
+  border: 1px solid var(--color-line-strong);
   border-radius: var(--radius-pill);
-  color: var(--color-white);
+  color: var(--color-score-red);
+  cursor: pointer;
   display: inline-grid;
-  font-size: var(--text-xs);
+  flex-shrink: 0;
+  font-size: 18px;
   font-weight: var(--weight-black);
-  height: 22px;
+  height: 28px;
   justify-content: center;
-  width: 22px;
+  line-height: 1;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
+  width: 28px;
+}
+
+.companion-chip-remove-btn:hover {
+  background: rgba(214, 59, 42, 0.1);
+  border-color: var(--color-score-red);
+  color: var(--color-score-red);
+}
+
+.companion-chip-remove-btn:focus-visible {
+  outline: 2px solid var(--color-score-red);
+  outline-offset: 2px;
 }
 
 .companion-status-list {
@@ -1890,10 +1906,18 @@ img {
 
 .calendar-event[data-outcome='draw'] {
   background: color-mix(in srgb, var(--color-draw) 34%, var(--color-white));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-draw) 28%, transparent);
 }
 
 .calendar-event[data-outcome='cancelled'] {
-  background: color-mix(in srgb, var(--color-cancelled) 30%, var(--color-white));
+  background: repeating-linear-gradient(
+    -45deg,
+    color-mix(in srgb, var(--color-cancelled) 52%, var(--color-white)),
+    color-mix(in srgb, var(--color-cancelled) 52%, var(--color-white)) 3px,
+    color-mix(in srgb, var(--color-white) 90%, var(--color-line)) 3px,
+    color-mix(in srgb, var(--color-white) 90%, var(--color-line)) 6px
+  );
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-cancelled) 35%, transparent);
 }
 
 .calendar-event[data-outcome='scheduled'] {
@@ -3035,6 +3059,13 @@ img {
 /* =========================================================
  * Auth (login / register)
  * ========================================================= */
+
+.verification-code-input {
+  font-size: var(--text-xl);
+  font-weight: var(--weight-black);
+  letter-spacing: 0.35em;
+  text-align: center;
+}
 
 .auth-card {
   background: var(--color-white);

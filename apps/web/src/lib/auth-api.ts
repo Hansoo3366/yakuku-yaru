@@ -6,10 +6,16 @@ export type AuthResponse = {
   user: PublicUser;
 };
 
-export type RegisterResponse = {
-  user: PublicUser;
+export type EmailVerificationMeta = {
   emailSent: boolean;
-  verificationUrl: string | null;
+  expiresAt: string;
+  resendAvailableAt: string;
+  resendsRemaining: number;
+  verificationCode: string | null;
+};
+
+export type RegisterResponse = EmailVerificationMeta & {
+  user: PublicUser;
 };
 
 export function login(input: { email: string; password: string }) {
@@ -50,10 +56,17 @@ export function fetchMe(token: string) {
   });
 }
 
-export function verifyEmail(token: string) {
+export function verifyEmail(input: { email: string; code: string } | { token: string }) {
   return request<{ verified: boolean }>('/auth/verify-email', {
     method: 'POST',
-    body: { token },
+    body: input,
+  });
+}
+
+export function resendVerificationEmail(email: string) {
+  return request<EmailVerificationMeta>('/auth/resend-verification-email', {
+    method: 'POST',
+    body: { email },
   });
 }
 

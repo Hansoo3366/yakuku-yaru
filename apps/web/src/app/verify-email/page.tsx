@@ -19,7 +19,7 @@ function VerifyEmailContent() {
       return;
     }
 
-    verifyEmail(token)
+    verifyEmail({ token })
       .then(() => {
         setStatus('success');
         setMessage('이메일 인증이 완료되었습니다.');

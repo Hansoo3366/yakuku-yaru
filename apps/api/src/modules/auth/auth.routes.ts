@@ -6,16 +6,12 @@ import { HttpError } from '../../utils/http-error.js';
 import { signAccessToken } from '../../utils/jwt.js';
 import { comparePassword, hashPassword } from '../../utils/password.js';
 import {
-  createEmailVerificationToken,
   findUsableEmailVerificationToken,
+  findUsableEmailVerificationTokenByEmailAndCode,
   markEmailVerificationTokenUsed,
 } from './email-verification.repository.js';
-import {
-  getPasswordResetUrl,
-  getVerificationUrl,
-  sendPasswordResetEmail,
-  sendVerificationEmail,
-} from './email.service.js';
+import { issueEmailVerification, resendEmailVerification } from './email-verification.js';
+import { getPasswordResetUrl, sendPasswordResetEmail } from './email.service.js';
 import {
   createPasswordResetToken,
   findUsablePasswordResetToken,
@@ -57,6 +53,13 @@ const verifyEmailRateLimit = rateLimit({
   scope: 'auth:verify-email',
   windowMs: 10 * 60 * 1000,
   max: 20,
+});
+
+const resendVerificationRateLimit = rateLimit({
+  scope: 'auth:resend-verification',
+  windowMs: 60 * 60 * 1000,
+  max: 10,
+  message: '인증번호 재전송 요청이 너무 많습니다. 잠시 후 다시 시도해주세요.',
 });
 
 const checkRegistrationRateLimit = rateLimit({
@@ -156,18 +159,22 @@ authRouter.post('/register', registerRateLimit, async (req, res, next) => {
       throw new HttpError(500, 'USER_CREATE_FAILED', '회원가입에 실패했습니다.');
     }
 
-    const verificationToken = await createEmailVerificationToken(user.id);
-    const emailSent = await sendVerificationEmail({
+    const verification = await issueEmailVerification({
+      userId: user.id,
       email: user.email,
       nickname: user.nickname,
-      token: verificationToken,
     });
 
     res.status(201).json({
       user: toPublicUser(user),
-      emailSent,
-      verificationUrl:
-        env.nodeEnv === 'production' ? null : getVerificationUrl(verificationToken),
+      emailSent: verification.emailSent,
+      expiresAt: verification.expiresAt,
+      resendAvailableAt: verification.resendAvailableAt,
+      resendsRemaining: verification.resendsRemaining,
+      verificationCode:
+        env.nodeEnv !== 'production' && !verification.emailSent
+          ? verification.code
+          : null,
     });
   } catch (error) {
     next(error);
@@ -202,7 +209,7 @@ authRouter.post('/login', loginRateLimit, async (req, res, next) => {
       throw new HttpError(
         403,
         'EMAIL_NOT_VERIFIED',
-        '이메일 인증이 완료되지 않았습니다. 가입 시 받은 메일의 인증 링크를 눌러주세요.',
+        '이메일 인증이 완료되지 않았습니다. 가입 시 받은 인증번호를 입력해주세요.',
       );
     }
 
@@ -306,20 +313,70 @@ authRouter.post('/reset-password', resetPasswordRateLimit, async (req, res, next
   }
 });
 
+authRouter.post(
+  '/resend-verification-email',
+  resendVerificationRateLimit,
+  async (req, res, next) => {
+    try {
+      const { email } = req.body as { email?: string };
+
+      if (!email) {
+        throw new HttpError(400, 'INVALID_INPUT', '이메일을 입력해주세요.');
+      }
+
+      const normalizedEmail = validateEmail(email);
+      const verification = await resendEmailVerification(normalizedEmail);
+
+      res.json({
+        emailSent: verification.emailSent,
+        expiresAt: verification.expiresAt,
+        resendAvailableAt: verification.resendAvailableAt,
+        resendsRemaining: verification.resendsRemaining,
+        verificationCode:
+          env.nodeEnv !== 'production' && !verification.emailSent
+            ? verification.code
+            : null,
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
 authRouter.post('/verify-email', verifyEmailRateLimit, async (req, res, next) => {
   try {
-    const { token } = req.body as {
+    const { token, email, code } = req.body as {
       token?: string;
+      email?: string;
+      code?: string;
     };
 
-    if (!token) {
-      throw new HttpError(400, 'INVALID_INPUT', '인증 토큰이 필요합니다.');
+    let verificationToken = null;
+
+    if (email && code) {
+      const normalizedEmail = validateEmail(email);
+      const normalizedCode = String(code).trim().replace(/\D/g, '');
+
+      if (normalizedCode.length !== 6) {
+        throw new HttpError(400, 'INVALID_INPUT', '6자리 인증번호를 입력해주세요.');
+      }
+
+      verificationToken = await findUsableEmailVerificationTokenByEmailAndCode(
+        normalizedEmail,
+        normalizedCode,
+      );
+    } else if (token) {
+      verificationToken = await findUsableEmailVerificationToken(token.trim());
+    } else {
+      throw new HttpError(400, 'INVALID_INPUT', '이메일과 인증번호를 입력해주세요.');
     }
 
-    const verificationToken = await findUsableEmailVerificationToken(token);
-
     if (!verificationToken) {
-      throw new HttpError(400, 'INVALID_VERIFICATION_TOKEN', '유효하지 않은 인증 토큰입니다.');
+      throw new HttpError(
+        400,
+        'INVALID_VERIFICATION_TOKEN',
+        '인증번호가 올바르지 않거나 만료되었습니다.',
+      );
     }
 
     await markUserEmailVerified(verificationToken.user_id);

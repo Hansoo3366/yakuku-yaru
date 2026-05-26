@@ -34,10 +34,31 @@ import {
 } from '@/lib/calendar-range';
 import { useMediaQuery } from '@/lib/use-media-query';
 
-const initialAnchor = new Date(2026, 4, 1);
 const weekdayLabels = ['일', '월', '화', '수', '목', '금', '토'];
 
 type ViewMode = 'month' | 'week';
+
+function gameFromAttendanceRecord(record: AttendanceRecord, gamesById: Map<number, Game>): Game {
+  const existing = gamesById.get(record.gameId);
+
+  if (existing) {
+    return existing;
+  }
+
+  return {
+    id: record.gameId,
+    gameDate: record.game.gameDate,
+    stadium: record.game.stadium,
+    homeTeam: record.game.homeTeam as Game['homeTeam'],
+    awayTeam: record.game.awayTeam as Game['awayTeam'],
+    homeScore: record.game.homeScore,
+    awayScore: record.game.awayScore,
+    status: record.game.status,
+    ticketUrl: null,
+    ticketOpenAt: null,
+    stadiumGuide: null,
+  };
+}
 
 function shiftAnchor(date: Date, viewMode: ViewMode, amount: number) {
   if (viewMode === 'month') {
@@ -53,7 +74,7 @@ export default function CalendarPage() {
   const router = useRouter();
   useAuthGuard();
   const [viewMode, setViewMode] = useState<ViewMode>('month');
-  const [anchorDate, setAnchorDate] = useState(initialAnchor);
+  const [anchorDate, setAnchorDate] = useState(() => getMonthStart(new Date()));
   const [user, setUser] = useState<PublicUser | null>(null);
   const [teams, setTeams] = useState<Team[]>([]);
   const [games, setGames] = useState<Game[]>([]);
@@ -66,7 +87,6 @@ export default function CalendarPage() {
   const [watchTypeFilter, setWatchTypeFilter] = useState<
     'all' | 'stadium' | 'home'
   >('all');
-  const [recordsOnly, setRecordsOnly] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const isMobile = useMediaQuery('(max-width: 720px)');
 
@@ -126,19 +146,30 @@ export default function CalendarPage() {
     };
   }, [rangeKey, router, scheduleScope]);
 
-  const filteredAttendanceRecords = attendanceRecords.filter((record) =>
-    watchTypeFilter === 'all' ? true : record.watchType === watchTypeFilter,
+  const ownAttendanceRecords = useMemo(
+    () => attendanceRecords.filter((record) => record.viewerRelation === 'owner'),
+    [attendanceRecords],
   );
+
+  const filteredAttendanceRecords = useMemo(() => {
+    if (watchTypeFilter === 'all') {
+      return ownAttendanceRecords;
+    }
+
+    return ownAttendanceRecords.filter(
+      (record) => record.watchType === watchTypeFilter,
+    );
+  }, [ownAttendanceRecords, watchTypeFilter]);
 
   const periodRecords = useMemo(() => {
     const fromMs = new Date(`${range.from}T00:00:00`).getTime();
     const toMs = new Date(`${range.to}T00:00:00`).getTime();
 
-    return attendanceRecords.filter((record) => {
+    return filteredAttendanceRecords.filter((record) => {
       const ms = new Date(record.game.gameDate).getTime();
       return ms >= fromMs && ms < toMs;
     });
-  }, [attendanceRecords, range.from, range.to]);
+  }, [filteredAttendanceRecords, range.from, range.to]);
 
   const periodWinCount = periodRecords.filter(
     (record) => record.result === 'win',
@@ -147,11 +178,51 @@ export default function CalendarPage() {
     ? Math.round((periodWinCount / periodRecords.length) * 100)
     : 0;
 
-  const gamesByDate = games.reduce<Record<string, Game[]>>((acc, game) => {
-    const key = game.gameDate.slice(0, 10);
-    acc[key] = [...(acc[key] ?? []), game];
-    return acc;
-  }, {});
+  const gamesByDate = useMemo(
+    () =>
+      games.reduce<Record<string, Game[]>>((acc, game) => {
+        const key = game.gameDate.slice(0, 10);
+        acc[key] = [...(acc[key] ?? []), game];
+        return acc;
+      }, {}),
+    [games],
+  );
+
+  const gamesById = useMemo(
+    () => new Map(games.map((game) => [game.id, game])),
+    [games],
+  );
+
+  const displayGamesByDate = useMemo(() => {
+    if (watchTypeFilter === 'all') {
+      return gamesByDate;
+    }
+
+    const result: Record<string, Game[]> = {};
+
+    for (const record of filteredAttendanceRecords) {
+      const key = record.game.gameDate.slice(0, 10);
+      const game = gameFromAttendanceRecord(record, gamesById);
+      const dayGames = result[key] ?? [];
+
+      if (!dayGames.some((item) => item.id === game.id)) {
+        result[key] = [...dayGames, game];
+      }
+    }
+
+    return result;
+  }, [watchTypeFilter, gamesByDate, filteredAttendanceRecords, gamesById]);
+
+  const displayGameCount = useMemo(() => {
+    if (watchTypeFilter === 'all') {
+      return games.length;
+    }
+
+    return Object.values(displayGamesByDate).reduce(
+      (total, dayGames) => total + dayGames.length,
+      0,
+    );
+  }, [watchTypeFilter, games.length, displayGamesByDate]);
 
   const attendanceByGameId = filteredAttendanceRecords.reduce<
     Record<number, AttendanceRecord>
@@ -177,17 +248,8 @@ export default function CalendarPage() {
 
   function renderDayCell(date: Date, options: { dense: boolean; inMonth: boolean }) {
     const key = formatDateInput(date);
-    const dayGames = gamesByDate[key] ?? [];
+    const dayGames = displayGamesByDate[key] ?? [];
     const dayRecords = attendanceByDate[key] ?? [];
-
-    if (recordsOnly && dayRecords.length === 0 && dayGames.length === 0) {
-      return (
-        <div
-          className={`calendar-day is-empty${options.inMonth ? '' : ' is-outside'}`}
-          key={key}
-        />
-      );
-    }
 
     const visibleGameIds = new Set(dayGames.map((game) => game.id));
     const extraRecords = dayRecords.filter(
@@ -277,7 +339,7 @@ export default function CalendarPage() {
       <section className="calendar-summary-row" aria-label="기간 요약">
         <div className="calendar-summary-card">
           <span>{periodLabel} 경기</span>
-          <strong>{games.length}</strong>
+          <strong>{displayGameCount}</strong>
         </div>
         <div className="calendar-summary-card">
           <span>기록한 경기</span>
@@ -330,7 +392,7 @@ export default function CalendarPage() {
             className={`filter-pill ${viewMode === 'week' ? 'is-selected' : ''}`}
             onClick={() => {
               setViewMode('week');
-              setAnchorDate(getWeekStart(anchorDate));
+              setAnchorDate(getWeekStart(new Date()));
             }}
             type="button"
           >
@@ -367,14 +429,6 @@ export default function CalendarPage() {
             </button>
           ))}
         </div>
-        <label className="filter-toggle">
-          <input
-            checked={recordsOnly}
-            onChange={(event) => setRecordsOnly(event.target.checked)}
-            type="checkbox"
-          />
-          기록 있는 날만
-        </label>
         </div>
         {user?.favoriteTeamId ? <CalendarOutcomeLegend /> : null}
       </section>
@@ -389,8 +443,7 @@ export default function CalendarPage() {
           attendanceByGameId={attendanceByGameId}
           days={days}
           favoriteTeamId={user?.favoriteTeamId}
-          gamesByDate={gamesByDate}
-          recordsOnly={recordsOnly}
+          gamesByDate={displayGamesByDate}
           referenceMonth={viewMode === 'month' ? monthStart : undefined}
           showOutsideDays={viewMode === 'week'}
         />
@@ -417,15 +470,23 @@ export default function CalendarPage() {
         </section>
       )}
 
-      {!isLoading && games.length === 0 ? (
+      {!isLoading && displayGameCount === 0 ? (
         <EmptyState
           icon="◌"
           title={
-            viewMode === 'month'
-              ? '이번 달엔 경기 일정이 없어요'
-              : '이번 주엔 경기 일정이 없어요'
+            watchTypeFilter === 'all'
+              ? viewMode === 'month'
+                ? '이번 달엔 경기 일정이 없어요'
+                : '이번 주엔 경기 일정이 없어요'
+              : watchTypeFilter === 'stadium'
+                ? '이번 기간에 직관 기록이 없어요'
+                : '이번 기간에 집관 기록이 없어요'
           }
-          description="다른 기간으로 이동해보세요."
+          description={
+            watchTypeFilter === 'all'
+              ? '다른 기간으로 이동해보세요.'
+              : '직관 기록을 남기거나 다른 기간을 확인해보세요.'
+          }
         />
       ) : null}
     </main>

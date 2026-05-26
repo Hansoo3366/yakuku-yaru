@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { FormEvent, useState } from 'react';
 import { getAccessToken } from '@/lib/auth';
 import { searchUsers, type UserSearchResult } from '@/lib/user-api';
 import type { AttendanceCompanion } from '@/lib/attendance-api';
@@ -33,43 +33,46 @@ export function CompanionPicker({
   const [keyword, setKeyword] = useState('');
   const [results, setResults] = useState<UserSearchResult[]>([]);
   const [message, setMessage] = useState('');
+  const [isSearching, setIsSearching] = useState(false);
 
-  useEffect(() => {
+  async function runSearch() {
     const token = getAccessToken();
     const trimmedKeyword = keyword.trim();
 
-    if (!token || trimmedKeyword.length < 2) {
+    if (!token) {
+      setMessage('로그인이 필요해요.');
       setResults([]);
-      setMessage('');
       return;
     }
 
-    let isMounted = true;
-    const timer = window.setTimeout(() => {
-      searchUsers(trimmedKeyword, token)
-        .then((response) => {
-          if (isMounted) {
-            const filtered = response.items.filter(
-              (item) =>
-                !selectedCompanions.some((selected) => selected.id === item.id),
-            );
-            setResults(filtered);
-            setMessage(filtered.length ? '' : '검색 결과가 없어요.');
-          }
-        })
-        .catch(() => {
-          if (isMounted) {
-            setResults([]);
-            setMessage('회원을 검색하지 못했어요. 잠시 후 다시 시도해주세요.');
-          }
-        });
-    }, 250);
+    if (trimmedKeyword.length < 2) {
+      setResults([]);
+      setMessage('닉네임 또는 이메일을 2자 이상 입력해주세요.');
+      return;
+    }
 
-    return () => {
-      isMounted = false;
-      window.clearTimeout(timer);
-    };
-  }, [keyword, selectedCompanions]);
+    setIsSearching(true);
+    setMessage('');
+
+    try {
+      const response = await searchUsers(trimmedKeyword, token);
+      const filtered = response.items.filter(
+        (item) => !selectedCompanions.some((selected) => selected.id === item.id),
+      );
+      setResults(filtered);
+      setMessage(filtered.length ? '' : '검색 결과가 없어요.');
+    } catch {
+      setResults([]);
+      setMessage('회원을 검색하지 못했어요. 잠시 후 다시 시도해주세요.');
+    } finally {
+      setIsSearching(false);
+    }
+  }
+
+  function handleSearchSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    void runSearch();
+  }
 
   function addCompanion(user: UserSearchResult) {
     if (selectedCompanions.some((companion) => companion.id === user.id)) {
@@ -96,17 +99,28 @@ export function CompanionPicker({
           같이 간 사람
         </label>
         <span className="field-hint">
-          닉네임이나 이메일로 회원을 검색하면 동행자로 태그할 수 있어요.
+          닉네임이나 이메일로 검색한 뒤 동행자로 태그할 수 있어요. Enter 또는 검색
+          버튼을 눌러주세요.
         </span>
-        <div className="companion-search">
-          <input
-            id="companion-search-input"
-            onChange={(event) => setKeyword(event.target.value)}
-            placeholder="닉네임 또는 이메일 (2자 이상)"
-            type="search"
-            value={keyword}
-          />
-        </div>
+        <form className="companion-search-bar" onSubmit={handleSearchSubmit}>
+          <div className="companion-search-input-wrap">
+            <input
+              className="form-input"
+              id="companion-search-input"
+              onChange={(event) => setKeyword(event.target.value)}
+              placeholder="닉네임 또는 이메일 (2자 이상)"
+              type="search"
+              value={keyword}
+            />
+          </div>
+          <button
+            className="btn btn-secondary companion-search-button"
+            disabled={isSearching}
+            type="submit"
+          >
+            {isSearching ? '검색 중' : '검색'}
+          </button>
+        </form>
       </div>
       {results.length ? (
         <div className="companion-result-list" role="listbox">
@@ -132,22 +146,25 @@ export function CompanionPicker({
       {selectedCompanions.length ? (
         <div
           aria-label="선택한 동행자"
-          className="companion-chip-row"
+          className="companion-chip-row companion-chip-row--picked"
           role="list"
         >
           {selectedCompanions.map((companion) => (
-            <button
-              className="companion-chip"
+            <span
+              className="companion-chip companion-chip--picked"
               key={companion.id}
-              onClick={() => removeCompanion(companion.id)}
               role="listitem"
-              type="button"
             >
               {companion.nickname}
-              <span aria-label="제거" className="companion-chip-remove">
+              <button
+                aria-label={`${companion.nickname} 동행자 제거`}
+                className="companion-chip-remove-btn"
+                onClick={() => removeCompanion(companion.id)}
+                type="button"
+              >
                 ×
-              </span>
-            </button>
+              </button>
+            </span>
           ))}
         </div>
       ) : null}

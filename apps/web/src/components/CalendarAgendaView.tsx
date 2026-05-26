@@ -13,7 +13,6 @@ type Props = {
   attendanceByGameId: Record<number, AttendanceRecord>;
   attendanceByDate: Record<string, AttendanceRecord[]>;
   favoriteTeamId: number | null | undefined;
-  recordsOnly: boolean;
   showOutsideDays?: boolean;
   referenceMonth?: Date;
 };
@@ -24,7 +23,6 @@ export function CalendarAgendaView({
   attendanceByGameId,
   attendanceByDate,
   favoriteTeamId,
-  recordsOnly,
   showOutsideDays = false,
   referenceMonth,
 }: Props) {
@@ -41,11 +39,7 @@ export function CalendarAgendaView({
     const dayGames = gamesByDate[key] ?? [];
     const dayRecords = attendanceByDate[key] ?? [];
 
-    if (recordsOnly && dayGames.length === 0 && dayRecords.length === 0) {
-      return false;
-    }
-
-    return dayGames.length > 0 || dayRecords.length > 0 || !recordsOnly;
+    return dayGames.length > 0 || dayRecords.length > 0;
   });
 
   if (visibleDays.length === 0) {

@@ -6,7 +6,12 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { FormEvent, useEffect, useState } from 'react';
 import { ApiError } from '@/lib/api';
-import { checkRegistrationAvailability, register } from '@/lib/auth-api';
+import {
+  checkRegistrationAvailability,
+  register,
+  resendVerificationEmail,
+  verifyEmail,
+} from '@/lib/auth-api';
 import { listTeams, type Team } from '@/lib/baseball-api';
 import { PasswordField } from '@/components/PasswordField';
 import { DEFAULT_PROFILE_IMAGE_SRC } from '@/lib/profile-image';
@@ -23,6 +28,17 @@ import {
 
 type Step = 'account' | 'team' | 'done';
 
+function getSecondsUntil(isoDate: string | null) {
+  if (!isoDate) return 0;
+  return Math.max(0, Math.ceil((new Date(isoDate).getTime() - Date.now()) / 1000));
+}
+
+function formatCountdown(seconds: number) {
+  const minutes = Math.floor(seconds / 60);
+  const remainder = seconds % 60;
+  return `${minutes}:${String(remainder).padStart(2, '0')}`;
+}
+
 export default function RegisterPage() {
   const router = useRouter();
   const [step, setStep] = useState<Step>('account');
@@ -33,14 +49,52 @@ export default function RegisterPage() {
   const [favoriteTeamId, setFavoriteTeamId] = useState<number | null>(null);
   const [teams, setTeams] = useState<Team[]>([]);
   const [errorMessage, setErrorMessage] = useState('');
-  const [verificationUrl, setVerificationUrl] = useState<string | null>(null);
   const [emailSent, setEmailSent] = useState(false);
+  const [verificationCode, setVerificationCode] = useState('');
+  const [devVerificationCode, setDevVerificationCode] = useState<string | null>(null);
+  const [expiresAt, setExpiresAt] = useState<string | null>(null);
+  const [resendAvailableAt, setResendAvailableAt] = useState<string | null>(null);
+  const [resendsRemaining, setResendsRemaining] = useState(3);
+  const [codeSecondsLeft, setCodeSecondsLeft] = useState(0);
+  const [resendSecondsLeft, setResendSecondsLeft] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isCheckingAccount, setIsCheckingAccount] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [isResending, setIsResending] = useState(false);
 
   useEffect(() => {
     listTeams().then((response) => setTeams(response.items));
   }, []);
+
+  useEffect(() => {
+    if (step !== 'done') return;
+
+    const updateTimers = () => {
+      setCodeSecondsLeft(getSecondsUntil(expiresAt));
+      setResendSecondsLeft(getSecondsUntil(resendAvailableAt));
+    };
+
+    updateTimers();
+    const timer = window.setInterval(updateTimers, 1000);
+    return () => window.clearInterval(timer);
+  }, [step, expiresAt, resendAvailableAt]);
+
+  function applyVerificationMeta(response: {
+    emailSent: boolean;
+    expiresAt: string;
+    resendAvailableAt: string;
+    resendsRemaining: number;
+    verificationCode: string | null;
+  }) {
+    setEmailSent(response.emailSent);
+    setExpiresAt(response.expiresAt);
+    setResendAvailableAt(response.resendAvailableAt);
+    setResendsRemaining(response.resendsRemaining);
+    setDevVerificationCode(response.verificationCode);
+    setVerificationCode('');
+    setCodeSecondsLeft(getSecondsUntil(response.expiresAt));
+    setResendSecondsLeft(getSecondsUntil(response.resendAvailableAt));
+  }
 
   async function handleAccountNext(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -101,8 +155,7 @@ export default function RegisterPage() {
         password,
         favoriteTeamId,
       });
-      setEmailSent(response.emailSent);
-      setVerificationUrl(response.verificationUrl);
+      applyVerificationMeta(response);
       setStep('done');
     } catch (error) {
       if (error instanceof ApiError) {
@@ -115,6 +168,62 @@ export default function RegisterPage() {
       setIsSubmitting(false);
     }
   }
+
+  async function handleVerifyCode(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setErrorMessage('');
+
+    const normalizedCode = verificationCode.replace(/\D/g, '');
+
+    if (normalizedCode.length !== 6) {
+      setErrorMessage('6자리 인증번호를 입력해주세요.');
+      return;
+    }
+
+    if (codeSecondsLeft <= 0) {
+      setErrorMessage('인증번호가 만료되었습니다. 재전송 후 다시 입력해주세요.');
+      return;
+    }
+
+    setIsVerifying(true);
+
+    try {
+      await verifyEmail({ email, code: normalizedCode });
+      router.push('/login');
+    } catch (error) {
+      if (error instanceof ApiError) {
+        setErrorMessage(error.message);
+      } else {
+        setErrorMessage('인증번호 확인 중 오류가 발생했습니다.');
+      }
+    } finally {
+      setIsVerifying(false);
+    }
+  }
+
+  async function handleResend() {
+    if (resendSecondsLeft > 0 || resendsRemaining <= 0 || isResending) {
+      return;
+    }
+
+    setErrorMessage('');
+    setIsResending(true);
+
+    try {
+      const response = await resendVerificationEmail(email);
+      applyVerificationMeta(response);
+    } catch (error) {
+      if (error instanceof ApiError) {
+        setErrorMessage(error.message);
+      } else {
+        setErrorMessage('인증번호 재전송 중 오류가 발생했습니다.');
+      }
+    } finally {
+      setIsResending(false);
+    }
+  }
+
+  const canResend = resendSecondsLeft <= 0 && resendsRemaining > 0 && !isResending;
 
   return (
     <main className="auth-shell">
@@ -289,28 +398,67 @@ export default function RegisterPage() {
         ) : null}
 
         {step === 'done' ? (
-          <div className="form-grid">
+          <form className="form-grid" onSubmit={handleVerifyCode}>
             <div className="notice-card">
-              <strong>이메일 인증 메일을 확인해주세요</strong>
+              <strong>이메일 인증번호를 입력해주세요</strong>
               <span className="muted" style={{ fontSize: 'var(--text-xs)' }}>
                 {emailSent
-                  ? `${email} 주소로 인증 링크를 보냈어요. 메일함에서 인증을 완료한 뒤 로그인해주세요.`
-                  : 'SMTP 설정이 없어 메일을 보내지 못했어요. 개발 환경에서는 아래 링크로 인증을 테스트할 수 있어요.'}
+                  ? `${email} 주소로 6자리 인증번호를 보냈어요. 3분 안에 입력해주세요.`
+                  : 'SMTP 설정이 없어 메일을 보내지 못했어요. 개발 환경에서는 아래 인증번호로 테스트할 수 있어요.'}
               </span>
-              {!emailSent && verificationUrl ? (
-                <Link className="btn btn-ghost btn-sm" href={verificationUrl}>
-                  개발용 인증 링크 열기
-                </Link>
+              {!emailSent && devVerificationCode ? (
+                <span className="field-hint">개발용 인증번호: {devVerificationCode}</span>
               ) : null}
             </div>
+            <div className="field">
+              <label className="field-label" htmlFor="verificationCode">
+                인증번호
+              </label>
+              <input
+                autoComplete="one-time-code"
+                className="form-input verification-code-input"
+                id="verificationCode"
+                inputMode="numeric"
+                maxLength={6}
+                name="verificationCode"
+                onChange={(event) =>
+                  setVerificationCode(event.target.value.replace(/\D/g, '').slice(0, 6))
+                }
+                pattern="[0-9]{6}"
+                placeholder="6자리 숫자"
+                required
+                type="text"
+                value={verificationCode}
+              />
+              <span className="field-hint">
+                {codeSecondsLeft > 0
+                  ? `남은 시간 ${formatCountdown(codeSecondsLeft)}`
+                  : '인증번호가 만료되었습니다. 재전송해주세요.'}
+              </span>
+            </div>
+            {errorMessage ? <p className="form-error">{errorMessage}</p> : null}
             <button
               className="btn btn-primary btn-lg btn-block"
-              onClick={() => router.push('/login')}
+              disabled={isVerifying || codeSecondsLeft <= 0}
+              type="submit"
+            >
+              {isVerifying ? '확인 중' : '인증 완료'}
+            </button>
+            <button
+              className="btn btn-ghost btn-lg btn-block"
+              disabled={!canResend}
+              onClick={handleResend}
               type="button"
             >
-              로그인하러 가기
+              {isResending
+                ? '재전송 중'
+                : resendsRemaining <= 0
+                  ? '재전송 횟수 초과'
+                  : resendSecondsLeft > 0
+                    ? `재전송 (${resendSecondsLeft}초)`
+                    : `인증번호 재전송 (남은 ${resendsRemaining}회)`}
             </button>
-          </div>
+          </form>
         ) : null}
 
         {step !== 'done' ? (

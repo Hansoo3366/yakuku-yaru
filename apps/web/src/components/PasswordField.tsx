@@ -1,6 +1,7 @@
 'use client';
 
-import { useId, useState, type ReactNode } from 'react';
+import { useId, useState, type CompositionEvent, type ReactNode } from 'react';
+import { normalizePasswordInput } from '@/lib/korean-to-qwerty';
 
 type PasswordFieldProps = {
   autoComplete?: string;
@@ -67,6 +68,16 @@ export function PasswordField({
   const generatedId = useId();
   const id = idProp ?? generatedId;
   const [visible, setVisible] = useState(false);
+  const [isComposing, setIsComposing] = useState(false);
+
+  function handleValueChange(nextValue: string) {
+    onChange(normalizePasswordInput(nextValue));
+  }
+
+  function handleCompositionEnd(event: CompositionEvent<HTMLInputElement>) {
+    setIsComposing(false);
+    handleValueChange(event.currentTarget.value);
+  }
 
   return (
     <div className="field">
@@ -85,14 +96,23 @@ export function PasswordField({
       <div className="password-input-wrap">
         <input
           autoComplete={autoComplete}
+          autoCorrect="off"
           className="form-input"
           id={id}
+          lang="en"
           maxLength={maxLength}
           minLength={minLength}
           name={name}
-          onChange={(event) => onChange(event.target.value)}
+          onChange={(event) => {
+            if (!isComposing) {
+              handleValueChange(event.target.value);
+            }
+          }}
+          onCompositionEnd={handleCompositionEnd}
+          onCompositionStart={() => setIsComposing(true)}
           placeholder={placeholder}
           required={required}
+          spellCheck={false}
           type={visible ? 'text' : 'password'}
           value={value}
         />

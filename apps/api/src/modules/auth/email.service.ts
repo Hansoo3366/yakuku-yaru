@@ -12,14 +12,13 @@ export function getPasswordResetUrl(token: string) {
 export async function sendVerificationEmail(input: {
   email: string;
   nickname: string;
-  token: string;
+  code: string;
 }) {
   if (!env.smtp.user || !env.smtp.password || !env.smtp.from) {
     console.warn('SMTP is not configured. Skipping verification email.');
     return false;
   }
 
-  const verificationUrl = getVerificationUrl(input.token);
   const transporter = nodemailer.createTransport({
     host: env.smtp.host,
     port: env.smtp.port,
@@ -33,18 +32,14 @@ export async function sendVerificationEmail(input: {
   await transporter.sendMail({
     from: env.smtp.from,
     to: input.email,
-    subject: '[야크크 야르] 이메일 인증을 완료해주세요',
-    text: `${input.nickname}님, 아래 링크를 열어 이메일 인증을 완료해주세요.\n\n${verificationUrl}\n\n이 링크는 24시간 동안 유효합니다.`,
+    subject: '[야크크 야르] 이메일 인증번호',
+    text: `${input.nickname}님, 가입 인증번호는 ${input.code} 입니다.\n\n인증번호는 3분 동안 유효합니다.`,
     html: `
       <div style="font-family:Arial,sans-serif;line-height:1.6;color:#14213d">
         <h1 style="font-size:22px">야크크 야르 이메일 인증</h1>
-        <p>${input.nickname}님, 아래 버튼을 눌러 이메일 인증을 완료해주세요.</p>
-        <p>
-          <a href="${verificationUrl}" style="display:inline-block;background:#0f6b4f;color:#fff;padding:12px 18px;border-radius:6px;text-decoration:none;font-weight:700">
-            이메일 인증하기
-          </a>
-        </p>
-        <p style="font-size:13px;color:#667085">이 링크는 24시간 동안 유효합니다.</p>
+        <p>${input.nickname}님, 아래 인증번호를 가입 화면에 입력해주세요.</p>
+        <p style="font-size:32px;font-weight:700;letter-spacing:0.2em;margin:24px 0">${input.code}</p>
+        <p style="font-size:13px;color:#667085">인증번호는 3분 동안 유효합니다.</p>
       </div>
     `,
   });
