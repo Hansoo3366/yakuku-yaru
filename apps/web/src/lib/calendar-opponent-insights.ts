@@ -1,7 +1,6 @@
 import type { AttendanceRecord } from '@/lib/attendance-api';
 import { countsTowardWinRate } from '@/lib/attendance-game';
 import { resolveAttendanceOutcome } from '@/lib/attendance-score';
-import type { GameOutcome } from '@/lib/game-outcome';
 
 export type OpponentInsightItem = {
   teamId: number;
@@ -50,12 +49,6 @@ function getOpponentTeamId(
   }
 
   return null;
-}
-
-function isDecidedTeamOutcome(
-  outcome: GameOutcome,
-): outcome is 'win' | 'lose' | 'draw' {
-  return outcome === 'win' || outcome === 'lose' || outcome === 'draw';
 }
 
 function applyOutcomeToAccumulator(
@@ -161,7 +154,7 @@ function buildStadiumOpponentStats(
 
     const teamOutcome = resolveAttendanceOutcome(record, favoriteTeamId);
 
-    if (!isDecidedTeamOutcome(teamOutcome)) {
+    if (!teamOutcome) {
       continue;
     }
 

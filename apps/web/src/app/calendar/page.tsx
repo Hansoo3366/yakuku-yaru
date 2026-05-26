@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import { fetchMe } from '@/lib/auth-api';
@@ -120,10 +119,8 @@ export default function CalendarPage() {
       viewMode === 'month' ? getMonthRange(monthStart) : getWeekRange(weekStart),
     [viewMode, monthStart, weekStart],
   );
-  const rangeKey = `${viewMode}:${range.from}:${range.to}`;
   const statsYear = anchorDate.getFullYear();
   const yearRange = useMemo(() => getYearRange(statsYear), [statsYear]);
-  const yearRangeKey = `${yearRange.from}:${yearRange.to}`;
 
   useEffect(() => {
     let isMounted = true;
@@ -177,7 +174,7 @@ export default function CalendarPage() {
     return () => {
       isMounted = false;
     };
-  }, [rangeKey, router, scheduleFilter]);
+  }, [range, router, scheduleFilter]);
 
   useEffect(() => {
     let isMounted = true;
@@ -202,7 +199,7 @@ export default function CalendarPage() {
     return () => {
       isMounted = false;
     };
-  }, [yearRangeKey, router]);
+  }, [yearRange, router]);
 
   useEffect(() => {
     let isMounted = true;
@@ -249,7 +246,7 @@ export default function CalendarPage() {
     return () => {
       isMounted = false;
     };
-  }, [yearRangeKey, user?.favoriteTeamId]);
+  }, [yearRange, user?.favoriteTeamId]);
 
   const filteredAttendanceRecords = useMemo(() => {
     if (watchTypeFilter === 'all') {

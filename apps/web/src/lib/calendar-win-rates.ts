@@ -77,7 +77,7 @@ export function getFavoriteTeamWinRate(
   const outcomes = records
     .filter((record) => record.viewerRelation === 'owner')
     .map((record) =>
-      getFavoriteTeamGameOutcome(record.game, favoriteTeamId, record.result),
+      getFavoriteTeamGameOutcome(record.game, favoriteTeamId),
     )
     .filter(isDecidedTeamOutcome);
 

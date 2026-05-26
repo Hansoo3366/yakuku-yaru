@@ -57,8 +57,8 @@ export function CalendarEventCard({
 }: Props) {
   const outcome: GameOutcome = attendance
     ? (resolveAttendanceOutcome(attendance, favoriteTeamId) ??
-      getFavoriteTeamGameOutcome(game, favoriteTeamId ?? null, attendance.result))
-    : getFavoriteTeamGameOutcome(game, favoriteTeamId ?? null, null);
+      getFavoriteTeamGameOutcome(game, favoriteTeamId ?? null))
+    : getFavoriteTeamGameOutcome(game, favoriteTeamId ?? null);
   const outcomeLabel = getGameOutcomeLabel(outcome);
   const matchupLabel = `${game.awayTeam.shortName} vs ${game.homeTeam.shortName}`;
   const timeLabel = formatGameTime(game.gameDate);
@@ -108,7 +108,7 @@ export function CalendarEventCard({
               : tagKind === 'companion'
                 ? '동행'
                 : tagKind === 'neutral'
-                  ? attendance.cheeredTeamShortName
+                  ? attendance?.cheeredTeamShortName
                     ? `중립·${attendance.cheeredTeamShortName}`
                     : '중립'
                   : '직관'}

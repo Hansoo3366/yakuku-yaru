@@ -56,7 +56,6 @@ function normalizeScore(value: GameLike['homeScore']) {
 export function getFavoriteTeamGameOutcome(
   game: GameLike,
   favoriteTeamId: number | null | undefined,
-  attendanceResult?: string | null,
 ): GameOutcome {
   if (!favoriteTeamId) {
     return 'unknown';

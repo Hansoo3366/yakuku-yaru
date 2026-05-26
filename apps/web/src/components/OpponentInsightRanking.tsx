@@ -30,11 +30,9 @@ function formatRecord(item: RankedOpponentInsightItem) {
 
 function RankingEntry({
   item,
-  variant,
   compact,
 }: {
   item: RankedOpponentInsightItem;
-  variant: 'high' | 'low';
   compact: boolean;
 }) {
   const logoSrc = getTeamLogoSrc({ shortName: item.shortName });
@@ -47,6 +45,7 @@ function RankingEntry({
     >
       <span className="calendar-opponent-ranking__rank">{item.rank}</span>
       {logoSrc ? (
+        // eslint-disable-next-line @next/next/no-img-element -- 팀 로고는 정적 SVG 경로
         <img
           alt=""
           className="calendar-opponent-ranking__logo"
@@ -69,12 +68,10 @@ function RankingEntry({
 function OpponentRankingModal({
   items,
   title,
-  variant,
   onClose,
 }: {
   items: RankedOpponentInsightItem[];
   title: string;
-  variant: 'high' | 'low';
   onClose: () => void;
 }) {
   const titleId = useId();
@@ -127,7 +124,6 @@ function OpponentRankingModal({
               compact={index > 0}
               item={item}
               key={item.teamId}
-              variant={variant}
             />
           ))}
         </div>
@@ -155,14 +151,15 @@ export function OpponentInsightRanking({
 
   return (
     <>
-      <div className="calendar-opponent-ranking">
+      <div
+        className={`calendar-opponent-ranking calendar-opponent-ranking--${variant}`}
+      >
         <div className="calendar-opponent-ranking__list">
           {previewItems.map((item, index) => (
             <RankingEntry
               compact={index > 0}
               item={item}
               key={item.teamId}
-              variant={variant}
             />
           ))}
         </div>
@@ -181,7 +178,6 @@ export function OpponentInsightRanking({
           items={items}
           onClose={() => setOpen(false)}
           title={title}
-          variant={variant}
         />
       ) : null}
     </>

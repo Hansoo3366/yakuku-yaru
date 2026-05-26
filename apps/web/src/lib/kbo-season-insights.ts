@@ -70,7 +70,7 @@ export function getKboOpponentWinRateInsights(
       continue;
     }
 
-    const outcome = getFavoriteTeamGameOutcome(game, favoriteTeamId, null);
+    const outcome = getFavoriteTeamGameOutcome(game, favoriteTeamId);
 
     if (outcome !== 'win' && outcome !== 'lose' && outcome !== 'draw') {
       continue;
