@@ -53,6 +53,21 @@ export async function runMigrations() {
     );
   }
 
+  const hasGameExternalSource = await columnExists('games', 'external_source');
+
+  if (!hasGameExternalSource) {
+    await db.execute(
+      `ALTER TABLE games
+       ADD COLUMN external_source VARCHAR(20) NULL AFTER status,
+       ADD COLUMN external_id VARCHAR(64) NULL AFTER external_source`,
+    );
+
+    await db.execute(
+      `CREATE UNIQUE INDEX uq_games_external
+       ON games (external_source, external_id)`,
+    );
+  }
+
   const hasProfileImageUrl = await columnExists('users', 'profile_image_url');
 
   if (!hasProfileImageUrl) {

@@ -32,4 +32,14 @@ export const env = {
     user: process.env.MYSQL_USER ?? 'yakuku',
     password: process.env.MYSQL_PASSWORD ?? 'yakuku_password',
   },
+  kboSync: {
+    enabled:
+      process.env.KBO_SYNC_ENABLED === 'true' ||
+      (process.env.KBO_SYNC_ENABLED !== 'false' &&
+        (process.env.NODE_ENV ?? 'development') === 'production'),
+    /** 매일 06:00 KST */
+    cron: process.env.KBO_SYNC_CRON ?? '0 6 * * *',
+    onStart: process.env.KBO_SYNC_ON_START !== 'false',
+    startDelayMs: Number(process.env.KBO_SYNC_START_DELAY_MS ?? 20_000),
+  },
 };
