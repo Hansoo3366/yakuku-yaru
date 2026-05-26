@@ -31,9 +31,9 @@ export default function RegisterPage() {
   const [favoriteTeamId, setFavoriteTeamId] = useState<number | null>(null);
   const [teams, setTeams] = useState<Team[]>([]);
   const [errorMessage, setErrorMessage] = useState('');
-  const [verificationToken, setVerificationToken] = useState('');
+  const [verificationUrl, setVerificationUrl] = useState<string | null>(null);
+  const [emailSent, setEmailSent] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [tokenCopied, setTokenCopied] = useState(false);
 
   useEffect(() => {
     listTeams().then((response) => setTeams(response.items));
@@ -66,7 +66,8 @@ export default function RegisterPage() {
         password,
         favoriteTeamId,
       });
-      setVerificationToken(response.verificationToken);
+      setEmailSent(response.emailSent);
+      setVerificationUrl(response.verificationUrl);
       setStep('done');
     } catch (error) {
       if (error instanceof ApiError) {
@@ -77,16 +78,6 @@ export default function RegisterPage() {
       setStep('account');
     } finally {
       setIsSubmitting(false);
-    }
-  }
-
-  async function copyToken() {
-    try {
-      await navigator.clipboard.writeText(verificationToken);
-      setTokenCopied(true);
-      setTimeout(() => setTokenCopied(false), 2000);
-    } catch {
-      setTokenCopied(false);
     }
   }
 
@@ -237,21 +228,17 @@ export default function RegisterPage() {
         {step === 'done' ? (
           <div className="form-grid">
             <div className="notice-card">
-              <strong>개발용 이메일 인증 토큰</strong>
-              <div className="notice-card-token">
-                <code>{verificationToken}</code>
-                <button
-                  className="btn btn-ghost btn-sm"
-                  onClick={copyToken}
-                  type="button"
-                >
-                  {tokenCopied ? '복사됨' : '복사'}
-                </button>
-              </div>
+              <strong>이메일 인증 메일을 확인해주세요</strong>
               <span className="muted" style={{ fontSize: 'var(--text-xs)' }}>
-                실제 환경에서는 이메일로 발송되는 토큰입니다. 지금은 학습 단계라
-                직접 보여드립니다.
+                {emailSent
+                  ? `${email} 주소로 인증 링크를 보냈어요. 메일함에서 인증을 완료한 뒤 로그인해주세요.`
+                  : 'SMTP 설정이 없어 메일을 보내지 못했어요. 개발 환경에서는 아래 링크로 인증을 테스트할 수 있어요.'}
               </span>
+              {!emailSent && verificationUrl ? (
+                <Link className="btn btn-ghost btn-sm" href={verificationUrl}>
+                  개발용 인증 링크 열기
+                </Link>
+              ) : null}
             </div>
             <button
               className="btn btn-primary btn-lg btn-block"

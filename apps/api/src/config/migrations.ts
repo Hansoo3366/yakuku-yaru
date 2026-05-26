@@ -62,6 +62,15 @@ export async function runMigrations() {
     );
   }
 
+  const hasUserRole = await columnExists('users', 'role');
+
+  if (!hasUserRole) {
+    await db.execute(
+      `ALTER TABLE users
+       ADD COLUMN role VARCHAR(20) NOT NULL DEFAULT 'user' AFTER profile_image_url`,
+    );
+  }
+
   await db.execute(
     `UPDATE teams
      SET ticket_url = CASE short_name

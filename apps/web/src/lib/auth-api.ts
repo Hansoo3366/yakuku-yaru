@@ -8,7 +8,8 @@ export type AuthResponse = {
 
 export type RegisterResponse = {
   user: PublicUser;
-  verificationToken: string;
+  emailSent: boolean;
+  verificationUrl: string | null;
 };
 
 export function login(input: { email: string; password: string }) {
@@ -33,6 +34,13 @@ export function register(input: {
 export function fetchMe(token: string) {
   return request<{ user: PublicUser }>('/auth/me', {
     token,
+  });
+}
+
+export function verifyEmail(token: string) {
+  return request<{ verified: boolean }>('/auth/verify-email', {
+    method: 'POST',
+    body: { token },
   });
 }
 

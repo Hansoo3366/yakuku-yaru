@@ -7,6 +7,7 @@ export type UserRow = RowDataPacket & {
   password_hash: string;
   nickname: string;
   profile_image_url: string | null;
+  role: string;
   favorite_team_id: number | null;
   email_verified_at: Date | null;
   created_at: Date;
@@ -18,6 +19,7 @@ export type PublicUser = {
   email: string;
   nickname: string;
   profileImageUrl: string | null;
+  role: string;
   favoriteTeamId: number | null;
   emailVerifiedAt: Date | null;
 };
@@ -35,13 +37,14 @@ export function toPublicUser(user: UserRow): PublicUser {
     email: user.email,
     nickname: user.nickname,
     profileImageUrl: user.profile_image_url,
+    role: user.role,
     favoriteTeamId: user.favorite_team_id,
     emailVerifiedAt: user.email_verified_at,
   };
 }
 
 const userSelectColumns =
-  'id, email, password_hash, nickname, profile_image_url, favorite_team_id, email_verified_at, created_at, updated_at';
+  'id, email, password_hash, nickname, profile_image_url, role, favorite_team_id, email_verified_at, created_at, updated_at';
 
 export async function findUserByEmail(email: string) {
   const [rows] = await db.query<UserRow[]>(

@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS users (
   password_hash VARCHAR(255) NOT NULL,
   nickname VARCHAR(50) NOT NULL,
   profile_image_url VARCHAR(500) NULL,
+  role VARCHAR(20) NOT NULL DEFAULT 'user',
   favorite_team_id BIGINT UNSIGNED NULL,
   email_verified_at DATETIME NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,

@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { env } from '../../config/env.js';
 import { authenticate } from '../../middleware/authenticate.js';
 import { rateLimit } from '../../middleware/rate-limit.js';
 import { HttpError } from '../../utils/http-error.js';
@@ -9,6 +10,7 @@ import {
   findUsableEmailVerificationToken,
   markEmailVerificationTokenUsed,
 } from './email-verification.repository.js';
+import { getVerificationUrl, sendVerificationEmail } from './email.service.js';
 import {
   createUser,
   findUserByEmail,
@@ -96,10 +98,17 @@ authRouter.post('/register', registerRateLimit, async (req, res, next) => {
     }
 
     const verificationToken = await createEmailVerificationToken(user.id);
+    const emailSent = await sendVerificationEmail({
+      email: user.email,
+      nickname: user.nickname,
+      token: verificationToken,
+    });
 
     res.status(201).json({
       user: toPublicUser(user),
-      verificationToken,
+      emailSent,
+      verificationUrl:
+        env.nodeEnv === 'production' ? null : getVerificationUrl(verificationToken),
     });
   } catch (error) {
     next(error);

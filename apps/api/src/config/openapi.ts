@@ -667,7 +667,8 @@ export const openApiDocument = {
         type: 'object',
         properties: {
           user: { $ref: '#/components/schemas/User' },
-          verificationToken: { type: 'string' },
+          emailSent: { type: 'boolean' },
+          verificationUrl: { type: 'string', nullable: true },
         },
       },
       PostWriteRequest: {

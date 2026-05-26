@@ -5,6 +5,7 @@ import swaggerUi from 'swagger-ui-express';
 import { openApiDocument } from './config/openapi.js';
 import { env } from './config/env.js';
 import { errorHandler } from './middleware/error-handler.js';
+import { adminRouter } from './modules/admin/admin.routes.js';
 import { attendanceRouter } from './modules/attendance/attendance.routes.js';
 import { commentRouter } from './modules/comments/comment.routes.js';
 import { authRouter } from './modules/auth/auth.routes.js';
@@ -43,6 +44,7 @@ export function createApp() {
   });
 
   app.use('/api/auth', authRouter);
+  app.use('/api/admin', adminRouter);
   app.use('/api/users/me', meRouter);
   app.use('/api/users', userRouter);
   app.use('/api/notifications', notificationRouter);

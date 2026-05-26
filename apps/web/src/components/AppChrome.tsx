@@ -100,6 +100,15 @@ export function AppHeader() {
               {item.label}
             </Link>
           ))}
+          {user?.role === 'admin' ? (
+            <Link
+              aria-current={isActivePath(pathname, '/admin') ? 'page' : undefined}
+              className={isActivePath(pathname, '/admin') ? 'active' : ''}
+              href="/admin"
+            >
+              관리자
+            </Link>
+          ) : null}
         </nav>
 
         <div className="account-actions">
