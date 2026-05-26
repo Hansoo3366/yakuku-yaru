@@ -74,7 +74,7 @@ export type AttendanceRecordForOutcome = {
   game: GameForAttendanceScore;
 };
 
-/** 공식·입력 스코어를 우선해 승패를 맞춥니다 (저장된 result 단독 신뢰 X). */
+/** KBO 공식 스코어가 있으면 개인 입력은 쓰지 않습니다. */
 export function resolveAttendanceOutcome(
   record: AttendanceRecordForOutcome,
   favoriteTeamId: number | null,

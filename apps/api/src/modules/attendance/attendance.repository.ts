@@ -3,6 +3,7 @@ import { db } from '../../config/database.js';
 import { findUserById } from '../users/user.repository.js';
 import {
   resolveAttendanceOutcome,
+  resolveAttendanceScoresFromGame,
   resolveAttendanceTitle,
 } from './attendance-score.js';
 import {
@@ -210,6 +211,12 @@ export async function listAttendanceRecords(input: {
   from?: string;
   to?: string;
 }) {
+  const user = await findUserById(input.userId);
+  await reconcileAttendanceScoresForUser(
+    input.userId,
+    user?.favoriteTeamId ?? null,
+  );
+
   const params: Array<number | string> = [input.userId, input.userId];
   const dateFilter =
     input.from && input.to ? 'AND g.game_date >= ? AND g.game_date < ?' : '';
@@ -343,13 +350,47 @@ async function listOwnerAttendanceRecordsForStats(userId: number) {
   return rows.map((row) => toAttendanceRecord(row));
 }
 
-async function reconcileAttendanceResultsForUser(
+async function reconcileAttendanceScoresForUser(
   userId: number,
   favoriteTeamId: number | null,
 ) {
   const records = await listOwnerAttendanceRecordsForStats(userId);
 
   for (const record of records) {
+    const fromGame = resolveAttendanceScoresFromGame(record.game, favoriteTeamId);
+
+    if (fromGame) {
+      const needsUpdate =
+        record.myTeamScore !== fromGame.myTeamScore ||
+        record.opponentScore !== fromGame.opponentScore ||
+        record.result !== fromGame.result ||
+        record.isScoreModified;
+
+      if (!needsUpdate) {
+        continue;
+      }
+
+      await db.execute(
+        `UPDATE attendance_records
+         SET my_team_score = ?,
+             opponent_score = ?,
+             result = ?,
+             is_score_modified = 0
+         WHERE id = ?`,
+        [
+          fromGame.myTeamScore,
+          fromGame.opponentScore,
+          fromGame.result,
+          record.id,
+        ],
+      );
+      record.myTeamScore = fromGame.myTeamScore;
+      record.opponentScore = fromGame.opponentScore;
+      record.result = fromGame.result;
+      record.isScoreModified = false;
+      continue;
+    }
+
     const outcome = resolveAttendanceOutcome(record, favoriteTeamId);
 
     if (!outcome || outcome === record.result) {
@@ -370,7 +411,7 @@ export async function getAttendanceStats(userId: number) {
   const user = await findUserById(userId);
   const favoriteTeamId = user?.favoriteTeamId ?? null;
 
-  await reconcileAttendanceResultsForUser(userId, favoriteTeamId);
+  await reconcileAttendanceScoresForUser(userId, favoriteTeamId);
 
   const records = await listOwnerAttendanceRecordsForStats(userId);
   let stadiumCount = 0;

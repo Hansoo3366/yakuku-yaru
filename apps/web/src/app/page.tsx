@@ -7,11 +7,11 @@ import { useEffect, useState } from 'react';
 import { fetchMe } from '@/lib/auth-api';
 import { clearAccessToken, getAccessToken, type PublicUser } from '@/lib/auth';
 import {
-  fetchAttendanceStats,
   listAttendanceRecords,
   type AttendanceStats,
   type AttendanceRecord,
 } from '@/lib/attendance-api';
+import { computeAttendanceStatsFromRecords } from '@/lib/attendance-stats';
 import {
   listGames,
   listTeamStandings,
@@ -119,17 +119,15 @@ export default function HomePage() {
         const isoFrom = today.toISOString().slice(0, 10);
         const isoTo = monthLater.toISOString().slice(0, 10);
 
-        const [teamsResponse, gamesResponse, recordsResponse, statsResponse] =
-          await Promise.all([
-            listTeams(),
-            listGames({
-              from: isoFrom,
-              to: isoTo,
-              teamId: current.favoriteTeamId ?? undefined,
-            }),
-            listAttendanceRecords({}, token),
-            fetchAttendanceStats(token),
-          ]);
+        const [teamsResponse, gamesResponse, recordsResponse] = await Promise.all([
+          listTeams(),
+          listGames({
+            from: isoFrom,
+            to: isoTo,
+            teamId: current.favoriteTeamId ?? undefined,
+          }),
+          listAttendanceRecords({}, token),
+        ]);
 
         setFavoriteTeam(
           teamsResponse.items.find(
@@ -139,9 +137,11 @@ export default function HomePage() {
         setUpcomingGames(
           gamesResponse.items.filter((game) => isUpcoming(game.gameDate)).slice(0, 5),
         );
+        const ownedRecords = recordsResponse.items.filter(
+          (record) => record.viewerRelation === 'owner',
+        );
         setRecentRecords(
-          recordsResponse.items
-            .filter((record) => record.viewerRelation === 'owner')
+          [...ownedRecords]
             .sort(
               (a, b) =>
                 new Date(b.game.gameDate).getTime() -
@@ -149,7 +149,12 @@ export default function HomePage() {
             )
             .slice(0, 3),
         );
-        setStats(statsResponse);
+        setStats(
+          computeAttendanceStatsFromRecords(
+            recordsResponse.items,
+            current.favoriteTeamId,
+          ),
+        );
       })
       .catch(() => {
         clearAccessToken();
@@ -318,29 +323,57 @@ export default function HomePage() {
           </section>
 
           <section className="stack">
-            <div className="card-dark">
+            <div className="card-dark home-win-rate-card">
               <span className="eyebrow">Win Rate</span>
               {stats ? (
                 <>
-                  <div
+                  <div className="home-win-rate-head">
+                    <div
+                      style={{
+                        alignItems: 'baseline',
+                        display: 'flex',
+                        gap: 8,
+                        marginTop: 6,
+                      }}
+                    >
+                      <strong
+                        style={{
+                          fontSize: 'var(--text-3xl)',
+                          color: 'var(--color-white)',
+                        }}
+                      >
+                        {stats.winRate}%
+                      </strong>
+                      <span style={{ color: 'rgba(255,255,255,0.7)' }}>
+                        / {stats.totalCount}경기
+                      </span>
+                    </div>
+                    {stats.title ? (
+                      <span
+                        className="profile-title-pill home-title-pill"
+                        data-kind={stats.title === '패배요정' ? 'lose' : 'win'}
+                      >
+                        {stats.title}
+                      </span>
+                    ) : null}
+                  </div>
+                  {stats.totalCount > 0 ? (
+                    <p className="home-win-rate-record">
+                      <span>{stats.winCount}승</span>
+                      <span>{stats.loseCount}패</span>
+                      <span>{stats.drawCount}무</span>
+                    </p>
+                  ) : null}
+                  <p
                     style={{
-                      alignItems: 'baseline',
-                      display: 'flex',
-                      gap: 8,
+                      color: 'rgba(255,255,255,0.78)',
+                      fontSize: 'var(--text-sm)',
                       marginTop: 6,
                     }}
                   >
-                    <strong style={{ fontSize: 'var(--text-3xl)', color: 'var(--color-white)' }}>
-                      {stats.winRate}%
-                    </strong>
-                    <span style={{ color: 'rgba(255,255,255,0.7)' }}>
-                      / {stats.totalCount}경기
-                    </span>
-                  </div>
-                  <p style={{ color: 'rgba(255,255,255,0.78)', fontSize: 'var(--text-sm)', marginTop: 6 }}>
                     {stats.title
                       ? `${stats.title} 타이틀 보유 중`
-                      : '직관 기록을 남기면 타이틀이 열려요'}
+                      : '직관 기록을 남기면 승리요정·패배요정이 붙어요'}
                   </p>
                 </>
               ) : (
