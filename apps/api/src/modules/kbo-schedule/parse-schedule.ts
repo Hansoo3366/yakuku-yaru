@@ -43,6 +43,18 @@ function extractGameId(cells: KboScheduleCell[]) {
   return null;
 }
 
+/** KBO가 아직 gameId·게임센터 링크를 안 붙인 미래 일정용 (나중에 실제 gameId로 갱신됨) */
+export function buildPendingExternalId(input: {
+  gameDate: string;
+  awayTeamShortName: string;
+  homeTeamShortName: string;
+}) {
+  const [datePart, timePart = '000000'] = input.gameDate.split(' ');
+  const ymd = datePart.replace(/-/g, '');
+  const hm = timePart.replace(/:/g, '').slice(0, 4);
+  return `pending-${ymd}${hm}-${input.awayTeamShortName}-${input.homeTeamShortName}`;
+}
+
 function parseDayLabel(text: string, seasonYear: number) {
   const match = text.trim().match(KBO_DAY_PATTERN);
   if (!match) {
@@ -179,18 +191,21 @@ export function parseKboScheduleTable(table: KboScheduleTable, seasonYear: numbe
       continue;
     }
 
-    const externalId = extractGameId(cells);
-    if (!externalId) {
-      continue;
-    }
-
     const note = findNote(cells);
     const scores = parseScores(playCell.Text);
     const status = resolveStatus(playCell.Text, note, cells);
+    const gameDate = `${currentDate} ${time}`;
+    const externalId =
+      extractGameId(cells) ??
+      buildPendingExternalId({
+        gameDate,
+        awayTeamShortName: teams.awayTeamShortName,
+        homeTeamShortName: teams.homeTeamShortName,
+      });
 
     games.push({
       externalId,
-      gameDate: `${currentDate} ${time}`,
+      gameDate,
       awayTeamShortName: teams.awayTeamShortName,
       homeTeamShortName: teams.homeTeamShortName,
       awayScore: scores.awayScore,

@@ -69,9 +69,11 @@ docker compose -f docker-compose.prod.yml --env-file .env.production exec -T api
 
 | 항목 | 규칙 |
 |------|------|
-| 경기 ID | `gameId` → `games.external_id` |
-| upsert | `external_id` 우선, 없으면 `(game_date, home_team_id, away_team_id)` |
+| 경기 ID | KBO `gameId` → `external_id`. **미래 일정**은 API에 `gameId`가 없을 수 있어 `pending-YYYYMMDDhhmm-원정-홈` 으로 저장 |
+| upsert | `external_id` 우선, 없으면 `(game_date, home_team_id, away_team_id)` — 나중에 실제 `gameId`가 생기면 같은 경기로 **갱신** |
 | `external_source` | `kbo` |
+
+미래 달(6·7·8월 등)도 KBO API에 **시간·대진·구장**은 오지만 `gameId` 링크만 비어 있는 경우가 많습니다. 예전 파서는 `gameId` 없으면 행 전체를 버려서 “일정 없음”처럼 보였습니다.
 
 상세 파싱 규칙은 `apps/api/src/modules/kbo-schedule/parse-schedule.ts` 참고.
 

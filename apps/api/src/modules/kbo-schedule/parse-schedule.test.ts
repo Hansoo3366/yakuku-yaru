@@ -90,4 +90,32 @@ const previewGames = parseKboScheduleTable(previewSample, 2026);
 assert.equal(previewGames.length, 1);
 assert.equal(previewGames[0].status, 'scheduled');
 
+const noGameIdSample = {
+  rows: [
+    {
+      row: [
+        { Text: '07.01(수)', Class: 'day', RowSpan: '3' },
+        { Text: '<b>18:30</b>', Class: 'time' },
+        {
+          Text: '<span>롯데</span><em><span>vs</span></em><span>두산</span>',
+          Class: 'play',
+        },
+        { Text: '', Class: 'relay' },
+        { Text: '', Class: null },
+        { Text: '', Class: null },
+        { Text: '', Class: null },
+        { Text: '잠실', Class: null },
+        { Text: '-', Class: null },
+      ],
+    },
+  ],
+};
+
+const pendingGames = parseKboScheduleTable(noGameIdSample, 2026);
+assert.equal(pendingGames.length, 1);
+assert.equal(pendingGames[0].externalId, 'pending-202607011830-롯데-두산');
+assert.equal(pendingGames[0].gameDate, '2026-07-01 18:30:00');
+assert.equal(pendingGames[0].stadium, '잠실야구장');
+assert.equal(pendingGames[0].status, 'scheduled');
+
 console.log('parse-schedule.test.ts: ok');

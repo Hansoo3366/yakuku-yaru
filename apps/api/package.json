@@ -11,8 +11,10 @@
     "typecheck": "tsc --noEmit",
     "sync:kbo-schedule": "node dist/scripts/sync-kbo-schedule.js",
     "db:reset-users": "node dist/scripts/reset-users-and-seed-admin.js",
+    "db:reset-app": "node dist/scripts/reset-app-data.js",
     "sync:kbo-schedule:dev": "tsx src/scripts/sync-kbo-schedule.ts",
-    "db:reset-users:dev": "tsx src/scripts/reset-users-and-seed-admin.ts"
+    "db:reset-users:dev": "tsx src/scripts/reset-users-and-seed-admin.ts",
+    "db:reset-app:dev": "tsx src/scripts/reset-app-data.ts"
   },
   "dependencies": {
     "@types/multer": "^2.1.0",
