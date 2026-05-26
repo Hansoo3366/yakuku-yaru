@@ -2,6 +2,10 @@ import type { ResultSetHeader, RowDataPacket } from 'mysql2';
 import { db } from '../../config/database.js';
 import { findUserById } from '../users/user.repository.js';
 import {
+  countsTowardWinRate,
+  resolveStorageOutcomeTeamId,
+} from './attendance-game.js';
+import {
   resolveAttendanceOutcome,
   resolveAttendanceScoresFromGame,
   resolveAttendanceTitle,
@@ -17,6 +21,8 @@ export type AttendanceRecordRow = RowDataPacket & {
   last_modified_by_user_id: number | null;
   game_id: number;
   watch_type: string;
+  cheered_team_id: number | null;
+  cheered_team_short_name: string | null;
   photo_url: string | null;
   memo: string | null;
   my_team_score: number | null;
@@ -48,6 +54,8 @@ export type AttendanceRecord = {
   userId: number;
   gameId: number;
   watchType: string;
+  cheeredTeamId: number | null;
+  cheeredTeamShortName: string | null;
   photoUrl: string | null;
   memo: string | null;
   myTeamScore: number | null;
@@ -89,6 +97,8 @@ function attendanceSelectSql() {
       ar.last_modified_by_user_id,
       ar.game_id,
       ar.watch_type,
+      ar.cheered_team_id,
+      ct.short_name AS cheered_team_short_name,
       ar.photo_url,
       ar.memo,
       ar.my_team_score,
@@ -116,7 +126,8 @@ function attendanceSelectSql() {
     LEFT JOIN users lmu ON lmu.id = ar.last_modified_by_user_id
     JOIN games g ON g.id = ar.game_id
     JOIN teams ht ON ht.id = g.home_team_id
-    JOIN teams at ON at.id = g.away_team_id`;
+    JOIN teams at ON at.id = g.away_team_id
+    LEFT JOIN teams ct ON ct.id = ar.cheered_team_id`;
 }
 
 export function toAttendanceRecord(row: AttendanceRecordRow): AttendanceRecord {
@@ -125,6 +136,8 @@ export function toAttendanceRecord(row: AttendanceRecordRow): AttendanceRecord {
     userId: row.user_id,
     gameId: row.game_id,
     watchType: row.watch_type,
+    cheeredTeamId: row.cheered_team_id,
+    cheeredTeamShortName: row.cheered_team_short_name,
     photoUrl: row.photo_url,
     memo: row.memo,
     myTeamScore: row.my_team_score,
@@ -175,6 +188,7 @@ export async function createAttendanceRecord(input: {
   userId: number;
   gameId: number;
   watchType?: string;
+  cheeredTeamId?: number | null;
   memo?: string | null;
   myTeamScore?: number | null;
   opponentScore?: number | null;
@@ -187,18 +201,20 @@ export async function createAttendanceRecord(input: {
       last_modified_by_user_id,
       game_id,
       watch_type,
+      cheered_team_id,
       memo,
       my_team_score,
       opponent_score,
       result,
       is_score_modified
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       input.userId,
       input.userId,
       input.gameId,
       input.watchType ?? 'stadium',
+      input.cheeredTeamId ?? null,
       input.memo ?? null,
       input.myTeamScore ?? null,
       input.opponentScore ?? null,
@@ -215,11 +231,7 @@ export async function listAttendanceRecords(input: {
   from?: string;
   to?: string;
 }) {
-  const user = await findUserById(input.userId);
-  await reconcileAttendanceScoresForUser(
-    input.userId,
-    user?.favoriteTeamId ?? null,
-  );
+  await reconcileAttendanceScoresForUser(input.userId);
 
   const params: Array<number | string> = [input.userId, input.userId];
   const dateFilter =
@@ -287,6 +299,7 @@ export async function findAttendanceRecordByGame(input: {
 export async function updateAttendanceRecord(input: {
   id: number;
   watchType?: string;
+  cheeredTeamId?: number | null;
   memo?: string | null;
   myTeamScore?: number | null;
   opponentScore?: number | null;
@@ -298,6 +311,7 @@ export async function updateAttendanceRecord(input: {
     `UPDATE attendance_records
      SET memo = ?,
          watch_type = ?,
+         cheered_team_id = ?,
          my_team_score = ?,
          opponent_score = ?,
          result = ?,
@@ -307,6 +321,7 @@ export async function updateAttendanceRecord(input: {
     [
       input.memo ?? null,
       input.watchType ?? 'stadium',
+      input.cheeredTeamId ?? null,
       input.myTeamScore ?? null,
       input.opponentScore ?? null,
       input.result ?? null,
@@ -354,11 +369,17 @@ async function listOwnerAttendanceRecordsForStats(userId: number) {
   return rows.map((row) => toAttendanceRecord(row));
 }
 
-async function reconcileAttendanceRecord(
-  record: AttendanceRecord,
-  favoriteTeamId: number | null,
-) {
-  const fromGame = resolveAttendanceScoresFromGame(record.game, favoriteTeamId);
+function storageOutcomeTeamId(record: AttendanceRecord) {
+  return resolveStorageOutcomeTeamId({
+    game: record.game,
+    ownerFavoriteTeamId: record.ownerFavoriteTeamId,
+    cheeredTeamId: record.cheeredTeamId,
+  });
+}
+
+async function reconcileAttendanceRecord(record: AttendanceRecord) {
+  const outcomeTeamId = storageOutcomeTeamId(record);
+  const fromGame = resolveAttendanceScoresFromGame(record.game, outcomeTeamId);
 
   if (fromGame) {
     const needsUpdate =
@@ -388,7 +409,7 @@ async function reconcileAttendanceRecord(
     return;
   }
 
-  const outcome = resolveAttendanceOutcome(record, favoriteTeamId);
+  const outcome = resolveAttendanceOutcome(record, outcomeTeamId);
 
   if (!outcome || outcome === record.result) {
     return;
@@ -402,14 +423,11 @@ async function reconcileAttendanceRecord(
   );
 }
 
-async function reconcileAttendanceScoresForUser(
-  userId: number,
-  favoriteTeamId: number | null,
-) {
+async function reconcileAttendanceScoresForUser(userId: number) {
   const records = await listOwnerAttendanceRecordsForStats(userId);
 
   for (const record of records) {
-    await reconcileAttendanceRecord(record, favoriteTeamId);
+    await reconcileAttendanceRecord(record);
   }
 }
 
@@ -420,7 +438,7 @@ export async function reconcileAttendanceRecordById(recordId: number) {
     return null;
   }
 
-  await reconcileAttendanceRecord(record, record.ownerFavoriteTeamId);
+  await reconcileAttendanceRecord(record);
   const [refreshed] = await attachCompanions([
     (await findAttendanceRecordById(recordId))!,
   ]);
@@ -432,9 +450,14 @@ export async function getAttendanceStats(userId: number) {
   const user = await findUserById(userId);
   const favoriteTeamId = user?.favoriteTeamId ?? null;
 
-  await reconcileAttendanceScoresForUser(userId, favoriteTeamId);
+  await reconcileAttendanceScoresForUser(userId);
 
-  const records = await listOwnerAttendanceRecordsForStats(userId);
+  const records = await listAttendanceRecords({ userId });
+  const owned = records.filter((record) => record.viewerRelation === 'owner');
+  const countable = records.filter((record) =>
+    countsTowardWinRate(record.game, favoriteTeamId),
+  );
+
   let stadiumCount = 0;
   let homeCount = 0;
   let winCount = 0;
@@ -442,12 +465,22 @@ export async function getAttendanceStats(userId: number) {
   let drawCount = 0;
   let stadiumWinCount = 0;
   let homeWinCount = 0;
+  let countableStadium = 0;
+  let countableHome = 0;
 
-  for (const record of records) {
+  for (const record of owned) {
     if (record.watchType === 'stadium') {
       stadiumCount += 1;
     } else if (record.watchType === 'home') {
       homeCount += 1;
+    }
+  }
+
+  for (const record of countable) {
+    if (record.watchType === 'stadium') {
+      countableStadium += 1;
+    } else if (record.watchType === 'home') {
+      countableHome += 1;
     }
 
     const outcome = resolveAttendanceOutcome(record, favoriteTeamId);
@@ -470,17 +503,19 @@ export async function getAttendanceStats(userId: number) {
     }
   }
 
-  const totalCount = records.length;
-  const winRate = totalCount ? Math.round((winCount / totalCount) * 1000) / 10 : 0;
-  const stadiumWinRate = stadiumCount
-    ? Math.round((stadiumWinCount / stadiumCount) * 1000) / 10
+  const decidedCountable = winCount + loseCount + drawCount;
+  const winRate = decidedCountable
+    ? Math.round((winCount / decidedCountable) * 1000) / 10
     : 0;
-  const homeWinRate = homeCount
-    ? Math.round((homeWinCount / homeCount) * 1000) / 10
+  const stadiumWinRate = countableStadium
+    ? Math.round((stadiumWinCount / countableStadium) * 1000) / 10
+    : 0;
+  const homeWinRate = countableHome
+    ? Math.round((homeWinCount / countableHome) * 1000) / 10
     : 0;
 
   return {
-    totalCount,
+    totalCount: owned.length,
     stadiumCount,
     homeCount,
     winCount,
@@ -489,6 +524,6 @@ export async function getAttendanceStats(userId: number) {
     winRate,
     stadiumWinRate,
     homeWinRate,
-    title: resolveAttendanceTitle(totalCount, winRate),
+    title: resolveAttendanceTitle(decidedCountable, winRate),
   };
 }

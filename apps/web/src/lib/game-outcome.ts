@@ -20,6 +20,29 @@ function normalizeTeamId(value: number) {
   return Number(value);
 }
 
+const TYPICAL_GAME_MS = 2.5 * 60 * 60 * 1000;
+
+/** DB가 일찍 finished로 잡혀도, 개시 후 2.5시간 전이면 경기 중·예정으로 봄 */
+export function isGameFinished(
+  game: Pick<GameLike, 'status'> & { gameDate?: string | Date },
+) {
+  if (game.status !== 'finished') {
+    return false;
+  }
+
+  if (!game.gameDate) {
+    return true;
+  }
+
+  const startedAt = new Date(game.gameDate).getTime();
+
+  if (Number.isNaN(startedAt)) {
+    return true;
+  }
+
+  return startedAt < Date.now() - TYPICAL_GAME_MS;
+}
+
 function normalizeScore(value: GameLike['homeScore']) {
   if (value === null || value === undefined) {
     return null;
@@ -51,6 +74,10 @@ export function getFavoriteTeamGameOutcome(
     return 'cancelled';
   }
 
+  if (!isGameFinished(game)) {
+    return 'scheduled';
+  }
+
   const homeScore = normalizeScore(game.homeScore);
   const awayScore = normalizeScore(game.awayScore);
 
@@ -61,14 +88,6 @@ export function getFavoriteTeamGameOutcome(
     if (myScore > oppScore) return 'win';
     if (myScore < oppScore) return 'lose';
     return 'draw';
-  }
-
-  if (
-    attendanceResult === 'win' ||
-    attendanceResult === 'lose' ||
-    attendanceResult === 'draw'
-  ) {
-    return attendanceResult;
   }
 
   return 'scheduled';

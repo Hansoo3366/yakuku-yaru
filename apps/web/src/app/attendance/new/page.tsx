@@ -13,7 +13,8 @@ import {
   createAttendanceRecord,
   uploadAttendancePhoto,
 } from '@/lib/attendance-api';
-import { fetchGame } from '@/lib/baseball-api';
+import { fetchGame, type Game } from '@/lib/baseball-api';
+import { isNeutralAttendance } from '@/lib/attendance-game';
 import {
   inferResultFromScores,
   resolveAttendanceScoresFromGame,
@@ -24,6 +25,7 @@ import {
   type SelectedCompanion,
 } from '@/components/CompanionPicker';
 import { AttendanceScoreSection } from '@/components/AttendanceScoreSection';
+import { CheeredTeamPicker } from '@/components/CheeredTeamPicker';
 
 function NewAttendanceForm() {
   const router = useRouter();
@@ -43,6 +45,29 @@ function NewAttendanceForm() {
   const [errorMessage, setErrorMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoadingGame, setIsLoadingGame] = useState(true);
+  const [game, setGame] = useState<Game | null>(null);
+  const [favoriteTeamId, setFavoriteTeamId] = useState<number | null>(null);
+  const [cheeredTeamId, setCheeredTeamId] = useState<number | null>(null);
+
+  const isNeutral = game ? isNeutralAttendance(game, favoriteTeamId) : false;
+
+  function applyOfficialScores(
+    targetGame: Game,
+    outcomeTeamId: number | null,
+  ) {
+    const official = resolveAttendanceScoresFromGame(targetGame, outcomeTeamId);
+
+    if (official) {
+      setMyTeamScore(String(official.myTeamScore));
+      setOpponentScore(String(official.opponentScore));
+      setResult(official.result);
+      setResultManuallySet(true);
+      setScoreLocked(true);
+      return;
+    }
+
+    setScoreLocked(false);
+  }
 
   useEffect(() => {
     const token = getAccessToken();
@@ -53,17 +78,17 @@ function NewAttendanceForm() {
 
     Promise.all([fetchGame(gameId), fetchMe(token)])
       .then(([gameResponse, meResponse]) => {
-        const official = resolveAttendanceScoresFromGame(
+        setGame(gameResponse.game);
+        setFavoriteTeamId(meResponse.user.favoriteTeamId);
+        const neutral = isNeutralAttendance(
           gameResponse.game,
           meResponse.user.favoriteTeamId,
         );
 
-        if (official) {
-          setMyTeamScore(String(official.myTeamScore));
-          setOpponentScore(String(official.opponentScore));
-          setResult(official.result);
-          setResultManuallySet(true);
-          setScoreLocked(true);
+        if (!neutral) {
+          applyOfficialScores(gameResponse.game, meResponse.user.favoriteTeamId);
+        } else {
+          setScoreLocked(false);
         }
       })
       .catch(() => {
@@ -73,6 +98,14 @@ function NewAttendanceForm() {
         setIsLoadingGame(false);
       });
   }, [gameId]);
+
+  useEffect(() => {
+    if (!game || !isNeutral || !cheeredTeamId) {
+      return;
+    }
+
+    applyOfficialScores(game, cheeredTeamId);
+  }, [game, isNeutral, cheeredTeamId]);
 
   useEffect(() => {
     if (!photo) {
@@ -127,6 +160,11 @@ function NewAttendanceForm() {
       return;
     }
 
+    if (isNeutral && !cheeredTeamId) {
+      setErrorMessage('이 경기에서 응원한 팀을 선택해주세요.');
+      return;
+    }
+
     setIsSubmitting(true);
     setErrorMessage('');
 
@@ -144,6 +182,7 @@ function NewAttendanceForm() {
           watchType,
           result,
           isScoreModified: !scoreLocked,
+          cheeredTeamId: isNeutral ? cheeredTeamId : null,
           companionUserIds: companions.map((companion) => companion.id),
         },
         token,
@@ -243,6 +282,14 @@ function NewAttendanceForm() {
               </label>
             )}
           </section>
+
+          {game && isNeutral ? (
+            <CheeredTeamPicker
+              game={game}
+              onChange={setCheeredTeamId}
+              value={cheeredTeamId}
+            />
+          ) : null}
 
           <AttendanceScoreSection
             myTeamScore={myTeamScore}

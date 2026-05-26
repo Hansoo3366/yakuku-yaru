@@ -47,6 +47,7 @@ import {
   isGameInScheduleFilter,
   isSameDay,
 } from '@/lib/calendar-range';
+import { countsTowardWinRate, isNeutralAttendance } from '@/lib/attendance-game';
 import { useMediaQuery } from '@/lib/use-media-query';
 
 const weekdayLabels = ['일', '월', '화', '수', '목', '금', '토'];
@@ -262,8 +263,14 @@ export default function CalendarPage() {
 
   const scheduleScopedAttendanceRecords = useMemo(
     () =>
-      filteredAttendanceRecords.filter((record) =>
-        isGameInScheduleFilter(record.game, scheduleFilter, user?.favoriteTeamId),
+      filteredAttendanceRecords.filter(
+        (record) =>
+          isGameInScheduleFilter(
+            record.game,
+            scheduleFilter,
+            user?.favoriteTeamId,
+          ) ||
+          isNeutralAttendance(record.game, user?.favoriteTeamId),
       ),
     [filteredAttendanceRecords, scheduleFilter, user?.favoriteTeamId],
   );
@@ -293,8 +300,10 @@ export default function CalendarPage() {
       }
     }
 
-    return [...byId.values()];
-  }, [yearAttendanceRecords, attendanceRecords, statsYear]);
+    return [...byId.values()].filter((record) =>
+      countsTowardWinRate(record.game, user?.favoriteTeamId),
+    );
+  }, [yearAttendanceRecords, attendanceRecords, statsYear, user?.favoriteTeamId]);
 
   const yearStadiumWinRate = useMemo(
     () =>

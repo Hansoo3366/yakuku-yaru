@@ -23,12 +23,15 @@ import {
   type SelectedCompanion,
 } from '@/components/CompanionPicker';
 import { Skeleton } from '@/components/Skeleton';
+import type { Game } from '@/lib/baseball-api';
+import { isNeutralAttendance } from '@/lib/attendance-game';
 import {
   inferResultFromScores,
   resolveAttendanceScoresFromGame,
   type AttendanceResult,
 } from '@/lib/attendance-score';
 import { AttendanceScoreSection } from '@/components/AttendanceScoreSection';
+import { CheeredTeamPicker } from '@/components/CheeredTeamPicker';
 
 export default function EditAttendancePage() {
   const params = useParams<{ recordId: string }>();
@@ -48,6 +51,29 @@ export default function EditAttendancePage() {
   const [photoPreviewUrl, setPhotoPreviewUrl] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [game, setGame] = useState<Game | null>(null);
+  const [favoriteTeamId, setFavoriteTeamId] = useState<number | null>(null);
+  const [cheeredTeamId, setCheeredTeamId] = useState<number | null>(null);
+
+  const isNeutral = game ? isNeutralAttendance(game, favoriteTeamId) : false;
+
+  function applyOfficialScores(
+    targetGame: Game,
+    outcomeTeamId: number | null,
+  ) {
+    const official = resolveAttendanceScoresFromGame(targetGame, outcomeTeamId);
+
+    if (official) {
+      setMyTeamScore(String(official.myTeamScore));
+      setOpponentScore(String(official.opponentScore));
+      setResult(official.result);
+      setResultManuallySet(true);
+      setScoreLocked(true);
+      return;
+    }
+
+    setScoreLocked(false);
+  }
 
   useEffect(() => {
     const token = getAccessToken();
@@ -60,36 +86,54 @@ export default function EditAttendancePage() {
     Promise.all([fetchAttendanceRecord(recordId, token), fetchMe(token)]).then(
       ([response, meResponse]) => {
         const r = response.record;
-        setRecord(r);
-        setMemo(r.memo ?? '');
-        setWatchType(r.watchType);
-        setCompanions(toSelectedCompanions(r.companions));
-
-        const gameForScore = {
+        const loadedGame: Game = {
+          id: r.gameId,
+          gameDate: r.game.gameDate,
+          stadium: r.game.stadium,
           homeTeam: r.game.homeTeam,
           awayTeam: r.game.awayTeam,
           homeScore: r.game.homeScore,
           awayScore: r.game.awayScore,
+          status: r.game.status,
+          ticketUrl: null,
+          ticketOpenAt: null,
+          stadiumGuide: null,
         };
-        const official = resolveAttendanceScoresFromGame(
-          gameForScore,
+
+        setRecord(r);
+        setGame(loadedGame);
+        setFavoriteTeamId(meResponse.user.favoriteTeamId);
+        setCheeredTeamId(r.cheeredTeamId ?? null);
+        setMemo(r.memo ?? '');
+        setWatchType(r.watchType);
+        setCompanions(toSelectedCompanions(r.companions));
+
+        const neutral = isNeutralAttendance(
+          loadedGame,
           meResponse.user.favoriteTeamId,
         );
 
-        if (official) {
-          setMyTeamScore(String(official.myTeamScore));
-          setOpponentScore(String(official.opponentScore));
-          setResult(official.result);
-          setResultManuallySet(true);
-          setScoreLocked(true);
+        if (!neutral) {
+          applyOfficialScores(loadedGame, meResponse.user.favoriteTeamId);
+        } else if (r.cheeredTeamId) {
+          applyOfficialScores(loadedGame, r.cheeredTeamId);
         } else {
           setMyTeamScore(String(r.myTeamScore ?? ''));
           setOpponentScore(String(r.opponentScore ?? ''));
           setResult((r.result as AttendanceResult) ?? 'win');
+          setScoreLocked(false);
         }
       },
     );
   }, [recordId, router]);
+
+  useEffect(() => {
+    if (!game || !isNeutral || !cheeredTeamId) {
+      return;
+    }
+
+    applyOfficialScores(game, cheeredTeamId);
+  }, [game, isNeutral, cheeredTeamId]);
 
   useEffect(() => {
     if (!photo) {
@@ -144,6 +188,11 @@ export default function EditAttendancePage() {
       return;
     }
 
+    if (isNeutral && !cheeredTeamId) {
+      setErrorMessage('이 경기에서 응원한 팀을 선택해주세요.');
+      return;
+    }
+
     setErrorMessage('');
     setIsSubmitting(true);
 
@@ -161,6 +210,7 @@ export default function EditAttendancePage() {
           watchType,
           result,
           isScoreModified: !scoreLocked,
+          cheeredTeamId: isNeutral ? cheeredTeamId : null,
           companionUserIds: companions.map((companion) => companion.id),
         },
         token,
@@ -296,6 +346,14 @@ export default function EditAttendancePage() {
             </label>
           )}
         </section>
+
+        {game && isNeutral ? (
+          <CheeredTeamPicker
+            game={game}
+            onChange={setCheeredTeamId}
+            value={cheeredTeamId}
+          />
+        ) : null}
 
         <AttendanceScoreSection
           myTeamScore={myTeamScore}

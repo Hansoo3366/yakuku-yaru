@@ -323,4 +323,20 @@ export async function runMigrations() {
       ticket_url = VALUES(ticket_url),
       ticket_open_at = VALUES(ticket_open_at)`,
   );
+
+  const hasCheeredTeamId = await columnExists(
+    'attendance_records',
+    'cheered_team_id',
+  );
+
+  if (!hasCheeredTeamId) {
+    await db.execute(
+      `ALTER TABLE attendance_records
+       ADD COLUMN cheered_team_id BIGINT UNSIGNED NULL AFTER watch_type,
+       ADD KEY idx_attendance_cheered_team_id (cheered_team_id),
+       ADD CONSTRAINT fk_attendance_cheered_team
+         FOREIGN KEY (cheered_team_id) REFERENCES teams(id)
+         ON DELETE SET NULL`,
+    );
+  }
 }

@@ -4,6 +4,7 @@ import Link from 'next/link';
 import type { AttendanceRecord } from '@/lib/attendance-api';
 import { getAssetUrl } from '@/lib/api';
 import { formatGameTime } from '@/lib/calendar-range';
+import { isNeutralAttendance } from '@/lib/attendance-game';
 import { resolveAttendanceOutcome } from '@/lib/attendance-score';
 import {
   getFavoriteTeamGameOutcome,
@@ -62,10 +63,15 @@ export function CalendarEventCard({
   const matchupLabel = `${game.awayTeam.shortName} vs ${game.homeTeam.shortName}`;
   const timeLabel = formatGameTime(game.gameDate);
   const scoreLine = formatScoreLine(game);
+  const isNeutral =
+    attendance &&
+    isNeutralAttendance(attendance.game, favoriteTeamId ?? null);
   const tagKind = attendance
     ? attendance.viewerRelation === 'companion'
       ? 'companion'
-      : attendance.watchType
+      : isNeutral
+        ? 'neutral'
+        : attendance.watchType
     : null;
 
   return (
@@ -101,7 +107,11 @@ export function CalendarEventCard({
               ? '집관'
               : tagKind === 'companion'
                 ? '동행'
-                : '직관'}
+                : tagKind === 'neutral'
+                  ? attendance.cheeredTeamShortName
+                    ? `중립·${attendance.cheeredTeamShortName}`
+                    : '중립'
+                  : '직관'}
           </span>
         ) : null}
         {attendance?.photoUrl ? (

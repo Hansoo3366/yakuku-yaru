@@ -99,11 +99,7 @@ export function getWeekDays(weekStart: Date) {
 }
 
 export function isSameDay(a: Date, b: Date) {
-  return (
-    a.getFullYear() === b.getFullYear() &&
-    a.getMonth() === b.getMonth() &&
-    a.getDate() === b.getDate()
-  );
+  return formatDateInput(a) === formatDateInput(b);
 }
 
 export function formatGameTime(gameDate: string) {

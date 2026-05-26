@@ -24,6 +24,7 @@ import {
 import { createNotification } from '../notifications/notification.repository.js';
 import { attendancePhotoUpload } from './upload.js';
 import { findUserById } from '../users/user.repository.js';
+import { assertValidCheeredTeamId } from './attendance-game.js';
 import { buildAttendanceScoreFields } from './attendance-score.js';
 
 export const attendanceRouter = Router();
@@ -183,9 +184,20 @@ attendanceRouter.post(
       }
 
       const user = await findUserById(userId);
+      const cheeredTeamId = assertValidCheeredTeamId({
+        game,
+        ownerFavoriteTeamId: user?.favoriteTeamId ?? null,
+        cheeredTeamId: (req.body as { cheeredTeamId?: number }).cheeredTeamId,
+      });
+
+      if (typeof cheeredTeamId === 'string') {
+        throw new HttpError(400, 'INVALID_INPUT', cheeredTeamId);
+      }
+
       const scoreFields = buildAttendanceScoreFields({
         game,
         favoriteTeamId: user?.favoriteTeamId ?? null,
+        cheeredTeamId,
         body: req.body,
         normalizeNumber,
       });
@@ -194,6 +206,7 @@ attendanceRouter.post(
         userId,
         gameId,
         watchType: normalizeWatchType(watchType),
+        cheeredTeamId,
         memo: memo?.trim() || null,
         myTeamScore: scoreFields.myTeamScore,
         opponentScore: scoreFields.opponentScore,
@@ -280,9 +293,20 @@ attendanceRouter.patch(
       }
 
       const owner = await findUserById(record.userId);
+      const cheeredTeamId = assertValidCheeredTeamId({
+        game,
+        ownerFavoriteTeamId: owner?.favoriteTeamId ?? null,
+        cheeredTeamId: (req.body as { cheeredTeamId?: number }).cheeredTeamId,
+      });
+
+      if (typeof cheeredTeamId === 'string') {
+        throw new HttpError(400, 'INVALID_INPUT', cheeredTeamId);
+      }
+
       const scoreFields = buildAttendanceScoreFields({
         game,
         favoriteTeamId: owner?.favoriteTeamId ?? null,
+        cheeredTeamId,
         body: req.body,
         normalizeNumber,
       });
@@ -290,6 +314,7 @@ attendanceRouter.patch(
       const updatedRecord = await updateAttendanceRecord({
         id: record.id,
         watchType: normalizeWatchType(watchType),
+        cheeredTeamId,
         memo: memo?.trim() || null,
         myTeamScore: scoreFields.myTeamScore,
         opponentScore: scoreFields.opponentScore,

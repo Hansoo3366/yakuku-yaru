@@ -1,4 +1,5 @@
 import type { AttendanceRecord } from '@/lib/attendance-api';
+import { countsTowardWinRate } from '@/lib/attendance-game';
 import { resolveAttendanceOutcome } from '@/lib/attendance-score';
 import { getFavoriteTeamGameOutcome, type GameOutcome } from '@/lib/game-outcome';
 
@@ -32,7 +33,8 @@ function getAttendanceWinRateByWatchType(
 ): WinRateSnapshot {
   const filtered = records.filter(
     (record) =>
-      record.viewerRelation === 'owner' && record.watchType === watchType,
+      record.watchType === watchType &&
+      countsTowardWinRate(record.game, favoriteTeamId),
   );
   const decided = filtered
     .map((record) => resolveAttendanceOutcome(record, favoriteTeamId))

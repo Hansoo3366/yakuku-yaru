@@ -1,4 +1,6 @@
 import type { Game } from './baseball-api';
+import { resolveOutcomeTeamId } from '@/lib/attendance-game';
+import { isGameFinished } from '@/lib/game-outcome';
 
 export type AttendanceResult = 'win' | 'lose' | 'draw';
 
@@ -7,10 +9,16 @@ export type GameForAttendanceScore = {
   awayTeam: { id: number };
   homeScore: Game['homeScore'];
   awayScore: Game['awayScore'];
+  status: Game['status'];
+  gameDate?: Game['gameDate'];
 };
 
 export function gameHasOfficialScores(game: GameForAttendanceScore) {
-  return game.homeScore !== null && game.awayScore !== null;
+  return (
+    isGameFinished(game) &&
+    game.homeScore !== null &&
+    game.awayScore !== null
+  );
 }
 
 export function inferResultFromScores(
@@ -71,6 +79,9 @@ export type AttendanceRecordForOutcome = {
   opponentScore: number | null;
   result: string | null;
   game: GameForAttendanceScore;
+  cheeredTeamId?: number | null;
+  viewerRelation?: 'owner' | 'companion';
+  ownerFavoriteTeamId?: number | null;
 };
 
 /** KBO 공식 스코어가 있으면 개인 입력은 쓰지 않습니다. */
@@ -78,10 +89,14 @@ export function resolveAttendanceOutcome(
   record: AttendanceRecordForOutcome,
   favoriteTeamId: number | null | undefined,
 ): AttendanceResult | null {
-  const fromGame = resolveAttendanceScoresFromGame(
-    record.game,
-    favoriteTeamId ?? null,
-  );
+  const outcomeTeamId = resolveOutcomeTeamId({
+    game: record.game,
+    favoriteTeamId,
+    cheeredTeamId: record.cheeredTeamId,
+    viewerRelation: record.viewerRelation,
+    ownerFavoriteTeamId: record.ownerFavoriteTeamId,
+  });
+  const fromGame = resolveAttendanceScoresFromGame(record.game, outcomeTeamId);
 
   if (fromGame) {
     return fromGame.result;
@@ -102,39 +117,87 @@ export function resolveAttendanceOutcome(
   return null;
 }
 
-export function getAttendanceTicketView(
-  record: AttendanceRecordForOutcome & {
+export function resolveOutcomeFavoriteTeamId(
+  record: {
+    game: GameForAttendanceScore;
+    viewerRelation?: 'owner' | 'companion';
     ownerFavoriteTeamId?: number | null;
+    cheeredTeamId?: number | null;
   },
   viewerFavoriteTeamId: number | null | undefined,
 ) {
-  const favoriteTeamId =
-    record.ownerFavoriteTeamId ?? viewerFavoriteTeamId ?? null;
-  const official = resolveAttendanceScoresFromGame(record.game, favoriteTeamId);
+  return resolveOutcomeTeamId({
+    game: record.game,
+    favoriteTeamId: viewerFavoriteTeamId,
+    cheeredTeamId: record.cheeredTeamId,
+    viewerRelation: record.viewerRelation,
+    ownerFavoriteTeamId: record.ownerFavoriteTeamId,
+  });
+}
+
+export type AttendanceTicketView = {
+  outcome: AttendanceResult | null;
+  awayScore: number | null;
+  homeScore: number | null;
+};
+
+/** 티켓 UI: 승패는 보는 사람 응원팀 기준, 점수는 원정:홈 배치 */
+export function getAttendanceTicketView(
+  record: AttendanceRecordForOutcome & {
+    ownerFavoriteTeamId?: number | null;
+    cheeredTeamId?: number | null;
+    viewerRelation?: 'owner' | 'companion';
+  },
+  viewerFavoriteTeamId: number | null | undefined,
+): AttendanceTicketView {
+  const favoriteTeamId = resolveOutcomeFavoriteTeamId(
+    record,
+    viewerFavoriteTeamId,
+  );
   const outcome = resolveAttendanceOutcome(record, favoriteTeamId);
 
-  if (official) {
+  if (isGameFinished(record.game) && gameHasOfficialScores(record.game)) {
     return {
-      myTeamScore: official.myTeamScore,
-      opponentScore: official.opponentScore,
-      outcome: official.result,
+      outcome,
+      awayScore: Number(record.game.awayScore),
+      homeScore: Number(record.game.homeScore),
     };
   }
 
-  if (record.myTeamScore !== null && record.opponentScore !== null) {
-    return {
-      myTeamScore: record.myTeamScore,
-      opponentScore: record.opponentScore,
-      outcome:
-        outcome ??
-        inferResultFromScores(record.myTeamScore, record.opponentScore),
-    };
+  const favoriteId = favoriteTeamId === null ? null : Number(favoriteTeamId);
+  const homeTeamId = Number(record.game.homeTeam.id);
+  const awayTeamId = Number(record.game.awayTeam.id);
+
+  if (
+    record.myTeamScore !== null &&
+    record.opponentScore !== null &&
+    favoriteId !== null
+  ) {
+    if (favoriteId === homeTeamId) {
+      return {
+        outcome:
+          outcome ??
+          inferResultFromScores(record.myTeamScore, record.opponentScore),
+        awayScore: record.opponentScore,
+        homeScore: record.myTeamScore,
+      };
+    }
+
+    if (favoriteId === awayTeamId) {
+      return {
+        outcome:
+          outcome ??
+          inferResultFromScores(record.myTeamScore, record.opponentScore),
+        awayScore: record.myTeamScore,
+        homeScore: record.opponentScore,
+      };
+    }
   }
 
   return {
-    myTeamScore: null,
-    opponentScore: null,
     outcome,
+    awayScore: null,
+    homeScore: null,
   };
 }
 

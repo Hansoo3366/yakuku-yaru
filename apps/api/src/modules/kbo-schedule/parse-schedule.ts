@@ -154,11 +154,7 @@ function resolveStatus(playHtml: string, note: string | null, cells: KboSchedule
     return 'scheduled' as const;
   }
 
-  const { awayScore, homeScore } = parseScores(playHtml);
-  if (awayScore !== null && homeScore !== null) {
-    return 'finished' as const;
-  }
-
+  // 스코어가 보여도 리뷰 링크 전이면 경기 진행 중·예정 — 무승부/종료 오판 방지
   return 'scheduled' as const;
 }
 

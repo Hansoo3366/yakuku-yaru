@@ -5,6 +5,8 @@ export type AttendanceRecord = {
   userId: number;
   gameId: number;
   watchType: 'stadium' | 'home';
+  cheeredTeamId?: number | null;
+  cheeredTeamShortName?: string | null;
   photoUrl: string | null;
   memo: string | null;
   myTeamScore: number | null;
@@ -60,6 +62,7 @@ export type AttendanceInput = {
   result: string;
   isScoreModified?: boolean;
   companionUserIds?: number[];
+  cheeredTeamId?: number | null;
 };
 
 export type AttendanceStats = {

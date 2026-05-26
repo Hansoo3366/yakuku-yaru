@@ -118,9 +118,7 @@ export default function AttendanceDetailPage() {
   const ticket = getAttendanceTicketView(record, viewerFavoriteTeamId);
   const winLossClass = ticket.outcome ? `is-${ticket.outcome}` : 'is-blank';
   const watchLabel = record.watchType === 'home' ? '집관' : '직관';
-  const myScore = ticket.myTeamScore;
-  const oppScore = ticket.opponentScore;
-  const hasScore = myScore !== null && oppScore !== null;
+  const hasScore = ticket.awayScore !== null && ticket.homeScore !== null;
 
   return (
     <main className="app-shell">
@@ -163,9 +161,9 @@ export default function AttendanceDetailPage() {
               <div className="photo-ticket-score">
                 {hasScore ? (
                   <>
-                    <span className="photo-ticket-score-num">{myScore}</span>
+                    <span className="photo-ticket-score-num">{ticket.awayScore}</span>
                     <span className="photo-ticket-score-divider">:</span>
-                    <span className="photo-ticket-score-num">{oppScore}</span>
+                    <span className="photo-ticket-score-num">{ticket.homeScore}</span>
                   </>
                 ) : (
                   <span className="photo-ticket-score-vs">vs</span>

@@ -11,7 +11,7 @@ import type { Game } from '../games/game.repository.js';
 
 const baseGame = {
   id: 1,
-  gameDate: new Date(),
+  gameDate: new Date('2020-06-01 18:30:00'),
   stadium: '잠실',
   homeTeam: { id: 1, name: 'LG', shortName: 'LG', primaryColor: null, ticketUrl: null },
   awayTeam: { id: 2, name: '두산', shortName: '두산', primaryColor: null, ticketUrl: null },
@@ -44,6 +44,7 @@ assert.equal(inferResultFromScores(4, 4), 'draw');
 const fromKbo = buildAttendanceScoreFields({
   game: baseGame,
   favoriteTeamId: 1,
+  cheeredTeamId: null,
   body: { myTeamScore: 9, opponentScore: 0, isScoreModified: true },
   normalizeNumber: (v) => (v === '' || v == null ? null : Number(v)),
 });
@@ -53,6 +54,7 @@ assert.equal(fromKbo.isScoreModified, false);
 const manual = buildAttendanceScoreFields({
   game: { ...baseGame, homeScore: null, awayScore: null },
   favoriteTeamId: 1,
+  cheeredTeamId: null,
   body: { myTeamScore: 2, opponentScore: 1, result: 'win' },
   normalizeNumber: (v) => (v === '' || v == null ? null : Number(v)),
 });
@@ -62,6 +64,7 @@ assert.equal(manual.isScoreModified, true);
 const wrongResultBody = buildAttendanceScoreFields({
   game: { ...baseGame, homeScore: null, awayScore: null },
   favoriteTeamId: 1,
+  cheeredTeamId: null,
   body: { myTeamScore: 1, opponentScore: 4, result: 'win' },
   normalizeNumber: (v) => (v === '' || v == null ? null : Number(v)),
 });
@@ -73,7 +76,11 @@ assert.equal(
       myTeamScore: 5,
       opponentScore: 3,
       result: 'lose',
-      game: baseGame,
+      game: {
+        ...baseGame,
+        gameDate: baseGame.gameDate,
+        status: 'finished',
+      },
     },
     1,
   ),

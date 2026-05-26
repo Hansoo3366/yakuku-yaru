@@ -1,5 +1,7 @@
 import type { AttendanceRecord } from '@/lib/attendance-api';
-import { getFavoriteTeamGameOutcome, type GameOutcome } from '@/lib/game-outcome';
+import { countsTowardWinRate } from '@/lib/attendance-game';
+import { resolveAttendanceOutcome } from '@/lib/attendance-score';
+import type { GameOutcome } from '@/lib/game-outcome';
 
 export type OpponentInsightItem = {
   teamId: number;
@@ -147,17 +149,17 @@ function buildStadiumOpponentStats(
       continue;
     }
 
+    if (!countsTowardWinRate(record.game, favoriteTeamId)) {
+      continue;
+    }
+
     const opponent = getOpponentTeamId(record, favoriteTeamId);
 
     if (!opponent) {
       continue;
     }
 
-    const teamOutcome = getFavoriteTeamGameOutcome(
-      record.game,
-      favoriteTeamId,
-      record.result,
-    );
+    const teamOutcome = resolveAttendanceOutcome(record, favoriteTeamId);
 
     if (!isDecidedTeamOutcome(teamOutcome)) {
       continue;

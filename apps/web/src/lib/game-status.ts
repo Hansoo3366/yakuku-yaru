@@ -1,4 +1,5 @@
 import type { Game } from './baseball-api';
+import { isGameFinished } from './game-outcome';
 
 export type GameStatusTone = 'scheduled' | 'finished' | 'cancelled';
 
@@ -9,17 +10,7 @@ export function getGameStatusTone(
     return 'cancelled';
   }
 
-  if (
-    game.status === 'finished' ||
-    (game.homeScore !== null && game.awayScore !== null)
-  ) {
-    return 'finished';
-  }
-
-  const startedAt = new Date(game.gameDate).getTime();
-  const likelyEnded = startedAt < Date.now() - 4 * 60 * 60 * 1000;
-
-  if (likelyEnded) {
+  if (isGameFinished(game)) {
     return 'finished';
   }
 

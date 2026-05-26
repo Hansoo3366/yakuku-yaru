@@ -104,6 +104,7 @@ CREATE TABLE IF NOT EXISTS attendance_records (
   last_modified_by_user_id BIGINT UNSIGNED NULL,
   game_id BIGINT UNSIGNED NOT NULL,
   watch_type VARCHAR(20) NOT NULL DEFAULT 'stadium',
+  cheered_team_id BIGINT UNSIGNED NULL,
   photo_url VARCHAR(500) NULL,
   memo TEXT NULL,
   my_team_score INT NULL,
@@ -123,7 +124,10 @@ CREATE TABLE IF NOT EXISTS attendance_records (
     ON DELETE SET NULL,
   CONSTRAINT fk_attendance_game
     FOREIGN KEY (game_id) REFERENCES games(id)
-    ON DELETE CASCADE
+    ON DELETE CASCADE,
+  CONSTRAINT fk_attendance_cheered_team
+    FOREIGN KEY (cheered_team_id) REFERENCES teams(id)
+    ON DELETE SET NULL
 );
 
 CREATE TABLE IF NOT EXISTS attendance_companions (

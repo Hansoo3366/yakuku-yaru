@@ -3,6 +3,10 @@ import type { Game } from '../games/game.repository.js';
 import { db } from '../../config/database.js';
 import { findGameById } from '../games/game.repository.js';
 import { findUserById } from '../users/user.repository.js';
+import {
+  resolveOutcomeTeamId,
+  resolveStorageOutcomeTeamId,
+} from './attendance-game.js';
 
 export type AttendanceResult = 'win' | 'lose' | 'draw';
 
@@ -11,10 +15,38 @@ export type GameForAttendanceScore = {
   awayTeam: { id: number };
   homeScore: number | null;
   awayScore: number | null;
+  status: string;
+  gameDate?: Date | string;
 };
 
+const TYPICAL_GAME_MS = 2.5 * 60 * 60 * 1000;
+
+export function isGameFinished(
+  game: Pick<GameForAttendanceScore, 'status'> & { gameDate?: Date | string },
+) {
+  if (game.status !== 'finished') {
+    return false;
+  }
+
+  if (!game.gameDate) {
+    return true;
+  }
+
+  const startedAt = new Date(game.gameDate).getTime();
+
+  if (Number.isNaN(startedAt)) {
+    return true;
+  }
+
+  return startedAt < Date.now() - TYPICAL_GAME_MS;
+}
+
 export function gameHasOfficialScores(game: GameForAttendanceScore) {
-  return game.homeScore !== null && game.awayScore !== null;
+  return (
+    isGameFinished(game) &&
+    game.homeScore !== null &&
+    game.awayScore !== null
+  );
 }
 
 export function inferResultFromScores(
@@ -72,6 +104,9 @@ export type AttendanceRecordForOutcome = {
   opponentScore: number | null;
   result: string | null;
   game: GameForAttendanceScore;
+  cheeredTeamId?: number | null;
+  viewerRelation?: 'owner' | 'companion';
+  ownerFavoriteTeamId?: number | null;
 };
 
 /** KBO 공식 스코어가 있으면 개인 입력은 쓰지 않습니다. */
@@ -79,7 +114,14 @@ export function resolveAttendanceOutcome(
   record: AttendanceRecordForOutcome,
   favoriteTeamId: number | null,
 ): AttendanceResult | null {
-  const fromGame = resolveAttendanceScoresFromGame(record.game, favoriteTeamId);
+  const outcomeTeamId = resolveOutcomeTeamId({
+    game: record.game,
+    favoriteTeamId,
+    cheeredTeamId: record.cheeredTeamId,
+    viewerRelation: record.viewerRelation,
+    ownerFavoriteTeamId: record.ownerFavoriteTeamId,
+  });
+  const fromGame = resolveAttendanceScoresFromGame(record.game, outcomeTeamId);
 
   if (fromGame) {
     return fromGame.result;
@@ -118,6 +160,7 @@ export function resolveAttendanceTitle(
 export function buildAttendanceScoreFields(input: {
   game: Game;
   favoriteTeamId: number | null;
+  cheeredTeamId?: number | null;
   body: {
     myTeamScore?: unknown;
     opponentScore?: unknown;
@@ -126,7 +169,12 @@ export function buildAttendanceScoreFields(input: {
   };
   normalizeNumber: (value: unknown) => number | null;
 }) {
-  const official = resolveAttendanceScoresFromGame(input.game, input.favoriteTeamId);
+  const outcomeTeamId = resolveStorageOutcomeTeamId({
+    game: input.game,
+    ownerFavoriteTeamId: input.favoriteTeamId,
+    cheeredTeamId: input.cheeredTeamId,
+  });
+  const official = resolveAttendanceScoresFromGame(input.game, outcomeTeamId);
 
   if (official) {
     return {
@@ -157,14 +205,20 @@ export function buildAttendanceScoreFields(input: {
 export async function syncAttendanceScoresForGame(gameId: number) {
   const game = await findGameById(gameId);
 
-  if (!game || !gameHasOfficialScores(game)) {
+  if (!game || !isGameFinished(game) || !gameHasOfficialScores(game)) {
     return 0;
   }
 
-  type AttendanceIdRow = RowDataPacket & { id: number; user_id: number };
+  type AttendanceIdRow = RowDataPacket & {
+    id: number;
+    user_id: number;
+    cheered_team_id: number | null;
+  };
 
   const [rows] = await db.query<AttendanceIdRow[]>(
-    `SELECT id, user_id FROM attendance_records WHERE game_id = ?`,
+    `SELECT ar.id, ar.user_id, ar.cheered_team_id
+     FROM attendance_records ar
+     WHERE ar.game_id = ?`,
     [gameId],
   );
 
@@ -174,7 +228,11 @@ export async function syncAttendanceScoresForGame(gameId: number) {
     const user = await findUserById(row.user_id);
     const scores = resolveAttendanceScoresFromGame(
       game,
-      user?.favoriteTeamId ?? null,
+      resolveStorageOutcomeTeamId({
+        game,
+        ownerFavoriteTeamId: user?.favoriteTeamId ?? null,
+        cheeredTeamId: row.cheered_team_id,
+      }),
     );
 
     if (!scores) {

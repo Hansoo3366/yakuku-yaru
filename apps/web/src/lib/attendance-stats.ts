@@ -1,15 +1,20 @@
 import type { AttendanceRecord, AttendanceStats } from '@/lib/attendance-api';
+import { countsTowardWinRate } from '@/lib/attendance-game';
 import {
   resolveAttendanceOutcome,
   resolveAttendanceTitle,
 } from '@/lib/attendance-score';
 
-/** 메인 등 클라이언트 표시용 — KBO 공식 스코어 기준 승패·승률·타이틀 */
+/** 메인 등 클라이언트 표시용 — 중립 제외, 동행(내 팀 경기) 포함 */
 export function computeAttendanceStatsFromRecords(
   records: AttendanceRecord[],
   favoriteTeamId: number | null | undefined,
 ): AttendanceStats {
   const owned = records.filter((record) => record.viewerRelation === 'owner');
+  const countable = records.filter((record) =>
+    countsTowardWinRate(record.game, favoriteTeamId),
+  );
+
   let stadiumCount = 0;
   let homeCount = 0;
   let winCount = 0;
@@ -17,12 +22,22 @@ export function computeAttendanceStatsFromRecords(
   let drawCount = 0;
   let stadiumWinCount = 0;
   let homeWinCount = 0;
+  let countableStadium = 0;
+  let countableHome = 0;
 
   for (const record of owned) {
     if (record.watchType === 'stadium') {
       stadiumCount += 1;
     } else if (record.watchType === 'home') {
       homeCount += 1;
+    }
+  }
+
+  for (const record of countable) {
+    if (record.watchType === 'stadium') {
+      countableStadium += 1;
+    } else if (record.watchType === 'home') {
+      countableHome += 1;
     }
 
     const outcome = resolveAttendanceOutcome(record, favoriteTeamId);
@@ -45,17 +60,19 @@ export function computeAttendanceStatsFromRecords(
     }
   }
 
-  const totalCount = owned.length;
-  const winRate = totalCount ? Math.round((winCount / totalCount) * 1000) / 10 : 0;
-  const stadiumWinRate = stadiumCount
-    ? Math.round((stadiumWinCount / stadiumCount) * 1000) / 10
+  const decidedCountable = winCount + loseCount + drawCount;
+  const winRate = decidedCountable
+    ? Math.round((winCount / decidedCountable) * 1000) / 10
     : 0;
-  const homeWinRate = homeCount
-    ? Math.round((homeWinCount / homeCount) * 1000) / 10
+  const stadiumWinRate = countableStadium
+    ? Math.round((stadiumWinCount / countableStadium) * 1000) / 10
+    : 0;
+  const homeWinRate = countableHome
+    ? Math.round((homeWinCount / countableHome) * 1000) / 10
     : 0;
 
   return {
-    totalCount,
+    totalCount: owned.length,
     stadiumCount,
     homeCount,
     winCount,
@@ -64,6 +81,6 @@ export function computeAttendanceStatsFromRecords(
     winRate,
     stadiumWinRate,
     homeWinRate,
-    title: resolveAttendanceTitle(totalCount, winRate),
+    title: resolveAttendanceTitle(decidedCountable, winRate),
   };
 }
