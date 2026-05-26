@@ -74,6 +74,8 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api';
 export const ATTENDANCE_PHOTO_ACCEPT =
   'image/jpeg,image/png,image/webp,image/heic,image/heif,image/avif,image/gif';
 const ATTENDANCE_PHOTO_MAX_BYTES = 20 * 1024 * 1024;
+const ATTENDANCE_PHOTO_OPTIMIZED_MAX_BYTES = 5 * 1024 * 1024;
+const ATTENDANCE_PHOTO_TARGET_SIZE = 1600;
 const ATTENDANCE_PHOTO_ALLOWED_TYPES = new Set(
   ATTENDANCE_PHOTO_ACCEPT.split(','),
 );
@@ -160,21 +162,60 @@ export function fetchAttendanceStats(token: string) {
   });
 }
 
-export async function uploadAttendancePhoto(
-  recordId: number,
-  photo: File,
-  token: string,
-) {
+async function optimizeAttendancePhoto(photo: File) {
   if (!ATTENDANCE_PHOTO_ALLOWED_TYPES.has(photo.type)) {
     throw new Error('JPG, PNG, WebP, HEIC, AVIF, GIF 이미지만 업로드할 수 있어요.');
   }
 
   if (photo.size > ATTENDANCE_PHOTO_MAX_BYTES) {
-    throw new Error('직관 사진은 20MB 이하로 업로드해주세요.');
+    throw new Error('직관 사진 원본은 20MB 이하로 선택해주세요.');
   }
 
+  const bitmap = await createImageBitmap(photo);
+  const scale = Math.min(
+    1,
+    ATTENDANCE_PHOTO_TARGET_SIZE / Math.max(bitmap.width, bitmap.height),
+  );
+  const width = Math.max(1, Math.round(bitmap.width * scale));
+  const height = Math.max(1, Math.round(bitmap.height * scale));
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+
+  const context = canvas.getContext('2d');
+  if (!context) {
+    bitmap.close();
+    throw new Error('직관 사진을 처리할 수 없어요.');
+  }
+
+  context.drawImage(bitmap, 0, 0, width, height);
+  bitmap.close();
+
+  const blob = await new Promise<Blob | null>((resolve) => {
+    canvas.toBlob(resolve, 'image/webp', 0.84);
+  });
+
+  if (!blob) {
+    throw new Error('직관 사진 최적화에 실패했어요.');
+  }
+
+  if (blob.size > ATTENDANCE_PHOTO_OPTIMIZED_MAX_BYTES) {
+    throw new Error('최적화된 직관 사진은 5MB 이하로 업로드해주세요.');
+  }
+
+  return new File([blob], 'attendance-photo.webp', {
+    type: 'image/webp',
+  });
+}
+
+export async function uploadAttendancePhoto(
+  recordId: number,
+  photo: File,
+  token: string,
+) {
+  const optimizedPhoto = await optimizeAttendancePhoto(photo);
   const formData = new FormData();
-  formData.set('photo', photo);
+  formData.set('photo', optimizedPhoto);
 
   const response = await fetch(
     `${API_URL}/attendance-records/${recordId}/photo`,

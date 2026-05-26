@@ -98,8 +98,12 @@ function NewAttendanceForm() {
       }
 
       router.push('/calendar');
-    } catch {
-      setErrorMessage('직관 기록 저장 중 오류가 발생했습니다.');
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : '직관 기록 저장 중 오류가 발생했습니다.',
+      );
     } finally {
       setIsSubmitting(false);
     }
