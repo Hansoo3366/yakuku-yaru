@@ -4,7 +4,7 @@ import { authenticate } from '../../middleware/authenticate.js';
 import { env } from '../../config/env.js';
 import { HttpError } from '../../utils/http-error.js';
 import { validateNickname } from '../../utils/user-input.js';
-import { upload } from '../attendance/upload.js';
+import { profilePhotoUpload } from '../attendance/upload.js';
 import { findTeamById } from '../teams/team.repository.js';
 import {
   findUserByNickname,
@@ -81,7 +81,7 @@ meRouter.patch('/nickname', authenticate, async (req, res, next) => {
 meRouter.post(
   '/profile-photo',
   authenticate,
-  upload.single('photo'),
+  profilePhotoUpload.single('photo'),
   async (req, res, next) => {
     try {
       const userId = req.user?.id ?? 0;

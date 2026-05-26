@@ -5,7 +5,12 @@
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import { ApiError } from '@/lib/api';
-import { fetchMe, updateNickname, uploadProfilePhoto } from '@/lib/auth-api';
+import {
+  fetchMe,
+  PROFILE_PHOTO_ACCEPT,
+  updateNickname,
+  uploadProfilePhoto,
+} from '@/lib/auth-api';
 import { clearAccessToken, getAccessToken, type PublicUser } from '@/lib/auth';
 import {
   fetchAttendanceStats,
@@ -165,7 +170,7 @@ export default function MyPage() {
                 {isUploadingPhoto ? '…' : '＋'}
               </button>
               <input
-                accept="image/*"
+                accept={PROFILE_PHOTO_ACCEPT}
                 className="sr-only"
                 onChange={(event) =>
                   handleProfilePhotoChange(event.target.files?.[0])

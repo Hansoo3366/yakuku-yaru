@@ -5,6 +5,9 @@ export const PASSWORD_MIN_LENGTH = 8;
 export const PASSWORD_MAX_LENGTH = 128;
 export const NICKNAME_MIN_LENGTH = 2;
 export const NICKNAME_MAX_LENGTH = 20;
+export const POST_TITLE_MAX_LENGTH = 200;
+export const POST_CONTENT_MAX_LENGTH = 10000;
+export const COMMENT_CONTENT_MAX_LENGTH = 2000;
 
 const EMAIL_PATTERN =
   /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$/;
@@ -12,6 +15,7 @@ const EMAIL_PATTERN =
 const NICKNAME_PATTERN = /^[가-힣a-zA-Z0-9_]+$/;
 
 const BLOCKED_INPUT_PATTERNS = [
+  /<\/?[a-z][^>]*>/i,
   /<script\b/i,
   /<\/script>/i,
   /javascript:/i,
@@ -54,6 +58,56 @@ export function sanitizePlainText(value: string, maxLength: number) {
   }
 
   return normalized.slice(0, maxLength);
+}
+
+function normalizeBoardText(value: string, maxLength: number) {
+  if (typeof value !== 'string') {
+    return '';
+  }
+
+  const normalized = value
+    .replace(/\r\n/g, '\n')
+    .split('')
+    .filter((char) => {
+      const code = char.charCodeAt(0);
+      return code === 10 || code === 9 || (code >= 32 && code !== 127);
+    })
+    .join('')
+    .trim();
+
+  if (!normalized) {
+    return '';
+  }
+
+  if (containsBlockedPayload(normalized)) {
+    throw new HttpError(
+      400,
+      'UNSAFE_CONTENT',
+      '스크립트, CSS, HTML 태그는 입력할 수 없습니다.',
+    );
+  }
+
+  if (normalized.length > maxLength) {
+    throw new HttpError(
+      400,
+      'INVALID_INPUT',
+      `${maxLength}자 이하로 입력해주세요.`,
+    );
+  }
+
+  return normalized;
+}
+
+export function validatePostTitle(title: string) {
+  return normalizeBoardText(title, POST_TITLE_MAX_LENGTH);
+}
+
+export function validatePostContent(content: string) {
+  return normalizeBoardText(content, POST_CONTENT_MAX_LENGTH);
+}
+
+export function validateCommentContent(content: string) {
+  return normalizeBoardText(content, COMMENT_CONTENT_MAX_LENGTH);
 }
 
 export function validateEmail(email: string) {

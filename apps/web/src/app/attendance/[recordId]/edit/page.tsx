@@ -7,6 +7,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { FormEvent, useEffect, useState } from 'react';
 import { getAccessToken } from '@/lib/auth';
 import {
+  ATTENDANCE_PHOTO_ACCEPT,
   deleteAttendanceRecord,
   fetchAttendanceRecord,
   updateAttendanceRecord,
@@ -219,7 +220,7 @@ export default function EditAttendancePage() {
                 <label className="btn btn-ghost btn-sm" htmlFor="photo-replace">
                   변경
                   <input
-                    accept="image/*"
+                    accept={ATTENDANCE_PHOTO_ACCEPT}
                     id="photo-replace"
                     onChange={(event) =>
                       setPhoto(event.target.files?.[0] ?? null)
@@ -238,7 +239,7 @@ export default function EditAttendancePage() {
               <strong>사진 가져오기</strong>
               <span>JPG, PNG 등 모바일에서는 카메라 바로 가능</span>
               <input
-                accept="image/*"
+                accept={ATTENDANCE_PHOTO_ACCEPT}
                 id="photo-input"
                 onChange={(event) => setPhoto(event.target.files?.[0] ?? null)}
                 type="file"

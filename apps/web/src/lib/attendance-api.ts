@@ -71,6 +71,12 @@ export type AttendanceStats = {
 };
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api';
+export const ATTENDANCE_PHOTO_ACCEPT =
+  'image/jpeg,image/png,image/webp,image/heic,image/heif,image/avif,image/gif';
+const ATTENDANCE_PHOTO_MAX_BYTES = 20 * 1024 * 1024;
+const ATTENDANCE_PHOTO_ALLOWED_TYPES = new Set(
+  ATTENDANCE_PHOTO_ACCEPT.split(','),
+);
 
 export function listAttendanceRecords(
   input: { from?: string; to?: string },
@@ -159,6 +165,14 @@ export async function uploadAttendancePhoto(
   photo: File,
   token: string,
 ) {
+  if (!ATTENDANCE_PHOTO_ALLOWED_TYPES.has(photo.type)) {
+    throw new Error('JPG, PNG, WebP, HEIC, AVIF, GIF 이미지만 업로드할 수 있어요.');
+  }
+
+  if (photo.size > ATTENDANCE_PHOTO_MAX_BYTES) {
+    throw new Error('직관 사진은 20MB 이하로 업로드해주세요.');
+  }
+
   const formData = new FormData();
   formData.set('photo', photo);
 
@@ -174,7 +188,10 @@ export async function uploadAttendancePhoto(
   );
 
   if (!response.ok) {
-    throw new Error('사진 업로드에 실패했습니다.');
+    const error = (await response.json().catch(() => ({
+      message: '사진 업로드에 실패했습니다.',
+    }))) as { message: string };
+    throw new Error(error.message);
   }
 
   return response.json() as Promise<{ record: AttendanceRecord }>;

@@ -20,7 +20,7 @@ import {
   updateCompanionStatus,
 } from './companion.repository.js';
 import { createNotification } from '../notifications/notification.repository.js';
-import { upload } from './upload.js';
+import { attendancePhotoUpload } from './upload.js';
 import { findUserById } from '../users/user.repository.js';
 
 export const attendanceRouter = Router();
@@ -292,7 +292,7 @@ attendanceRouter.delete('/:recordId', authenticate, async (req, res, next) => {
 attendanceRouter.post(
   '/:recordId/photo',
   authenticate,
-  upload.single('photo'),
+  attendancePhotoUpload.single('photo'),
   async (req, res, next) => {
     try {
       const record = await findAttendanceRecordById(Number(req.params.recordId));

@@ -2,6 +2,11 @@ import { Router } from 'express';
 import { authenticate } from '../../middleware/authenticate.js';
 import { HttpError } from '../../utils/http-error.js';
 import {
+  validateCommentContent,
+  validatePostContent,
+  validatePostTitle,
+} from '../../utils/user-input.js';
+import {
   createPost,
   deletePost,
   findPostById,
@@ -58,14 +63,17 @@ postRouter.post('/', authenticate, async (req, res, next) => {
       content?: string;
     };
 
-    if (!title?.trim() || !content?.trim()) {
+    const safeTitle = validatePostTitle(title ?? '');
+    const safeContent = validatePostContent(content ?? '');
+
+    if (!safeTitle || !safeContent) {
       throw new HttpError(400, 'INVALID_INPUT', '제목과 본문을 입력해주세요.');
     }
 
     const post = await createPost({
       userId: req.user?.id ?? 0,
-      title: title.trim(),
-      content: content.trim(),
+      title: safeTitle,
+      content: safeContent,
     });
 
     if (!post) {
@@ -113,14 +121,17 @@ postRouter.patch('/:postId', authenticate, async (req, res, next) => {
       content?: string;
     };
 
-    if (!title?.trim() || !content?.trim()) {
+    const safeTitle = validatePostTitle(title ?? '');
+    const safeContent = validatePostContent(content ?? '');
+
+    if (!safeTitle || !safeContent) {
       throw new HttpError(400, 'INVALID_INPUT', '제목과 본문을 입력해주세요.');
     }
 
     const updatedPost = await updatePost({
       id: post.id,
-      title: title.trim(),
-      content: content.trim(),
+      title: safeTitle,
+      content: safeContent,
     });
 
     res.json({
@@ -181,14 +192,16 @@ postRouter.post('/:postId/comments', authenticate, async (req, res, next) => {
       content?: string;
     };
 
-    if (!content?.trim()) {
+    const safeContent = validateCommentContent(content ?? '');
+
+    if (!safeContent) {
       throw new HttpError(400, 'INVALID_INPUT', '댓글 내용을 입력해주세요.');
     }
 
     const comment = await createComment({
       postId: post.id,
       userId: req.user?.id ?? 0,
-      content: content.trim(),
+      content: safeContent,
     });
 
     if (comment && post.user_id !== req.user?.id) {

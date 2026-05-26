@@ -45,10 +45,58 @@ export function updateNickname(nickname: string, token: string) {
 }
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api';
+export const PROFILE_PHOTO_ACCEPT =
+  'image/jpeg,image/png,image/webp,image/heic,image/heif,image/avif,image/gif';
+const PROFILE_PHOTO_MAX_BYTES = 1024 * 1024;
+const PROFILE_PHOTO_TARGET_SIZE = 512;
+const PROFILE_PHOTO_ALLOWED_TYPES = new Set(PROFILE_PHOTO_ACCEPT.split(','));
+
+async function optimizeProfilePhoto(photo: File) {
+  if (!PROFILE_PHOTO_ALLOWED_TYPES.has(photo.type)) {
+    throw new Error('JPG, PNG, WebP, HEIC, AVIF, GIF 이미지만 업로드할 수 있어요.');
+  }
+
+  const bitmap = await createImageBitmap(photo);
+  const scale = Math.min(
+    1,
+    PROFILE_PHOTO_TARGET_SIZE / Math.max(bitmap.width, bitmap.height),
+  );
+  const width = Math.max(1, Math.round(bitmap.width * scale));
+  const height = Math.max(1, Math.round(bitmap.height * scale));
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+
+  const context = canvas.getContext('2d');
+  if (!context) {
+    bitmap.close();
+    throw new Error('프로필 사진을 처리할 수 없어요.');
+  }
+
+  context.drawImage(bitmap, 0, 0, width, height);
+  bitmap.close();
+
+  const blob = await new Promise<Blob | null>((resolve) => {
+    canvas.toBlob(resolve, 'image/webp', 0.82);
+  });
+
+  if (!blob) {
+    throw new Error('프로필 사진 최적화에 실패했어요.');
+  }
+
+  if (blob.size > PROFILE_PHOTO_MAX_BYTES) {
+    throw new Error('프로필 사진은 1MB 이하로 업로드해주세요.');
+  }
+
+  return new File([blob], 'profile-photo.webp', {
+    type: 'image/webp',
+  });
+}
 
 export async function uploadProfilePhoto(photo: File, token: string) {
+  const optimizedPhoto = await optimizeProfilePhoto(photo);
   const formData = new FormData();
-  formData.set('photo', photo);
+  formData.set('photo', optimizedPhoto);
 
   const response = await fetch(`${API_URL}/users/me/profile-photo`, {
     method: 'POST',
