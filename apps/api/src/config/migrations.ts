@@ -109,6 +109,23 @@ export async function runMigrations() {
   );
 
   await db.execute(
+    `CREATE TABLE IF NOT EXISTS password_reset_tokens (
+      id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+      user_id BIGINT UNSIGNED NOT NULL,
+      token VARCHAR(255) NOT NULL,
+      expires_at DATETIME NOT NULL,
+      used_at DATETIME NULL,
+      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (id),
+      UNIQUE KEY uq_password_reset_tokens_token (token),
+      KEY idx_password_reset_tokens_user_id (user_id),
+      CONSTRAINT fk_password_reset_tokens_user
+        FOREIGN KEY (user_id) REFERENCES users(id)
+        ON DELETE CASCADE
+    )`,
+  );
+
+  await db.execute(
     `CREATE TABLE IF NOT EXISTS game_reminders (
       id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
       user_id BIGINT UNSIGNED NOT NULL,

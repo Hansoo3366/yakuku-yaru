@@ -10,7 +10,17 @@ import {
   findUsableEmailVerificationToken,
   markEmailVerificationTokenUsed,
 } from './email-verification.repository.js';
-import { getVerificationUrl, sendVerificationEmail } from './email.service.js';
+import {
+  getPasswordResetUrl,
+  getVerificationUrl,
+  sendPasswordResetEmail,
+  sendVerificationEmail,
+} from './email.service.js';
+import {
+  createPasswordResetToken,
+  findUsablePasswordResetToken,
+  markPasswordResetTokenUsed,
+} from './password-reset.repository.js';
 import {
   createUser,
   findUserByEmail,
@@ -18,6 +28,7 @@ import {
   findUserByNickname,
   markUserEmailVerified,
   toPublicUser,
+  updateUserPassword,
 } from '../users/user.repository.js';
 import {
   validateEmail,
@@ -53,6 +64,19 @@ const checkRegistrationRateLimit = rateLimit({
   windowMs: 60 * 60 * 1000,
   max: 30,
   message: '중복 확인 요청이 너무 많습니다. 잠시 후 다시 시도해주세요.',
+});
+
+const forgotPasswordRateLimit = rateLimit({
+  scope: 'auth:forgot-password',
+  windowMs: 60 * 60 * 1000,
+  max: 5,
+  message: '비밀번호 재설정 요청이 너무 많습니다. 잠시 후 다시 시도해주세요.',
+});
+
+const resetPasswordRateLimit = rateLimit({
+  scope: 'auth:reset-password',
+  windowMs: 10 * 60 * 1000,
+  max: 20,
 });
 
 authRouter.post('/check-registration', checkRegistrationRateLimit, async (req, res, next) => {
@@ -206,6 +230,76 @@ authRouter.get('/me', authenticate, async (req, res, next) => {
 
     res.json({
       user: toPublicUser(user),
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+authRouter.post('/forgot-password', forgotPasswordRateLimit, async (req, res, next) => {
+  try {
+    const { email } = req.body as { email?: string };
+
+    if (!email) {
+      throw new HttpError(400, 'INVALID_INPUT', '이메일을 입력해주세요.');
+    }
+
+    const normalizedEmail = validateEmail(email);
+    const user = await findUserByEmail(normalizedEmail);
+
+    const genericMessage =
+      '등록된 이메일이면 비밀번호 재설정 링크를 보냈어요. 메일함과 스팸함을 확인해주세요.';
+
+    if (!user) {
+      res.json({ message: genericMessage, emailSent: false });
+      return;
+    }
+
+    const resetToken = await createPasswordResetToken(user.id);
+    const emailSent = await sendPasswordResetEmail({
+      email: user.email,
+      nickname: user.nickname,
+      token: resetToken,
+    });
+
+    res.json({
+      message: genericMessage,
+      emailSent,
+      resetUrl: env.nodeEnv === 'production' ? null : getPasswordResetUrl(resetToken),
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+authRouter.post('/reset-password', resetPasswordRateLimit, async (req, res, next) => {
+  try {
+    const { token, password } = req.body as {
+      token?: string;
+      password?: string;
+    };
+
+    if (!token || !password) {
+      throw new HttpError(400, 'INVALID_INPUT', '토큰과 새 비밀번호를 입력해주세요.');
+    }
+
+    const normalizedPassword = validatePassword(password);
+    const resetToken = await findUsablePasswordResetToken(token);
+
+    if (!resetToken) {
+      throw new HttpError(
+        400,
+        'INVALID_RESET_TOKEN',
+        '유효하지 않거나 만료된 재설정 링크입니다. 비밀번호 찾기를 다시 요청해주세요.',
+      );
+    }
+
+    const passwordHash = await hashPassword(normalizedPassword);
+    await updateUserPassword(resetToken.user_id, passwordHash);
+    await markPasswordResetTokenUsed(resetToken.id);
+
+    res.json({
+      reset: true,
     });
   } catch (error) {
     next(error);

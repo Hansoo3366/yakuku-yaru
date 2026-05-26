@@ -127,6 +127,31 @@ export const openApiDocument = {
         },
       },
     },
+    '/auth/forgot-password': {
+      post: {
+        tags: ['Auth'],
+        summary: 'Request password reset email',
+        responses: {
+          '200': {
+            description: 'Request accepted',
+          },
+        },
+      },
+    },
+    '/auth/reset-password': {
+      post: {
+        tags: ['Auth'],
+        summary: 'Reset password with token',
+        responses: {
+          '200': {
+            description: 'Password reset',
+          },
+          '400': {
+            description: 'Invalid token',
+          },
+        },
+      },
+    },
     '/posts': {
       get: {
         tags: ['Posts'],

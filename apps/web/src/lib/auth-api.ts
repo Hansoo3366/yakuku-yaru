@@ -57,6 +57,24 @@ export function verifyEmail(token: string) {
   });
 }
 
+export function requestPasswordReset(email: string) {
+  return request<{
+    message: string;
+    emailSent: boolean;
+    resetUrl: string | null;
+  }>('/auth/forgot-password', {
+    method: 'POST',
+    body: { email },
+  });
+}
+
+export function resetPassword(input: { token: string; password: string }) {
+  return request<{ reset: boolean }>('/auth/reset-password', {
+    method: 'POST',
+    body: input,
+  });
+}
+
 export function updateNickname(nickname: string, token: string) {
   return request<{ user: PublicUser }>('/users/me/nickname', {
     method: 'PATCH',

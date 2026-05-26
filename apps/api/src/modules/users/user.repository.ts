@@ -107,6 +107,15 @@ export async function createUser(input: {
   return findUserById(result.insertId);
 }
 
+export async function updateUserPassword(userId: number, passwordHash: string) {
+  await db.execute(
+    `UPDATE users
+     SET password_hash = ?
+     WHERE id = ?`,
+    [passwordHash, userId],
+  );
+}
+
 export async function markUserEmailVerified(userId: number) {
   await db.execute(
     `UPDATE users

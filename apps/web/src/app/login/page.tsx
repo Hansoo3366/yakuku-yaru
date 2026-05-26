@@ -64,9 +64,14 @@ export default function LoginPage() {
             />
           </div>
           <div className="field">
-            <label className="field-label" htmlFor="password">
-              비밀번호
-            </label>
+            <div className="field-label-row">
+              <label className="field-label" htmlFor="password">
+                비밀번호
+              </label>
+              <Link className="field-inline-link" href="/forgot-password">
+                비밀번호 찾기
+              </Link>
+            </div>
             <input
               autoComplete="current-password"
               className="form-input"
