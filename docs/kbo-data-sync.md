@@ -5,67 +5,55 @@
 - **페이지**: [KBO 경기일정/결과](https://www.koreabaseball.com/Schedule/Schedule.aspx)
 - **실제 API** (브라우저가 호출): `POST https://www.koreabaseball.com/ws/Schedule.asmx/GetScheduleList`
 
-### 요청 파라미터
+KBO API는 **월 단위**만 제공합니다. 주·일 단위 갱신은 해당 월을 받아온 뒤 **KST 날짜로 필터**해 upsert합니다.
 
-| 필드 | 설명 | 예시 |
-|------|------|------|
-| `leId` | 리그 ID | `1` |
-| `srIdList` | 시리즈 (시범·정규·포스트) | `0,9,6` |
-| `seasonId` | 시즌 연도 | `2026` |
-| `gameMonth` | 월 (2자리) | `05` |
-| `teamId` | 팀 필터 (전체는 빈 문자열) | `` |
+## 동기화 모드
 
-응답은 `#tblScheduleList`와 동일한 행·셀 구조의 JSON (`rows[].row[].Text`에 HTML 포함)입니다.
+| 모드 | 주기 | API 호출 범위 | DB 반영 범위 |
+|------|------|---------------|--------------|
+| `season` | **연 1회** (GHA) | 해당 연도 1~12월 전체 | 해당 월 전체 경기 |
+| `month` | **월 1회** (GHA) | 이번 달 | 이번 달 전체 |
+| `week` | **매일** (API cron + GHA 백업) | 전·당·다음 달 | KST 기준 **7일 전 ~ 14일 후** |
+| `today` | **매시간** (API cron + GHA 백업) | 당월(월초 3일 이내면 전월 포함) | **오늘(KST)** 경기만 |
 
-## 파싱 규칙
+### 운영 분담
 
-| 항목 | 규칙 |
-|------|------|
-| 경기 ID | `gameId=20260501NCLG0` → `games.external_id` |
-| 날짜 | `05.01(금)` + 시즌 연도 → `2026-05-01` |
-| 시간 | `17:00` |
-| 원정·홈 | `td.play` 첫 번째·두 번째 `<span>` (KBO 표기 순서) |
-| 스코어 | `<em>` 안 `win`/`lose`/`same` 숫자, 없으면 `scheduled` |
-| 구장 | 구장 열 약칭 → `kbo-stadium-map.ts` |
-| 상태 | 비고 `우천취소` → `cancelled`, 리뷰/스코어 있음 → `finished`, 그 외 `scheduled` |
+| 구간 | production API (`node-cron`) | GitHub Actions |
+|------|------------------------------|----------------|
+| 연간·월별 | — | `kbo-sync-season.yml`, `kbo-sync-month.yml` |
+| 주간·당일 | `KBO_SYNC_WEEK_CRON`, `KBO_SYNC_TODAY_CRON` | `kbo-sync-week.yml`, `kbo-sync-today.yml` |
 
-## DB
+API 기동 약 20초 후 **주간(`week`)** 1회 추가 실행 (`KBO_SYNC_ON_START`).
 
-- `games.external_source` = `kbo`
-- `games.external_id` = KBO `gameId`
-- upsert: `external_id` 우선, 없으면 `(game_date, home_team_id, away_team_id)`
-
-## 자동 동기화 (기본)
-
-**production** API가 떠 있으면 별도 작업 없이 돌아갑니다.
-
-| 시점 | 동작 |
-|------|------|
-| API 기동 ~20초 후 | 이번 달 + 다음 달 1회 동기화 |
-| 매일 06:00 (KST) | 같은 범위 자동 동기화 |
-
-환경 변수 (`docker-compose.prod.yml` / `.env.production`):
+## 환경 변수
 
 | 변수 | 기본값 | 설명 |
 |------|--------|------|
-| `KBO_SYNC_ENABLED` | `true` (production) | `false`면 자동·시작 시 동기화 끔 |
-| `KBO_SYNC_CRON` | `0 6 * * *` | node-cron 표현식 (KST) |
-| `KBO_SYNC_ON_START` | `true` | 기동 직후 1회 실행 |
+| `KBO_SYNC_ENABLED` | `true` (production) | `false`면 API 자동 동기화 끔 |
+| `KBO_SYNC_WEEK_CRON` | `0 6 * * *` | 주간 모드 (KST) |
+| `KBO_SYNC_TODAY_CRON` | `0 * * * *` | 당일 모드 (KST) |
+| `KBO_SYNC_ON_START` | `true` | 기동 직후 주간 1회 |
 | `KBO_SYNC_START_DELAY_MS` | `20000` | 기동 후 대기(ms) |
 
-로컬 개발에서는 기본 **꺼짐** (`NODE_ENV !== production`). 켜려면 `KBO_SYNC_ENABLED=true`.
+하위 호환: `KBO_SYNC_CRON`은 `KBO_SYNC_WEEK_CRON`과 동일하게 취급합니다.
 
-백업: GitHub Actions [kbo-schedule-sync.yml](../.github/workflows/kbo-schedule-sync.yml)가 매일 VM에서 `npm run sync:kbo-schedule` 실행 (배포 secrets 필요).
+로컬 개발에서는 기본 **꺼짐** (`NODE_ENV !== production`). 켜려면 `KBO_SYNC_ENABLED=true`.
 
 ## 수동 실행
 
 ```bash
 cd apps/api
 
-# 이번 달 + 다음 달 (자동과 동일)
+# 기본: 주간 롤링
 npm run sync:kbo-schedule
 
-# 특정 연·월만
+# 모드 지정
+npm run sync:kbo-schedule -- --mode=season
+npm run sync:kbo-schedule -- --mode=month
+npm run sync:kbo-schedule -- --mode=week
+npm run sync:kbo-schedule -- --mode=today
+
+# 특정 연·월만 (레거시)
 npm run sync:kbo-schedule -- --year=2026 --month=5
 ```
 
@@ -73,15 +61,21 @@ npm run sync:kbo-schedule -- --year=2026 --month=5
 
 ```bash
 docker compose --env-file .env.production -f docker-compose.prod.yml exec -T api \
-  npm run sync:kbo-schedule
+  npm run sync:kbo-schedule -- --mode=today
 ```
 
-## 갱신 범위
+## 파싱·DB
 
-- **롤링 윈도우**: KST 기준 **이번 달 + 다음 달** (12월이면 12월·다음 해 1월)
-- 실시간 중계·선발·선수 스탯은 포함하지 않음
+| 항목 | 규칙 |
+|------|------|
+| 경기 ID | `gameId` → `games.external_id` |
+| upsert | `external_id` 우선, 없으면 `(game_date, home_team_id, away_team_id)` |
+| `external_source` | `kbo` |
+
+상세 파싱 규칙은 `apps/api/src/modules/kbo-schedule/parse-schedule.ts` 참고.
 
 ## 주의
 
-- KBO/sports2i 데이터 이용약관·서버 부하를 준수하고, 요청 간격을 두세요.
-- HTML 구조나 API가 바뀌면 `parse-schedule.ts` 수정이 필요할 수 있습니다.
+- KBO/sports2i 이용약관·서버 부하를 준수하고, 요청 간격을 두세요.
+- `season` 모드는 12회 월 API 호출이므로 연 1회만 사용하세요.
+- HTML/API 구조 변경 시 `parse-schedule.ts` 수정이 필요할 수 있습니다.

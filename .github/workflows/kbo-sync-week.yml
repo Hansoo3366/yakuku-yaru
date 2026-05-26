@@ -1,4 +1,4 @@
-name: Sync KBO schedule
+name: Sync KBO schedule (week)
 
 on:
   schedule:
@@ -8,10 +8,10 @@ on:
 
 jobs:
   sync:
-    name: Sync on production VM
+    name: Week rolling sync on production VM
     runs-on: ubuntu-latest
     steps:
-      - name: Run KBO schedule sync in API container
+      - name: Run week-mode sync in API container
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.DEPLOY_HOST }}
@@ -22,4 +22,4 @@ jobs:
             set -e
             cd ${{ secrets.DEPLOY_PATH }}
             docker compose -f docker-compose.prod.yml --env-file .env.production exec -T api \
-              npm run sync:kbo-schedule
+              npm run sync:kbo-schedule -- --mode=week

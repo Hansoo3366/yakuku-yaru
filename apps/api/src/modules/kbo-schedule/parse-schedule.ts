@@ -126,8 +126,20 @@ function resolveStatus(playHtml: string, note: string | null, cells: KboSchedule
   }
 
   const relayText = cells.find((cell) => cell.Class === 'relay')?.Text ?? '';
-  if (relayText.includes('REVIEW') || relayText.includes('리뷰')) {
+  if (
+    relayText.includes('section=REVIEW') ||
+    relayText.includes('btnReview') ||
+    />리뷰</i.test(relayText)
+  ) {
     return 'finished' as const;
+  }
+
+  if (
+    relayText.includes('section=START_PIT') ||
+    relayText.includes('btnPreView') ||
+    relayText.includes('프리뷰')
+  ) {
+    return 'scheduled' as const;
   }
 
   const { awayScore, homeScore } = parseScores(playHtml);

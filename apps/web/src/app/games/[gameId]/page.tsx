@@ -18,6 +18,11 @@ import {
   fetchGameReminder,
 } from '@/lib/reminder-api';
 import { Skeleton } from '@/components/Skeleton';
+import {
+  getGameStatusBadgeClass,
+  getGameStatusLabel,
+  getGameStatusTone,
+} from '@/lib/game-status';
 
 function formatDateTime(value: string) {
   return new Date(value).toLocaleString('ko-KR', {
@@ -204,21 +209,14 @@ export default function GameDetailPage() {
           <div className="info-row">
             <dt>경기 상태</dt>
             <dd>
-              <span
-                className={`badge ${
-                  game.status === 'finished' ? 'badge-navy' : 'badge-green'
-                }`}
-              >
-                {game.status === 'finished' ? '종료' : '예정'}
-              </span>
-            </dd>
-          </div>
-          <div className="info-row">
-            <dt>예매 오픈</dt>
-            <dd>
-              {game.ticketOpenAt
-                ? formatDateTime(game.ticketOpenAt)
-                : '예매 정보 준비 중'}
+              {(() => {
+                const tone = getGameStatusTone(game);
+                return (
+                  <span className={getGameStatusBadgeClass(tone)}>
+                    {getGameStatusLabel(tone)}
+                  </span>
+                );
+              })()}
             </dd>
           </div>
         </dl>

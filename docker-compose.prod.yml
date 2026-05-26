@@ -33,7 +33,8 @@ services:
       TZ: Asia/Seoul
       API_PORT: 4000
       KBO_SYNC_ENABLED: ${KBO_SYNC_ENABLED:-true}
-      KBO_SYNC_CRON: ${KBO_SYNC_CRON:-0 6 * * *}
+      KBO_SYNC_WEEK_CRON: ${KBO_SYNC_WEEK_CRON:-0 6 * * *}
+      KBO_SYNC_TODAY_CRON: ${KBO_SYNC_TODAY_CRON:-0 * * * *}
       KBO_SYNC_ON_START: ${KBO_SYNC_ON_START:-true}
       APP_URL: ${APP_URL:-}
       APP_DOMAIN: ${APP_DOMAIN:-}

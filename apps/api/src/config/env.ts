@@ -37,8 +37,13 @@ export const env = {
       process.env.KBO_SYNC_ENABLED === 'true' ||
       (process.env.KBO_SYNC_ENABLED !== 'false' &&
         (process.env.NODE_ENV ?? 'development') === 'production'),
-    /** 매일 06:00 KST */
-    cron: process.env.KBO_SYNC_CRON ?? '0 6 * * *',
+    /** 매일 06:00 KST — 주간 롤링(전 7일~후 14일) */
+    weekCron:
+      process.env.KBO_SYNC_WEEK_CRON ??
+      process.env.KBO_SYNC_CRON ??
+      '0 6 * * *',
+    /** 매시간 — 오늘(KST) 경기만 */
+    todayCron: process.env.KBO_SYNC_TODAY_CRON ?? '0 * * * *',
     onStart: process.env.KBO_SYNC_ON_START !== 'false',
     startDelayMs: Number(process.env.KBO_SYNC_START_DELAY_MS ?? 20_000),
   },

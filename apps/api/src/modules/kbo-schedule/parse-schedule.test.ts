@@ -62,4 +62,32 @@ assert.equal(games[1].homeTeamShortName, 'KT');
 assert.equal(games[1].status, 'cancelled');
 assert.equal(games[1].stadium, '수원 KT위즈파크');
 
+const previewSample = {
+  rows: [
+    {
+      row: [
+        { Text: '05.26(화)', Class: 'day', RowSpan: '1' },
+        { Text: '<b>18:30</b>', Class: 'time' },
+        {
+          Text: '<span>KT</span><em><span>vs</span></em><span>두산</span>',
+          Class: 'play',
+        },
+        {
+          Text: "<a href='/Schedule/GameCenter/Main.aspx?gameDate=20260526&gameId=20260526KTOB0&section=START_PIT' class='btn2' id='btnPreView'>프리뷰</a>",
+          Class: 'relay',
+        },
+        { Text: '', Class: null },
+        { Text: 'MS-T', Class: null },
+        { Text: '', Class: null },
+        { Text: '잠실', Class: null },
+        { Text: '-', Class: null },
+      ],
+    },
+  ],
+};
+
+const previewGames = parseKboScheduleTable(previewSample, 2026);
+assert.equal(previewGames.length, 1);
+assert.equal(previewGames[0].status, 'scheduled');
+
 console.log('parse-schedule.test.ts: ok');

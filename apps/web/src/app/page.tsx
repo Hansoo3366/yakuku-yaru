@@ -17,6 +17,10 @@ import { getAssetUrl } from '@/lib/api';
 import { getTeamLogoSrc } from '@/lib/team-logo';
 import { Skeleton, SkeletonCard } from '@/components/Skeleton';
 import { EmptyState } from '@/components/EmptyState';
+import {
+  getGameStatusLabel,
+  getGameStatusTone,
+} from '@/lib/game-status';
 
 const features = [
   {
@@ -228,8 +232,16 @@ export default function HomePage() {
                           {parts.weekday} · {parts.time} · {game.stadium}
                         </span>
                       </div>
-                      <span className="badge badge-green">
-                        {game.status === 'finished' ? '종료' : '예정'}
+                      <span
+                        className={`badge ${
+                          getGameStatusTone(game) === 'finished'
+                            ? 'badge-navy'
+                            : getGameStatusTone(game) === 'cancelled'
+                              ? 'badge-gray'
+                              : 'badge-green'
+                        }`}
+                      >
+                        {getGameStatusLabel(getGameStatusTone(game))}
                       </span>
                     </Link>
                   );
