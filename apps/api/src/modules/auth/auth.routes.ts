@@ -48,6 +48,41 @@ const verifyEmailRateLimit = rateLimit({
   max: 20,
 });
 
+const checkRegistrationRateLimit = rateLimit({
+  scope: 'auth:check-registration',
+  windowMs: 60 * 60 * 1000,
+  max: 30,
+  message: '중복 확인 요청이 너무 많습니다. 잠시 후 다시 시도해주세요.',
+});
+
+authRouter.post('/check-registration', checkRegistrationRateLimit, async (req, res, next) => {
+  try {
+    const { email, nickname } = req.body as {
+      email?: string;
+      nickname?: string;
+    };
+
+    if (!email || !nickname) {
+      throw new HttpError(400, 'INVALID_INPUT', '이메일과 닉네임을 입력해주세요.');
+    }
+
+    const normalizedEmail = validateEmail(email);
+    const normalizedNickname = validateNickname(nickname);
+
+    const [existingEmail, existingNickname] = await Promise.all([
+      findUserByEmail(normalizedEmail),
+      findUserByNickname(normalizedNickname),
+    ]);
+
+    res.json({
+      emailAvailable: !existingEmail,
+      nicknameAvailable: !existingNickname,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 authRouter.post('/register', registerRateLimit, async (req, res, next) => {
   try {
     const { email, password, nickname, favoriteTeamId } = req.body as {
@@ -126,7 +161,8 @@ authRouter.post('/login', loginRateLimit, async (req, res, next) => {
       throw new HttpError(400, 'INVALID_INPUT', '이메일과 비밀번호를 입력해주세요.');
     }
 
-    const user = await findUserByEmail(email);
+    const normalizedEmail = validateEmail(email);
+    const user = await findUserByEmail(normalizedEmail);
 
     if (!user) {
       throw new HttpError(401, 'INVALID_CREDENTIALS', '이메일 또는 비밀번호가 올바르지 않습니다.');
@@ -136,6 +172,14 @@ authRouter.post('/login', loginRateLimit, async (req, res, next) => {
 
     if (!isPasswordValid) {
       throw new HttpError(401, 'INVALID_CREDENTIALS', '이메일 또는 비밀번호가 올바르지 않습니다.');
+    }
+
+    if (!user.email_verified_at) {
+      throw new HttpError(
+        403,
+        'EMAIL_NOT_VERIFIED',
+        '이메일 인증이 완료되지 않았습니다. 가입 시 받은 메일의 인증 링크를 눌러주세요.',
+      );
     }
 
     const accessToken = signAccessToken({

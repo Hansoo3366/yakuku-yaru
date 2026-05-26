@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { FormEvent, useEffect, useState } from 'react';
 import { ApiError } from '@/lib/api';
-import { register } from '@/lib/auth-api';
+import { checkRegistrationAvailability, register } from '@/lib/auth-api';
 import { listTeams, type Team } from '@/lib/baseball-api';
 import { getTeamLogoSrc } from '@/lib/team-logo';
 import { applyTeamTheme } from '@/lib/team-theme';
@@ -34,12 +34,13 @@ export default function RegisterPage() {
   const [verificationUrl, setVerificationUrl] = useState<string | null>(null);
   const [emailSent, setEmailSent] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isCheckingAccount, setIsCheckingAccount] = useState(false);
 
   useEffect(() => {
     listTeams().then((response) => setTeams(response.items));
   }, []);
 
-  function handleAccountNext(event: FormEvent<HTMLFormElement>) {
+  async function handleAccountNext(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setErrorMessage('');
 
@@ -52,7 +53,31 @@ export default function RegisterPage() {
       return;
     }
 
-    setStep('team');
+    setIsCheckingAccount(true);
+
+    try {
+      const availability = await checkRegistrationAvailability({ email, nickname });
+
+      if (!availability.emailAvailable) {
+        setErrorMessage('이미 사용 중인 이메일입니다. 다른 이메일을 입력해주세요.');
+        return;
+      }
+
+      if (!availability.nicknameAvailable) {
+        setErrorMessage('이미 사용 중인 닉네임입니다. 다른 닉네임을 입력해주세요.');
+        return;
+      }
+
+      setStep('team');
+    } catch (error) {
+      if (error instanceof ApiError) {
+        setErrorMessage(error.message);
+      } else {
+        setErrorMessage('중복 확인 중 오류가 발생했습니다.');
+      }
+    } finally {
+      setIsCheckingAccount(false);
+    }
   }
 
   async function handleSubmit() {
@@ -161,8 +186,12 @@ export default function RegisterPage() {
               />
             </div>
             {errorMessage ? <p className="form-error">{errorMessage}</p> : null}
-            <button className="btn btn-primary btn-lg btn-block" type="submit">
-              다음
+            <button
+              className="btn btn-primary btn-lg btn-block"
+              disabled={isCheckingAccount}
+              type="submit"
+            >
+              {isCheckingAccount ? '확인 중' : '다음'}
             </button>
           </form>
         ) : null}

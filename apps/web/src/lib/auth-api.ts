@@ -19,6 +19,19 @@ export function login(input: { email: string; password: string }) {
   });
 }
 
+export function checkRegistrationAvailability(input: {
+  email: string;
+  nickname: string;
+}) {
+  return request<{ emailAvailable: boolean; nicknameAvailable: boolean }>(
+    '/auth/check-registration',
+    {
+      method: 'POST',
+      body: input,
+    },
+  );
+}
+
 export function register(input: {
   email: string;
   password: string;
