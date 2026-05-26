@@ -28,6 +28,37 @@ export function getYearRange(year: number) {
   return { from: formatDateInput(from), to: formatDateInput(to) };
 }
 
+export type ScheduleFilter = 'favorite' | 'favorite-home' | 'all';
+
+type GameTeamsLike = {
+  homeTeam: { id: number };
+  awayTeam: { id: number };
+};
+
+export function isGameInScheduleFilter(
+  game: GameTeamsLike,
+  scheduleFilter: ScheduleFilter,
+  favoriteTeamId: number | null | undefined,
+) {
+  if (scheduleFilter === 'all') {
+    return true;
+  }
+
+  if (!favoriteTeamId) {
+    return false;
+  }
+
+  const teamId = Number(favoriteTeamId);
+  const isHome = Number(game.homeTeam.id) === teamId;
+  const isAway = Number(game.awayTeam.id) === teamId;
+
+  if (scheduleFilter === 'favorite-home') {
+    return isHome;
+  }
+
+  return isHome || isAway;
+}
+
 export function isDateInMonth(date: Date, month: Date) {
   return (
     date.getFullYear() === month.getFullYear() && date.getMonth() === month.getMonth()

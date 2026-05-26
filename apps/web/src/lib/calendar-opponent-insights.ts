@@ -11,9 +11,13 @@ export type OpponentInsightItem = {
   draws: number;
 };
 
+export type RankedOpponentInsightItem = OpponentInsightItem & {
+  rank: number;
+};
+
 export type OpponentInsightRankings = {
-  high: OpponentInsightItem[];
-  low: OpponentInsightItem[];
+  high: RankedOpponentInsightItem[];
+  low: RankedOpponentInsightItem[];
 };
 
 type OpponentAccumulator = {
@@ -96,22 +100,33 @@ function sortOpponentItems(
   });
 }
 
+export function assignCompetitionRanks(
+  items: OpponentInsightItem[],
+): RankedOpponentInsightItem[] {
+  let rank = 0;
+
+  return items.map((item, index) => {
+    if (index === 0 || item.rate !== items[index - 1].rate) {
+      rank = index + 1;
+    }
+
+    return { ...item, rank };
+  });
+}
+
 export function pickOpponentRankedList(
   entries: OpponentAccumulator[],
   direction: 'high' | 'low',
   limit?: number,
-): OpponentInsightItem[] {
+): RankedOpponentInsightItem[] {
   const rated = entries
     .filter((entry) => entry.decided > 0)
     .map(toOpponentInsightItem);
 
   const sorted = sortOpponentItems(rated, direction);
+  const sliced = limit === undefined ? sorted : sorted.slice(0, limit);
 
-  if (limit === undefined) {
-    return sorted;
-  }
-
-  return sorted.slice(0, limit);
+  return assignCompetitionRanks(sliced);
 }
 
 export function pickOpponentExtreme(

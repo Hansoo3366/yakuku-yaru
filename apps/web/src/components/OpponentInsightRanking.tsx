@@ -2,19 +2,19 @@
 
 import { useEffect, useId, useState } from 'react';
 import { createPortal } from 'react-dom';
-import type { OpponentInsightItem } from '@/lib/calendar-opponent-insights';
+import type { RankedOpponentInsightItem } from '@/lib/calendar-opponent-insights';
 import { getTeamLogoSrc } from '@/lib/team-logo';
 
 const PREVIEW_RANK_COUNT = 3;
 
 type OpponentInsightRankingProps = {
-  items: OpponentInsightItem[];
+  items: RankedOpponentInsightItem[];
   title: string;
   variant: 'high' | 'low';
   showViewAll?: boolean;
 };
 
-function formatRecord(item: OpponentInsightItem) {
+function formatRecord(item: RankedOpponentInsightItem) {
   const parts = [`${item.wins}승`];
 
   if (item.draws > 0) {
@@ -30,12 +30,10 @@ function formatRecord(item: OpponentInsightItem) {
 
 function RankingEntry({
   item,
-  rank,
   variant,
   compact,
 }: {
-  item: OpponentInsightItem;
-  rank: number;
+  item: RankedOpponentInsightItem;
   variant: 'high' | 'low';
   compact: boolean;
 }) {
@@ -47,7 +45,7 @@ function RankingEntry({
         compact ? ' calendar-opponent-ranking__entry--compact' : ''
       }`}
     >
-      <span className="calendar-opponent-ranking__rank">{rank}</span>
+      <span className="calendar-opponent-ranking__rank">{item.rank}</span>
       {logoSrc ? (
         <img
           alt=""
@@ -74,7 +72,7 @@ function OpponentRankingModal({
   variant,
   onClose,
 }: {
-  items: OpponentInsightItem[];
+  items: RankedOpponentInsightItem[];
   title: string;
   variant: 'high' | 'low';
   onClose: () => void;
@@ -129,7 +127,6 @@ function OpponentRankingModal({
               compact={index > 0}
               item={item}
               key={item.teamId}
-              rank={index + 1}
               variant={variant}
             />
           ))}
@@ -165,7 +162,6 @@ export function OpponentInsightRanking({
               compact={index > 0}
               item={item}
               key={item.teamId}
-              rank={index + 1}
               variant={variant}
             />
           ))}

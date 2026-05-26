@@ -44,6 +44,7 @@ import {
   getWeekRange,
   getWeekStart,
   getYearRange,
+  isGameInScheduleFilter,
   isSameDay,
 } from '@/lib/calendar-range';
 import { useMediaQuery } from '@/lib/use-media-query';
@@ -153,12 +154,9 @@ export default function CalendarPage() {
 
         if (!isMounted) return null;
 
-        const nextGames =
-          scheduleFilter === 'favorite-home' && favoriteTeamId
-            ? gamesResponse.items.filter(
-                (game) => game.homeTeam.id === favoriteTeamId,
-              )
-            : gamesResponse.items;
+        const nextGames = gamesResponse.items.filter((game) =>
+          isGameInScheduleFilter(game, scheduleFilter, favoriteTeamId),
+        );
 
         return { nextGames, attendanceResponse };
       })
@@ -267,15 +265,23 @@ export default function CalendarPage() {
     );
   }, [ownAttendanceRecords, watchTypeFilter]);
 
+  const scheduleScopedAttendanceRecords = useMemo(
+    () =>
+      filteredAttendanceRecords.filter((record) =>
+        isGameInScheduleFilter(record.game, scheduleFilter, user?.favoriteTeamId),
+      ),
+    [filteredAttendanceRecords, scheduleFilter, user?.favoriteTeamId],
+  );
+
   const periodRecords = useMemo(() => {
     const fromMs = new Date(`${range.from}T00:00:00`).getTime();
     const toMs = new Date(`${range.to}T00:00:00`).getTime();
 
-    return filteredAttendanceRecords.filter((record) => {
+    return scheduleScopedAttendanceRecords.filter((record) => {
       const ms = new Date(record.game.gameDate).getTime();
       return ms >= fromMs && ms < toMs;
     });
-  }, [filteredAttendanceRecords, range.from, range.to]);
+  }, [scheduleScopedAttendanceRecords, range.from, range.to]);
 
   const statsAttendanceRecords = useMemo(() => {
     const byId = new Map<number, AttendanceRecord>();
@@ -367,7 +373,7 @@ export default function CalendarPage() {
 
     const result: Record<string, Game[]> = {};
 
-    for (const record of filteredAttendanceRecords) {
+    for (const record of scheduleScopedAttendanceRecords) {
       const key = record.game.gameDate.slice(0, 10);
       const game = gameFromAttendanceRecord(record, gamesById);
       const dayGames = result[key] ?? [];
@@ -378,7 +384,7 @@ export default function CalendarPage() {
     }
 
     return result;
-  }, [watchTypeFilter, gamesByDate, filteredAttendanceRecords, gamesById]);
+  }, [watchTypeFilter, gamesByDate, scheduleScopedAttendanceRecords, gamesById]);
 
   const displayGameCount = useMemo(() => {
     if (watchTypeFilter === 'all') {
@@ -391,14 +397,14 @@ export default function CalendarPage() {
     );
   }, [watchTypeFilter, games.length, displayGamesByDate]);
 
-  const attendanceByGameId = filteredAttendanceRecords.reduce<
+  const attendanceByGameId = scheduleScopedAttendanceRecords.reduce<
     Record<number, AttendanceRecord>
   >((acc, record) => {
     acc[record.gameId] = record;
     return acc;
   }, {});
 
-  const attendanceByDate = filteredAttendanceRecords.reduce<
+  const attendanceByDate = scheduleScopedAttendanceRecords.reduce<
     Record<string, AttendanceRecord[]>
   >((acc, record) => {
     const key = record.game.gameDate.slice(0, 10);
@@ -656,24 +662,27 @@ export default function CalendarPage() {
           <button
             className={`filter-pill ${scheduleFilter === 'favorite' ? 'is-selected' : ''}`}
             onClick={() => setScheduleFilter('favorite')}
+            title="응원 팀 경기 전체 (홈·원정)"
             type="button"
           >
-            내 팀만
+            응원팀
           </button>
           <button
             className={`filter-pill ${scheduleFilter === 'favorite-home' ? 'is-selected' : ''}`}
             disabled={!user?.favoriteTeamId}
             onClick={() => setScheduleFilter('favorite-home')}
+            title="우리 팀이 홈팀인 경기만"
             type="button"
           >
-            홈 경기
+            홈구장
           </button>
           <button
             className={`filter-pill ${scheduleFilter === 'all' ? 'is-selected' : ''}`}
             onClick={() => setScheduleFilter('all')}
+            title="KBO 전체 팀 일정"
             type="button"
           >
-            전체
+            리그 전체
           </button>
         </div>
         <div className="filter-group">
@@ -737,8 +746,8 @@ export default function CalendarPage() {
             watchTypeFilter === 'all'
               ? scheduleFilter === 'favorite-home'
                 ? viewMode === 'month'
-                  ? '이번 달엔 홈 경기가 없어요'
-                  : '이번 주엔 홈 경기가 없어요'
+                  ? '이번 달엔 홈구장 경기가 없어요'
+                  : '이번 주엔 홈구장 경기가 없어요'
                 : viewMode === 'month'
                   ? '이번 달엔 경기 일정이 없어요'
                   : '이번 주엔 경기 일정이 없어요'
@@ -749,7 +758,7 @@ export default function CalendarPage() {
           description={
             watchTypeFilter === 'all'
               ? scheduleFilter === 'favorite-home'
-                ? '원정 일정은 「내 팀만」으로 확인해보세요.'
+                ? '원정 경기는 「응원팀」으로 확인해보세요.'
                 : '다른 기간으로 이동해보세요.'
               : '직관 기록을 남기거나 다른 기간을 확인해보세요.'
           }
