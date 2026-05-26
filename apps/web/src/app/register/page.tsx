@@ -8,8 +8,9 @@ import { FormEvent, useEffect, useState } from 'react';
 import { ApiError } from '@/lib/api';
 import { checkRegistrationAvailability, register } from '@/lib/auth-api';
 import { listTeams, type Team } from '@/lib/baseball-api';
+import { PasswordField } from '@/components/PasswordField';
+import { DEFAULT_PROFILE_IMAGE_SRC } from '@/lib/profile-image';
 import { getTeamLogoSrc } from '@/lib/team-logo';
-import { applyTeamTheme } from '@/lib/team-theme';
 import {
   EMAIL_MAX_LENGTH,
   NICKNAME_MAX_LENGTH,
@@ -28,6 +29,7 @@ export default function RegisterPage() {
   const [email, setEmail] = useState('');
   const [nickname, setNickname] = useState('');
   const [password, setPassword] = useState('');
+  const [passwordConfirm, setPasswordConfirm] = useState('');
   const [favoriteTeamId, setFavoriteTeamId] = useState<number | null>(null);
   const [teams, setTeams] = useState<Team[]>([]);
   const [errorMessage, setErrorMessage] = useState('');
@@ -47,9 +49,17 @@ export default function RegisterPage() {
     const emailError = validateEmailClient(email);
     const nicknameError = validateNicknameClient(nickname);
     const passwordError = validatePasswordClient(password);
+    const passwordConfirmError =
+      password !== passwordConfirm ? '비밀번호가 일치하지 않습니다.' : null;
 
-    if (emailError || nicknameError || passwordError) {
-      setErrorMessage(emailError ?? nicknameError ?? passwordError ?? '');
+    if (emailError || nicknameError || passwordError || passwordConfirmError) {
+      setErrorMessage(
+        emailError ??
+          nicknameError ??
+          passwordError ??
+          passwordConfirmError ??
+          '',
+      );
       return;
     }
 
@@ -167,24 +177,35 @@ export default function RegisterPage() {
               />
               <span className="field-hint">한글·영문·숫자·_만, 2~20자.</span>
             </div>
-            <div className="field">
-              <label className="field-label" htmlFor="password">
-                비밀번호
-              </label>
-              <input
+            <div className="stack-sm">
+              <PasswordField
                 autoComplete="new-password"
-                className="form-input"
                 id="password"
+                label="비밀번호"
                 maxLength={PASSWORD_MAX_LENGTH}
                 minLength={PASSWORD_MIN_LENGTH}
                 name="password"
-                onChange={(event) => setPassword(event.target.value)}
-                placeholder={`${PASSWORD_MIN_LENGTH}자 이상`}
+                onChange={setPassword}
+                placeholder={`${PASSWORD_MIN_LENGTH}~${PASSWORD_MAX_LENGTH}자`}
                 required
-                type="password"
                 value={password}
               />
+              <span className="field-hint">
+                {PASSWORD_MIN_LENGTH}~{PASSWORD_MAX_LENGTH}자.
+              </span>
             </div>
+            <PasswordField
+              autoComplete="new-password"
+              id="passwordConfirm"
+              label="비밀번호 확인"
+              maxLength={PASSWORD_MAX_LENGTH}
+              minLength={PASSWORD_MIN_LENGTH}
+              name="passwordConfirm"
+              onChange={setPasswordConfirm}
+              placeholder="비밀번호를 다시 입력"
+              required
+              value={passwordConfirm}
+            />
             {errorMessage ? <p className="form-error">{errorMessage}</p> : null}
             <button
               className="btn btn-primary btn-lg btn-block"
@@ -208,6 +229,15 @@ export default function RegisterPage() {
               </p>
             </div>
             <fieldset className="team-grid">
+              <button
+                aria-pressed={favoriteTeamId === null}
+                className={`team-grid-card team-grid-card--none ${favoriteTeamId === null ? 'is-selected' : ''}`}
+                onClick={() => setFavoriteTeamId(null)}
+                type="button"
+              >
+                <img alt="" src={DEFAULT_PROFILE_IMAGE_SRC} />
+                <span>미선택</span>
+              </button>
               {teams.map((team) => {
                 const isSelected = favoriteTeamId === team.id;
                 return (
@@ -216,8 +246,12 @@ export default function RegisterPage() {
                     className={`team-grid-card ${isSelected ? 'is-selected' : ''}`}
                     key={team.id}
                     onClick={() => {
+                      if (isSelected) {
+                        setFavoriteTeamId(null);
+                        return;
+                      }
+
                       setFavoriteTeamId(team.id);
-                      applyTeamTheme(team.primaryColor);
                     }}
                     type="button"
                   >

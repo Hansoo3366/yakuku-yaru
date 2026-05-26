@@ -5,7 +5,9 @@ import { useRouter } from 'next/navigation';
 import { FormEvent, useState } from 'react';
 import { ApiError } from '@/lib/api';
 import { login } from '@/lib/auth-api';
+import { PasswordField } from '@/components/PasswordField';
 import { setAccessToken } from '@/lib/auth';
+import { PASSWORD_MAX_LENGTH } from '@/lib/user-input';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -63,26 +65,21 @@ export default function LoginPage() {
               value={email}
             />
           </div>
-          <div className="field">
-            <div className="field-label-row">
-              <label className="field-label" htmlFor="password">
-                비밀번호
-              </label>
+          <PasswordField
+            autoComplete="current-password"
+            id="password"
+            label="비밀번호"
+            labelAside={
               <Link className="field-inline-link" href="/forgot-password">
                 비밀번호 찾기
               </Link>
-            </div>
-            <input
-              autoComplete="current-password"
-              className="form-input"
-              id="password"
-              name="password"
-              onChange={(event) => setPassword(event.target.value)}
-              required
-              type="password"
-              value={password}
-            />
-          </div>
+            }
+            maxLength={PASSWORD_MAX_LENGTH}
+            name="password"
+            onChange={setPassword}
+            required
+            value={password}
+          />
           {errorMessage ? <p className="form-error">{errorMessage}</p> : null}
           <button
             className="btn btn-primary btn-lg btn-block"

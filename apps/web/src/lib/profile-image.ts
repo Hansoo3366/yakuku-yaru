@@ -3,6 +3,8 @@ import { getAssetUrl } from './api';
 import { getTeamLogoSrc } from './team-logo';
 import type { Team } from './baseball-api';
 
+export const DEFAULT_PROFILE_IMAGE_SRC = '/icons/default_profile.svg';
+
 export function getProfileImageSrc(
   user: Pick<PublicUser, 'profileImageUrl'> | null | undefined,
   team?: Pick<Team, 'shortName'> | null,
@@ -11,7 +13,12 @@ export function getProfileImageSrc(
     return getAssetUrl(user.profileImageUrl);
   }
 
-  return getTeamLogoSrc(team ?? null);
+  const teamLogo = getTeamLogoSrc(team ?? null);
+  if (teamLogo) {
+    return teamLogo;
+  }
+
+  return DEFAULT_PROFILE_IMAGE_SRC;
 }
 
 export function getAuthorProfileImageSrc(
@@ -22,9 +29,12 @@ export function getAuthorProfileImageSrc(
     return getAssetUrl(profileImageUrl);
   }
 
-  return (
-    getTeamLogoSrc(
-      favoriteTeamShortName ? { shortName: favoriteTeamShortName } : null,
-    ) || '/icons/main_icon.png'
+  const teamLogo = getTeamLogoSrc(
+    favoriteTeamShortName ? { shortName: favoriteTeamShortName } : null,
   );
+  if (teamLogo) {
+    return teamLogo;
+  }
+
+  return DEFAULT_PROFILE_IMAGE_SRC;
 }

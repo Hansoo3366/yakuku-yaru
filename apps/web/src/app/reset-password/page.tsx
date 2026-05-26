@@ -4,10 +4,12 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { FormEvent, Suspense, useState } from 'react';
 import { ApiError } from '@/lib/api';
+import { PasswordField } from '@/components/PasswordField';
 import { resetPassword } from '@/lib/auth-api';
 import {
   PASSWORD_MAX_LENGTH,
   PASSWORD_MIN_LENGTH,
+  validatePasswordClient,
 } from '@/lib/user-input';
 
 function ResetPasswordForm() {
@@ -29,8 +31,14 @@ function ResetPasswordForm() {
       return;
     }
 
+    const passwordError = validatePasswordClient(password);
+    if (passwordError) {
+      setErrorMessage(passwordError);
+      return;
+    }
+
     if (password !== passwordConfirm) {
-      setErrorMessage('비밀번호가 서로 일치하지 않습니다.');
+      setErrorMessage('비밀번호가 일치하지 않습니다.');
       return;
     }
 
@@ -73,7 +81,7 @@ function ResetPasswordForm() {
         <p>
           {successMessage
             ? successMessage
-            : `영문·숫자 포함 ${PASSWORD_MIN_LENGTH}~${PASSWORD_MAX_LENGTH}자로 설정해주세요.`}
+            : `${PASSWORD_MIN_LENGTH}~${PASSWORD_MAX_LENGTH}자로 설정해주세요.`}
         </p>
       </header>
 
@@ -83,40 +91,28 @@ function ResetPasswordForm() {
         </Link>
       ) : (
         <form className="form-grid" onSubmit={handleSubmit}>
-          <div className="field">
-            <label className="field-label" htmlFor="password">
-              새 비밀번호
-            </label>
-            <input
-              autoComplete="new-password"
-              className="form-input"
-              id="password"
-              maxLength={PASSWORD_MAX_LENGTH}
-              minLength={PASSWORD_MIN_LENGTH}
-              name="password"
-              onChange={(event) => setPassword(event.target.value)}
-              required
-              type="password"
-              value={password}
-            />
-          </div>
-          <div className="field">
-            <label className="field-label" htmlFor="passwordConfirm">
-              새 비밀번호 확인
-            </label>
-            <input
-              autoComplete="new-password"
-              className="form-input"
-              id="passwordConfirm"
-              maxLength={PASSWORD_MAX_LENGTH}
-              minLength={PASSWORD_MIN_LENGTH}
-              name="passwordConfirm"
-              onChange={(event) => setPasswordConfirm(event.target.value)}
-              required
-              type="password"
-              value={passwordConfirm}
-            />
-          </div>
+          <PasswordField
+            autoComplete="new-password"
+            id="password"
+            label="새 비밀번호"
+            maxLength={PASSWORD_MAX_LENGTH}
+            minLength={PASSWORD_MIN_LENGTH}
+            name="password"
+            onChange={setPassword}
+            required
+            value={password}
+          />
+          <PasswordField
+            autoComplete="new-password"
+            id="passwordConfirm"
+            label="새 비밀번호 확인"
+            maxLength={PASSWORD_MAX_LENGTH}
+            minLength={PASSWORD_MIN_LENGTH}
+            name="passwordConfirm"
+            onChange={setPasswordConfirm}
+            required
+            value={passwordConfirm}
+          />
           {errorMessage ? <p className="form-error">{errorMessage}</p> : null}
           <button
             className="btn btn-primary btn-lg btn-block"

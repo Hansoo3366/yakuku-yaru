@@ -1202,6 +1202,42 @@ img {
   text-decoration: underline;
 }
 
+.password-input-wrap {
+  position: relative;
+}
+
+.password-input-wrap .form-input {
+  padding-right: 44px;
+}
+
+.password-toggle {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  color: var(--color-muted);
+  cursor: pointer;
+  display: inline-flex;
+  height: 40px;
+  justify-content: center;
+  padding: 0;
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 40px;
+}
+
+.password-toggle:hover {
+  color: var(--color-night-navy);
+}
+
+.team-grid-card--none img {
+  border-radius: 50%;
+  height: 36px;
+  object-fit: cover;
+  width: 36px;
+}
+
 /* Choice toggle group (radio-as-button) */
 .choice-group {
   background: var(--color-paper-deep);
