@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { FormEvent, useEffect, useState } from 'react';
 import { getAccessToken } from '@/lib/auth';
+import { useAuthGuard } from '@/lib/use-auth-guard';
 import {
   ATTENDANCE_PHOTO_ACCEPT,
   deleteAttendanceRecord,
@@ -37,6 +38,7 @@ function inferResult(myScore: string, opponentScore: string): ResultValue | null
 export default function EditAttendancePage() {
   const params = useParams<{ recordId: string }>();
   const router = useRouter();
+  useAuthGuard();
   const recordId = Number(params.recordId);
   const [record, setRecord] = useState<AttendanceRecord | null>(null);
   const [memo, setMemo] = useState('');
@@ -55,7 +57,7 @@ export default function EditAttendancePage() {
     const token = getAccessToken();
 
     if (!token) {
-      router.replace('/login');
+      router.replace('/');
       return;
     }
 
@@ -101,7 +103,7 @@ export default function EditAttendancePage() {
     const token = getAccessToken();
 
     if (!token) {
-      router.replace('/login');
+      router.replace('/');
       return;
     }
 
@@ -141,7 +143,7 @@ export default function EditAttendancePage() {
   async function handleDelete() {
     const token = getAccessToken();
     if (!token) {
-      router.replace('/login');
+      router.replace('/');
       return;
     }
 

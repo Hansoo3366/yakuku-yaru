@@ -6,7 +6,13 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { fetchMe } from '@/lib/auth-api';
-import { clearAccessToken, getAccessToken, type PublicUser } from '@/lib/auth';
+import {
+  clearAccessToken,
+  getAccessToken,
+  performLogout,
+  setRootAuthState,
+  type PublicUser,
+} from '@/lib/auth';
 import { listTeams, type Team } from '@/lib/baseball-api';
 import { applyTeamTheme, useTeamTheme } from '@/lib/team-theme';
 import { getProfileImageSrc } from '@/lib/profile-image';
@@ -20,12 +26,6 @@ const primaryLinks = [
 
 function isActivePath(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
-}
-
-function setRootAuthState(state: 'authed' | 'guest') {
-  if (typeof document !== 'undefined') {
-    document.documentElement.dataset.authState = state;
-  }
 }
 
 export function AppHeader() {
@@ -66,11 +66,8 @@ export function AppHeader() {
   }, [pathname]);
 
   function handleLogout() {
-    clearAccessToken();
-    applyTeamTheme(null);
-    setRootAuthState('guest');
     setUser(null);
-    router.push('/');
+    performLogout(router);
   }
 
   const favoriteTeam = teams.find((team) => team.id === user?.favoriteTeamId);

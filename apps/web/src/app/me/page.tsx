@@ -11,7 +11,13 @@ import {
   updateNickname,
   uploadProfilePhoto,
 } from '@/lib/auth-api';
-import { clearAccessToken, getAccessToken, type PublicUser } from '@/lib/auth';
+import {
+  clearAccessToken,
+  getAccessToken,
+  performLogout,
+  type PublicUser,
+} from '@/lib/auth';
+import { useAuthGuard } from '@/lib/use-auth-guard';
 import {
   fetchAttendanceStats,
   type AttendanceStats,
@@ -25,6 +31,7 @@ import { Skeleton } from '@/components/Skeleton';
 
 export default function MyPage() {
   const router = useRouter();
+  useAuthGuard();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [user, setUser] = useState<PublicUser | null>(null);
   const [stats, setStats] = useState<AttendanceStats | null>(null);
@@ -41,7 +48,7 @@ export default function MyPage() {
     const token = getAccessToken();
 
     if (!token) {
-      router.replace('/login');
+      router.replace('/');
       return;
     }
 
@@ -54,7 +61,7 @@ export default function MyPage() {
       })
       .catch(() => {
         clearAccessToken();
-        router.replace('/login');
+        router.replace('/');
       })
       .finally(() => {
         setIsLoading(false);
@@ -85,7 +92,7 @@ export default function MyPage() {
 
     const token = getAccessToken();
     if (!token) {
-      router.replace('/login');
+      router.replace('/');
       return;
     }
 
@@ -102,7 +109,7 @@ export default function MyPage() {
     if (isSavingNickname) return;
     const token = getAccessToken();
     if (!token) {
-      router.replace('/login');
+      router.replace('/');
       return;
     }
 
@@ -133,7 +140,7 @@ export default function MyPage() {
     if (isUploadingPhoto) return;
     const token = getAccessToken();
     if (!token) {
-      router.replace('/login');
+      router.replace('/');
       return;
     }
 
@@ -407,11 +414,7 @@ export default function MyPage() {
         </div>
         <button
           className="btn btn-ghost"
-          onClick={() => {
-            clearAccessToken();
-            applyTeamTheme(null);
-            router.push('/');
-          }}
+          onClick={() => performLogout(router)}
           type="button"
         >
           로그아웃

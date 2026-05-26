@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
 const navItems = [
+  { href: '/', icon: '⌂', label: '홈', exact: true },
   { href: '/calendar', icon: '◇', label: '캘린더' },
   { href: '/posts', icon: '▤', label: '게시판' },
   { href: '/me', icon: '◉', label: '마이' },
@@ -16,7 +17,9 @@ export function BottomNav() {
     <nav className="bottom-nav" aria-label="주요 메뉴">
       {navItems.map((item) => {
         const isActive =
-          pathname === item.href || pathname.startsWith(`${item.href}/`);
+          'exact' in item && item.exact
+            ? pathname === item.href
+            : pathname === item.href || pathname.startsWith(`${item.href}/`);
 
         return (
           <Link

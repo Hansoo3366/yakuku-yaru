@@ -47,7 +47,7 @@ export default function PostDetailPage() {
   async function handleDeletePost() {
     const token = getAccessToken();
     if (!token) {
-      router.push('/login');
+      router.replace('/');
       return;
     }
 
@@ -62,7 +62,7 @@ export default function PostDetailPage() {
     if (isSubmitting) return;
     const token = getAccessToken();
     if (!token) {
-      router.push('/login');
+      router.replace('/');
       return;
     }
 
@@ -87,7 +87,7 @@ export default function PostDetailPage() {
   async function handleDeleteComment(commentId: number) {
     const token = getAccessToken();
     if (!token) {
-      router.push('/login');
+      router.replace('/');
       return;
     }
 

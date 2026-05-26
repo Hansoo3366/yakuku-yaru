@@ -693,7 +693,7 @@ img {
   border-top: 1px solid var(--color-line);
   bottom: 0;
   display: none;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   height: var(--bottom-nav-height);
   left: 0;
   padding-bottom: env(safe-area-inset-bottom, 0);

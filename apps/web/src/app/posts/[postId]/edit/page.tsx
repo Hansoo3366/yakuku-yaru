@@ -5,12 +5,14 @@ import { useParams, useRouter } from 'next/navigation';
 import { FormEvent, useEffect, useState } from 'react';
 import { ApiError } from '@/lib/api';
 import { getAccessToken } from '@/lib/auth';
+import { useAuthGuard } from '@/lib/use-auth-guard';
 import { fetchPost, updatePost } from '@/lib/post-api';
 import { Skeleton } from '@/components/Skeleton';
 
 export default function EditPostPage() {
   const params = useParams<{ postId: string }>();
   const router = useRouter();
+  useAuthGuard();
   const postId = Number(params.postId);
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
@@ -20,7 +22,7 @@ export default function EditPostPage() {
 
   useEffect(() => {
     if (!getAccessToken()) {
-      router.replace('/login');
+      router.replace('/');
       return;
     }
 
@@ -38,7 +40,7 @@ export default function EditPostPage() {
     const token = getAccessToken();
 
     if (!token) {
-      router.replace('/login');
+      router.replace('/');
       return;
     }
 

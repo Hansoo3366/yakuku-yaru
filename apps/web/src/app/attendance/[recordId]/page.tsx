@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { getAccessToken } from '@/lib/auth';
+import { useAuthGuard } from '@/lib/use-auth-guard';
 import {
   deleteAttendanceRecord,
   fetchAttendanceRecord,
@@ -47,6 +48,7 @@ function resultLabel(result: string | null) {
 export default function AttendanceDetailPage() {
   const params = useParams<{ recordId: string }>();
   const router = useRouter();
+  useAuthGuard();
   const recordId = Number(params.recordId);
   const [record, setRecord] = useState<AttendanceRecord | null>(null);
   const [errorMessage, setErrorMessage] = useState('');
@@ -56,7 +58,7 @@ export default function AttendanceDetailPage() {
   useEffect(() => {
     const token = getAccessToken();
     if (!token) {
-      router.replace('/login');
+      router.replace('/');
       return;
     }
 

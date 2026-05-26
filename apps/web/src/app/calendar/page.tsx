@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import { fetchMe } from '@/lib/auth-api';
 import { clearAccessToken, getAccessToken, type PublicUser } from '@/lib/auth';
+import { useAuthGuard } from '@/lib/use-auth-guard';
 import {
   listGames,
   listTeams,
@@ -67,6 +68,7 @@ function isSameDay(a: Date, b: Date) {
 
 export default function CalendarPage() {
   const router = useRouter();
+  useAuthGuard();
   const [calendarMonth, setCalendarMonth] = useState(initialMonth);
   const [user, setUser] = useState<PublicUser | null>(null);
   const [teams, setTeams] = useState<Team[]>([]);
@@ -88,7 +90,7 @@ export default function CalendarPage() {
     const token = getAccessToken();
 
     if (!token) {
-      router.replace('/login');
+      router.replace('/');
       return;
     }
 
@@ -120,7 +122,7 @@ export default function CalendarPage() {
       })
       .catch(() => {
         clearAccessToken();
-        router.replace('/login');
+        router.replace('/');
       })
       .finally(() => {
         if (isMounted) setIsLoading(false);

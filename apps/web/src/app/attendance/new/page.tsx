@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { FormEvent, Suspense, useEffect, useState } from 'react';
 import { getAccessToken } from '@/lib/auth';
+import { useAuthGuard } from '@/lib/use-auth-guard';
 import {
   ATTENDANCE_PHOTO_ACCEPT,
   createAttendanceRecord,
@@ -30,6 +31,7 @@ function inferResult(myScore: string, opponentScore: string): ResultValue | null
 
 function NewAttendanceForm() {
   const router = useRouter();
+  useAuthGuard();
   const searchParams = useSearchParams();
   const gameId = Number(searchParams.get('gameId'));
   const [memo, setMemo] = useState('');
@@ -73,7 +75,7 @@ function NewAttendanceForm() {
     const token = getAccessToken();
 
     if (!token) {
-      router.replace('/login');
+      router.replace('/');
       return;
     }
 

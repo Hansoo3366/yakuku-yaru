@@ -5,10 +5,12 @@ import { useRouter } from 'next/navigation';
 import { FormEvent, useEffect, useState } from 'react';
 import { ApiError } from '@/lib/api';
 import { getAccessToken } from '@/lib/auth';
+import { useAuthGuard } from '@/lib/use-auth-guard';
 import { createPost } from '@/lib/post-api';
 
 export default function NewPostPage() {
   const router = useRouter();
+  useAuthGuard();
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
@@ -16,7 +18,7 @@ export default function NewPostPage() {
 
   useEffect(() => {
     if (!getAccessToken()) {
-      router.replace('/login');
+      router.replace('/');
     }
   }, [router]);
 
@@ -26,7 +28,7 @@ export default function NewPostPage() {
     const token = getAccessToken();
 
     if (!token) {
-      router.replace('/login');
+      router.replace('/');
       return;
     }
 
