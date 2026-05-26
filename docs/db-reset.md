@@ -1,6 +1,29 @@
 # DB 초기화
 
-## 전체 초기화 + KBO 일정 재적재 (권장 · 라이브)
+## 경기만 비우고 KBO 전체 재적재 (라이브 · 사용자 유지)
+
+**사용자·게시판·관리자는 그대로** 두고, 경기 일정만 지운 뒤 KBO `season` + `week` + `today` 동기화합니다.  
+(경기 FK 때문에 **직관 기록·경기 알림**도 함께 삭제됩니다.)
+
+```bash
+cd ~/yakuku-yaru
+git pull
+docker compose -f docker-compose.prod.yml --env-file .env.production up -d --build api
+
+docker compose -f docker-compose.prod.yml --env-file .env.production exec -T api \
+  sh -c 'cd apps/api && npm run db:reset-games'
+```
+
+동기화만 (경기 삭제 없이 upsert만):
+
+```bash
+docker compose -f docker-compose.prod.yml --env-file .env.production exec -T api \
+  sh -c 'cd apps/api && npm run sync:kbo-schedule -- --mode=season'
+```
+
+---
+
+## 전체 초기화 + KBO 일정 재적재 (라이브)
 
 **경기(가짜 시드 포함)·사용자·게시판·직관·알림을 모두 비우고**, 관리자 1명 생성 후 **KBO `season` → `week` → `today`** 동기화까지 한 번에 합니다.
 
