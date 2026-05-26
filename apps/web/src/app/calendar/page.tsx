@@ -102,9 +102,9 @@ export default function CalendarPage() {
   const [teamStandings, setTeamStandings] = useState<TeamStandingsResponse | null>(
     null,
   );
-  const [scheduleScope, setScheduleScope] = useState<'favorite' | 'all'>(
-    'favorite',
-  );
+  const [scheduleFilter, setScheduleFilter] = useState<
+    'favorite' | 'favorite-home' | 'all'
+  >('favorite');
   const [watchTypeFilter, setWatchTypeFilter] = useState<
     'all' | 'stadium' | 'home'
   >('all');
@@ -135,27 +135,37 @@ export default function CalendarPage() {
     setIsLoading(true);
 
     Promise.all([fetchMe(token), listTeams()])
-      .then(([meResponse, teamsResponse]) => {
+      .then(async ([meResponse, teamsResponse]) => {
         if (!isMounted) return null;
 
         setUser(meResponse.user);
         setTeams(teamsResponse.items);
-        return Promise.all([
+
+        const favoriteTeamId = meResponse.user.favoriteTeamId;
+        const [gamesResponse, attendanceResponse] = await Promise.all([
           listGames({
             ...range,
             teamId:
-              scheduleScope === 'favorite'
-                ? meResponse.user.favoriteTeamId
-                : undefined,
+              scheduleFilter !== 'all' ? favoriteTeamId ?? undefined : undefined,
           }),
           listAttendanceRecords(range, token),
         ]);
+
+        if (!isMounted) return null;
+
+        const nextGames =
+          scheduleFilter === 'favorite-home' && favoriteTeamId
+            ? gamesResponse.items.filter(
+                (game) => game.homeTeam.id === favoriteTeamId,
+              )
+            : gamesResponse.items;
+
+        return { nextGames, attendanceResponse };
       })
-      .then((responses) => {
-        if (!responses || !isMounted) return;
-        const [gamesResponse, attendanceResponse] = responses;
-        setGames(gamesResponse.items);
-        setAttendanceRecords(attendanceResponse.items);
+      .then((result) => {
+        if (!result || !isMounted) return;
+        setGames(result.nextGames);
+        setAttendanceRecords(result.attendanceResponse.items);
       })
       .catch(() => {
         clearAccessToken();
@@ -168,7 +178,7 @@ export default function CalendarPage() {
     return () => {
       isMounted = false;
     };
-  }, [rangeKey, router, scheduleScope]);
+  }, [rangeKey, router, scheduleFilter]);
 
   useEffect(() => {
     let isMounted = true;
@@ -567,6 +577,7 @@ export default function CalendarPage() {
                 <span>상대 승률 낮은 팀</span>
                 <OpponentInsightRanking
                   items={opponentInsights.teamWinRateLow}
+                  showViewAll={false}
                   title="상대 승률 낮은 팀"
                   variant="low"
                 />
@@ -643,15 +654,23 @@ export default function CalendarPage() {
         <div className="filter-group">
           <span className="filter-group-label">경기</span>
           <button
-            className={`filter-pill ${scheduleScope === 'favorite' ? 'is-selected' : ''}`}
-            onClick={() => setScheduleScope('favorite')}
+            className={`filter-pill ${scheduleFilter === 'favorite' ? 'is-selected' : ''}`}
+            onClick={() => setScheduleFilter('favorite')}
             type="button"
           >
             내 팀만
           </button>
           <button
-            className={`filter-pill ${scheduleScope === 'all' ? 'is-selected' : ''}`}
-            onClick={() => setScheduleScope('all')}
+            className={`filter-pill ${scheduleFilter === 'favorite-home' ? 'is-selected' : ''}`}
+            disabled={!user?.favoriteTeamId}
+            onClick={() => setScheduleFilter('favorite-home')}
+            type="button"
+          >
+            홈 경기
+          </button>
+          <button
+            className={`filter-pill ${scheduleFilter === 'all' ? 'is-selected' : ''}`}
+            onClick={() => setScheduleFilter('all')}
             type="button"
           >
             전체
@@ -716,16 +735,22 @@ export default function CalendarPage() {
           icon="◌"
           title={
             watchTypeFilter === 'all'
-              ? viewMode === 'month'
-                ? '이번 달엔 경기 일정이 없어요'
-                : '이번 주엔 경기 일정이 없어요'
+              ? scheduleFilter === 'favorite-home'
+                ? viewMode === 'month'
+                  ? '이번 달엔 홈 경기가 없어요'
+                  : '이번 주엔 홈 경기가 없어요'
+                : viewMode === 'month'
+                  ? '이번 달엔 경기 일정이 없어요'
+                  : '이번 주엔 경기 일정이 없어요'
               : watchTypeFilter === 'stadium'
                 ? '이번 기간에 직관 기록이 없어요'
                 : '이번 기간에 집관 기록이 없어요'
           }
           description={
             watchTypeFilter === 'all'
-              ? '다른 기간으로 이동해보세요.'
+              ? scheduleFilter === 'favorite-home'
+                ? '원정 일정은 「내 팀만」으로 확인해보세요.'
+                : '다른 기간으로 이동해보세요.'
               : '직관 기록을 남기거나 다른 기간을 확인해보세요.'
           }
         />

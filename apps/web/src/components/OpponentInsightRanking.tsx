@@ -11,14 +11,21 @@ type OpponentInsightRankingProps = {
   items: OpponentInsightItem[];
   title: string;
   variant: 'high' | 'low';
+  showViewAll?: boolean;
 };
 
-function formatRecord(item: OpponentInsightItem, variant: 'high' | 'low') {
-  if (variant === 'high') {
-    return `승 ${item.wins} / ${item.games}경기`;
+function formatRecord(item: OpponentInsightItem) {
+  const parts = [`${item.wins}승`];
+
+  if (item.draws > 0) {
+    parts.push(`${item.draws}무`);
   }
 
-  return `패 ${item.losses} / ${item.games}경기`;
+  if (item.losses > 0) {
+    parts.push(`${item.losses}패`);
+  }
+
+  return `${parts.join(' ')} · ${item.games}경기`;
 }
 
 function RankingEntry({
@@ -53,7 +60,7 @@ function RankingEntry({
         <span className="calendar-opponent-ranking__meta">
           <span className="calendar-opponent-ranking__rate">{item.rate}%</span>
           <span className="calendar-opponent-ranking__record">
-            {formatRecord(item, variant)}
+            {formatRecord(item)}
           </span>
         </span>
       </span>
@@ -137,6 +144,7 @@ export function OpponentInsightRanking({
   items,
   title,
   variant,
+  showViewAll = true,
 }: OpponentInsightRankingProps) {
   const [open, setOpen] = useState(false);
 
@@ -146,7 +154,7 @@ export function OpponentInsightRanking({
 
   const previewCount = Math.min(items.length, PREVIEW_RANK_COUNT);
   const previewItems = items.slice(0, previewCount);
-  const showMore = items.length > previewCount;
+  const showMore = showViewAll && items.length > previewCount;
 
   return (
     <>
