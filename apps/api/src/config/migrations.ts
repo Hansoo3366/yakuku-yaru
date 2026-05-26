@@ -2,6 +2,18 @@ import type { RowDataPacket } from 'mysql2';
 import { db } from './database.js';
 import { env } from './env.js';
 
+async function tableExists(tableName: string) {
+  const [rows] = await db.query<(RowDataPacket & { count: number })[]>(
+    `SELECT COUNT(*) AS count
+     FROM information_schema.tables
+     WHERE table_schema = ?
+       AND table_name = ?`,
+    [env.database.name, tableName],
+  );
+
+  return Number(rows[0]?.count ?? 0) > 0;
+}
+
 async function columnExists(tableName: string, columnName: string) {
   const [rows] = await db.query<(RowDataPacket & { count: number })[]>(
     `SELECT COUNT(*) AS count
@@ -250,6 +262,34 @@ export async function runMigrations() {
        parking_summary = VALUES(parking_summary),
        map_url = VALUES(map_url)`,
   );
+
+  const hasTeamStandings = await tableExists('team_standings');
+
+  if (!hasTeamStandings) {
+    await db.execute(
+      `CREATE TABLE team_standings (
+         id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+         season_year INT NOT NULL,
+         rank_date DATE NOT NULL,
+         series_id VARCHAR(20) NOT NULL DEFAULT '0',
+         team_id BIGINT UNSIGNED NOT NULL,
+         rank_position INT NOT NULL,
+         games INT NOT NULL,
+         wins INT NOT NULL,
+         losses INT NOT NULL,
+         draws INT NOT NULL,
+         win_rate DECIMAL(5, 3) NOT NULL,
+         games_behind DECIMAL(4, 1) NOT NULL DEFAULT 0,
+         synced_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+         PRIMARY KEY (id),
+         UNIQUE KEY uq_team_standings_snapshot (season_year, rank_date, series_id, team_id),
+         KEY idx_team_standings_lookup (season_year, series_id, rank_date),
+         CONSTRAINT fk_team_standings_team
+           FOREIGN KEY (team_id) REFERENCES teams(id)
+           ON DELETE CASCADE
+       )`,
+    );
+  }
 
   await db.execute(
     `INSERT INTO games (

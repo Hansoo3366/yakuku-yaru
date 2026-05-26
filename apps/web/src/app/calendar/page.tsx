@@ -8,9 +8,11 @@ import { clearAccessToken, getAccessToken, type PublicUser } from '@/lib/auth';
 import { useAuthGuard } from '@/lib/use-auth-guard';
 import {
   listGames,
+  listTeamStandings,
   listTeams,
   type Game,
   type Team,
+  type TeamStandingsResponse,
 } from '@/lib/baseball-api';
 import {
   listAttendanceRecords,
@@ -22,6 +24,16 @@ import { CalendarOutcomeLegend } from '@/components/CalendarOutcomeLegend';
 import { EmptyState } from '@/components/EmptyState';
 import { Skeleton } from '@/components/Skeleton';
 import {
+  formatOpponentInsight,
+  getCalendarOpponentInsights,
+} from '@/lib/calendar-opponent-insights';
+import {
+  formatWinRateLabel,
+  getFavoriteTeamWinRate,
+  getHomeAttendanceWinRate,
+  getStadiumAttendanceWinRate,
+} from '@/lib/calendar-win-rates';
+import {
   formatDateInput,
   formatWeekLabel,
   getCalendarMonthDays,
@@ -30,6 +42,7 @@ import {
   getWeekDays,
   getWeekRange,
   getWeekStart,
+  getYearRange,
   isSameDay,
 } from '@/lib/calendar-range';
 import { useMediaQuery } from '@/lib/use-media-query';
@@ -81,6 +94,12 @@ export default function CalendarPage() {
   const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>(
     [],
   );
+  const [yearAttendanceRecords, setYearAttendanceRecords] = useState<
+    AttendanceRecord[]
+  >([]);
+  const [teamStandings, setTeamStandings] = useState<TeamStandingsResponse | null>(
+    null,
+  );
   const [scheduleScope, setScheduleScope] = useState<'favorite' | 'all'>(
     'favorite',
   );
@@ -98,6 +117,9 @@ export default function CalendarPage() {
     [viewMode, monthStart, weekStart],
   );
   const rangeKey = `${viewMode}:${range.from}:${range.to}`;
+  const statsYear = anchorDate.getFullYear();
+  const yearRange = useMemo(() => getYearRange(statsYear), [statsYear]);
+  const yearRangeKey = `${yearRange.from}:${yearRange.to}`;
 
   useEffect(() => {
     let isMounted = true;
@@ -146,6 +168,51 @@ export default function CalendarPage() {
     };
   }, [rangeKey, router, scheduleScope]);
 
+  useEffect(() => {
+    let isMounted = true;
+    const token = getAccessToken();
+
+    if (!token) {
+      return;
+    }
+
+    listAttendanceRecords(yearRange, token)
+      .then((response) => {
+        if (isMounted) {
+          setYearAttendanceRecords(response.items);
+        }
+      })
+      .catch(() => {
+        if (isMounted) {
+          setYearAttendanceRecords([]);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [yearRangeKey, router]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    listTeamStandings(statsYear)
+      .then((response) => {
+        if (isMounted) {
+          setTeamStandings(response);
+        }
+      })
+      .catch(() => {
+        if (isMounted) {
+          setTeamStandings(null);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [statsYear]);
+
   const ownAttendanceRecords = useMemo(
     () => attendanceRecords.filter((record) => record.viewerRelation === 'owner'),
     [attendanceRecords],
@@ -171,12 +238,58 @@ export default function CalendarPage() {
     });
   }, [filteredAttendanceRecords, range.from, range.to]);
 
-  const periodWinCount = periodRecords.filter(
-    (record) => record.result === 'win',
-  ).length;
-  const periodWinRate = periodRecords.length
-    ? Math.round((periodWinCount / periodRecords.length) * 100)
-    : 0;
+  const statsAttendanceRecords = useMemo(() => {
+    const byId = new Map<number, AttendanceRecord>();
+
+    for (const record of yearAttendanceRecords) {
+      byId.set(record.id, record);
+    }
+
+    for (const record of ownAttendanceRecords) {
+      const recordYear = new Date(record.game.gameDate).getFullYear();
+
+      if (recordYear === statsYear) {
+        byId.set(record.id, record);
+      }
+    }
+
+    return [...byId.values()];
+  }, [yearAttendanceRecords, ownAttendanceRecords, statsYear]);
+
+  const yearStadiumWinRate = useMemo(
+    () =>
+      getStadiumAttendanceWinRate(
+        statsAttendanceRecords,
+        user?.favoriteTeamId,
+      ),
+    [statsAttendanceRecords, user?.favoriteTeamId],
+  );
+  const yearHomeWinRate = useMemo(
+    () =>
+      getHomeAttendanceWinRate(statsAttendanceRecords, user?.favoriteTeamId),
+    [statsAttendanceRecords, user?.favoriteTeamId],
+  );
+  const yearTeamWinRate = useMemo(
+    () =>
+      getFavoriteTeamWinRate(statsAttendanceRecords, user?.favoriteTeamId),
+    [statsAttendanceRecords, user?.favoriteTeamId],
+  );
+  const opponentInsights = useMemo(
+    () =>
+      getCalendarOpponentInsights(statsAttendanceRecords, user?.favoriteTeamId),
+    [statsAttendanceRecords, user?.favoriteTeamId],
+  );
+
+  const favoriteTeamStanding = useMemo(() => {
+    if (!user?.favoriteTeamId || !teamStandings?.items.length) {
+      return null;
+    }
+
+    return (
+      teamStandings.items.find((item) => item.teamId === user.favoriteTeamId) ??
+      null
+    );
+  }, [teamStandings, user?.favoriteTeamId]);
 
   const gamesByDate = useMemo(
     () =>
@@ -321,6 +434,15 @@ export default function CalendarPage() {
       : formatWeekLabel(weekStart);
 
   const periodLabel = viewMode === 'month' ? '이번 달' : '이번 주';
+  const showTeamWinRate = Boolean(user?.favoriteTeamId);
+  const teamRateLabel = favoriteTeam
+    ? `우리팀(${favoriteTeam.shortName}) 승률`
+    : null;
+  const favoriteRankLabel = favoriteTeamStanding
+    ? `${favoriteTeamStanding.rank}위`
+    : favoriteTeam
+      ? '—'
+      : null;
 
   return (
     <main className="app-shell app-shell--calendar with-bottom-nav">
@@ -336,7 +458,12 @@ export default function CalendarPage() {
         </p>
       </header>
 
-      <section className="calendar-summary-row" aria-label="기간 요약">
+      <section
+        className={`calendar-summary-row${
+          favoriteRankLabel ? '' : ' calendar-summary-row--duo'
+        }`}
+        aria-label="기간 요약"
+      >
         <div className="calendar-summary-card">
           <span>{periodLabel} 경기</span>
           <strong>{displayGameCount}</strong>
@@ -345,10 +472,71 @@ export default function CalendarPage() {
           <span>기록한 경기</span>
           <strong>{periodRecords.length}</strong>
         </div>
-        <div className="calendar-summary-card">
-          <span>{viewMode === 'month' ? '월간' : '주간'} 승률</span>
-          <strong>{periodWinRate}%</strong>
+        {favoriteRankLabel ? (
+          <div className="calendar-summary-card">
+            <span>{favoriteTeam?.shortName ?? '우리팀'} 순위</span>
+            <strong>{favoriteRankLabel}</strong>
+          </div>
+        ) : null}
+      </section>
+
+      <section className="calendar-win-rate-panel" aria-label="승률 요약">
+        <div className="calendar-win-rate-group">
+          <h2 className="calendar-win-rate-heading">
+            {statsYear}년
+            <small>연간 승률</small>
+          </h2>
+          <div
+            className={`calendar-summary-row calendar-summary-row--rates${
+              showTeamWinRate ? ' calendar-summary-row--trio' : ''
+            }`}
+          >
+            <div className="calendar-summary-card">
+              <span>직관 승률</span>
+              <strong>{formatWinRateLabel(yearStadiumWinRate)}</strong>
+            </div>
+            <div className="calendar-summary-card">
+              <span>집관 승률</span>
+              <strong>{formatWinRateLabel(yearHomeWinRate)}</strong>
+            </div>
+            {showTeamWinRate && teamRateLabel ? (
+              <div className="calendar-summary-card">
+                <span>{teamRateLabel}</span>
+                <strong>{formatWinRateLabel(yearTeamWinRate)}</strong>
+              </div>
+            ) : null}
+          </div>
         </div>
+        {showTeamWinRate ? (
+          <div className="calendar-win-rate-group">
+            <h2 className="calendar-win-rate-heading">
+              상대 팀 인사이트
+              <small>{statsYear}년 직관 기록</small>
+            </h2>
+            <div className="calendar-summary-row calendar-summary-row--quad">
+              <div className="calendar-summary-card">
+                <span>상대 승률 높은 팀</span>
+                <strong>{formatOpponentInsight(opponentInsights.teamWinRateHigh)}</strong>
+              </div>
+              <div className="calendar-summary-card">
+                <span>상대 승률 낮은 팀</span>
+                <strong>{formatOpponentInsight(opponentInsights.teamWinRateLow)}</strong>
+              </div>
+              <div className="calendar-summary-card">
+                <span>직관 승률 높은 팀</span>
+                <strong>
+                  {formatOpponentInsight(opponentInsights.stadiumWinRateHigh)}
+                </strong>
+              </div>
+              <div className="calendar-summary-card">
+                <span>직관 승률 낮은 팀</span>
+                <strong>
+                  {formatOpponentInsight(opponentInsights.stadiumWinRateLow)}
+                </strong>
+              </div>
+            </div>
+          </div>
+        ) : null}
       </section>
 
       <section className="calendar-toolbar" aria-label="기간 이동">

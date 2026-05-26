@@ -74,6 +74,15 @@ npm run build
 ADMIN_EMAIL=admin@yakuku.local ADMIN_PASSWORD='Admin1234!' npm run db:reset-app
 ```
 
+캘린더·메인 **팀 순위**는 DB `team_standings`에 데이터가 있어야 합니다. 로컬에서 한 번:
+
+```bash
+cd apps/api
+npm run sync:kbo-standings:dev
+```
+
+(`db:reset-app`만 하면 경기 일정은 들어가지만 순위는 비어 있을 수 있습니다.)
+
 ---
 
 ## 사용자만 초기화 (경기 일정 유지)

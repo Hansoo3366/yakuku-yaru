@@ -10,7 +10,11 @@ import {
   findUsableEmailVerificationTokenByEmailAndCode,
   markEmailVerificationTokenUsed,
 } from './email-verification.repository.js';
-import { issueEmailVerification, resendEmailVerification } from './email-verification.js';
+import {
+  getEmailVerificationStatus,
+  issueEmailVerification,
+  resendEmailVerification,
+} from './email-verification.js';
 import { getPasswordResetUrl, sendPasswordResetEmail } from './email.service.js';
 import {
   createPasswordResetToken,
@@ -308,6 +312,23 @@ authRouter.post('/reset-password', resetPasswordRateLimit, async (req, res, next
     res.json({
       reset: true,
     });
+  } catch (error) {
+    next(error);
+  }
+});
+
+authRouter.get('/verification-status', checkRegistrationRateLimit, async (req, res, next) => {
+  try {
+    const email = req.query.email as string | undefined;
+
+    if (!email) {
+      throw new HttpError(400, 'INVALID_INPUT', '이메일을 입력해주세요.');
+    }
+
+    const normalizedEmail = validateEmail(email);
+    const status = await getEmailVerificationStatus(normalizedEmail);
+
+    res.json(status);
   } catch (error) {
     next(error);
   }

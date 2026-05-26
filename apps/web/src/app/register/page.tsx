@@ -3,11 +3,12 @@
 /* eslint-disable @next/next/no-img-element */
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { FormEvent, useEffect, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { FormEvent, Suspense, useEffect, useState } from 'react';
 import { ApiError } from '@/lib/api';
 import {
   checkRegistrationAvailability,
+  fetchVerificationStatus,
   register,
   resendVerificationEmail,
   verifyEmail,
@@ -39,10 +40,13 @@ function formatCountdown(seconds: number) {
   return `${minutes}:${String(remainder).padStart(2, '0')}`;
 }
 
-export default function RegisterPage() {
+function RegisterPageContent() {
   const router = useRouter();
-  const [step, setStep] = useState<Step>('account');
-  const [email, setEmail] = useState('');
+  const searchParams = useSearchParams();
+  const isVerifyResume = searchParams.get('verify') === '1';
+  const resumeEmail = searchParams.get('email')?.trim() ?? '';
+  const [step, setStep] = useState<Step>(isVerifyResume && resumeEmail ? 'done' : 'account');
+  const [email, setEmail] = useState(isVerifyResume ? resumeEmail : '');
   const [nickname, setNickname] = useState('');
   const [password, setPassword] = useState('');
   const [passwordConfirm, setPasswordConfirm] = useState('');
@@ -61,10 +65,63 @@ export default function RegisterPage() {
   const [isCheckingAccount, setIsCheckingAccount] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
   const [isResending, setIsResending] = useState(false);
+  const [isLoadingVerification, setIsLoadingVerification] = useState(
+    Boolean(isVerifyResume && resumeEmail),
+  );
 
   useEffect(() => {
-    listTeams().then((response) => setTeams(response.items));
-  }, []);
+    if (!isVerifyResume) {
+      listTeams().then((response) => setTeams(response.items));
+    }
+  }, [isVerifyResume]);
+
+  useEffect(() => {
+    if (!isVerifyResume || !resumeEmail) {
+      return;
+    }
+
+    let isMounted = true;
+    setEmail(resumeEmail);
+    setStep('done');
+    setIsLoadingVerification(true);
+
+    fetchVerificationStatus(resumeEmail)
+      .then((status) => {
+        if (!isMounted) return;
+
+        applyVerificationMeta({
+          emailSent: status.emailSent,
+          expiresAt: status.expiresAt,
+          resendAvailableAt: status.resendAvailableAt,
+          resendsRemaining: status.resendsRemaining,
+          verificationCode: status.verificationCode ?? null,
+        });
+
+        if (status.needsResend) {
+          setErrorMessage(
+            '인증번호가 만료되었거나 없어요. 아래 재전송 버튼을 눌러 새 인증번호를 받아주세요.',
+          );
+        }
+      })
+      .catch((error) => {
+        if (!isMounted) return;
+
+        if (error instanceof ApiError) {
+          setErrorMessage(error.message);
+        } else {
+          setErrorMessage('인증 상태를 불러오지 못했어요.');
+        }
+      })
+      .finally(() => {
+        if (isMounted) {
+          setIsLoadingVerification(false);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isVerifyResume, resumeEmail]);
 
   useEffect(() => {
     if (step !== 'done') return;
@@ -81,16 +138,16 @@ export default function RegisterPage() {
 
   function applyVerificationMeta(response: {
     emailSent: boolean;
-    expiresAt: string;
+    expiresAt: string | null;
     resendAvailableAt: string;
     resendsRemaining: number;
-    verificationCode: string | null;
+    verificationCode?: string | null;
   }) {
     setEmailSent(response.emailSent);
     setExpiresAt(response.expiresAt);
     setResendAvailableAt(response.resendAvailableAt);
     setResendsRemaining(response.resendsRemaining);
-    setDevVerificationCode(response.verificationCode);
+    setDevVerificationCode(response.verificationCode ?? null);
     setVerificationCode('');
     setCodeSecondsLeft(getSecondsUntil(response.expiresAt));
     setResendSecondsLeft(getSecondsUntil(response.resendAvailableAt));
@@ -232,11 +289,16 @@ export default function RegisterPage() {
       </Link>
       <section className="auth-card">
         <header className="auth-header">
-          <span className="eyebrow">Sign up</span>
-          <h1>야크크 야르 시작하기</h1>
-          <p>좋아하는 팀을 고르고, 직관 기록을 캘린더에 남겨보세요.</p>
+          <span className="eyebrow">{isVerifyResume ? 'Verify email' : 'Sign up'}</span>
+          <h1>{isVerifyResume ? '이메일 인증' : '야크크 야르 시작하기'}</h1>
+          <p>
+            {isVerifyResume
+              ? '인증을 완료하면 로그인할 수 있어요. 메일의 인증번호를 입력하거나 재전송해주세요.'
+              : '좋아하는 팀을 고르고, 직관 기록을 캘린더에 남겨보세요.'}
+          </p>
         </header>
 
+        {isVerifyResume ? null : (
         <ol className="auth-step-list">
           <li className={`auth-step ${step === 'account' ? 'is-active' : ''}`}>
             1. 계정 만들기
@@ -248,6 +310,7 @@ export default function RegisterPage() {
             3. 인증 완료
           </li>
         </ol>
+        )}
 
         {step === 'account' ? (
           <form className="form-grid" onSubmit={handleAccountNext}>
@@ -399,12 +462,19 @@ export default function RegisterPage() {
 
         {step === 'done' ? (
           <form className="form-grid" onSubmit={handleVerifyCode}>
+            {isLoadingVerification ? (
+              <p className="muted" style={{ fontSize: 'var(--text-sm)' }}>
+                인증 정보를 불러오는 중이에요.
+              </p>
+            ) : null}
             <div className="notice-card">
               <strong>이메일 인증번호를 입력해주세요</strong>
               <span className="muted" style={{ fontSize: 'var(--text-xs)' }}>
-                {emailSent
-                  ? `${email} 주소로 6자리 인증번호를 보냈어요. 3분 안에 입력해주세요.`
-                  : 'SMTP 설정이 없어 메일을 보내지 못했어요. 개발 환경에서는 아래 인증번호로 테스트할 수 있어요.'}
+                {isVerifyResume && !emailSent
+                  ? `${email} 계정의 인증이 아직 완료되지 않았어요. 인증번호를 재전송한 뒤 입력해주세요.`
+                  : emailSent
+                    ? `${email} 주소로 6자리 인증번호를 보냈어요. 3분 안에 입력해주세요.`
+                    : 'SMTP 설정이 없어 메일을 보내지 못했어요. 개발 환경에서는 아래 인증번호로 테스트할 수 있어요.'}
               </span>
               {!emailSent && devVerificationCode ? (
                 <span className="field-hint">개발용 인증번호: {devVerificationCode}</span>
@@ -439,7 +509,7 @@ export default function RegisterPage() {
             {errorMessage ? <p className="form-error">{errorMessage}</p> : null}
             <button
               className="btn btn-primary btn-lg btn-block"
-              disabled={isVerifying || codeSecondsLeft <= 0}
+              disabled={isVerifying || isLoadingVerification || codeSecondsLeft <= 0}
               type="submit"
             >
               {isVerifying ? '확인 중' : '인증 완료'}
@@ -465,8 +535,26 @@ export default function RegisterPage() {
           <p className="auth-footnote">
             이미 계정이 있다면 <Link href="/login">로그인</Link>
           </p>
-        ) : null}
+        ) : (
+          <p className="auth-footnote">
+            인증을 마치면 <Link href="/login">로그인</Link>할 수 있어요.
+          </p>
+        )}
       </section>
     </main>
+  );
+}
+
+export default function RegisterPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="auth-shell">
+          <section className="auth-card">회원가입 화면을 불러오는 중이에요.</section>
+        </main>
+      }
+    >
+      <RegisterPageContent />
+    </Suspense>
   );
 }

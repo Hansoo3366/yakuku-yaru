@@ -26,6 +26,13 @@ export default function LoginPage() {
       setAccessToken(response.accessToken);
       router.push('/calendar');
     } catch (error) {
+      if (error instanceof ApiError && error.code === 'EMAIL_NOT_VERIFIED') {
+        router.push(
+          `/register?verify=1&email=${encodeURIComponent(email.trim())}`,
+        );
+        return;
+      }
+
       if (error instanceof ApiError) {
         setErrorMessage(error.message);
       } else {

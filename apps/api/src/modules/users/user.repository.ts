@@ -125,6 +125,15 @@ export async function markUserEmailVerified(userId: number) {
   );
 }
 
+export async function setUserEmailVerified(userId: number, verified: boolean) {
+  await db.execute(
+    `UPDATE users
+     SET email_verified_at = ${verified ? 'CURRENT_TIMESTAMP' : 'NULL'}
+     WHERE id = ?`,
+    [userId],
+  );
+}
+
 export async function updateUserFavoriteTeam(userId: number, teamId: number) {
   await db.execute(
     `UPDATE users

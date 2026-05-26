@@ -12,7 +12,15 @@ import {
   type AttendanceStats,
   type AttendanceRecord,
 } from '@/lib/attendance-api';
-import { listGames, listTeams, type Game, type Team } from '@/lib/baseball-api';
+import {
+  listGames,
+  listTeamStandings,
+  listTeams,
+  type Game,
+  type Team,
+  type TeamStandingsResponse,
+} from '@/lib/baseball-api';
+import { TeamStandingsTable } from '@/components/TeamStandingsTable';
 import { getAssetUrl } from '@/lib/api';
 import { getTeamLogoSrc } from '@/lib/team-logo';
 import { Skeleton, SkeletonCard } from '@/components/Skeleton';
@@ -66,6 +74,16 @@ export default function HomePage() {
   const [stats, setStats] = useState<AttendanceStats | null>(null);
   const [upcomingGames, setUpcomingGames] = useState<Game[]>([]);
   const [recentRecords, setRecentRecords] = useState<AttendanceRecord[]>([]);
+  const [teamStandings, setTeamStandings] = useState<TeamStandingsResponse | null>(
+    null,
+  );
+
+  useEffect(() => {
+    const seasonYear = new Date().getFullYear();
+    listTeamStandings(seasonYear)
+      .then(setTeamStandings)
+      .catch(() => setTeamStandings(null));
+  }, []);
 
   useEffect(() => {
     const token = getAccessToken();
@@ -161,12 +179,42 @@ export default function HomePage() {
             </div>
           ))}
         </section>
+
+        <section className="card stack" style={{ marginTop: 'var(--space-5)' }}>
+          <div className="section-heading">
+            <div>
+              <h2>KBO 팀 순위</h2>
+              <p>공식 기록실 일자별 순위를 매일 반영해요.</p>
+            </div>
+          </div>
+          <TeamStandingsTable standings={teamStandings} />
+        </section>
       </main>
     );
   }
 
   return (
     <main className="page-shell">
+      <section className="card stack">
+        <div className="section-heading">
+          <div>
+            <h2>KBO 팀 순위</h2>
+            <p>
+              {favoriteTeam
+                ? `${favoriteTeam.shortName}는 ${
+                    teamStandings?.items.find((item) => item.teamId === favoriteTeam.id)
+                      ?.rank ?? '—'
+                  }위예요.`
+                : '응원 팀을 설정하면 순위를 강조해 보여드려요.'}
+            </p>
+          </div>
+        </div>
+        <TeamStandingsTable
+          highlightTeamId={favoriteTeam?.id}
+          standings={teamStandings}
+        />
+      </section>
+
       <section className="dashboard-grid">
         <div className="dashboard-greeting">
           <div>

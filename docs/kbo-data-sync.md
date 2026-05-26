@@ -22,6 +22,7 @@ KBO API는 **월 단위**만 제공합니다. 주·일 단위 갱신은 해당 �
 |------|------------------------------|----------------|
 | 연간·월별 | — | `kbo-sync-season.yml`, `kbo-sync-month.yml` |
 | 주간·당일 | `KBO_SYNC_WEEK_CRON`, `KBO_SYNC_TODAY_CRON` | `kbo-sync-week.yml`, `kbo-sync-today.yml` |
+| 팀 순위(일자별) | — | `kbo-sync-standings.yml` (매일) |
 
 API 기동 약 20초 후 **주간(`week`)** 1회 추가 실행 (`KBO_SYNC_ON_START`).
 
@@ -55,6 +56,9 @@ npm run sync:kbo-schedule -- --mode=today
 
 # 특정 연·월만 (레거시)
 npm run sync:kbo-schedule -- --year=2026 --month=5
+
+# 팀 순위 (KBO 일자별 순위 페이지 HTML 파싱)
+npm run sync:kbo-standings
 ```
 
 운영 Docker (GCP SSH, API 컨테이너 안):

@@ -27,8 +27,43 @@ export type Game = {
   } | null;
 };
 
+export type TeamStanding = {
+  rank: number;
+  teamId: number;
+  teamShortName: string;
+  teamName: string;
+  games: number;
+  wins: number;
+  losses: number;
+  draws: number;
+  winRate: number;
+  gamesBehind: number;
+};
+
+export type TeamStandingsResponse = {
+  seasonYear: number;
+  rankDate: string | null;
+  seriesId: string;
+  syncedAt: string | null;
+  items: TeamStanding[];
+};
+
 export function listTeams() {
   return request<{ items: Team[] }>('/teams');
+}
+
+export function listTeamStandings(seasonYear?: number) {
+  const params = new URLSearchParams();
+
+  if (seasonYear) {
+    params.set('seasonYear', String(seasonYear));
+  }
+
+  const query = params.toString();
+
+  return request<TeamStandingsResponse>(
+    query ? `/teams/standings?${query}` : '/teams/standings',
+  );
 }
 
 export function updateFavoriteTeam(teamId: number, token: string) {

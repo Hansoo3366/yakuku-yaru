@@ -13,6 +13,7 @@ import {
   listAdminPosts,
   listAdminUsers,
   updateAdminGame,
+  updateAdminUserEmailVerification,
   updateAdminUserRole,
   type AdminComment,
   type AdminGame,
@@ -226,15 +227,34 @@ export default function AdminPage() {
                 <span>{user.favoriteTeamShortName ?? '팀 없음'}</span>
                 <span>글 {user.postCount} / 댓글 {user.commentCount}</span>
                 <select
+                  aria-label={`${user.nickname} 역할`}
                   onChange={async (event) => {
                     if (!token) return;
                     await updateAdminUserRole(user.id, event.target.value, token);
+                    setMessage('사용자 역할이 변경되었습니다.');
                     await loadAll();
                   }}
                   value={user.role}
                 >
                   <option value="user">user</option>
                   <option value="admin">admin</option>
+                </select>
+                <select
+                  aria-label={`${user.nickname} 이메일 인증`}
+                  onChange={async (event) => {
+                    if (!token) return;
+                    await updateAdminUserEmailVerification(
+                      user.id,
+                      event.target.value === 'verified',
+                      token,
+                    );
+                    setMessage('이메일 인증 상태가 변경되었습니다.');
+                    await loadAll();
+                  }}
+                  value={user.emailVerifiedAt ? 'verified' : 'unverified'}
+                >
+                  <option value="verified">인증됨</option>
+                  <option value="unverified">미인증</option>
                 </select>
                 <button
                   className="btn btn-ghost btn-sm"

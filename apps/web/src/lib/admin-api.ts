@@ -15,6 +15,7 @@ export type AdminUser = {
   profileImageUrl: string | null;
   favoriteTeamId: number | null;
   favoriteTeamShortName: string | null;
+  emailVerifiedAt: string | null;
   createdAt: string;
   postCount: number;
   commentCount: number;
@@ -88,6 +89,21 @@ export function updateAdminUserRole(userId: number, role: string, token: string)
     body: { role },
     token,
   });
+}
+
+export function updateAdminUserEmailVerification(
+  userId: number,
+  verified: boolean,
+  token: string,
+) {
+  return request<{ ok: boolean; verified: boolean }>(
+    `/admin/users/${userId}/email-verification`,
+    {
+      method: 'PATCH',
+      body: { verified },
+      token,
+    },
+  );
 }
 
 export function deleteAdminUser(userId: number, token: string) {

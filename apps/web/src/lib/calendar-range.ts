@@ -22,6 +22,18 @@ export function getMonthRange(month: Date) {
   return { from: formatDateInput(from), to: formatDateInput(to) };
 }
 
+export function getYearRange(year: number) {
+  const from = new Date(year, 0, 1);
+  const to = new Date(year + 1, 0, 1);
+  return { from: formatDateInput(from), to: formatDateInput(to) };
+}
+
+export function isDateInMonth(date: Date, month: Date) {
+  return (
+    date.getFullYear() === month.getFullYear() && date.getMonth() === month.getMonth()
+  );
+}
+
 export function getWeekRange(weekStart: Date) {
   const from = new Date(weekStart);
   const to = new Date(weekStart);

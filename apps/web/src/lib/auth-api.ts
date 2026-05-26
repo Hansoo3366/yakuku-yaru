@@ -8,10 +8,11 @@ export type AuthResponse = {
 
 export type EmailVerificationMeta = {
   emailSent: boolean;
-  expiresAt: string;
+  expiresAt: string | null;
   resendAvailableAt: string;
   resendsRemaining: number;
-  verificationCode: string | null;
+  verificationCode?: string | null;
+  needsResend?: boolean;
 };
 
 export type RegisterResponse = EmailVerificationMeta & {
@@ -68,6 +69,12 @@ export function resendVerificationEmail(email: string) {
     method: 'POST',
     body: { email },
   });
+}
+
+export function fetchVerificationStatus(email: string) {
+  return request<EmailVerificationMeta>(
+    `/auth/verification-status?email=${encodeURIComponent(email)}`,
+  );
 }
 
 export function requestPasswordReset(email: string) {

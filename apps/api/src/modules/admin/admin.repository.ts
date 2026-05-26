@@ -28,6 +28,7 @@ export async function listAdminUsers(keyword?: string) {
        u.profile_image_url AS profileImageUrl,
        u.favorite_team_id AS favoriteTeamId,
        t.short_name AS favoriteTeamShortName,
+       u.email_verified_at AS emailVerifiedAt,
        u.created_at AS createdAt,
        COUNT(DISTINCT p.id) AS postCount,
        COUNT(DISTINCT c.id) AS commentCount
@@ -36,7 +37,7 @@ export async function listAdminUsers(keyword?: string) {
      LEFT JOIN posts p ON p.user_id = u.id
      LEFT JOIN comments c ON c.user_id = u.id
      WHERE (? IS NULL OR u.email LIKE ? OR u.nickname LIKE ?)
-     GROUP BY u.id, u.email, u.nickname, u.role, u.profile_image_url, u.favorite_team_id, t.short_name, u.created_at
+     GROUP BY u.id, u.email, u.nickname, u.role, u.profile_image_url, u.favorite_team_id, t.short_name, u.email_verified_at, u.created_at
      ORDER BY u.created_at DESC
      LIMIT 100`,
     [q, q, q],

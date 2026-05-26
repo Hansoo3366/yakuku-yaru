@@ -5,6 +5,7 @@ import { rateLimit } from '../../middleware/rate-limit.js';
 import { HttpError } from '../../utils/http-error.js';
 import { deleteComment } from '../comments/comment.repository.js';
 import { deletePost } from '../posts/post.repository.js';
+import { findUserById, setUserEmailVerified } from '../users/user.repository.js';
 import {
   createAdminGame,
   deleteAdminUser,
@@ -96,6 +97,32 @@ adminRouter.patch('/users/:userId/role', adminWriteLimit, async (req, res, next)
     next(error);
   }
 });
+
+adminRouter.patch(
+  '/users/:userId/email-verification',
+  adminWriteLimit,
+  async (req, res, next) => {
+    try {
+      const userId = Number(req.params.userId);
+      const { verified } = req.body as { verified?: boolean };
+
+      if (typeof verified !== 'boolean') {
+        throw new HttpError(400, 'INVALID_INPUT', 'verified 값(true/false)이 필요합니다.');
+      }
+
+      const user = await findUserById(userId);
+
+      if (!user) {
+        throw new HttpError(404, 'USER_NOT_FOUND', '사용자를 찾을 수 없습니다.');
+      }
+
+      await setUserEmailVerified(userId, verified);
+      res.json({ ok: true, verified });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
 
 adminRouter.delete('/users/:userId', adminWriteLimit, async (req, res, next) => {
   try {

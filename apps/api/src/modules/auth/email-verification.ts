@@ -93,3 +93,44 @@ export async function resendEmailVerification(email: string) {
     nickname: user.nickname,
   });
 }
+
+function isUsableVerificationToken(token: {
+  expires_at: Date;
+  used_at: Date | null;
+}) {
+  return !token.used_at && new Date(token.expires_at).getTime() > Date.now();
+}
+
+export async function getEmailVerificationStatus(email: string) {
+  const user = await findUserByEmail(email);
+
+  if (!user) {
+    throw new HttpError(404, 'USER_NOT_FOUND', '가입 정보를 찾을 수 없습니다.');
+  }
+
+  if (user.email_verified_at) {
+    throw new HttpError(400, 'EMAIL_ALREADY_VERIFIED', '이미 인증이 완료된 이메일입니다.');
+  }
+
+  const sendCount = await countEmailVerificationSends(user.id);
+  const resendsRemaining = getVerificationResendsRemaining(sendCount);
+  const latest = await getLatestEmailVerificationToken(user.id);
+
+  if (!latest || !isUsableVerificationToken(latest)) {
+    return {
+      emailSent: false,
+      expiresAt: null,
+      resendAvailableAt: toIso(new Date()),
+      resendsRemaining,
+      needsResend: true,
+    };
+  }
+
+  return {
+    emailSent: true,
+    expiresAt: toIso(latest.expires_at),
+    resendAvailableAt: toIso(getResendAvailableAt(latest.created_at)),
+    resendsRemaining,
+    needsResend: false,
+  };
+}
