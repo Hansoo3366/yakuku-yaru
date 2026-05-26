@@ -12,11 +12,6 @@ import {
   type AttendanceRecord,
 } from '@/lib/attendance-api';
 import { getTeamLogoSrc } from '@/lib/team-logo';
-import {
-  createGameReminder,
-  deleteGameReminder,
-  fetchGameReminder,
-} from '@/lib/reminder-api';
 import { Skeleton } from '@/components/Skeleton';
 import {
   getGameStatusBadgeClass,
@@ -37,10 +32,6 @@ export default function GameDetailPage() {
   const [game, setGame] = useState<Game | null>(null);
   const [attendanceRecord, setAttendanceRecord] =
     useState<AttendanceRecord | null>(null);
-  const [reminderEnabled, setReminderEnabled] = useState(false);
-  const [reminderMessage, setReminderMessage] = useState('');
-  const [isToggling, setIsToggling] = useState(false);
-
   useEffect(() => {
     fetchGame(gameId).then((response) => setGame(response.game));
 
@@ -51,37 +42,8 @@ export default function GameDetailPage() {
           response.items.find((record) => record.gameId === gameId) ?? null,
         );
       });
-      fetchGameReminder(gameId, token).then((response) => {
-        setReminderEnabled(response.enabled);
-      });
     }
   }, [gameId]);
-
-  async function handleReminderToggle() {
-    const token = getAccessToken();
-
-    if (!token) {
-      setReminderMessage('로그인 후 알림을 설정할 수 있습니다.');
-      return;
-    }
-
-    if (!game) return;
-
-    setIsToggling(true);
-    try {
-      if (reminderEnabled) {
-        await deleteGameReminder(game.id, token);
-        setReminderEnabled(false);
-        setReminderMessage('경기 알림을 해제했어요.');
-      } else {
-        await createGameReminder(game.id, token);
-        setReminderEnabled(true);
-        setReminderMessage('경기 당일에 알림을 보내드릴게요.');
-      }
-    } finally {
-      setIsToggling(false);
-    }
-  }
 
   if (!game) {
     return (
@@ -170,27 +132,6 @@ export default function GameDetailPage() {
             </a>
           ) : null}
         </div>
-
-        <div className="reminder-row">
-          <div>
-            <strong>경기 알림</strong>
-            <p>경기 당일 관전 알림을 받으실래요?</p>
-          </div>
-          <button
-            aria-checked={reminderEnabled}
-            aria-label="경기 알림 토글"
-            className="toggle-switch"
-            disabled={isToggling}
-            onClick={handleReminderToggle}
-            role="switch"
-            type="button"
-          />
-        </div>
-        {reminderMessage ? (
-          <p className="muted" style={{ fontSize: 'var(--text-xs)' }}>
-            {reminderMessage}
-          </p>
-        ) : null}
       </section>
 
       <section className="card">

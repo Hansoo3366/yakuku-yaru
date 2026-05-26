@@ -1,8 +1,8 @@
 import type { Game, TeamStandingsResponse } from '@/lib/baseball-api';
 import type { WinRateSnapshot } from '@/lib/calendar-win-rates';
 import {
-  type OpponentInsightItem,
-  pickOpponentExtreme,
+  type OpponentInsightRankings,
+  pickOpponentRankedList,
 } from '@/lib/calendar-opponent-insights';
 import { getFavoriteTeamGameOutcome } from '@/lib/game-outcome';
 
@@ -10,6 +10,8 @@ type OpponentAccumulator = {
   teamId: number;
   shortName: string;
   wins: number;
+  losses: number;
+  draws: number;
   decided: number;
 };
 
@@ -54,12 +56,9 @@ export function getKboFavoriteTeamSeasonWinRate(
 export function getKboOpponentWinRateInsights(
   games: Game[],
   favoriteTeamId: number | null | undefined,
-): {
-  teamWinRateHigh: OpponentInsightItem | null;
-  teamWinRateLow: OpponentInsightItem | null;
-} {
+): OpponentInsightRankings {
   if (!favoriteTeamId) {
-    return { teamWinRateHigh: null, teamWinRateLow: null };
+    return { high: [], low: [] };
   }
 
   const stats = new Map<number, OpponentAccumulator>();
@@ -81,12 +80,18 @@ export function getKboOpponentWinRateInsights(
       teamId: opponent.id,
       shortName: opponent.shortName,
       wins: 0,
+      losses: 0,
+      draws: 0,
       decided: 0,
     };
     current.decided += 1;
 
     if (outcome === 'win') {
       current.wins += 1;
+    } else if (outcome === 'lose') {
+      current.losses += 1;
+    } else {
+      current.draws += 1;
     }
 
     stats.set(opponent.id, current);
@@ -95,7 +100,7 @@ export function getKboOpponentWinRateInsights(
   const entries = [...stats.values()];
 
   return {
-    teamWinRateHigh: pickOpponentExtreme(entries, 'high'),
-    teamWinRateLow: pickOpponentExtreme(entries, 'low'),
+    high: pickOpponentRankedList(entries, 'high'),
+    low: pickOpponentRankedList(entries, 'low'),
   };
 }

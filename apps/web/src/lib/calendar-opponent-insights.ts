@@ -6,12 +6,22 @@ export type OpponentInsightItem = {
   shortName: string;
   rate: number;
   games: number;
+  wins: number;
+  losses: number;
+  draws: number;
+};
+
+export type OpponentInsightRankings = {
+  high: OpponentInsightItem[];
+  low: OpponentInsightItem[];
 };
 
 type OpponentAccumulator = {
   teamId: number;
   shortName: string;
   wins: number;
+  losses: number;
+  draws: number;
   decided: number;
 };
 
@@ -42,43 +52,79 @@ function isDecidedTeamOutcome(
   return outcome === 'win' || outcome === 'lose' || outcome === 'draw';
 }
 
-export function pickOpponentExtreme(
-  entries: OpponentAccumulator[],
-  direction: 'high' | 'low',
-): OpponentInsightItem | null {
-  const rated = entries
-    .filter((entry) => entry.decided > 0)
-    .map((entry) => ({
-      teamId: entry.teamId,
-      shortName: entry.shortName,
-      rate: Math.round((entry.wins / entry.decided) * 100),
-      games: entry.decided,
-    }));
+function applyOutcomeToAccumulator(
+  accumulator: OpponentAccumulator,
+  outcome: 'win' | 'lose' | 'draw',
+) {
+  accumulator.decided += 1;
 
-  if (!rated.length) {
-    return null;
+  if (outcome === 'win') {
+    accumulator.wins += 1;
+    return;
   }
 
-  return rated.sort((left, right) => {
+  if (outcome === 'lose') {
+    accumulator.losses += 1;
+    return;
+  }
+
+  accumulator.draws += 1;
+}
+
+function toOpponentInsightItem(entry: OpponentAccumulator): OpponentInsightItem {
+  return {
+    teamId: entry.teamId,
+    shortName: entry.shortName,
+    rate: Math.round((entry.wins / entry.decided) * 100),
+    games: entry.decided,
+    wins: entry.wins,
+    losses: entry.losses,
+    draws: entry.draws,
+  };
+}
+
+function sortOpponentItems(
+  items: OpponentInsightItem[],
+  direction: 'high' | 'low',
+) {
+  return [...items].sort((left, right) => {
     if (left.rate !== right.rate) {
       return direction === 'high' ? right.rate - left.rate : left.rate - right.rate;
     }
 
     return right.games - left.games;
-  })[0];
+  });
 }
 
-export function getStadiumAttendanceOpponentInsights(
-  records: AttendanceRecord[],
-  favoriteTeamId: number | null | undefined,
-): {
-  stadiumWinRateHigh: OpponentInsightItem | null;
-  stadiumWinRateLow: OpponentInsightItem | null;
-} {
-  if (!favoriteTeamId) {
-    return { stadiumWinRateHigh: null, stadiumWinRateLow: null };
+export function pickOpponentRankedList(
+  entries: OpponentAccumulator[],
+  direction: 'high' | 'low',
+  limit?: number,
+): OpponentInsightItem[] {
+  const rated = entries
+    .filter((entry) => entry.decided > 0)
+    .map(toOpponentInsightItem);
+
+  const sorted = sortOpponentItems(rated, direction);
+
+  if (limit === undefined) {
+    return sorted;
   }
 
+  return sorted.slice(0, limit);
+}
+
+export function pickOpponentExtreme(
+  entries: OpponentAccumulator[],
+  direction: 'high' | 'low',
+): OpponentInsightItem | null {
+  return pickOpponentRankedList(entries, direction, 1)[0] ?? null;
+}
+
+function buildStadiumOpponentStats(
+  records: AttendanceRecord[],
+  favoriteTeamId: number,
+) {
   const stadiumOpponentStats = new Map<number, OpponentAccumulator>();
 
   for (const record of records) {
@@ -106,21 +152,29 @@ export function getStadiumAttendanceOpponentInsights(
       teamId: opponent.id,
       shortName: opponent.shortName,
       wins: 0,
+      losses: 0,
+      draws: 0,
       decided: 0,
     };
-    stadiumCurrent.decided += 1;
-
-    if (teamOutcome === 'win') {
-      stadiumCurrent.wins += 1;
-    }
-
+    applyOutcomeToAccumulator(stadiumCurrent, teamOutcome);
     stadiumOpponentStats.set(opponent.id, stadiumCurrent);
   }
 
-  const stadiumEntries = [...stadiumOpponentStats.values()];
+  return [...stadiumOpponentStats.values()];
+}
+
+export function getStadiumAttendanceOpponentInsights(
+  records: AttendanceRecord[],
+  favoriteTeamId: number | null | undefined,
+): OpponentInsightRankings {
+  if (!favoriteTeamId) {
+    return { high: [], low: [] };
+  }
+
+  const stadiumEntries = buildStadiumOpponentStats(records, favoriteTeamId);
 
   return {
-    stadiumWinRateHigh: pickOpponentExtreme(stadiumEntries, 'high'),
-    stadiumWinRateLow: pickOpponentExtreme(stadiumEntries, 'low'),
+    high: pickOpponentRankedList(stadiumEntries, 'high'),
+    low: pickOpponentRankedList(stadiumEntries, 'low'),
   };
 }
