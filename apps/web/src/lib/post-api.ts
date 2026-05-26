@@ -6,6 +6,7 @@ export type PostListItem = {
   title: string;
   authorNickname: string;
   authorProfileImageUrl: string | null;
+  authorFavoriteTeamShortName: string | null;
   commentCount: number;
   createdAt: string;
   updatedAt: string;
@@ -22,6 +23,7 @@ export type CommentItem = {
   content: string;
   authorNickname: string;
   authorProfileImageUrl: string | null;
+  authorFavoriteTeamShortName: string | null;
   createdAt: string;
   updatedAt: string;
 };

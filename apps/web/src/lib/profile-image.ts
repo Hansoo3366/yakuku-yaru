@@ -16,10 +16,15 @@ export function getProfileImageSrc(
 
 export function getAuthorProfileImageSrc(
   profileImageUrl: string | null | undefined,
+  favoriteTeamShortName?: string | null,
 ) {
   if (profileImageUrl) {
     return getAssetUrl(profileImageUrl);
   }
 
-  return '/icons/main_icon.png';
+  return (
+    getTeamLogoSrc(
+      favoriteTeamShortName ? { shortName: favoriteTeamShortName } : null,
+    ) || '/icons/main_icon.png'
+  );
 }

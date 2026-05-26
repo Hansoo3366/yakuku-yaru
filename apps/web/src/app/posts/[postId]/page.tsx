@@ -122,7 +122,10 @@ export default function PostDetailPage() {
               <span className="author-inline">
                 <img
                   alt=""
-                  src={getAuthorProfileImageSrc(post.authorProfileImageUrl)}
+                  src={getAuthorProfileImageSrc(
+                    post.authorProfileImageUrl,
+                    post.authorFavoriteTeamShortName,
+                  )}
                 />
                 {post.authorNickname}
               </span>
@@ -182,6 +185,7 @@ export default function PostDetailPage() {
                         alt=""
                         src={getAuthorProfileImageSrc(
                           comment.authorProfileImageUrl,
+                          comment.authorFavoriteTeamShortName,
                         )}
                       />
                       {comment.authorNickname}

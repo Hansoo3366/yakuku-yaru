@@ -92,7 +92,10 @@ export default function PostsPage() {
                 <span className="author-inline">
                   <img
                     alt=""
-                    src={getAuthorProfileImageSrc(post.authorProfileImageUrl)}
+                    src={getAuthorProfileImageSrc(
+                      post.authorProfileImageUrl,
+                      post.authorFavoriteTeamShortName,
+                    )}
                   />
                   {post.authorNickname}
                 </span>

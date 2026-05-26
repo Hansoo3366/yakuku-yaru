@@ -2086,8 +2086,10 @@ img {
 }
 
 .post-list {
+  align-content: start;
   display: grid;
   gap: var(--space-2);
+  grid-auto-rows: max-content;
 }
 
 .post-card {

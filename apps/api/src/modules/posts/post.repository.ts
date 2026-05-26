@@ -8,6 +8,7 @@ export type PostRow = RowDataPacket & {
   content: string;
   author_nickname: string;
   author_profile_image_url: string | null;
+  author_favorite_team_short_name: string | null;
   comment_count: number;
   created_at: Date;
   updated_at: Date;
@@ -19,6 +20,7 @@ export type PostListItem = {
   title: string;
   authorNickname: string;
   authorProfileImageUrl: string | null;
+  authorFavoriteTeamShortName: string | null;
   commentCount: number;
   createdAt: Date;
   updatedAt: Date;
@@ -35,6 +37,7 @@ export function toPostListItem(row: PostRow): PostListItem {
     title: row.title,
     authorNickname: row.author_nickname,
     authorProfileImageUrl: row.author_profile_image_url,
+    authorFavoriteTeamShortName: row.author_favorite_team_short_name,
     commentCount: Number(row.comment_count ?? 0),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -80,14 +83,16 @@ export async function listPosts(input: {
        p.content,
        u.nickname AS author_nickname,
        u.profile_image_url AS author_profile_image_url,
+       t.short_name AS author_favorite_team_short_name,
        COUNT(c.id) AS comment_count,
        p.created_at,
        p.updated_at
      FROM posts p
      JOIN users u ON u.id = p.user_id
+     LEFT JOIN teams t ON t.id = u.favorite_team_id
      LEFT JOIN comments c ON c.post_id = p.id
      ${whereClause}
-     GROUP BY p.id, p.user_id, p.title, p.content, u.nickname, u.profile_image_url, p.created_at, p.updated_at
+     GROUP BY p.id, p.user_id, p.title, p.content, u.nickname, u.profile_image_url, t.short_name, p.created_at, p.updated_at
      ORDER BY p.created_at DESC
      LIMIT ? OFFSET ?`,
     [...whereParams, input.size, offset],
@@ -115,14 +120,16 @@ export async function findPostById(id: number) {
        p.content,
        u.nickname AS author_nickname,
        u.profile_image_url AS author_profile_image_url,
+       t.short_name AS author_favorite_team_short_name,
        COUNT(c.id) AS comment_count,
        p.created_at,
        p.updated_at
      FROM posts p
      JOIN users u ON u.id = p.user_id
+     LEFT JOIN teams t ON t.id = u.favorite_team_id
      LEFT JOIN comments c ON c.post_id = p.id
      WHERE p.id = ?
-     GROUP BY p.id, p.user_id, p.title, p.content, u.nickname, u.profile_image_url, p.created_at, p.updated_at
+     GROUP BY p.id, p.user_id, p.title, p.content, u.nickname, u.profile_image_url, t.short_name, p.created_at, p.updated_at
      LIMIT 1`,
     [id],
   );

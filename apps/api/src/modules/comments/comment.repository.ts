@@ -8,6 +8,7 @@ export type CommentRow = RowDataPacket & {
   content: string;
   author_nickname: string;
   author_profile_image_url: string | null;
+  author_favorite_team_short_name: string | null;
   created_at: Date;
   updated_at: Date;
 };
@@ -19,6 +20,7 @@ export type CommentItem = {
   content: string;
   authorNickname: string;
   authorProfileImageUrl: string | null;
+  authorFavoriteTeamShortName: string | null;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -31,6 +33,7 @@ export function toCommentItem(row: CommentRow): CommentItem {
     content: row.content,
     authorNickname: row.author_nickname,
     authorProfileImageUrl: row.author_profile_image_url,
+    authorFavoriteTeamShortName: row.author_favorite_team_short_name,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -59,10 +62,12 @@ export async function listCommentsByPostId(postId: number) {
        c.content,
        u.nickname AS author_nickname,
        u.profile_image_url AS author_profile_image_url,
+       t.short_name AS author_favorite_team_short_name,
        c.created_at,
        c.updated_at
      FROM comments c
      JOIN users u ON u.id = c.user_id
+     LEFT JOIN teams t ON t.id = u.favorite_team_id
      WHERE c.post_id = ?
      ORDER BY c.created_at ASC`,
     [postId],
@@ -80,10 +85,12 @@ export async function findCommentById(id: number) {
        c.content,
        u.nickname AS author_nickname,
        u.profile_image_url AS author_profile_image_url,
+       t.short_name AS author_favorite_team_short_name,
        c.created_at,
        c.updated_at
      FROM comments c
      JOIN users u ON u.id = c.user_id
+     LEFT JOIN teams t ON t.id = u.favorite_team_id
      WHERE c.id = ?
      LIMIT 1`,
     [id],
