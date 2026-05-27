@@ -159,7 +159,11 @@ cat ~/.ssh/github_actions_yakuku_yaru
 
 ### SSH 인증 실패 (`unable to authenticate, attempted methods [none publickey]`)
 
-KBO 크롤 workflow가 아니라 **`Deploy to Google Cloud VM`** 배포 단계에서 나는 오류입니다. GitHub Secrets의 `DEPLOY_SSH_KEY`와 서버 `authorized_keys`가 맞지 않을 때 발생합니다.
+KBO 크롤 workflow가 아니라 **`Deploy to Google Cloud VM`** 배포 단계에서 나는 오류입니다.
+
+`deploy.yml`은 `appleboy/ssh-action`에 **`key:`(Secret 내용)** 을 넘깁니다. 이전 단계에서 runner의 `~/.ssh/deploy_key`를 만들고 `key_path`로 가리키면 **동작하지 않습니다**. ssh-action은 Docker 컨테이너 안에서 실행되어 runner 홈 디렉터리의 파일을 읽을 수 없기 때문입니다.
+
+Secret과 서버 `authorized_keys`가 맞지 않을 때도 같은 메시지가 납니다.
 
 1. **서버에서** 배포 전용 키를 새로 만듭니다 (패스프레이즈 없이).
 
