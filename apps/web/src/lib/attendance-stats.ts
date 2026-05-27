@@ -1,5 +1,5 @@
 import type { AttendanceRecord, AttendanceStats } from '@/lib/attendance-api';
-import { countsTowardWinRate } from '@/lib/attendance-game';
+import { countsTowardWinRateForRecord } from '@/lib/attendance-game';
 import {
   resolveAttendanceOutcome,
   resolveAttendanceTitle,
@@ -12,7 +12,13 @@ export function computeAttendanceStatsFromRecords(
 ): AttendanceStats {
   const owned = records.filter((record) => record.viewerRelation === 'owner');
   const countable = records.filter((record) =>
-    countsTowardWinRate(record.game, favoriteTeamId),
+    countsTowardWinRateForRecord({
+      game: record.game,
+      favoriteTeamId,
+      cheeredTeamId: record.cheeredTeamId ?? null,
+      viewerRelation: record.viewerRelation,
+      ownerFavoriteTeamId: record.ownerFavoriteTeamId ?? null,
+    }),
   );
 
   let stadiumCount = 0;

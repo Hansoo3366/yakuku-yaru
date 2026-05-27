@@ -45,6 +45,29 @@ export function countsTowardWinRate(
   return isTeamInGame(game, favoriteTeamId);
 }
 
+/** 기록 단위 집계 대상 여부 (응원팀 변경/중립 직관 cheeredTeam 반영) */
+export function countsTowardWinRateForRecord(input: {
+  game: GameTeamsLike;
+  favoriteTeamId: number | null | undefined;
+  cheeredTeamId?: number | null;
+  viewerRelation?: 'owner' | 'companion';
+  ownerFavoriteTeamId?: number | null;
+}) {
+  if (isGameCancelled(input.game)) {
+    return false;
+  }
+
+  return (
+    resolveOutcomeTeamId({
+      game: input.game,
+      favoriteTeamId: input.favoriteTeamId,
+      cheeredTeamId: input.cheeredTeamId,
+      viewerRelation: input.viewerRelation,
+      ownerFavoriteTeamId: input.ownerFavoriteTeamId,
+    }) !== null
+  );
+}
+
 export function requiresCheeredTeamPick(
   game: GameTeamsLike,
   favoriteTeamId: number | null | undefined,

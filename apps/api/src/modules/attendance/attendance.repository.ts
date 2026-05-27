@@ -2,7 +2,7 @@ import type { ResultSetHeader, RowDataPacket } from 'mysql2';
 import { db } from '../../config/database.js';
 import { findUserById } from '../users/user.repository.js';
 import {
-  countsTowardWinRate,
+  countsTowardWinRateForRecord,
   resolveStorageOutcomeTeamId,
 } from './attendance-game.js';
 import {
@@ -482,7 +482,13 @@ export async function getAttendanceStats(userId: number) {
   const records = await listAttendanceRecords({ userId });
   const owned = records.filter((record) => record.viewerRelation === 'owner');
   const countable = records.filter((record) =>
-    countsTowardWinRate(record.game, favoriteTeamId),
+    countsTowardWinRateForRecord({
+      game: record.game,
+      favoriteTeamId,
+      cheeredTeamId: record.cheeredTeamId ?? null,
+      viewerRelation: record.viewerRelation,
+      ownerFavoriteTeamId: record.ownerFavoriteTeamId ?? null,
+    }),
   );
 
   let stadiumCount = 0;
