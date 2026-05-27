@@ -124,9 +124,34 @@ function buildHitterBasic2Body(input: { html: string; teamCode: KboTeamCode }) {
     '__EVENTVALIDATION',
     extractHiddenField(input.html, '__EVENTVALIDATION'),
   );
-  body.set(`${FIELD_PREFIX}ddlSeason`, String(new Date().getFullYear()));
-  body.set(`${FIELD_PREFIX}ddlTeam`, input.teamCode);
-  body.set(`${FIELD_PREFIX}btnSearch`, '검색');
+  // HitterBasic2는 dropdown name이 "...$ddlX$ddlX" 형태다.
+  // 누락 시 팀 필터가 무시되거나 빈 결과가 반환될 수 있다.
+  body.set(
+    `${FIELD_PREFIX}ddlSeason$ddlSeason`,
+    String(new Date().getFullYear()),
+  );
+  body.set(`${FIELD_PREFIX}ddlSeries$ddlSeries`, '0');
+  body.set(`${FIELD_PREFIX}ddlTeam$ddlTeam`, input.teamCode);
+  body.set(`${FIELD_PREFIX}ddlPos$ddlPos`, '');
+  body.set(`${FIELD_PREFIX}ddlSituation$ddlSituation`, '');
+  body.set(`${FIELD_PREFIX}ddlSituationDetail$ddlSituationDetail`, '');
+  body.set(
+    `${FIELD_PREFIX}hfPage`,
+    extractHiddenField(input.html, 'cphContents_cphContents_cphContents_hfPage') ||
+      '1',
+  );
+  body.set(
+    `${FIELD_PREFIX}hfOrderByCol`,
+    extractHiddenField(
+      input.html,
+      'cphContents_cphContents_cphContents_hfOrderByCol',
+    ) || 'HRA_RT',
+  );
+  body.set(
+    `${FIELD_PREFIX}hfOrderBy`,
+    extractHiddenField(input.html, 'cphContents_cphContents_cphContents_hfOrderBy') ||
+      'DESC',
+  );
 
   return body;
 }
@@ -143,12 +168,19 @@ export async function fetchKboHitterSeasonStatsByTeam(teamCode: KboTeamCode) {
   }
 
   const initialHtml = await initialResponse.text();
+  const rawSetCookie = initialResponse.headers.get('set-cookie') ?? '';
+  const cookie = rawSetCookie
+    .split(',')
+    .map((part) => part.split(';')[0]?.trim())
+    .filter((part): part is string => Boolean(part))
+    .join('; ');
   const response = await fetch(KBO_HITTER_BASIC2_URL, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',
       Referer: KBO_HITTER_BASIC2_URL,
       'User-Agent': 'YakukuYaru/1.0 (+https://yakuku-yaru.today; player-sync)',
+      ...(cookie ? { Cookie: cookie } : {}),
     },
     body: buildHitterBasic2Body({ html: initialHtml, teamCode }).toString(),
   });
