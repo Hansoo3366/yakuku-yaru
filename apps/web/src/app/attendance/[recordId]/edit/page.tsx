@@ -27,6 +27,7 @@ import type { Game } from '@/lib/baseball-api';
 import {
   isGameCancelled,
   isNeutralAttendance,
+  normalizeFavoriteTeamId,
   requiresCheeredTeamPick,
 } from '@/lib/attendance-game';
 import {
@@ -126,19 +127,19 @@ export default function EditAttendancePage() {
 
         setRecord(r);
         setGame(loadedGame);
-        setFavoriteTeamId(meResponse.user.favoriteTeamId);
+        const favoriteTeamId = normalizeFavoriteTeamId(
+          meResponse.user.favoriteTeamId,
+        );
+        setFavoriteTeamId(favoriteTeamId);
         setCheeredTeamId(r.cheeredTeamId ?? null);
         setMemo(r.memo ?? '');
         setWatchType(r.watchType);
         setCompanions(toSelectedCompanions(r.companions));
 
-        const neutral = isNeutralAttendance(
-          loadedGame,
-          meResponse.user.favoriteTeamId,
-        );
+        const neutral = isNeutralAttendance(loadedGame, favoriteTeamId);
 
         if (!neutral) {
-          applyOfficialScores(loadedGame, meResponse.user.favoriteTeamId);
+          applyOfficialScores(loadedGame, favoriteTeamId);
         } else if (r.cheeredTeamId) {
           applyOfficialScores(loadedGame, r.cheeredTeamId);
         } else {
@@ -352,6 +353,7 @@ export default function EditAttendancePage() {
 
         {game && needsCheeredTeam ? (
           <CheeredTeamPicker
+            favoriteTeamId={favoriteTeamId}
             game={game}
             onChange={setCheeredTeamId}
             value={cheeredTeamId}

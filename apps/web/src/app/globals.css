@@ -2215,6 +2215,10 @@ img {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.calendar-summary-row--insights {
+  align-items: start;
+}
+
 .calendar-summary-row--trio {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
@@ -2477,6 +2481,11 @@ img {
 
 .calendar-opponent-ranking__toggle:hover {
   color: var(--color-night-navy);
+}
+
+.calendar-opponent-ranking__toggle-spacer {
+  display: block;
+  min-height: 1.25rem;
 }
 
 .opponent-ranking-modal {
@@ -4325,7 +4334,7 @@ img {
     font-size: var(--text-sm);
   }
 
-  .calendar-summary-row--quad {
+  .calendar-summary-row--insights {
     grid-template-columns: 1fr;
   }
 
@@ -4509,7 +4518,7 @@ img {
     gap: 6px;
   }
 
-  .calendar-summary-row--quad {
+  .calendar-summary-row--insights {
     grid-template-columns: 1fr;
   }
 

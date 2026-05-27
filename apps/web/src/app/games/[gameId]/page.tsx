@@ -20,6 +20,7 @@ import {
   getGameStatusTone,
 } from '@/lib/game-status';
 import { isGameFinished } from '@/lib/game-outcome';
+import { canWriteAttendanceRecord } from '@/lib/attendance-game';
 
 function formatDateTime(value: string) {
   return new Date(value).toLocaleString('ko-KR', {
@@ -215,6 +216,7 @@ export default function GameDetailPage() {
     game.lineupConfirmed === false &&
     !isFinished &&
     game.status !== 'cancelled';
+  const canWriteAttendance = canWriteAttendanceRecord(game);
 
   return (
     <main className="app-shell">
@@ -276,13 +278,17 @@ export default function GameDetailPage() {
             >
               직관 기록 보기
             </Link>
-          ) : (
+          ) : canWriteAttendance ? (
             <Link
               className="btn btn-primary btn-lg"
               href={`/attendance/new?gameId=${game.id}`}
             >
               직관 기록 작성
             </Link>
+          ) : (
+            <p className="score-input-hint">
+              경기 시작 후에 직관 기록을 작성할 수 있어요.
+            </p>
           )}
           {game.ticketUrl ? (
             <a

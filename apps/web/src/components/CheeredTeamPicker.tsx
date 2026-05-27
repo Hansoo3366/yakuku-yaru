@@ -3,15 +3,37 @@
 /* eslint-disable @next/next/no-img-element */
 
 import type { Game } from '@/lib/baseball-api';
+import { isTeamInGame } from '@/lib/attendance-game';
 import { getTeamLogoSrc } from '@/lib/team-logo';
 
 type Props = {
   game: Game;
+  favoriteTeamId: number | null;
   value: number | null;
   onChange: (teamId: number) => void;
 };
 
-export function CheeredTeamPicker({ game, value, onChange }: Props) {
+function getDescription(
+  game: Game,
+  favoriteTeamId: number | null,
+) {
+  if (!favoriteTeamId) {
+    return '프로필에 응원팀을 설정하면 내 팀 경기는 자동으로 잡혀요. 지금은 그날 응원한 팀을 골라주세요.';
+  }
+
+  if (!isTeamInGame(game, favoriteTeamId)) {
+    return '내 응원팀이 뛰지 않는 경기예요. 그날 응원한 팀을 골라주세요.';
+  }
+
+  return '그날 응원한 팀을 골라주세요.';
+}
+
+export function CheeredTeamPicker({
+  game,
+  favoriteTeamId,
+  value,
+  onChange,
+}: Props) {
   const teams = [game.awayTeam, game.homeTeam];
 
   return (
@@ -19,7 +41,7 @@ export function CheeredTeamPicker({ game, value, onChange }: Props) {
       <div className="section-heading" style={{ marginBottom: 0 }}>
         <div>
           <h2>이날 응원한 팀</h2>
-          <p>내 응원팀이 없는 경기예요. 그날 응원한 팀을 골라주세요.</p>
+          <p>{getDescription(game, favoriteTeamId)}</p>
         </div>
       </div>
       <div className="choice-group cheered-team-picker" role="radiogroup" aria-label="응원 팀">

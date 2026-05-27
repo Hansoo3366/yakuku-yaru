@@ -17,7 +17,9 @@ import { fetchGame, type Game } from '@/lib/baseball-api';
 import {
   isGameCancelled,
   isNeutralAttendance,
+  normalizeFavoriteTeamId,
   requiresCheeredTeamPick,
+  canWriteAttendanceRecord,
 } from '@/lib/attendance-game';
 import {
   resolveAttendanceScoresFromGame,
@@ -57,6 +59,7 @@ function NewAttendanceForm() {
     ? requiresCheeredTeamPick(game, favoriteTeamId)
     : false;
   const isCancelledGame = game ? isGameCancelled(game) : false;
+  const canWrite = game ? canWriteAttendanceRecord(game) : false;
 
   function applyOfficialScores(
     targetGame: Game,
@@ -99,14 +102,14 @@ function NewAttendanceForm() {
     Promise.all([fetchGame(gameId), fetchMe(token)])
       .then(([gameResponse, meResponse]) => {
         setGame(gameResponse.game);
-        setFavoriteTeamId(meResponse.user.favoriteTeamId);
-        const neutral = isNeutralAttendance(
-          gameResponse.game,
+        setFavoriteTeamId(normalizeFavoriteTeamId(meResponse.user.favoriteTeamId));
+        const favoriteTeamId = normalizeFavoriteTeamId(
           meResponse.user.favoriteTeamId,
         );
+        const neutral = isNeutralAttendance(gameResponse.game, favoriteTeamId);
 
         if (!neutral) {
-          applyOfficialScores(gameResponse.game, meResponse.user.favoriteTeamId);
+          applyOfficialScores(gameResponse.game, favoriteTeamId);
         } else {
           applyOfficialScores(gameResponse.game, null);
         }
@@ -166,6 +169,11 @@ function NewAttendanceForm() {
       return;
     }
 
+    if (!canWrite) {
+      setErrorMessage('경기 시작 전에는 직관 기록을 작성할 수 없어요.');
+      return;
+    }
+
     if (needsCheeredTeam && !cheeredTeamId) {
       setErrorMessage('이 경기에서 응원한 팀을 선택해주세요.');
       return;
@@ -220,6 +228,17 @@ function NewAttendanceForm() {
 
       {isLoadingGame ? (
         <p className="loading-text">경기 정보 불러오는 중</p>
+      ) : !game ? (
+        <p className="form-error">경기 정보를 불러오지 못했습니다.</p>
+      ) : !canWrite ? (
+        <section className="card stack">
+          <p className="form-error">
+            경기 시작 전에는 직관 기록을 작성할 수 없어요.
+          </p>
+          <Link className="btn btn-ghost btn-lg" href={`/games/${gameId}`}>
+            경기 상세로
+          </Link>
+        </section>
       ) : (
         <form className="form-grid" onSubmit={handleSubmit}>
           <section className="card stack">
@@ -287,6 +306,7 @@ function NewAttendanceForm() {
 
           {game && needsCheeredTeam ? (
             <CheeredTeamPicker
+              favoriteTeamId={favoriteTeamId}
               game={game}
               onChange={setCheeredTeamId}
               value={cheeredTeamId}

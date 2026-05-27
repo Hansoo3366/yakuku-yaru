@@ -8,6 +8,37 @@ export function isGameCancelled(game: { status?: string }) {
   return game.status === 'cancelled';
 }
 
+/** 경기 시작 전 scheduled 일정 */
+export function isGameUpcoming(
+  game: { status?: string; gameDate?: Date | string },
+) {
+  if (isGameCancelled(game)) {
+    return false;
+  }
+
+  if (game.status === 'finished') {
+    return false;
+  }
+
+  if (!game.gameDate) {
+    return game.status === 'scheduled';
+  }
+
+  const gameStart = new Date(game.gameDate).getTime();
+
+  if (Number.isNaN(gameStart)) {
+    return game.status === 'scheduled';
+  }
+
+  return gameStart > Date.now();
+}
+
+export function canWriteAttendanceRecord(
+  game: { status?: string; gameDate?: Date | string },
+) {
+  return !isGameUpcoming(game);
+}
+
 export function isTeamInGame(
   game: GameTeamsLike,
   teamId: number | null | undefined,

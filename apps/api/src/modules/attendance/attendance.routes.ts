@@ -24,7 +24,11 @@ import {
 import { createNotification } from '../notifications/notification.repository.js';
 import { attendancePhotoUpload } from './upload.js';
 import { findUserById } from '../users/user.repository.js';
-import { assertValidCheeredTeamId, isTeamInGame } from './attendance-game.js';
+import {
+  assertValidCheeredTeamId,
+  canWriteAttendanceRecord,
+  isTeamInGame,
+} from './attendance-game.js';
 import { buildAttendanceScoreFields } from './attendance-score.js';
 
 export const attendanceRouter = Router();
@@ -186,6 +190,14 @@ attendanceRouter.post(
 
       if (!game) {
         throw new HttpError(404, 'GAME_NOT_FOUND', '경기를 찾을 수 없습니다.');
+      }
+
+      if (!canWriteAttendanceRecord(game)) {
+        throw new HttpError(
+          400,
+          'GAME_NOT_STARTED',
+          '경기 시작 전에는 직관 기록을 작성할 수 없어요.',
+        );
       }
 
       const existingRecord = await findAttendanceRecordByGame({

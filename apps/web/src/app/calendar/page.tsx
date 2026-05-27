@@ -340,15 +340,9 @@ export default function CalendarPage() {
 
     return {
       teamWinRateHigh: kbo.high,
-      teamWinRateLow: kbo.low,
       stadiumWinRateHigh: stadium.high,
-      stadiumWinRateLow: stadium.low,
     };
-  }, [
-    yearSeasonGames,
-    statsAttendanceRecords,
-    user?.favoriteTeamId,
-  ]);
+  }, [yearSeasonGames, statsAttendanceRecords, user?.favoriteTeamId]);
 
   const favoriteTeamStanding = useMemo(() => {
     if (!user?.favoriteTeamId || !teamStandings?.items.length) {
@@ -619,7 +613,7 @@ export default function CalendarPage() {
         {showTeamWinRate ? (
           <div className="calendar-win-rate-group">
             <h2 className="calendar-win-rate-heading">상대 팀 인사이트</h2>
-            <div className="calendar-summary-row calendar-summary-row--quad">
+            <div className="calendar-summary-row calendar-summary-row--duo calendar-summary-row--insights">
               <div className="calendar-summary-card calendar-summary-card--ranking">
                 <span>상대 승률 높은 팀</span>
                 <OpponentInsightRanking
@@ -629,28 +623,11 @@ export default function CalendarPage() {
                 />
               </div>
               <div className="calendar-summary-card calendar-summary-card--ranking">
-                <span>상대 승률 낮은 팀</span>
-                <OpponentInsightRanking
-                  items={opponentInsights.teamWinRateLow}
-                  showViewAll={false}
-                  title="상대 승률 낮은 팀"
-                  variant="low"
-                />
-              </div>
-              <div className="calendar-summary-card calendar-summary-card--ranking">
                 <span>직관 승률 높은 팀</span>
                 <OpponentInsightRanking
                   items={opponentInsights.stadiumWinRateHigh}
                   title="직관 승률 높은 팀"
                   variant="high"
-                />
-              </div>
-              <div className="calendar-summary-card calendar-summary-card--ranking">
-                <span>직관 승률 낮은 팀</span>
-                <OpponentInsightRanking
-                  items={opponentInsights.stadiumWinRateLow}
-                  title="직관 승률 낮은 팀"
-                  variant="low"
                 />
               </div>
             </div>
