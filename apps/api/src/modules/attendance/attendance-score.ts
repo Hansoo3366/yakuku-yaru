@@ -161,13 +161,6 @@ export function buildAttendanceScoreFields(input: {
   game: Game;
   favoriteTeamId: number | null;
   cheeredTeamId?: number | null;
-  body: {
-    myTeamScore?: unknown;
-    opponentScore?: unknown;
-    result?: string | null;
-    isScoreModified?: boolean;
-  };
-  normalizeNumber: (value: unknown) => number | null;
 }) {
   const outcomeTeamId = resolveStorageOutcomeTeamId({
     game: input.game,
@@ -185,19 +178,11 @@ export function buildAttendanceScoreFields(input: {
     };
   }
 
-  const myTeamScore = input.normalizeNumber(input.body.myTeamScore);
-  const opponentScore = input.normalizeNumber(input.body.opponentScore);
-  const hasManualScore = myTeamScore !== null || opponentScore !== null;
-  const result =
-    myTeamScore !== null && opponentScore !== null
-      ? inferResultFromScores(myTeamScore, opponentScore)
-      : input.body.result || null;
-
   return {
-    myTeamScore,
-    opponentScore,
-    result,
-    isScoreModified: input.body.isScoreModified === true || hasManualScore,
+    myTeamScore: null,
+    opponentScore: null,
+    result: null,
+    isScoreModified: false,
   };
 }
 

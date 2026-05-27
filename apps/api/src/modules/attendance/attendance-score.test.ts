@@ -45,30 +45,18 @@ const fromKbo = buildAttendanceScoreFields({
   game: baseGame,
   favoriteTeamId: 1,
   cheeredTeamId: null,
-  body: { myTeamScore: 9, opponentScore: 0, isScoreModified: true },
-  normalizeNumber: (v) => (v === '' || v == null ? null : Number(v)),
 });
 assert.equal(fromKbo.myTeamScore, 5);
 assert.equal(fromKbo.isScoreModified, false);
 
-const manual = buildAttendanceScoreFields({
+const pendingGame = buildAttendanceScoreFields({
   game: { ...baseGame, homeScore: null, awayScore: null },
   favoriteTeamId: 1,
   cheeredTeamId: null,
-  body: { myTeamScore: 2, opponentScore: 1, result: 'win' },
-  normalizeNumber: (v) => (v === '' || v == null ? null : Number(v)),
 });
-assert.equal(manual.myTeamScore, 2);
-assert.equal(manual.isScoreModified, true);
-
-const wrongResultBody = buildAttendanceScoreFields({
-  game: { ...baseGame, homeScore: null, awayScore: null },
-  favoriteTeamId: 1,
-  cheeredTeamId: null,
-  body: { myTeamScore: 1, opponentScore: 4, result: 'win' },
-  normalizeNumber: (v) => (v === '' || v == null ? null : Number(v)),
-});
-assert.equal(wrongResultBody.result, 'lose');
+assert.equal(pendingGame.myTeamScore, null);
+assert.equal(pendingGame.result, null);
+assert.equal(pendingGame.isScoreModified, false);
 
 assert.equal(
   resolveAttendanceOutcome(

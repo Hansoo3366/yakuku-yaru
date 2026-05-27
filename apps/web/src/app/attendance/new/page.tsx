@@ -16,7 +16,6 @@ import {
 import { fetchGame, type Game } from '@/lib/baseball-api';
 import { isNeutralAttendance } from '@/lib/attendance-game';
 import {
-  inferResultFromScores,
   resolveAttendanceScoresFromGame,
   type AttendanceResult,
 } from '@/lib/attendance-score';
@@ -36,9 +35,9 @@ function NewAttendanceForm() {
   const [myTeamScore, setMyTeamScore] = useState('');
   const [opponentScore, setOpponentScore] = useState('');
   const [watchType, setWatchType] = useState<'stadium' | 'home'>('stadium');
-  const [result, setResult] = useState<AttendanceResult>('win');
+  const [result, setResult] = useState<AttendanceResult | null>(null);
   const [resultManuallySet, setResultManuallySet] = useState(false);
-  const [scoreLocked, setScoreLocked] = useState(false);
+  const [scoreLocked, setScoreLocked] = useState(true);
   const [companions, setCompanions] = useState<SelectedCompanion[]>([]);
   const [photo, setPhoto] = useState<File | null>(null);
   const [photoPreviewUrl, setPhotoPreviewUrl] = useState('');
@@ -66,7 +65,11 @@ function NewAttendanceForm() {
       return;
     }
 
-    setScoreLocked(false);
+    setMyTeamScore('');
+    setOpponentScore('');
+    setResult(null);
+    setResultManuallySet(true);
+    setScoreLocked(true);
   }
 
   useEffect(() => {
@@ -88,7 +91,7 @@ function NewAttendanceForm() {
         if (!neutral) {
           applyOfficialScores(gameResponse.game, meResponse.user.favoriteTeamId);
         } else {
-          setScoreLocked(false);
+          applyOfficialScores(gameResponse.game, null);
         }
       })
       .catch(() => {
@@ -119,29 +122,15 @@ function NewAttendanceForm() {
     return () => URL.revokeObjectURL(objectUrl);
   }, [photo]);
 
-  useEffect(() => {
-    if (scoreLocked || resultManuallySet) {
-      return;
-    }
-
-    const my =
-      myTeamScore === '' ? Number.NaN : Number(myTeamScore);
-    const opp =
-      opponentScore === '' ? Number.NaN : Number(opponentScore);
-
-    if (!Number.isFinite(my) || !Number.isFinite(opp)) {
-      return;
-    }
-
-    setResult(inferResultFromScores(my, opp));
-  }, [myTeamScore, opponentScore, scoreLocked, resultManuallySet]);
-
   function pickResult(value: AttendanceResult) {
+    if (scoreLocked) return;
     setResult(value);
     setResultManuallySet(true);
   }
 
   function handleScoreChange(side: 'my' | 'opponent', value: string) {
+    if (scoreLocked) return;
+
     if (side === 'my') {
       setMyTeamScore(value);
     } else {
@@ -173,15 +162,11 @@ function NewAttendanceForm() {
         {
           gameId,
           memo,
-          myTeamScore: scoreLocked ? null : myTeamScore ? Number(myTeamScore) : null,
-          opponentScore: scoreLocked
-            ? null
-            : opponentScore
-              ? Number(opponentScore)
-              : null,
+          myTeamScore: null,
+          opponentScore: null,
           watchType,
-          result,
-          isScoreModified: !scoreLocked,
+          result: null,
+          isScoreModified: false,
           cheeredTeamId: isNeutral ? cheeredTeamId : null,
           companionUserIds: companions.map((companion) => companion.id),
         },

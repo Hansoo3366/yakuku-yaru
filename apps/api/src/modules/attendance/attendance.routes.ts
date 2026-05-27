@@ -44,15 +44,6 @@ const attendancePhotoRateLimit = rateLimit({
   message: '사진 업로드 요청이 너무 많습니다. 잠시 후 다시 시도해주세요.',
 });
 
-function normalizeNumber(value: unknown) {
-  if (value === undefined || value === null || value === '') {
-    return null;
-  }
-
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : null;
-}
-
 function assertOwner(record: { userId: number }, userId: number) {
   if (record.userId !== userId) {
     throw new HttpError(403, 'FORBIDDEN', '본인의 직관 기록만 수정할 수 있습니다.');
@@ -153,13 +144,10 @@ attendanceRouter.post(
   attendanceWriteRateLimit,
   async (req, res, next) => {
     try {
-      const { gameId, memo, result, watchType } = req.body as {
+      const { gameId, memo, watchType } = req.body as {
         gameId?: number;
         memo?: string;
         watchType?: string;
-        myTeamScore?: number;
-        opponentScore?: number;
-        result?: string;
         companionUserIds?: number[];
       };
       const userId = req.user?.id ?? 0;
@@ -198,8 +186,6 @@ attendanceRouter.post(
         game,
         favoriteTeamId: user?.favoriteTeamId ?? null,
         cheeredTeamId,
-        body: req.body,
-        normalizeNumber,
       });
 
       const record = await createAttendanceRecord({
@@ -281,10 +267,9 @@ attendanceRouter.patch(
 
       await assertCanEdit(record, req.user?.id ?? 0);
 
-      const { memo, result, watchType } = req.body as {
+      const { memo, watchType } = req.body as {
         memo?: string;
         watchType?: string;
-        result?: string;
         companionUserIds?: number[];
       };
       const game = await findGameById(record.gameId);
@@ -307,8 +292,6 @@ attendanceRouter.patch(
         game,
         favoriteTeamId: owner?.favoriteTeamId ?? null,
         cheeredTeamId,
-        body: req.body,
-        normalizeNumber,
       });
 
       const updatedRecord = await updateAttendanceRecord({

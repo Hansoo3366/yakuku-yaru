@@ -1,14 +1,11 @@
 'use client';
 
-import {
-  inferResultFromScores,
-  type AttendanceResult,
-} from '@/lib/attendance-score';
+import type { AttendanceResult } from '@/lib/attendance-score';
 
 type Props = {
   myTeamScore: string;
   opponentScore: string;
-  result: AttendanceResult;
+  result: AttendanceResult | null;
   resultManuallySet: boolean;
   scoreLocked: boolean;
   lockHint?: string;
@@ -23,16 +20,11 @@ export function AttendanceScoreSection({
   result,
   resultManuallySet,
   scoreLocked,
-  lockHint = 'KBO 공식 스코어가 반영되어 수정할 수 없어요. 경기 종료 후 자동으로 맞춰집니다.',
+  lockHint = '경기 종료 후 KBO 공식 스코어가 확인되면 자동으로 맞춰집니다.',
   onMyTeamScoreChange,
   onOpponentScoreChange,
   onPickResult,
 }: Props) {
-  const inferred = inferResultFromScores(
-    myTeamScore === '' ? Number.NaN : Number(myTeamScore),
-    opponentScore === '' ? Number.NaN : Number(opponentScore),
-  );
-
   return (
     <section className="card stack">
       <div className="section-heading" style={{ marginBottom: 0 }}>
@@ -40,7 +32,7 @@ export function AttendanceScoreSection({
           <h2>스코어와 결과</h2>
           <p>
             {scoreLocked
-              ? '공식 경기 스코어와 승패가 자동으로 적용됩니다.'
+              ? '점수는 직접 입력하지 않고 공식 경기 스코어만 반영합니다.'
               : '점수를 입력하면 결과는 자동으로 추정해요. 수동 선택도 가능합니다.'}
           </p>
         </div>
@@ -99,7 +91,7 @@ export function AttendanceScoreSection({
       </div>
       {scoreLocked ? (
         <p className="score-input-hint">{lockHint}</p>
-      ) : !resultManuallySet && inferred ? (
+      ) : !resultManuallySet && result ? (
         <p className="score-input-hint">
           스코어로 자동 계산된 결과예요. 변경하면 수동 선택으로 고정됩니다.
         </p>

@@ -59,7 +59,7 @@ export type AttendanceInput = {
   memo: string;
   myTeamScore: number | null;
   opponentScore: number | null;
-  result: string;
+  result: string | null;
   isScoreModified?: boolean;
   companionUserIds?: number[];
   cheeredTeamId?: number | null;
