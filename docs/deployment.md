@@ -145,15 +145,26 @@ DEPLOY_PORT=22
 DEPLOY_COMPOSE_PROFILES=proxy
 ```
 
-`DEPLOY_SSH_KEY`는 GitHub가 서버에 접속할 때 사용할 private key입니다. 서버에서 배포용 key를 새로 만들고 공개키를 `~/.ssh/authorized_keys`에 추가한 뒤, private key 내용을 GitHub Secret에 넣는 방식을 권장합니다.
+`DEPLOY_SSH_KEY`는 GitHub가 서버에 접속할 때 사용할 **private key**입니다. 서버에서 한 번만 실행합니다.
 
 ```bash
-ssh-keygen -t ed25519 -C "github-actions-yakuku-yaru" -f ~/.ssh/github_actions_yakuku_yaru
-cat ~/.ssh/github_actions_yakuku_yaru.pub >> ~/.ssh/authorized_keys
-cat ~/.ssh/github_actions_yakuku_yaru
+cd ~/yakuku-yaru
+bash scripts/deploy/setup-github-actions-ssh.sh
 ```
 
-마지막 명령으로 출력된 private key 전체를 `DEPLOY_SSH_KEY`에 저장합니다.
+스크립트가 `authorized_keys`에 공개키를 넣고, `DEPLOY_SSH_KEY`에 붙여 넣을 private key를 출력합니다.
+
+수동으로 할 경우:
+
+```bash
+ssh-keygen -t ed25519 -C "github-actions-yakuku-yaru" -f ~/.ssh/github_actions_yakuku_yaru -N ""
+chmod 600 ~/.ssh/github_actions_yakuku_yaru ~/.ssh/authorized_keys
+chmod 700 ~/.ssh
+cat ~/.ssh/github_actions_yakuku_yaru.pub >> ~/.ssh/authorized_keys
+cat ~/.ssh/github_actions_yakuku_yaru   # ← 이 출력 전체가 DEPLOY_SSH_KEY
+```
+
+**주의:** `.pub` 파일이 아니라 **private key**(`BEGIN OPENSSH PRIVATE KEY`)를 Secret에 넣습니다.
 
 수동으로 자동 배포를 테스트하려면 GitHub Actions 화면에서 `Deploy to Google Cloud VM` workflow의 `Run workflow`를 실행합니다.
 
@@ -165,30 +176,55 @@ KBO 크롤 workflow가 아니라 **`Deploy to Google Cloud VM`** 배포 단계�
 
 Secret과 서버 `authorized_keys`가 맞지 않을 때도 같은 메시지가 납니다.
 
-1. **서버에서** 배포 전용 키를 새로 만듭니다 (패스프레이즈 없이).
+#### A. 서버 (GCP SSH 또는 브라우저 SSH)
 
 ```bash
-ssh-keygen -t ed25519 -C "github-actions-yakuku-yaru" -f ~/.ssh/github_actions_yakuku_yaru -N ""
-chmod 600 ~/.ssh/github_actions_yakuku_yaru
-chmod 644 ~/.ssh/github_actions_yakuku_yaru.pub
-cat ~/.ssh/github_actions_yakuku_yaru.pub >> ~/.ssh/authorized_keys
-chmod 600 ~/.ssh/authorized_keys
+cd ~/yakuku-yaru
+git pull   # setup 스크립트가 있으면
+bash scripts/deploy/setup-github-actions-ssh.sh
 ```
 
-2. **로컬에서** 같은 키로 접속되는지 확인합니다.
+출력된 **private key 전체**를 복사해 둡니다.
+
+서버에서 지문 확인:
 
 ```bash
-ssh -i ~/.ssh/github_actions_yakuku_yaru -p 22 DEPLOY_USER@DEPLOY_HOST "echo ok"
+ssh-keygen -lf ~/.ssh/github_actions_yakuku_yaru.pub
 ```
 
-3. GitHub → **Settings → Secrets and variables → Actions** 에서 `DEPLOY_SSH_KEY`를 **전체 교체**합니다.
-   - `-----BEGIN OPENSSH PRIVATE KEY-----` 부터 `-----END ...-----` 까지 한 글자도 빠지지 않게
-   - 앞뒤 공백·따옴표 없이
-   - 예전에 쓰던 **다른 PC 키·패스프레이즈 있는 키**는 Actions에서 사용 불가
+#### B. GitHub Secrets (Repository → Settings → Secrets → Actions)
 
-4. `DEPLOY_USER`가 서버 로그인 계정과 같은지, `DEPLOY_HOST`가 **외부 IP**인지 확인합니다.
+| Secret | 값 |
+|--------|-----|
+| `DEPLOY_USER` | 서버 `whoami` 결과 (예: `hanso3366`) |
+| `DEPLOY_HOST` | GCP VM **외부 IP** (내부 IP 아님) |
+| `DEPLOY_PATH` | `/home/hanso3366/yakuku-yaru` |
+| `DEPLOY_SSH_KEY` | A에서 복사한 private key **전체** (BEGIN~END, 따옴표 없음) |
 
-5. 다시 Actions에서 `Deploy to Google Cloud VM` → **Run workflow** 실행.
+`DEPLOY_SSH_KEY`는 **Update**로 덮어쓰기. 줄바꿈이 깨지면 Secret을 삭제 후 새로 만드는 편이 낫습니다.
+
+#### C. Mac에서 접속 테스트 (선택, 권장)
+
+서버에서 private key 파일을 Mac으로 복사한 뒤:
+
+```bash
+chmod 600 ~/Downloads/github_actions_yakuku_yaru
+ssh -i ~/Downloads/github_actions_yakuku_yaru hanso3366@VM외부IP "echo ok"
+```
+
+`ok`가 나오면 Secret도 동일 키이므로 Actions가 통과해야 합니다.
+
+#### D. Actions 재실행
+
+`Deploy to Google Cloud VM` → **Run workflow**
+
+**Validate deployment secrets** 로그에 `Deploy key fingerprint`가 나옵니다. 서버의 `ssh-keygen -lf ~/.ssh/github_actions_yakuku_yaru.pub` 지문과 **같아야** 합니다. 다르면 Secret에 잘못된 키가 들어간 것입니다.
+
+#### E. 그래도 실패할 때
+
+- GCP VM에 **OS Login**이 켜져 있으면 `~/.ssh/authorized_keys`가 무시될 수 있습니다. 메타데이터에서 OS Login을 끄거나, OS Login용 키를 등록해야 합니다.
+- `DEPLOY_USER`가 키를 넣은 계정과 다른 경우 (예: `ubuntu` vs `hanso3366`)
+- 방화벽: SSH 22는 열려 있어야 함 (연결 자체가 안 되면 timeout, 지금은 auth 실패)
 
 ## 10. DuckDNS and HTTPS
 

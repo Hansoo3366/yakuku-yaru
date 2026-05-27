@@ -29,6 +29,12 @@ jobs:
           echo "$DEPLOY_SSH_KEY" | grep -q 'BEGIN.*PRIVATE KEY' || (
             echo "DEPLOY_SSH_KEY must be a full PEM private key (BEGIN/END lines)" && exit 1
           )
+          printf '%s\n' "$DEPLOY_SSH_KEY" > /tmp/deploy_key
+          chmod 600 /tmp/deploy_key
+          ssh-keygen -y -f /tmp/deploy_key > /tmp/deploy_key.pub
+          echo "Deploy key fingerprint (서버 authorized_keys와 일치해야 함):"
+          ssh-keygen -lf /tmp/deploy_key.pub
+          rm -f /tmp/deploy_key /tmp/deploy_key.pub
 
       - name: Deploy with Docker Compose
         uses: appleboy/ssh-action@v1.2.0
