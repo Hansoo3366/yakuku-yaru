@@ -89,6 +89,15 @@ export async function runMigrations() {
     );
   }
 
+  const hasLineupConfirmed = await columnExists('games', 'lineup_confirmed');
+
+  if (!hasLineupConfirmed) {
+    await db.execute(
+      `ALTER TABLE games
+       ADD COLUMN lineup_confirmed BOOLEAN NULL AFTER cancellation_reason`,
+    );
+  }
+
   const hasProfileImageUrl = await columnExists('users', 'profile_image_url');
 
   if (!hasProfileImageUrl) {
@@ -235,6 +244,19 @@ export async function runMigrations() {
     await db.execute(
       `ALTER TABLE players
        ADD COLUMN profile_image_url VARCHAR(500) NULL AFTER school`,
+    );
+  }
+
+  const hasPlayerSeasonBattingAvg = await columnExists(
+    'players',
+    'season_batting_avg',
+  );
+
+  if (!hasPlayerSeasonBattingAvg) {
+    await db.execute(
+      `ALTER TABLE players
+       ADD COLUMN season_batting_avg DECIMAL(5,3) NULL AFTER profile_image_url,
+       ADD COLUMN season_ops DECIMAL(5,3) NULL AFTER season_batting_avg`,
     );
   }
 

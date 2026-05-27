@@ -25,7 +25,7 @@ const result = await syncKboPlayers({
 });
 
 console.log(
-  `[kbo-players] 완료 — ${result.teamCount}팀, 파싱 ${result.parsed}명, 추가 ${result.inserted}명, 갱신 ${result.updated}명, 건너뜀 ${result.skipped}명`,
+  `[kbo-players] 완료 — ${result.teamCount}팀, 파싱 ${result.parsed}명, 추가 ${result.inserted}명, 갱신 ${result.updated}명, 건너뜀 ${result.skipped}명, 타격지표 ${result.hittingStatsUpdated}/${result.hittingStatsParsed}명`,
 );
 
 process.exit(0);

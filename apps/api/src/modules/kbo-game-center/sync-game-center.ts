@@ -8,6 +8,7 @@ import {
   listKboGameCenterTargetDates,
   listKboTeamIdsByCode,
   replaceGameLineup,
+  updateGameLineupConfirmed,
   updatePitcherAnalysis,
   upsertGameStartingPitcher,
   upsertPitcherFromGameCenter,
@@ -201,6 +202,11 @@ export async function syncKboGameCenter(input?: {
         const lineupAnalysis = await fetchKboLineupAnalysis({
           seasonYear: Number(game.G_DT.slice(0, 4)),
           gameExternalId: game.G_ID,
+        });
+
+        await updateGameLineupConfirmed({
+          gameId,
+          isConfirmed: lineupAnalysis.isConfirmed,
         });
 
         lineupUpserts += await replaceGameLineup({

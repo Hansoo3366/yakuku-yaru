@@ -32,10 +32,11 @@ services:
       NODE_ENV: production
       TZ: Asia/Seoul
       API_PORT: 4000
-      KBO_SYNC_ENABLED: ${KBO_SYNC_ENABLED:-true}
+      # KBO 크롤은 호스트 crontab(scripts/kbo-sync/*.sh)에서 실행. API 내장 cron은 기본 끔.
+      KBO_SYNC_ENABLED: ${KBO_SYNC_ENABLED:-false}
       KBO_SYNC_WEEK_CRON: ${KBO_SYNC_WEEK_CRON:-0 6 * * *}
       KBO_SYNC_TODAY_CRON: ${KBO_SYNC_TODAY_CRON:-0 * * * *}
-      KBO_SYNC_ON_START: ${KBO_SYNC_ON_START:-true}
+      KBO_SYNC_ON_START: ${KBO_SYNC_ON_START:-false}
       APP_URL: ${APP_URL:-}
       APP_DOMAIN: ${APP_DOMAIN:-}
       JWT_SECRET: ${JWT_SECRET}

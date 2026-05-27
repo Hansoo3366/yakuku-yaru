@@ -19,6 +19,7 @@ const baseGame = {
   awayScore: 3,
   status: 'finished',
   cancellationReason: null,
+  lineupConfirmed: null,
   probablePitchers: { home: null, away: null },
   lineups: { home: [], away: [] },
   ticketUrl: null,

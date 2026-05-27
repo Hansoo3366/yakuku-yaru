@@ -117,6 +117,7 @@ export default function EditAttendancePage() {
           status: r.game.status,
           cancellationReason: r.game.cancellationReason ?? null,
           probablePitchers: { home: null, away: null },
+          lineupConfirmed: null,
           lineups: { home: [], away: [] },
           ticketUrl: null,
           ticketOpenAt: null,

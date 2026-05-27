@@ -1,9 +1,14 @@
 import {
+  fetchKboHitterSeasonStatsByTeam,
   fetchKboPlayersByTeam,
   KBO_TEAM_CODES,
   type KboTeamCode,
 } from './kbo-player.client.js';
-import { listTeamIdsByShortName, upsertPlayer } from './player.repository.js';
+import {
+  listTeamIdsByShortName,
+  updatePlayerSeasonHittingStats,
+  upsertPlayer,
+} from './player.repository.js';
 
 export async function syncKboPlayers(input?: { teamCodes?: KboTeamCode[] }) {
   const teamCodes = input?.teamCodes?.length ? input.teamCodes : KBO_TEAM_CODES;
@@ -12,6 +17,8 @@ export async function syncKboPlayers(input?: { teamCodes?: KboTeamCode[] }) {
   let inserted = 0;
   let updated = 0;
   let skipped = 0;
+  let hittingStatsParsed = 0;
+  let hittingStatsUpdated = 0;
 
   for (const teamCode of teamCodes) {
     const players = await fetchKboPlayersByTeam(teamCode);
@@ -24,6 +31,21 @@ export async function syncKboPlayers(input?: { teamCodes?: KboTeamCode[] }) {
       else if (result === 'updated') updated += 1;
       else skipped += 1;
     }
+
+    const hitterStats = await fetchKboHitterSeasonStatsByTeam(teamCode);
+    hittingStatsParsed += hitterStats.length;
+
+    for (const stats of hitterStats) {
+      const affected = await updatePlayerSeasonHittingStats({
+        kboPlayerId: stats.kboPlayerId,
+        seasonBattingAvg: stats.seasonBattingAvg,
+        seasonOps: stats.seasonOps,
+      });
+
+      if (affected > 0) {
+        hittingStatsUpdated += 1;
+      }
+    }
   }
 
   return {
@@ -32,5 +54,7 @@ export async function syncKboPlayers(input?: { teamCodes?: KboTeamCode[] }) {
     inserted,
     updated,
     skipped,
+    hittingStatsParsed,
+    hittingStatsUpdated,
   };
 }

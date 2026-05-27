@@ -36,7 +36,9 @@ import {
 import {
   formatDateInput,
   formatWeekLabel,
+  getAgendaDayElementId,
   getCalendarMonthDays,
+  scrollAgendaDayIntoView,
   getMonthRange,
   getMonthStart,
   getWeekDays,
@@ -70,6 +72,7 @@ function gameFromAttendanceRecord(record: AttendanceRecord, gamesById: Map<numbe
     awayScore: record.game.awayScore,
     status: record.game.status,
     cancellationReason: null,
+    lineupConfirmed: null,
     probablePitchers: { home: null, away: null },
     lineups: { home: [], away: [] },
     ticketUrl: null,
@@ -113,6 +116,9 @@ export default function CalendarPage() {
     'all' | 'stadium' | 'home'
   >('all');
   const [isLoading, setIsLoading] = useState(true);
+  const [agendaFocusDateKey, setAgendaFocusDateKey] = useState<string | null>(
+    null,
+  );
   const isMobile = useMediaQuery('(max-width: 720px)');
 
   const monthStart = useMemo(() => getMonthStart(anchorDate), [anchorDate]);
@@ -497,6 +503,45 @@ export default function CalendarPage() {
       ? `${anchorDate.getFullYear()}.${String(anchorDate.getMonth() + 1).padStart(2, '0')}`
       : formatWeekLabel(weekStart);
 
+  function goToToday() {
+    const today = new Date();
+    const todayKey = formatDateInput(today);
+
+    setAgendaFocusDateKey(todayKey);
+    setAnchorDate(
+      viewMode === 'month' ? getMonthStart(today) : getWeekStart(today),
+    );
+  }
+
+  useEffect(() => {
+    if (!isMobile || isLoading || !agendaFocusDateKey) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const frame = window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => {
+        if (cancelled) {
+          return;
+        }
+
+        const element = document.getElementById(
+          getAgendaDayElementId(agendaFocusDateKey),
+        );
+
+        if (element) {
+          scrollAgendaDayIntoView(element);
+        }
+      });
+    });
+
+    return () => {
+      cancelled = true;
+      window.cancelAnimationFrame(frame);
+    };
+  }, [agendaFocusDateKey, isMobile, isLoading, anchorDate, displayGamesByDate]);
+
   const periodLabel = viewMode === 'month' ? '이번 달' : '이번 주';
   const showTeamWinRate = Boolean(user?.favoriteTeamId);
   const teamRateLabel = favoriteTeam
@@ -617,7 +662,10 @@ export default function CalendarPage() {
         <button
           aria-label={viewMode === 'month' ? '이전 달' : '이전 주'}
           className="icon-button"
-          onClick={() => setAnchorDate((current) => shiftAnchor(current, viewMode, -1))}
+          onClick={() => {
+            setAgendaFocusDateKey(null);
+            setAnchorDate((current) => shiftAnchor(current, viewMode, -1));
+          }}
           type="button"
         >
           ←
@@ -629,7 +677,10 @@ export default function CalendarPage() {
         <button
           aria-label={viewMode === 'month' ? '다음 달' : '다음 주'}
           className="icon-button"
-          onClick={() => setAnchorDate((current) => shiftAnchor(current, viewMode, 1))}
+          onClick={() => {
+            setAgendaFocusDateKey(null);
+            setAnchorDate((current) => shiftAnchor(current, viewMode, 1));
+          }}
           type="button"
         >
           →
@@ -711,15 +762,26 @@ export default function CalendarPage() {
           <Skeleton height={isMobile ? 360 : viewMode === 'week' ? 520 : 420} radius={10} />
         </div>
       ) : isMobile ? (
-        <CalendarAgendaView
-          attendanceByDate={attendanceByDate}
-          attendanceByGameId={attendanceByGameId}
-          days={days}
-          favoriteTeamId={user?.favoriteTeamId}
-          gamesByDate={displayGamesByDate}
-          referenceMonth={viewMode === 'month' ? monthStart : undefined}
-          showOutsideDays={viewMode === 'week'}
-        />
+        <>
+          <CalendarAgendaView
+            attendanceByDate={attendanceByDate}
+            attendanceByGameId={attendanceByGameId}
+            days={days}
+            favoriteTeamId={user?.favoriteTeamId}
+            focusDateKey={agendaFocusDateKey}
+            gamesByDate={displayGamesByDate}
+            referenceMonth={viewMode === 'month' ? monthStart : undefined}
+            showOutsideDays={viewMode === 'week'}
+          />
+          <button
+            aria-label="오늘 날짜로 이동"
+            className="calendar-today-fab"
+            onClick={goToToday}
+            type="button"
+          >
+            오늘
+          </button>
+        </>
       ) : (
         <section
           className={`calendar-card${viewMode === 'week' ? ' calendar-card--week' : ''}`}

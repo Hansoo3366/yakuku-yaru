@@ -2,7 +2,11 @@
 
 import type { Game } from '@/lib/baseball-api';
 import type { AttendanceRecord } from '@/lib/attendance-api';
-import { formatDateInput } from '@/lib/calendar-range';
+import {
+  formatDateInput,
+  getAgendaDayElementId,
+  isSameDay,
+} from '@/lib/calendar-range';
 import { CalendarEventCard } from '@/components/CalendarEventCard';
 
 const weekdayLabels = ['일', '월', '화', '수', '목', '금', '토'];
@@ -15,6 +19,7 @@ type Props = {
   favoriteTeamId: number | null | undefined;
   showOutsideDays?: boolean;
   referenceMonth?: Date;
+  focusDateKey?: string | null;
 };
 
 export function CalendarAgendaView({
@@ -25,7 +30,10 @@ export function CalendarAgendaView({
   favoriteTeamId,
   showOutsideDays = false,
   referenceMonth,
+  focusDateKey = null,
 }: Props) {
+  const today = new Date();
+
   const visibleDays = days.filter((date) => {
     if (
       referenceMonth &&
@@ -39,7 +47,11 @@ export function CalendarAgendaView({
     const dayGames = gamesByDate[key] ?? [];
     const dayRecords = attendanceByDate[key] ?? [];
 
-    return dayGames.length > 0 || dayRecords.length > 0;
+    return (
+      key === focusDateKey ||
+      dayGames.length > 0 ||
+      dayRecords.length > 0
+    );
   });
 
   if (visibleDays.length === 0) {
@@ -60,21 +72,38 @@ export function CalendarAgendaView({
         );
         const isOutside =
           referenceMonth && date.getMonth() !== referenceMonth.getMonth();
+        const isToday = isSameDay(date, today);
+        const isFocused = key === focusDateKey;
+        const hasEvents = dayGames.length > 0 || extraRecords.length > 0;
 
         return (
           <article
-            className={`calendar-agenda-day${isOutside ? ' is-outside' : ''}`}
+            className={[
+              'calendar-agenda-day',
+              isOutside ? 'is-outside' : '',
+              isToday ? 'is-today' : '',
+              isFocused ? 'is-focused' : '',
+            ]
+              .filter(Boolean)
+              .join(' ')}
+            id={getAgendaDayElementId(key)}
             key={key}
           >
             <header className="calendar-agenda-day-head">
               <span className="calendar-agenda-weekday">
                 {weekdayLabels[date.getDay()]}
+                {isToday ? ' · 오늘' : ''}
               </span>
               <span className="calendar-agenda-date">
                 {date.getMonth() + 1}월 {date.getDate()}일
               </span>
             </header>
             <div className="calendar-agenda-events">
+              {!hasEvents && isFocused ? (
+                <p className="calendar-agenda-day-empty">
+                  이 날짜에 표시할 경기·기록이 없어요.
+                </p>
+              ) : null}
               {dayGames.map((game) => {
                 const attendance = attendanceByGameId[game.id];
                 const href = attendance

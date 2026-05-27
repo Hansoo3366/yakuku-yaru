@@ -19,11 +19,13 @@ export type Game = {
   awayScore: number | null;
   status: string;
   cancellationReason: string | null;
+  lineupConfirmed: boolean | null;
   probablePitchers: {
     home: {
       id: number;
       name: string;
       backNumber: string | null;
+      age: number | null;
       profileImageUrl: string | null;
       throwsHand: string | null;
       batsHand: string | null;
@@ -42,6 +44,7 @@ export type Game = {
       id: number;
       name: string;
       backNumber: string | null;
+      age: number | null;
       profileImageUrl: string | null;
       throwsHand: string | null;
       batsHand: string | null;
@@ -75,9 +78,12 @@ export type GameLineupPlayer = {
   playerId: number;
   name: string;
   backNumber: string | null;
+  age: number | null;
   profileImageUrl: string | null;
   battingOrder: number | null;
   fieldPosition: string | null;
+  battingAvg: number | null;
+  ops: number | null;
   war: number | null;
   isStarter: boolean;
 };

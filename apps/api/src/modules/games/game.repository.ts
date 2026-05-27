@@ -1,5 +1,6 @@
 import type { RowDataPacket } from 'mysql2';
 import { db } from '../../config/database.js';
+import { calculatePlayerAge } from '../players/player-age.js';
 
 export type GameRow = RowDataPacket & {
   id: number;
@@ -19,11 +20,13 @@ export type GameRow = RowDataPacket & {
   away_score: number | null;
   status: string;
   cancellation_reason: string | null;
+  lineup_confirmed: number | null;
   ticket_url: string | null;
   ticket_open_at: Date | null;
   home_starting_pitcher_id: number | null;
   home_starting_pitcher_name: string | null;
   home_starting_pitcher_back_number: string | null;
+  home_starting_pitcher_birth_date: Date | null;
   home_starting_pitcher_profile_image_url: string | null;
   home_starting_pitcher_throws_hand: string | null;
   home_starting_pitcher_bats_hand: string | null;
@@ -38,6 +41,7 @@ export type GameRow = RowDataPacket & {
   away_starting_pitcher_id: number | null;
   away_starting_pitcher_name: string | null;
   away_starting_pitcher_back_number: string | null;
+  away_starting_pitcher_birth_date: Date | null;
   away_starting_pitcher_profile_image_url: string | null;
   away_starting_pitcher_throws_hand: string | null;
   away_starting_pitcher_bats_hand: string | null;
@@ -63,6 +67,9 @@ type GameLineupRow = RowDataPacket & {
   player_name: string;
   player_back_number: string | null;
   player_profile_image_url: string | null;
+  player_season_batting_avg: string | null;
+  player_season_ops: string | null;
+  player_birth_date: Date | null;
   batting_order: number | null;
   field_position: string | null;
   war: string | null;
@@ -73,6 +80,7 @@ type StartingPitcher = {
   id: number;
   name: string;
   backNumber: string | null;
+  age: number | null;
   profileImageUrl: string | null;
   throwsHand: string | null;
   batsHand: string | null;
@@ -93,9 +101,12 @@ type GameLineupPlayer = {
   playerId: number;
   name: string;
   backNumber: string | null;
+  age: number | null;
   profileImageUrl: string | null;
   battingOrder: number | null;
   fieldPosition: string | null;
+  battingAvg: number | null;
+  ops: number | null;
   war: number | null;
   isStarter: boolean;
 };
@@ -122,6 +133,7 @@ export type Game = {
   awayScore: number | null;
   status: string;
   cancellationReason: string | null;
+  lineupConfirmed: boolean | null;
   probablePitchers: {
     home: StartingPitcher | null;
     away: StartingPitcher | null;
@@ -158,11 +170,13 @@ function gameSelectSql() {
       g.away_score,
       g.status,
       g.cancellation_reason,
+      g.lineup_confirmed,
       COALESCE(g.ticket_url, ht.ticket_url) AS ticket_url,
       g.ticket_open_at,
       hsp.id AS home_starting_pitcher_id,
       hsp.name AS home_starting_pitcher_name,
       hsp.back_number AS home_starting_pitcher_back_number,
+      hsp.birth_date AS home_starting_pitcher_birth_date,
       hsp.profile_image_url AS home_starting_pitcher_profile_image_url,
       hsp.throws_hand AS home_starting_pitcher_throws_hand,
       hsp.bats_hand AS home_starting_pitcher_bats_hand,
@@ -177,6 +191,7 @@ function gameSelectSql() {
       asp.id AS away_starting_pitcher_id,
       asp.name AS away_starting_pitcher_name,
       asp.back_number AS away_starting_pitcher_back_number,
+      asp.birth_date AS away_starting_pitcher_birth_date,
       asp.profile_image_url AS away_starting_pitcher_profile_image_url,
       asp.throws_hand AS away_starting_pitcher_throws_hand,
       asp.bats_hand AS away_starting_pitcher_bats_hand,
@@ -215,7 +230,11 @@ function toNumberOrNull(value: string | number | null) {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
-function toStartingPitcher(row: GameRow, side: 'home' | 'away') {
+function toStartingPitcher(
+  row: GameRow,
+  side: 'home' | 'away',
+  referenceDate: Date,
+) {
   const id = row[`${side}_starting_pitcher_id`];
   const name = row[`${side}_starting_pitcher_name`];
 
@@ -227,6 +246,7 @@ function toStartingPitcher(row: GameRow, side: 'home' | 'away') {
     id,
     name,
     backNumber: row[`${side}_starting_pitcher_back_number`],
+    age: calculatePlayerAge(row[`${side}_starting_pitcher_birth_date`], referenceDate),
     profileImageUrl: row[`${side}_starting_pitcher_profile_image_url`],
     throwsHand: row[`${side}_starting_pitcher_throws_hand`],
     batsHand: row[`${side}_starting_pitcher_bats_hand`],
@@ -244,9 +264,11 @@ function toStartingPitcher(row: GameRow, side: 'home' | 'away') {
 }
 
 export function toGame(row: GameRow): Game {
+  const gameDate = row.game_date;
+
   return {
     id: row.id,
-    gameDate: row.game_date,
+    gameDate,
     stadium: row.stadium,
     homeTeam: {
       id: row.home_team_id,
@@ -266,9 +288,11 @@ export function toGame(row: GameRow): Game {
     awayScore: row.away_score,
     status: row.status,
     cancellationReason: row.cancellation_reason,
+    lineupConfirmed:
+      row.lineup_confirmed === null ? null : Boolean(row.lineup_confirmed),
     probablePitchers: {
-      home: toStartingPitcher(row, 'home'),
-      away: toStartingPitcher(row, 'away'),
+      home: toStartingPitcher(row, 'home', gameDate),
+      away: toStartingPitcher(row, 'away', gameDate),
     },
     lineups: {
       home: [],
@@ -287,18 +311,41 @@ export function toGame(row: GameRow): Game {
   };
 }
 
-function toLineupPlayer(row: GameLineupRow): GameLineupPlayer {
+function toLineupPlayer(row: GameLineupRow, referenceDate: Date): GameLineupPlayer {
   return {
     id: row.id,
     playerId: row.player_id,
     name: row.player_name,
     backNumber: row.player_back_number,
+    age: calculatePlayerAge(row.player_birth_date, referenceDate),
     profileImageUrl: row.player_profile_image_url,
     battingOrder: row.batting_order,
     fieldPosition: row.field_position,
+    battingAvg: toNumberOrNull(row.player_season_batting_avg),
+    ops: toNumberOrNull(row.player_season_ops),
     war: toNumberOrNull(row.war),
     isStarter: Boolean(row.is_starter),
   };
+}
+
+function rosterPlayerLookupSql(column: string) {
+  return `(
+    SELECT pr.${column}
+    FROM players pr
+    WHERE pr.team_id = gl.team_id
+      AND pr.name = p.name
+      AND pr.kbo_player_id IS NOT NULL
+      AND (
+        p.kbo_player_id IS NULL
+        OR pr.kbo_player_id = p.kbo_player_id
+      )
+    ORDER BY
+      (pr.birth_date IS NOT NULL) DESC,
+      (pr.season_batting_avg IS NOT NULL) DESC,
+      (pr.season_ops IS NOT NULL) DESC,
+      pr.id ASC
+    LIMIT 1
+  )`;
 }
 
 async function listGameLineups(gameId: number) {
@@ -308,8 +355,11 @@ async function listGameLineups(gameId: number) {
        gl.team_id,
        gl.player_id,
        p.name AS player_name,
-       p.back_number AS player_back_number,
-       p.profile_image_url AS player_profile_image_url,
+       COALESCE(p.back_number, ${rosterPlayerLookupSql('back_number')}) AS player_back_number,
+       COALESCE(p.profile_image_url, ${rosterPlayerLookupSql('profile_image_url')}) AS player_profile_image_url,
+       COALESCE(p.season_batting_avg, ${rosterPlayerLookupSql('season_batting_avg')}) AS player_season_batting_avg,
+       COALESCE(p.season_ops, ${rosterPlayerLookupSql('season_ops')}) AS player_season_ops,
+       COALESCE(p.birth_date, ${rosterPlayerLookupSql('birth_date')}) AS player_birth_date,
        gl.batting_order,
        gl.field_position,
        gl.war,
@@ -364,14 +414,15 @@ export async function findGameById(id: number) {
 
   const game = toGame(rows[0]);
   const lineupRows = await listGameLineups(game.id);
+  const referenceDate = game.gameDate;
 
   game.lineups = {
     home: lineupRows
       .filter((row) => row.team_id === game.homeTeam.id)
-      .map(toLineupPlayer),
+      .map((row) => toLineupPlayer(row, referenceDate)),
     away: lineupRows
       .filter((row) => row.team_id === game.awayTeam.id)
-      .map(toLineupPlayer),
+      .map((row) => toLineupPlayer(row, referenceDate)),
   };
 
   return game;

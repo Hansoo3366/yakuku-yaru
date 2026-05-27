@@ -65,6 +65,8 @@ export type KboLineupPlayer = {
   battingOrder: number;
   fieldPosition: string | null;
   name: string;
+  kboPlayerId: number | null;
+  profileImageUrl: string | null;
   war: number | null;
 };
 
@@ -171,7 +173,7 @@ function parsePitcherAnalysisRow(row: KboGridRow): KboPitcherAnalysis | null {
   };
 }
 
-function parseLineupRows(value: unknown): KboLineupPlayer[] {
+export function parseLineupRowsPayload(value: unknown): KboLineupPlayer[] {
   if (typeof value !== 'string') {
     return [];
   }
@@ -188,7 +190,10 @@ function parseLineupRows(value: unknown): KboLineupPlayer[] {
     .map((row) => {
       const cells = row.row ?? [];
       const battingOrder = parseInteger(cells[0]?.Text);
-      const name = stripHtml(cells[2]?.Text);
+      const playerCell = cells[2]?.Text ?? null;
+      const profileImageUrl = extractImageUrl(playerCell);
+      const name =
+        extractClassText(playerCell, 'name') || stripHtml(playerCell) || null;
 
       if (!battingOrder || !name) {
         return null;
@@ -198,10 +203,16 @@ function parseLineupRows(value: unknown): KboLineupPlayer[] {
         battingOrder,
         fieldPosition: stripHtml(cells[1]?.Text) || null,
         name,
+        kboPlayerId: extractPlayerId(profileImageUrl),
+        profileImageUrl,
         war: parseNumber(cells[3]?.Text),
       };
     })
     .filter((player): player is KboLineupPlayer => Boolean(player));
+}
+
+function parseLineupRows(value: unknown): KboLineupPlayer[] {
+  return parseLineupRowsPayload(value);
 }
 
 async function postKboJson<T>(url: string, body: URLSearchParams) {

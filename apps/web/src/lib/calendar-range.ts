@@ -5,6 +5,27 @@ export function formatDateInput(date: Date) {
   return `${year}-${month}-${day}`;
 }
 
+export function getAgendaDayElementId(dateKey: string) {
+  return `calendar-agenda-${dateKey}`;
+}
+
+/** 하단 GNB·「오늘」 FAB 위 visible 영역 안으로 날짜 블록 스크롤 */
+export function scrollAgendaDayIntoView(element: HTMLElement) {
+  const styles = getComputedStyle(document.documentElement);
+  const bottomNavHeight =
+    Number.parseFloat(styles.getPropertyValue('--bottom-nav-height')) || 72;
+  const topInset = 16;
+  const bottomInset = bottomNavHeight + 88;
+
+  const rect = element.getBoundingClientRect();
+  const availableHeight = window.innerHeight - topInset - bottomInset;
+  const targetCenter = topInset + availableHeight / 2;
+  const elementCenter = rect.top + rect.height / 2;
+  const scrollTop = Math.max(0, window.scrollY + elementCenter - targetCenter);
+
+  window.scrollTo({ top: scrollTop, behavior: 'smooth' });
+}
+
 export function getMonthStart(date: Date) {
   return new Date(date.getFullYear(), date.getMonth(), 1);
 }

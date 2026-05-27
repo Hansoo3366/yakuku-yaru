@@ -32,6 +32,16 @@ function formatStat(value: number | null, digits = 2) {
   return value === null ? '-' : value.toFixed(digits);
 }
 
+function formatRate(value: number | null) {
+  if (value === null) {
+    return '-';
+  }
+
+  const formatted = value.toFixed(3);
+
+  return formatted.startsWith('0') ? formatted.slice(1) : formatted;
+}
+
 type Pitcher = NonNullable<Game['probablePitchers']['home']>;
 type LineupPlayer = Game['lineups']['home'][number];
 
@@ -58,6 +68,7 @@ function StarterPitcherCard({
           <p>
             {team.shortName}
             {pitcher?.backNumber ? ` · No.${pitcher.backNumber}` : ''}
+            {typeof pitcher?.age === 'number' ? ` · 만 ${pitcher.age}세` : ''}
             {pitcher?.throwsHand || pitcher?.batsHand
               ? ` · ${[pitcher.throwsHand, pitcher.batsHand].filter(Boolean).join('')}`
               : ''}
@@ -130,12 +141,20 @@ function LineupPanel({
                 profileImageUrl={player.profileImageUrl}
               />
               <div className="lineup-player-main">
-                <strong>{player.name}</strong>
-                <span>{player.fieldPosition ?? '포지션 미정'}</span>
+                <strong>
+                  {player.backNumber ? `${player.backNumber} ` : ''}
+                  {player.name}
+                </strong>
+                <span>
+                  {player.fieldPosition ?? '포지션 미정'}
+                  {player.age !== null ? ` · 만 ${player.age}세` : ''}
+                </span>
               </div>
-              <span className="lineup-war">
-                WAR {formatStat(player.war)}
-              </span>
+              <div className="lineup-stats">
+                <span>타율 {formatRate(player.battingAvg)}</span>
+                <span>OPS {formatRate(player.ops)}</span>
+                <span>WAR {formatStat(player.war)}</span>
+              </div>
             </li>
           ))}
         </ol>
@@ -189,6 +208,10 @@ export default function GameDetailPage() {
     : isCancelled && game.homeScore !== null && game.awayScore !== null
       ? `${game.awayScore} : ${game.homeScore}`
       : null;
+  const hasLineup =
+    game.lineups.home.length > 0 || game.lineups.away.length > 0;
+  const showLineupPredictedNotice =
+    hasLineup && game.lineupConfirmed !== true;
 
   return (
     <main className="app-shell">
@@ -325,9 +348,16 @@ export default function GameDetailPage() {
         <div className="section-heading">
           <div>
             <h2>라인업</h2>
-            <p>타순과 포지션, WAR</p>
+            <p>타순·포지션·시즌 타율/OPS/WAR</p>
           </div>
         </div>
+        {showLineupPredictedNotice ? (
+          <p className="lineup-notice" role="status">
+            <strong>공식 라인업 발표 전입니다.</strong>
+            KBO 게임센터 분석 기준 예상 타순이며, 실제 출전 순서와 다를 수
+            있습니다.
+          </p>
+        ) : null}
         <div className="lineup-grid">
           <LineupPanel players={game.lineups.away} team={game.awayTeam} />
           <LineupPanel players={game.lineups.home} team={game.homeTeam} />

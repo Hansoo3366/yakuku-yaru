@@ -5,6 +5,16 @@ import type { ParsedKboPlayer } from './parse-player-search.js';
 const KBO_PLAYER_IMAGE_BASE_URL =
   'https://6ptotvmi5753.edge.naverncp.com/KBO_IMAGE/person/kbo';
 
+function normalizeBirthDate(value: string | null) {
+  if (!value) {
+    return null;
+  }
+
+  const match = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+
+  return match ? value : null;
+}
+
 type TeamIdRow = RowDataPacket & {
   id: number;
   short_name: string;
@@ -64,11 +74,27 @@ export async function upsertPlayer(
       player.position,
       player.heightCm,
       player.weightKg,
-      player.birthDate,
+      normalizeBirthDate(player.birthDate),
       player.school,
       `${KBO_PLAYER_IMAGE_BASE_URL}/${new Date().getFullYear()}/${player.kboPlayerId}.png`,
     ],
   );
 
   return result.affectedRows === 1 ? ('inserted' as const) : ('updated' as const);
+}
+
+export async function updatePlayerSeasonHittingStats(input: {
+  kboPlayerId: string;
+  seasonBattingAvg: number | null;
+  seasonOps: number | null;
+}) {
+  const [result] = await db.execute<ResultSetHeader>(
+    `UPDATE players
+     SET season_batting_avg = ?,
+         season_ops = ?
+     WHERE kbo_player_id = ?`,
+    [input.seasonBattingAvg, input.seasonOps, input.kboPlayerId],
+  );
+
+  return result.affectedRows;
 }
