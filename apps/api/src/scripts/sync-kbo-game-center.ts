@@ -1,3 +1,4 @@
+import { syncLog } from '../lib/sync-log.js';
 import { runMigrations } from '../config/migrations.js';
 import {
   syncKboGameCenter,
@@ -33,6 +34,11 @@ function parseArgs(argv: string[]) {
 const { mode, dates } = parseArgs(process.argv.slice(2));
 
 await runMigrations();
+
+syncLog(
+  'kbo-game-center',
+  `마이그레이션 완료, 동기화 시작 (mode=${mode}${dates.length ? ` dates=${dates.join(',')}` : ''})`,
+);
 
 const result = await syncKboGameCenter({
   mode,

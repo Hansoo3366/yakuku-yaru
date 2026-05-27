@@ -211,7 +211,10 @@ export default function GameDetailPage() {
   const hasLineup =
     game.lineups.home.length > 0 || game.lineups.away.length > 0;
   const showLineupPredictedNotice =
-    hasLineup && game.lineupConfirmed !== true;
+    hasLineup &&
+    game.lineupConfirmed === false &&
+    !isFinished &&
+    game.status !== 'cancelled';
 
   return (
     <main className="app-shell">

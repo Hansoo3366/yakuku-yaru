@@ -1,8 +1,10 @@
+import { syncLog } from '../../lib/sync-log.js';
 import {
   fetchKboGameCenterList,
   fetchKboLineupAnalysis,
   fetchKboPitcherAnalysis,
 } from './kbo-game-center.client.js';
+import { isGameListLineupConfirmed } from './kbo-lineup-status.js';
 import {
   findKboGameIdByExternalId,
   listKboGameCenterTargetDates,
@@ -93,9 +95,23 @@ export async function syncKboGameCenter(input?: {
   let lineupUpserts = 0;
   let skipped = 0;
 
-  for (const date of dates) {
+  syncLog(
+    'kbo-game-center',
+    `시작 — 날짜 ${dates.length}개, 모드 ${input?.mode ?? (input?.dates?.length ? 'dates' : 'today')}`,
+  );
+
+  for (let dateIndex = 0; dateIndex < dates.length; dateIndex += 1) {
+    const date = dates[dateIndex];
+    syncLog(
+      'kbo-game-center',
+      `날짜 ${dateIndex + 1}/${dates.length} ${date} 경기 목록 조회 중…`,
+    );
     const games = await fetchKboGameCenterList(date);
     parsed += games.length;
+    syncLog(
+      'kbo-game-center',
+      `날짜 ${date} — ${games.length}경기 처리 중…`,
+    );
 
     for (const game of games) {
       const gameId = await findKboGameIdByExternalId(game.G_ID);
@@ -106,6 +122,10 @@ export async function syncKboGameCenter(input?: {
       }
 
       matched += 1;
+      syncLog(
+        'kbo-game-center',
+        `  ${game.G_ID} ${game.AWAY_NM} vs ${game.HOME_NM} — 선발·라인업 동기화`,
+      );
 
       const pitcherInputs = [
         {
@@ -206,7 +226,9 @@ export async function syncKboGameCenter(input?: {
 
         await updateGameLineupConfirmed({
           gameId,
-          isConfirmed: lineupAnalysis.isConfirmed,
+          isConfirmed:
+            lineupAnalysis.isConfirmed ||
+            isGameListLineupConfirmed(game.LINEUP_CK),
         });
 
         lineupUpserts += await replaceGameLineup({

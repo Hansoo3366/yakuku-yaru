@@ -1,3 +1,5 @@
+import { parseLineupAnalysisConfirmed } from './kbo-lineup-status.js';
+
 const KBO_GAME_CENTER_URL = 'https://www.koreabaseball.com/Schedule/GameCenter/Main.aspx';
 const KBO_GAME_LIST_URL = 'https://www.koreabaseball.com/ws/Main.asmx/GetKboGameList';
 const KBO_PITCHER_RECORD_ANALYSIS_URL =
@@ -305,10 +307,8 @@ export async function fetchKboLineupAnalysis(input: {
     }),
   );
 
-  const statusRows = data[0] as Array<{ LINEUP_CK?: boolean }> | undefined;
-
   return {
-    isConfirmed: Boolean(statusRows?.[0]?.LINEUP_CK),
+    isConfirmed: parseLineupAnalysisConfirmed(data[0]),
     home: parseLineupRows((data[3] as unknown[])?.[0]),
     away: parseLineupRows((data[4] as unknown[])?.[0]),
   } satisfies KboLineupAnalysis;

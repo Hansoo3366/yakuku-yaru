@@ -1,3 +1,4 @@
+import { syncLog } from '../../lib/sync-log.js';
 import type { ParsedKboGame } from './parse-schedule.js';
 import { fetchKboMonthSchedule } from './kbo-schedule.client.js';
 import { parseKboScheduleTable } from './parse-schedule.js';
@@ -185,9 +186,17 @@ export async function runKboSyncMode(
     .map((target) => `${target.seasonYear}-${String(target.month).padStart(2, '0')}`)
     .join(', ');
 
-  console.log(`[kbo-sync] mode=${mode} months=${targetLabel}`);
+  syncLog('kbo-sync', `mode=${mode} months=${targetLabel}`);
 
-  for (const target of targets) {
+  for (let index = 0; index < targets.length; index += 1) {
+    const target = targets[index];
+    const monthLabel = `${target.seasonYear}-${String(target.month).padStart(2, '0')}`;
+
+    syncLog(
+      'kbo-sync',
+      `${index + 1}/${targets.length} ${monthLabel} 일정 조회 중…`,
+    );
+
     const table = await fetchKboMonthSchedule({
       seasonYear: target.seasonYear,
       month: target.month,
@@ -199,6 +208,11 @@ export async function runKboSyncMode(
     }
 
     parsed += parsedGames.length;
+
+    syncLog(
+      'kbo-sync',
+      `${monthLabel} — ${parsedGames.length}경기 DB 반영 중…`,
+    );
 
     for (const game of parsedGames) {
       const result = await upsertKboGame(game, teamIds);

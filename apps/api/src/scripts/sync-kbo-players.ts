@@ -1,3 +1,4 @@
+import { syncLog } from '../lib/sync-log.js';
 import { runMigrations } from '../config/migrations.js';
 import {
   KBO_TEAM_CODES,
@@ -19,6 +20,8 @@ function parseArgs(argv: string[]) {
 const { teamCodes } = parseArgs(process.argv.slice(2));
 
 await runMigrations();
+
+syncLog('kbo-players', '마이그레이션 완료, 동기화 시작');
 
 const result = await syncKboPlayers({
   teamCodes: teamCodes.length ? teamCodes : undefined,
