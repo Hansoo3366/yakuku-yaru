@@ -8,3 +8,5 @@ const result = await syncKboTeamRank();
 console.log(
   `[kbo-standings] 완료 — ${result.seasonYear}시즌 ${result.rankDate} 기준 ${result.teamCount}팀 (series=${result.seriesId})`,
 );
+
+process.exit(0);
