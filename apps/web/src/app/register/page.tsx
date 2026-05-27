@@ -246,11 +246,6 @@ function RegisterPageContent() {
       return;
     }
 
-    if (codeSecondsLeft <= 0) {
-      setErrorMessage('인증번호가 만료되었습니다. 재전송 후 다시 입력해주세요.');
-      return;
-    }
-
     setIsVerifying(true);
 
     try {
@@ -522,7 +517,7 @@ function RegisterPageContent() {
               <span className="field-hint">
                 {codeSecondsLeft > 0
                   ? `남은 시간 ${formatCountdown(codeSecondsLeft)}`
-                  : '인증번호가 만료되었습니다. 재전송해주세요.'}
+                  : '남은 시간이 0초로 보이면 먼저 인증번호 확인을 눌러보고, 실패하면 재전송해주세요.'}
               </span>
             </div>
             {infoMessage ? (
@@ -533,7 +528,7 @@ function RegisterPageContent() {
             {errorMessage ? <p className="form-error">{errorMessage}</p> : null}
             <button
               className="btn btn-primary btn-lg btn-block"
-              disabled={isVerifying || isLoadingVerification || codeSecondsLeft <= 0}
+              disabled={isVerifying || isLoadingVerification}
               type="submit"
             >
               {isVerifying ? '확인 중' : '인증번호 확인'}
