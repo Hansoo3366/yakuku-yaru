@@ -1,7 +1,7 @@
 # KBO 서버 크롤링 (cron)
 
 GitHub Actions 스케줄 대신 **프로덕션 서버 호스트 crontab**에서 실행합니다.  
-실제 크롤은 `docker compose exec api` 안의 npm 스크립트가 수행합니다.
+실제 크롤은 `docker compose exec api` 안에서 `apps/api`의 npm 스크립트가 수행합니다.
 
 ## 스크립트
 

@@ -38,8 +38,8 @@ fi
 DC=(docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" exec -T api)
 
 run_in_api() {
-  echo "[$BATCH_NAME] \$ $*"
-  "${DC[@]}" sh -c "$*"
+  echo "[$BATCH_NAME] \$ cd apps/api && $*"
+  "${DC[@]}" sh -c "cd apps/api && $*"
 }
 
 on_finish() {

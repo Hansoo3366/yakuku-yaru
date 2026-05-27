@@ -70,7 +70,7 @@ Docker로 직접:
 
 ```bash
 docker compose -f docker-compose.prod.yml --env-file .env.production exec -T api \
-  npm run sync:kbo-schedule -- --mode=season
+  sh -c 'cd apps/api && npm run sync:kbo-schedule -- --mode=season'
 ```
 
 로컬 개발 (`apps/api`):

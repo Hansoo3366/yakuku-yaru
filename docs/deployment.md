@@ -157,6 +157,35 @@ cat ~/.ssh/github_actions_yakuku_yaru
 
 수동으로 자동 배포를 테스트하려면 GitHub Actions 화면에서 `Deploy to Google Cloud VM` workflow의 `Run workflow`를 실행합니다.
 
+### SSH 인증 실패 (`unable to authenticate, attempted methods [none publickey]`)
+
+KBO 크롤 workflow가 아니라 **`Deploy to Google Cloud VM`** 배포 단계에서 나는 오류입니다. GitHub Secrets의 `DEPLOY_SSH_KEY`와 서버 `authorized_keys`가 맞지 않을 때 발생합니다.
+
+1. **서버에서** 배포 전용 키를 새로 만듭니다 (패스프레이즈 없이).
+
+```bash
+ssh-keygen -t ed25519 -C "github-actions-yakuku-yaru" -f ~/.ssh/github_actions_yakuku_yaru -N ""
+chmod 600 ~/.ssh/github_actions_yakuku_yaru
+chmod 644 ~/.ssh/github_actions_yakuku_yaru.pub
+cat ~/.ssh/github_actions_yakuku_yaru.pub >> ~/.ssh/authorized_keys
+chmod 600 ~/.ssh/authorized_keys
+```
+
+2. **로컬에서** 같은 키로 접속되는지 확인합니다.
+
+```bash
+ssh -i ~/.ssh/github_actions_yakuku_yaru -p 22 DEPLOY_USER@DEPLOY_HOST "echo ok"
+```
+
+3. GitHub → **Settings → Secrets and variables → Actions** 에서 `DEPLOY_SSH_KEY`를 **전체 교체**합니다.
+   - `-----BEGIN OPENSSH PRIVATE KEY-----` 부터 `-----END ...-----` 까지 한 글자도 빠지지 않게
+   - 앞뒤 공백·따옴표 없이
+   - 예전에 쓰던 **다른 PC 키·패스프레이즈 있는 키**는 Actions에서 사용 불가
+
+4. `DEPLOY_USER`가 서버 로그인 계정과 같은지, `DEPLOY_HOST`가 **외부 IP**인지 확인합니다.
+
+5. 다시 Actions에서 `Deploy to Google Cloud VM` → **Run workflow** 실행.
+
 ## 10. DuckDNS and HTTPS
 
 도메인 구매 비용을 줄이려면 DuckDNS 무료 서브도메인을 사용할 수 있습니다.
