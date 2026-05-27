@@ -106,9 +106,7 @@ export function CalendarAgendaView({
               ) : null}
               {dayGames.map((game) => {
                 const attendance = attendanceByGameId[game.id];
-                const href = attendance
-                  ? `/attendance/${attendance.id}`
-                  : `/games/${game.id}`;
+                const href = `/games/${game.id}`;
 
                 return (
                   <CalendarEventCard
@@ -136,7 +134,7 @@ export function CalendarAgendaView({
                     awayScore: record.game.awayScore,
                     status: record.game.status,
                   }}
-                  href={`/attendance/${record.id}`}
+                  href={`/games/${record.gameId}`}
                   key={`record-${record.id}`}
                 />
               ))}
