@@ -23,6 +23,8 @@ KBO API는 **월 단위**만 제공합니다. 주·일 단위 갱신은 해당 �
 | 연간·월별 | — | `kbo-sync-season.yml`, `kbo-sync-month.yml` |
 | 주간·당일 | `KBO_SYNC_WEEK_CRON`, `KBO_SYNC_TODAY_CRON` | `kbo-sync-week.yml`, `kbo-sync-today.yml` |
 | 팀 순위(일자별) | — | `kbo-sync-standings.yml` (매일) |
+| 선수 마스터 | — | `kbo-sync-players.yml` (매주 월 06:30 KST) |
+| 선발·라인업 | — | `kbo-sync-game-center.yml` (당일 8회, KST 시간대) |
 
 API 기동 약 20초 후 **주간(`week`)** 1회 추가 실행 (`KBO_SYNC_ON_START`).
 
@@ -59,6 +61,23 @@ npm run sync:kbo-schedule -- --year=2026 --month=5
 
 # 팀 순위 (KBO 일자별 순위 페이지 HTML 파싱)
 npm run sync:kbo-standings
+
+# 선수 마스터 (10개 구단 전체)
+npm run sync:kbo-players
+
+# 당일 선발 투수·라인업 (기본 today)
+npm run sync:kbo-game-center
+npm run sync:kbo-game-center -- --mode=week
+```
+
+### GitHub Actions 스케줄 (KST)
+
+| 워크플로 | 시각 |
+|----------|------|
+| `kbo-sync-players.yml` | **매주 월요일 06:30** |
+| `kbo-sync-game-center.yml` | **매일** 08:00, 10:30, 13:00, 15:30, 17:00, 18:30, 20:00, 21:30 |
+
+`game-center`는 Actions 탭에서 `workflow_dispatch`로 `today` / `week` / `month` 수동 실행 가능.
 ```
 
 운영 Docker (GCP SSH, API 컨테이너 안):
