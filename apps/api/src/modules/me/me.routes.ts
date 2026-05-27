@@ -14,6 +14,13 @@ import {
   updateUserNickname,
   updateUserProfileImage,
 } from '../users/user.repository.js';
+import {
+  deleteUserStadiumNote,
+  findUserStadiumNote,
+  normalizeStadiumName,
+  normalizeStadiumNoteFields,
+  upsertUserStadiumNote,
+} from '../stadium-notes/stadium-note.repository.js';
 
 export const meRouter = Router();
 
@@ -87,6 +94,72 @@ meRouter.patch('/nickname', authenticate, profileUpdateRateLimit, async (req, re
     res.json({
       user: toPublicUser(user),
     });
+  } catch (error) {
+    next(error);
+  }
+});
+
+meRouter.get('/stadium-notes', authenticate, async (req, res, next) => {
+  try {
+    const stadium =
+      typeof req.query.stadium === 'string'
+        ? normalizeStadiumName(req.query.stadium)
+        : null;
+
+    if (!stadium) {
+      throw new HttpError(400, 'INVALID_INPUT', '구장 이름이 필요합니다.');
+    }
+
+    const note = await findUserStadiumNote({
+      userId: req.user?.id ?? 0,
+      stadium,
+    });
+
+    res.json({ note });
+  } catch (error) {
+    next(error);
+  }
+});
+
+meRouter.put('/stadium-notes', authenticate, profileUpdateRateLimit, async (req, res, next) => {
+  try {
+    const { stadium, foodMemo, parkingMemo } = req.body as {
+      stadium?: string;
+      foodMemo?: string;
+      parkingMemo?: string;
+    };
+    const normalizedStadium =
+      typeof stadium === 'string' ? normalizeStadiumName(stadium) : null;
+
+    if (!normalizedStadium) {
+      throw new HttpError(400, 'INVALID_INPUT', '구장 이름이 올바르지 않습니다.');
+    }
+
+    const { foodMemo: normalizedFoodMemo, parkingMemo: normalizedParkingMemo } =
+      normalizeStadiumNoteFields({
+        foodMemo: typeof foodMemo === 'string' ? foodMemo : '',
+        parkingMemo: typeof parkingMemo === 'string' ? parkingMemo : '',
+      });
+
+    const userId = req.user?.id ?? 0;
+
+    if (!normalizedFoodMemo && !normalizedParkingMemo) {
+      await deleteUserStadiumNote({
+        userId,
+        stadium: normalizedStadium,
+      });
+      res.json({ note: null });
+      return;
+    }
+
+    const note = await upsertUserStadiumNote({
+      userId,
+      stadium: normalizedStadium,
+      foodMemo: normalizedFoodMemo,
+      parkingMemo: normalizedParkingMemo,
+    });
+
+    res.json({ note });
   } catch (error) {
     next(error);
   }

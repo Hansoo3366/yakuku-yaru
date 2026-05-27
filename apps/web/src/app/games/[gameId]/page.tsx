@@ -21,6 +21,8 @@ import {
 } from '@/lib/game-status';
 import { isGameFinished } from '@/lib/game-outcome';
 import { canWriteAttendanceRecord } from '@/lib/attendance-game';
+import { StatTerm } from '@/components/StatGlossary';
+import { StadiumPersonalNotes } from '@/components/StadiumPersonalNotes';
 
 function formatDateTime(value: string) {
   return new Date(value).toLocaleString('ko-KR', {
@@ -86,15 +88,21 @@ function StarterPitcherCard({
           ) : null}
           <dl className="starter-pitcher-stats">
             <div>
-              <dt>ERA</dt>
+              <dt>
+                <StatTerm abbr="ERA" />
+              </dt>
               <dd>{formatStat(pitcher.stats.era)}</dd>
             </div>
             <div>
-              <dt>WHIP</dt>
+              <dt>
+                <StatTerm abbr="WHIP" />
+              </dt>
               <dd>{formatStat(pitcher.stats.whip)}</dd>
             </div>
             <div>
-              <dt>WAR</dt>
+              <dt>
+                <StatTerm abbr="WAR" />
+              </dt>
               <dd>{formatStat(pitcher.stats.war)}</dd>
             </div>
             <div>
@@ -106,7 +114,9 @@ function StarterPitcherCard({
               <dd>{pitcher.stats.starterAverageInnings ?? '-'}</dd>
             </div>
             <div>
-              <dt>QS</dt>
+              <dt>
+                <StatTerm abbr="QS" />
+              </dt>
               <dd>{pitcher.stats.qualityStarts ?? '-'}</dd>
             </div>
           </dl>
@@ -153,8 +163,12 @@ function LineupPanel({
               </div>
               <div className="lineup-stats">
                 <span>타율 {formatRate(player.battingAvg)}</span>
-                <span>OPS {formatRate(player.ops)}</span>
-                <span>WAR {formatStat(player.war)}</span>
+                <span>
+                  <StatTerm abbr="OPS" /> {formatRate(player.ops)}
+                </span>
+                <span>
+                  <StatTerm abbr="WAR" /> {formatStat(player.war)}
+                </span>
               </div>
             </li>
           ))}
@@ -373,36 +387,7 @@ export default function GameDetailPage() {
         </div>
       </section>
 
-      {game.stadiumGuide ? (
-        <section className="card">
-          <div className="section-heading">
-            <div>
-              <h2>구장 가이드</h2>
-              <p>주변 맛집과 주차 정보</p>
-            </div>
-            {game.stadiumGuide.mapUrl ? (
-              <a
-                className="btn btn-ghost btn-sm"
-                href={game.stadiumGuide.mapUrl}
-                rel="noreferrer"
-                target="_blank"
-              >
-                지도 열기
-              </a>
-            ) : null}
-          </div>
-          <div className="stadium-info">
-            <div className="stadium-info-row">
-              <strong>맛집 메모</strong>
-              <p>{game.stadiumGuide.foodSummary}</p>
-            </div>
-            <div className="stadium-info-row">
-              <strong>주차 정보</strong>
-              <p>{game.stadiumGuide.parkingSummary}</p>
-            </div>
-          </div>
-        </section>
-      ) : null}
+      <StadiumPersonalNotes stadium={game.stadium} />
     </main>
   );
 }

@@ -186,6 +186,22 @@ CREATE TABLE IF NOT EXISTS stadium_guides (
   UNIQUE KEY uq_stadium_guides_stadium (stadium)
 );
 
+CREATE TABLE IF NOT EXISTS user_stadium_notes (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  user_id BIGINT UNSIGNED NOT NULL,
+  stadium VARCHAR(100) NOT NULL,
+  food_memo TEXT NOT NULL,
+  parking_memo TEXT NOT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_user_stadium_notes_user_stadium (user_id, stadium),
+  KEY idx_user_stadium_notes_stadium (stadium),
+  CONSTRAINT fk_user_stadium_notes_user
+    FOREIGN KEY (user_id) REFERENCES users(id)
+    ON DELETE CASCADE
+);
+
 CREATE TABLE IF NOT EXISTS attendance_records (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   user_id BIGINT UNSIGNED NOT NULL,

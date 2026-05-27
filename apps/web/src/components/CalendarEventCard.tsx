@@ -64,10 +64,8 @@ function formatPitcherLine(game: GameLike) {
 
   const awayLabel = awayPitcher?.name ?? '-';
   const homeLabel = homePitcher?.name ?? '-';
-  const isConfirmed =
-    awayPitcher?.isConfirmed === true || homePitcher?.isConfirmed === true;
 
-  return `${isConfirmed ? '선발' : '예상'} ${awayLabel} / ${homeLabel}`;
+  return `${awayLabel} vs ${homeLabel}`;
 }
 
 export function CalendarEventCard({

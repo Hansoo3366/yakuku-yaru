@@ -8,6 +8,7 @@ export const NICKNAME_MAX_LENGTH = 20;
 export const POST_TITLE_MAX_LENGTH = 200;
 export const POST_CONTENT_MAX_LENGTH = 10000;
 export const COMMENT_CONTENT_MAX_LENGTH = 2000;
+export const STADIUM_NOTE_FIELD_MAX_LENGTH = 4000;
 
 const EMAIL_PATTERN =
   /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$/;
@@ -108,6 +109,10 @@ export function validatePostContent(content: string) {
 
 export function validateCommentContent(content: string) {
   return normalizeBoardText(content, COMMENT_CONTENT_MAX_LENGTH);
+}
+
+export function validateStadiumNoteField(value: string) {
+  return normalizeBoardText(value, STADIUM_NOTE_FIELD_MAX_LENGTH);
 }
 
 export function validateEmail(email: string) {

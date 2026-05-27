@@ -520,4 +520,58 @@ export async function runMigrations() {
          ON DELETE SET NULL`,
     );
   }
+
+  const hasUserStadiumNotes = await tableExists('user_stadium_notes');
+
+  if (!hasUserStadiumNotes) {
+    await db.execute(
+      `CREATE TABLE user_stadium_notes (
+         id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+         user_id BIGINT UNSIGNED NOT NULL,
+         stadium VARCHAR(100) NOT NULL,
+         food_memo TEXT NOT NULL,
+         parking_memo TEXT NOT NULL,
+         created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+         updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+         PRIMARY KEY (id),
+         UNIQUE KEY uq_user_stadium_notes_user_stadium (user_id, stadium),
+         KEY idx_user_stadium_notes_stadium (stadium),
+         CONSTRAINT fk_user_stadium_notes_user
+           FOREIGN KEY (user_id) REFERENCES users(id)
+           ON DELETE CASCADE
+       )`,
+    );
+  } else {
+    const hasFoodMemo = await columnExists('user_stadium_notes', 'food_memo');
+
+    if (!hasFoodMemo) {
+      await db.execute(
+        `ALTER TABLE user_stadium_notes
+         ADD COLUMN food_memo TEXT NULL AFTER stadium,
+         ADD COLUMN parking_memo TEXT NULL AFTER food_memo`,
+      );
+
+      const hasLegacyMemo = await columnExists('user_stadium_notes', 'memo');
+
+      if (hasLegacyMemo) {
+        await db.execute(
+          `UPDATE user_stadium_notes
+           SET food_memo = COALESCE(NULLIF(memo, ''), food_memo, '')`,
+        );
+        await db.execute(`ALTER TABLE user_stadium_notes DROP COLUMN memo`);
+      }
+
+      await db.execute(
+        `UPDATE user_stadium_notes
+         SET food_memo = COALESCE(food_memo, ''),
+             parking_memo = COALESCE(parking_memo, '')`,
+      );
+
+      await db.execute(
+        `ALTER TABLE user_stadium_notes
+         MODIFY COLUMN food_memo TEXT NOT NULL,
+         MODIFY COLUMN parking_memo TEXT NOT NULL`,
+      );
+    }
+  }
 }

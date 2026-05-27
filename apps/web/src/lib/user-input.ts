@@ -3,6 +3,7 @@ export const PASSWORD_MIN_LENGTH = 8;
 export const PASSWORD_MAX_LENGTH = 128;
 export const NICKNAME_MIN_LENGTH = 2;
 export const NICKNAME_MAX_LENGTH = 20;
+export const STADIUM_NOTE_MAX_LENGTH = 4000;
 
 const EMAIL_PATTERN =
   /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$/;
@@ -10,6 +11,7 @@ const EMAIL_PATTERN =
 const NICKNAME_PATTERN = /^[가-힣a-zA-Z0-9_]+$/;
 
 const BLOCKED_INPUT_PATTERNS = [
+  /<\/?[a-z][^>]*>/i,
   /<script\b/i,
   /<\/script>/i,
   /javascript:/i,
@@ -83,6 +85,33 @@ export function validateNicknameClient(nickname: string) {
 
   if (containsBlockedPayload(sanitized)) {
     return '허용되지 않는 문자가 포함되어 있습니다.';
+  }
+
+  return null;
+}
+
+function normalizeStadiumNoteText(value: string) {
+  return value
+    .replace(/\r\n/g, '\n')
+    .replace(/<[^>]*>/g, '')
+    .split('')
+    .filter((char) => {
+      const code = char.charCodeAt(0);
+      return code === 10 || code === 9 || (code >= 32 && code !== 127);
+    })
+    .join('')
+    .trim();
+}
+
+export function validateStadiumNoteClient(value: string): string | null {
+  const normalized = normalizeStadiumNoteText(value);
+
+  if (containsBlockedPayload(normalized)) {
+    return 'HTML, 스크립트, CSS는 입력할 수 없습니다.';
+  }
+
+  if (value.length > STADIUM_NOTE_MAX_LENGTH) {
+    return `${STADIUM_NOTE_MAX_LENGTH}자 이하로 입력해주세요.`;
   }
 
   return null;
