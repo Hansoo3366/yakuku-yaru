@@ -13,6 +13,7 @@ export type PublicUser = {
   profileImageUrl: string | null;
   role: string;
   favoriteTeamId: number | null;
+  favoriteTeamShortName: string | null;
   emailVerifiedAt: string | null;
 };
 

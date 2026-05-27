@@ -29,6 +29,7 @@ import {
   isNeutralAttendance,
   normalizeFavoriteTeamId,
   requiresCheeredTeamPick,
+  resolveFavoriteTeamIdInGame,
 } from '@/lib/attendance-game';
 import {
   resolveAttendanceScoresFromGame,
@@ -57,11 +58,16 @@ export default function EditAttendancePage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [game, setGame] = useState<Game | null>(null);
   const [favoriteTeamId, setFavoriteTeamId] = useState<number | null>(null);
+  const [favoriteTeamShortName, setFavoriteTeamShortName] = useState<string | null>(
+    null,
+  );
   const [cheeredTeamId, setCheeredTeamId] = useState<number | null>(null);
 
-  const isNeutral = game ? isNeutralAttendance(game, favoriteTeamId) : false;
+  const isNeutral = game
+    ? isNeutralAttendance(game, favoriteTeamId, favoriteTeamShortName)
+    : false;
   const needsCheeredTeam = game
-    ? requiresCheeredTeamPick(game, favoriteTeamId)
+    ? requiresCheeredTeamPick(game, favoriteTeamId, favoriteTeamShortName)
     : false;
   const isCancelledGame = game ? isGameCancelled(game) : false;
 
@@ -130,16 +136,22 @@ export default function EditAttendancePage() {
         const favoriteTeamId = normalizeFavoriteTeamId(
           meResponse.user.favoriteTeamId,
         );
+        const favoriteShortName = meResponse.user.favoriteTeamShortName ?? null;
         setFavoriteTeamId(favoriteTeamId);
+        setFavoriteTeamShortName(favoriteShortName);
         setCheeredTeamId(r.cheeredTeamId ?? null);
         setMemo(r.memo ?? '');
         setWatchType(r.watchType);
         setCompanions(toSelectedCompanions(r.companions));
 
-        const neutral = isNeutralAttendance(loadedGame, favoriteTeamId);
+        const teamInGameId = resolveFavoriteTeamIdInGame(
+          loadedGame,
+          favoriteTeamId,
+          favoriteShortName,
+        );
 
-        if (!neutral) {
-          applyOfficialScores(loadedGame, favoriteTeamId);
+        if (teamInGameId != null) {
+          applyOfficialScores(loadedGame, teamInGameId);
         } else if (r.cheeredTeamId) {
           applyOfficialScores(loadedGame, r.cheeredTeamId);
         } else {
@@ -352,8 +364,9 @@ export default function EditAttendancePage() {
         </section>
 
         {game && needsCheeredTeam ? (
-          <CheeredTeamPicker
+            <CheeredTeamPicker
             favoriteTeamId={favoriteTeamId}
+            favoriteTeamShortName={favoriteTeamShortName}
             game={game}
             onChange={setCheeredTeamId}
             value={cheeredTeamId}

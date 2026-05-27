@@ -20,6 +20,7 @@ import {
   normalizeFavoriteTeamId,
   requiresCheeredTeamPick,
   canWriteAttendanceRecord,
+  resolveFavoriteTeamIdInGame,
 } from '@/lib/attendance-game';
 import {
   resolveAttendanceScoresFromGame,
@@ -52,11 +53,16 @@ function NewAttendanceForm() {
   const [isLoadingGame, setIsLoadingGame] = useState(true);
   const [game, setGame] = useState<Game | null>(null);
   const [favoriteTeamId, setFavoriteTeamId] = useState<number | null>(null);
+  const [favoriteTeamShortName, setFavoriteTeamShortName] = useState<string | null>(
+    null,
+  );
   const [cheeredTeamId, setCheeredTeamId] = useState<number | null>(null);
 
-  const isNeutral = game ? isNeutralAttendance(game, favoriteTeamId) : false;
+  const isNeutral = game
+    ? isNeutralAttendance(game, favoriteTeamId, favoriteTeamShortName)
+    : false;
   const needsCheeredTeam = game
-    ? requiresCheeredTeamPick(game, favoriteTeamId)
+    ? requiresCheeredTeamPick(game, favoriteTeamId, favoriteTeamShortName)
     : false;
   const isCancelledGame = game ? isGameCancelled(game) : false;
   const canWrite = game ? canWriteAttendanceRecord(game) : false;
@@ -102,14 +108,25 @@ function NewAttendanceForm() {
     Promise.all([fetchGame(gameId), fetchMe(token)])
       .then(([gameResponse, meResponse]) => {
         setGame(gameResponse.game);
-        setFavoriteTeamId(normalizeFavoriteTeamId(meResponse.user.favoriteTeamId));
         const favoriteTeamId = normalizeFavoriteTeamId(
           meResponse.user.favoriteTeamId,
         );
-        const neutral = isNeutralAttendance(gameResponse.game, favoriteTeamId);
+        const favoriteShortName = meResponse.user.favoriteTeamShortName ?? null;
+        setFavoriteTeamId(favoriteTeamId);
+        setFavoriteTeamShortName(favoriteShortName);
+        const neutral = isNeutralAttendance(
+          gameResponse.game,
+          favoriteTeamId,
+          favoriteShortName,
+        );
+        const teamInGameId = resolveFavoriteTeamIdInGame(
+          gameResponse.game,
+          favoriteTeamId,
+          favoriteShortName,
+        );
 
-        if (!neutral) {
-          applyOfficialScores(gameResponse.game, favoriteTeamId);
+        if (teamInGameId != null) {
+          applyOfficialScores(gameResponse.game, teamInGameId);
         } else {
           applyOfficialScores(gameResponse.game, null);
         }
@@ -304,9 +321,20 @@ function NewAttendanceForm() {
             )}
           </section>
 
+          {!favoriteTeamId && !favoriteTeamShortName ? (
+            <section className="card stack">
+              <p className="score-input-hint">
+                마이페이지에서 응원팀을 설정하면 내 팀 경기는 응원팀 선택 없이
+                기록할 수 있어요.{' '}
+                <Link href="/me">응원팀 설정하기</Link>
+              </p>
+            </section>
+          ) : null}
+
           {game && needsCheeredTeam ? (
             <CheeredTeamPicker
               favoriteTeamId={favoriteTeamId}
+              favoriteTeamShortName={favoriteTeamShortName}
               game={game}
               onChange={setCheeredTeamId}
               value={cheeredTeamId}

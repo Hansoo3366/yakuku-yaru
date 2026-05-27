@@ -9,6 +9,7 @@ export type UserRow = RowDataPacket & {
   profile_image_url: string | null;
   role: string;
   favorite_team_id: number | null;
+  favorite_team_short_name?: string | null;
   email_verified_at: Date | null;
   created_at: Date;
   updated_at: Date;
@@ -21,6 +22,7 @@ export type PublicUser = {
   profileImageUrl: string | null;
   role: string;
   favoriteTeamId: number | null;
+  favoriteTeamShortName: string | null;
   emailVerifiedAt: Date | null;
 };
 
@@ -31,6 +33,18 @@ export type UserSearchResult = {
   favoriteTeamId: number | null;
 };
 
+export function getFavoriteTeamIdFromUser(
+  user: Pick<UserRow, 'favorite_team_id'> | null | undefined,
+) {
+  return user?.favorite_team_id != null ? Number(user.favorite_team_id) : null;
+}
+
+export function getFavoriteTeamShortNameFromUser(
+  user: Pick<UserRow, 'favorite_team_short_name'> | null | undefined,
+) {
+  return user?.favorite_team_short_name ?? null;
+}
+
 export function toPublicUser(user: UserRow): PublicUser {
   return {
     id: user.id,
@@ -38,7 +52,9 @@ export function toPublicUser(user: UserRow): PublicUser {
     nickname: user.nickname,
     profileImageUrl: user.profile_image_url,
     role: user.role,
-    favoriteTeamId: user.favorite_team_id,
+    favoriteTeamId:
+      user.favorite_team_id != null ? Number(user.favorite_team_id) : null,
+    favoriteTeamShortName: user.favorite_team_short_name ?? null,
     emailVerifiedAt: user.email_verified_at,
   };
 }
@@ -60,9 +76,21 @@ export async function findUserByEmail(email: string) {
 
 export async function findUserById(id: number) {
   const [rows] = await db.query<UserRow[]>(
-    `SELECT ${userSelectColumns}
-     FROM users
-     WHERE id = ?
+    `SELECT
+       u.id,
+       u.email,
+       u.password_hash,
+       u.nickname,
+       u.profile_image_url,
+       u.role,
+       u.favorite_team_id,
+       u.email_verified_at,
+       u.created_at,
+       u.updated_at,
+       t.short_name AS favorite_team_short_name
+     FROM users u
+     LEFT JOIN teams t ON t.id = u.favorite_team_id
+     WHERE u.id = ?
      LIMIT 1`,
     [id],
   );

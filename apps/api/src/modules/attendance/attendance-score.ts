@@ -2,7 +2,11 @@ import type { RowDataPacket } from 'mysql2';
 import type { Game } from '../games/game.repository.js';
 import { db } from '../../config/database.js';
 import { findGameById } from '../games/game.repository.js';
-import { findUserById } from '../users/user.repository.js';
+import {
+  findUserById,
+  getFavoriteTeamIdFromUser,
+  getFavoriteTeamShortNameFromUser,
+} from '../users/user.repository.js';
 import {
   isGameCancelled,
   resolveOutcomeTeamId,
@@ -235,7 +239,8 @@ export async function syncAttendanceScoresForGame(gameId: number) {
       game,
       resolveStorageOutcomeTeamId({
         game,
-        ownerFavoriteTeamId: user?.favoriteTeamId ?? null,
+        ownerFavoriteTeamId: getFavoriteTeamIdFromUser(user),
+        ownerFavoriteTeamShortName: getFavoriteTeamShortNameFromUser(user),
         cheeredTeamId: row.cheered_team_id,
       }),
     );

@@ -23,11 +23,15 @@ import {
 } from './companion.repository.js';
 import { createNotification } from '../notifications/notification.repository.js';
 import { attendancePhotoUpload } from './upload.js';
-import { findUserById } from '../users/user.repository.js';
+import {
+  findUserById,
+  getFavoriteTeamIdFromUser,
+  getFavoriteTeamShortNameFromUser,
+} from '../users/user.repository.js';
 import {
   assertValidCheeredTeamId,
   canWriteAttendanceRecord,
-  isTeamInGame,
+  resolveFavoriteTeamIdInGame,
 } from './attendance-game.js';
 import { buildAttendanceScoreFields } from './attendance-score.js';
 
@@ -92,24 +96,32 @@ function normalizeCompanionUserIds(value: unknown) {
 function resolveScoreFavoriteTeamId(input: {
   game: Awaited<ReturnType<typeof findGameById>>;
   ownerFavoriteTeamId: number | null | undefined;
+  ownerFavoriteTeamShortName?: string | null;
   editorFavoriteTeamId?: number | null | undefined;
+  editorFavoriteTeamShortName?: string | null;
 }) {
   if (!input.game) {
     return null;
   }
 
-  if (
-    input.ownerFavoriteTeamId &&
-    isTeamInGame(input.game, input.ownerFavoriteTeamId)
-  ) {
-    return input.ownerFavoriteTeamId;
+  const ownerTeamInGame = resolveFavoriteTeamIdInGame(
+    input.game,
+    input.ownerFavoriteTeamId,
+    input.ownerFavoriteTeamShortName,
+  );
+
+  if (ownerTeamInGame != null) {
+    return ownerTeamInGame;
   }
 
-  if (
-    input.editorFavoriteTeamId &&
-    isTeamInGame(input.game, input.editorFavoriteTeamId)
-  ) {
-    return input.editorFavoriteTeamId;
+  const editorTeamInGame = resolveFavoriteTeamIdInGame(
+    input.game,
+    input.editorFavoriteTeamId,
+    input.editorFavoriteTeamShortName,
+  );
+
+  if (editorTeamInGame != null) {
+    return editorTeamInGame;
   }
 
   return input.ownerFavoriteTeamId ?? input.editorFavoriteTeamId ?? null;
@@ -210,10 +222,14 @@ attendanceRouter.post(
       }
 
       const user = await findUserById(userId);
+      const ownerFavoriteTeamId = getFavoriteTeamIdFromUser(user);
+      const ownerFavoriteTeamShortName = getFavoriteTeamShortNameFromUser(user);
       const cheeredTeamId = assertValidCheeredTeamId({
         game,
-        ownerFavoriteTeamId: user?.favoriteTeamId ?? null,
-        editorFavoriteTeamId: user?.favoriteTeamId ?? null,
+        ownerFavoriteTeamId,
+        ownerFavoriteTeamShortName,
+        editorFavoriteTeamId: ownerFavoriteTeamId,
+        editorFavoriteTeamShortName: ownerFavoriteTeamShortName,
         cheeredTeamId: (req.body as { cheeredTeamId?: number }).cheeredTeamId,
       });
 
@@ -225,8 +241,10 @@ attendanceRouter.post(
         game,
         favoriteTeamId: resolveScoreFavoriteTeamId({
           game,
-          ownerFavoriteTeamId: user?.favoriteTeamId ?? null,
-          editorFavoriteTeamId: user?.favoriteTeamId ?? null,
+          ownerFavoriteTeamId,
+          ownerFavoriteTeamShortName,
+          editorFavoriteTeamId: ownerFavoriteTeamId,
+          editorFavoriteTeamShortName: ownerFavoriteTeamShortName,
         }),
         cheeredTeamId,
       });
@@ -322,10 +340,16 @@ attendanceRouter.patch(
 
       const owner = await findUserById(record.userId);
       const editor = await findUserById(req.user?.id ?? 0);
+      const ownerFavoriteTeamId = getFavoriteTeamIdFromUser(owner);
+      const ownerFavoriteTeamShortName = getFavoriteTeamShortNameFromUser(owner);
+      const editorFavoriteTeamId = getFavoriteTeamIdFromUser(editor);
+      const editorFavoriteTeamShortName = getFavoriteTeamShortNameFromUser(editor);
       const cheeredTeamId = assertValidCheeredTeamId({
         game,
-        ownerFavoriteTeamId: owner?.favoriteTeamId ?? null,
-        editorFavoriteTeamId: editor?.favoriteTeamId ?? null,
+        ownerFavoriteTeamId,
+        ownerFavoriteTeamShortName,
+        editorFavoriteTeamId,
+        editorFavoriteTeamShortName,
         cheeredTeamId: (req.body as { cheeredTeamId?: number }).cheeredTeamId,
       });
 
@@ -337,8 +361,10 @@ attendanceRouter.patch(
         game,
         favoriteTeamId: resolveScoreFavoriteTeamId({
           game,
-          ownerFavoriteTeamId: owner?.favoriteTeamId ?? null,
-          editorFavoriteTeamId: editor?.favoriteTeamId ?? null,
+          ownerFavoriteTeamId,
+          ownerFavoriteTeamShortName,
+          editorFavoriteTeamId,
+          editorFavoriteTeamShortName,
         }),
         cheeredTeamId,
       });

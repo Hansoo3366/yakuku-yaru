@@ -53,6 +53,7 @@ function RegisterPageContent() {
   const [favoriteTeamId, setFavoriteTeamId] = useState<number | null>(null);
   const [teams, setTeams] = useState<Team[]>([]);
   const [errorMessage, setErrorMessage] = useState('');
+  const [infoMessage, setInfoMessage] = useState('');
   const [emailSent, setEmailSent] = useState(false);
   const [verificationCode, setVerificationCode] = useState('');
   const [devVerificationCode, setDevVerificationCode] = useState<string | null>(null);
@@ -156,6 +157,7 @@ function RegisterPageContent() {
   async function handleAccountNext(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setErrorMessage('');
+    setInfoMessage('');
 
     const emailError = validateEmailClient(email);
     const nicknameError = validateNicknameClient(nickname);
@@ -203,6 +205,7 @@ function RegisterPageContent() {
 
   async function handleSubmit() {
     setErrorMessage('');
+    setInfoMessage('');
     setIsSubmitting(true);
 
     try {
@@ -213,6 +216,11 @@ function RegisterPageContent() {
         favoriteTeamId,
       });
       applyVerificationMeta(response);
+      setInfoMessage(
+        response.emailSent
+          ? '인증번호를 보냈어요. 메일함을 확인한 뒤 아래에 입력해주세요.'
+          : '인증번호를 발급했어요. 아래에 입력해주세요.',
+      );
       setStep('done');
     } catch (error) {
       if (error instanceof ApiError) {
@@ -229,6 +237,7 @@ function RegisterPageContent() {
   async function handleVerifyCode(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setErrorMessage('');
+    setInfoMessage('');
 
     const normalizedCode = verificationCode.replace(/\D/g, '');
 
@@ -264,13 +273,23 @@ function RegisterPageContent() {
     }
 
     setErrorMessage('');
+    setInfoMessage('');
     setIsResending(true);
 
     try {
       const response = await resendVerificationEmail(email);
       applyVerificationMeta(response);
+      setInfoMessage(
+        response.emailSent
+          ? '인증번호를 다시 보냈어요. 메일함을 확인해주세요.'
+          : '새 인증번호를 발급했어요. 아래에 입력해주세요.',
+      );
     } catch (error) {
       if (error instanceof ApiError) {
+        if (error.code === 'EMAIL_ALREADY_VERIFIED') {
+          router.push('/login');
+          return;
+        }
         setErrorMessage(error.message);
       } else {
         setErrorMessage('인증번호 재전송 중 오류가 발생했습니다.');
@@ -307,7 +326,7 @@ function RegisterPageContent() {
             2. 응원 팀 선택
           </li>
           <li className={`auth-step ${step === 'done' ? 'is-active' : ''}`}>
-            3. 인증 완료
+            3. 이메일 인증
           </li>
         </ol>
         )}
@@ -506,13 +525,18 @@ function RegisterPageContent() {
                   : '인증번호가 만료되었습니다. 재전송해주세요.'}
               </span>
             </div>
+            {infoMessage ? (
+              <p className="field-hint" role="status">
+                {infoMessage}
+              </p>
+            ) : null}
             {errorMessage ? <p className="form-error">{errorMessage}</p> : null}
             <button
               className="btn btn-primary btn-lg btn-block"
               disabled={isVerifying || isLoadingVerification || codeSecondsLeft <= 0}
               type="submit"
             >
-              {isVerifying ? '확인 중' : '인증 완료'}
+              {isVerifying ? '확인 중' : '인증번호 확인'}
             </button>
             <button
               className="btn btn-ghost btn-lg btn-block"

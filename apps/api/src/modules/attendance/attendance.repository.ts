@@ -1,6 +1,9 @@
 import type { ResultSetHeader, RowDataPacket } from 'mysql2';
 import { db } from '../../config/database.js';
-import { findUserById } from '../users/user.repository.js';
+import {
+  findUserById,
+  getFavoriteTeamIdFromUser,
+} from '../users/user.repository.js';
 import {
   countsTowardWinRateForRecord,
   resolveStorageOutcomeTeamId,
@@ -475,13 +478,17 @@ export async function reconcileAttendanceRecordById(recordId: number) {
 
 export async function getAttendanceStats(userId: number) {
   const user = await findUserById(userId);
-  const favoriteTeamId = user?.favoriteTeamId ?? null;
+  const favoriteTeamId = getFavoriteTeamIdFromUser(user);
 
   await reconcileAttendanceScoresForUser(userId);
 
   const records = await listAttendanceRecords({ userId });
-  const owned = records.filter((record) => record.viewerRelation === 'owner');
-  const countable = records.filter((record) =>
+  const statsRecords = records.filter(
+    (record) =>
+      record.viewerRelation === 'owner' ||
+      record.viewerRelation === 'companion',
+  );
+  const countable = statsRecords.filter((record) =>
     countsTowardWinRateForRecord({
       game: record.game,
       favoriteTeamId,
@@ -501,7 +508,7 @@ export async function getAttendanceStats(userId: number) {
   let countableStadium = 0;
   let countableHome = 0;
 
-  for (const record of owned) {
+  for (const record of statsRecords) {
     if (record.watchType === 'stadium') {
       stadiumCount += 1;
     } else if (record.watchType === 'home') {
@@ -548,7 +555,7 @@ export async function getAttendanceStats(userId: number) {
     : 0;
 
   return {
-    totalCount: owned.length,
+    totalCount: statsRecords.length,
     stadiumCount,
     homeCount,
     winCount,

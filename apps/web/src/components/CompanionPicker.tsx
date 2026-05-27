@@ -1,6 +1,6 @@
 'use client';
 
-import { FormEvent, useState } from 'react';
+import { KeyboardEvent, useState } from 'react';
 import { getAccessToken } from '@/lib/auth';
 import { searchUsers, type UserSearchResult } from '@/lib/user-api';
 import type { AttendanceCompanion } from '@/lib/attendance-api';
@@ -69,7 +69,11 @@ export function CompanionPicker({
     }
   }
 
-  function handleSearchSubmit(event: FormEvent<HTMLFormElement>) {
+  function handleSearchKeyDown(event: KeyboardEvent<HTMLInputElement>) {
+    if (event.key !== 'Enter') {
+      return;
+    }
+
     event.preventDefault();
     void runSearch();
   }
@@ -102,12 +106,13 @@ export function CompanionPicker({
           닉네임이나 이메일로 검색한 뒤 동행자로 태그할 수 있어요. Enter 또는 검색
           버튼을 눌러주세요.
         </span>
-        <form className="companion-search-bar" onSubmit={handleSearchSubmit}>
+        <div className="companion-search-bar">
           <div className="companion-search-input-wrap">
             <input
               className="form-input"
               id="companion-search-input"
               onChange={(event) => setKeyword(event.target.value)}
+              onKeyDown={handleSearchKeyDown}
               placeholder="닉네임 또는 이메일 (2자 이상)"
               type="search"
               value={keyword}
@@ -116,11 +121,12 @@ export function CompanionPicker({
           <button
             className="btn btn-secondary companion-search-button"
             disabled={isSearching}
-            type="submit"
+            onClick={() => void runSearch()}
+            type="button"
           >
             {isSearching ? '검색 중' : '검색'}
           </button>
-        </form>
+        </div>
       </div>
       {results.length ? (
         <div className="companion-result-list" role="listbox">

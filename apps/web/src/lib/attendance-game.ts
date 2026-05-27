@@ -1,8 +1,51 @@
 type GameTeamsLike = {
-  homeTeam: { id: number };
-  awayTeam: { id: number };
+  homeTeam: { id: number; shortName?: string };
+  awayTeam: { id: number; shortName?: string };
   status?: string;
 };
+
+export function normalizeTeamId(value: number | string | null | undefined) {
+  if (value == null || value === '') {
+    return null;
+  }
+
+  const id = Number(value);
+
+  return Number.isInteger(id) && id > 0 ? id : null;
+}
+
+/** 프로필 응원팀이 이 경기에서 뛰는 팀 ID (경기 row 기준, ID·약칭 모두 확인) */
+export function resolveFavoriteTeamIdInGame(
+  game: GameTeamsLike,
+  favoriteTeamId: number | null | undefined,
+  favoriteTeamShortName?: string | null,
+) {
+  const favoriteId = normalizeTeamId(favoriteTeamId);
+  const homeId = normalizeTeamId(game.homeTeam.id);
+  const awayId = normalizeTeamId(game.awayTeam.id);
+
+  if (favoriteId != null && homeId != null && favoriteId === homeId) {
+    return homeId;
+  }
+
+  if (favoriteId != null && awayId != null && favoriteId === awayId) {
+    return awayId;
+  }
+
+  const shortName = favoriteTeamShortName?.trim();
+
+  if (shortName) {
+    if (game.homeTeam.shortName === shortName && homeId != null) {
+      return homeId;
+    }
+
+    if (game.awayTeam.shortName === shortName && awayId != null) {
+      return awayId;
+    }
+  }
+
+  return null;
+}
 
 export function isGameCancelled(game: { status?: string }) {
   return game.status === 'cancelled';
@@ -42,38 +85,35 @@ export function canWriteAttendanceRecord(
 export function normalizeFavoriteTeamId(
   favoriteTeamId: number | null | undefined,
 ) {
-  if (favoriteTeamId == null) {
-    return null;
-  }
-
-  const id = Number(favoriteTeamId);
-
-  return Number.isInteger(id) && id > 0 ? id : null;
+  return normalizeTeamId(favoriteTeamId);
 }
 
 export function isTeamInGame(
   game: GameTeamsLike,
   teamId: number | null | undefined,
 ) {
-  if (teamId == null) {
-    return false;
-  }
-
-  const id = Number(teamId);
-
-  return Number(game.homeTeam.id) === id || Number(game.awayTeam.id) === id;
+  return normalizeTeamId(teamId) != null
+    ? resolveFavoriteTeamIdInGame(game, teamId, null) !== null
+    : false;
 }
 
 /** 응원팀이 경기에 없는 직관(중립) */
 export function isNeutralAttendance(
   game: GameTeamsLike,
   favoriteTeamId: number | null | undefined,
+  favoriteTeamShortName?: string | null,
 ) {
-  if (!favoriteTeamId) {
+  if (!normalizeTeamId(favoriteTeamId) && !favoriteTeamShortName?.trim()) {
     return true;
   }
 
-  return !isTeamInGame(game, favoriteTeamId);
+  return (
+    resolveFavoriteTeamIdInGame(
+      game,
+      favoriteTeamId,
+      favoriteTeamShortName,
+    ) === null
+  );
 }
 
 /** 승률·타이틀 집계 대상 (내 응원팀이 뛴 경기 — 본인·동행 공통) */
@@ -114,8 +154,12 @@ export function countsTowardWinRateForRecord(input: {
 export function requiresCheeredTeamPick(
   game: GameTeamsLike,
   favoriteTeamId: number | null | undefined,
+  favoriteTeamShortName?: string | null,
 ) {
-  return isNeutralAttendance(game, favoriteTeamId) && !isGameCancelled(game);
+  return (
+    isNeutralAttendance(game, favoriteTeamId, favoriteTeamShortName) &&
+    !isGameCancelled(game)
+  );
 }
 
 export function resolveCheeredTeamId(
@@ -136,6 +180,7 @@ export function resolveOutcomeTeamId(input: {
   cheeredTeamId?: number | null;
   viewerRelation?: 'owner' | 'companion';
   ownerFavoriteTeamId?: number | null;
+  ownerFavoriteTeamShortName?: string | null;
 }) {
   const viewerTeamId = input.favoriteTeamId ?? null;
 
@@ -143,10 +188,14 @@ export function resolveOutcomeTeamId(input: {
     return viewerTeamId;
   }
 
-  const ownerTeamId = input.ownerFavoriteTeamId ?? viewerTeamId;
+  const ownerTeamInGame = resolveFavoriteTeamIdInGame(
+    input.game,
+    input.ownerFavoriteTeamId ?? input.favoriteTeamId,
+    input.ownerFavoriteTeamShortName,
+  );
 
-  if (ownerTeamId && isTeamInGame(input.game, ownerTeamId)) {
-    return ownerTeamId;
+  if (ownerTeamInGame != null) {
+    return ownerTeamInGame;
   }
 
   return resolveCheeredTeamId(input.game, input.cheeredTeamId);
@@ -156,13 +205,17 @@ export function resolveOutcomeTeamId(input: {
 export function resolveStorageOutcomeTeamId(input: {
   game: GameTeamsLike;
   ownerFavoriteTeamId: number | null | undefined;
+  ownerFavoriteTeamShortName?: string | null;
   cheeredTeamId?: number | null;
 }) {
-  if (
-    input.ownerFavoriteTeamId &&
-    isTeamInGame(input.game, input.ownerFavoriteTeamId)
-  ) {
-    return input.ownerFavoriteTeamId;
+  const ownerTeamInGame = resolveFavoriteTeamIdInGame(
+    input.game,
+    input.ownerFavoriteTeamId,
+    input.ownerFavoriteTeamShortName,
+  );
+
+  if (ownerTeamInGame != null) {
+    return ownerTeamInGame;
   }
 
   return resolveCheeredTeamId(input.game, input.cheeredTeamId);

@@ -271,14 +271,14 @@ export function toGame(row: GameRow): Game {
     gameDate,
     stadium: row.stadium,
     homeTeam: {
-      id: row.home_team_id,
+      id: Number(row.home_team_id),
       name: row.home_team_name,
       shortName: row.home_team_short_name,
       primaryColor: row.home_team_color,
       ticketUrl: row.home_team_ticket_url,
     },
     awayTeam: {
-      id: row.away_team_id,
+      id: Number(row.away_team_id),
       name: row.away_team_name,
       shortName: row.away_team_short_name,
       primaryColor: row.away_team_color,
