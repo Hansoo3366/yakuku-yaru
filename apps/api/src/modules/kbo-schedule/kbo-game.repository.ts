@@ -90,6 +90,7 @@ export async function upsertKboGame(
            home_score = ?,
            away_score = ?,
            status = ?,
+           cancellation_reason = ?,
            external_source = ?,
            external_id = ?
        WHERE id = ?`,
@@ -101,6 +102,7 @@ export async function upsertKboGame(
         game.homeScore,
         game.awayScore,
         game.status,
+        game.cancellationReason,
         KBO_EXTERNAL_SOURCE,
         game.externalId,
         existingId,
@@ -123,10 +125,11 @@ export async function upsertKboGame(
        home_score,
        away_score,
        status,
+       cancellation_reason,
        external_source,
        external_id
      )
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       game.gameDate,
       game.stadium,
@@ -135,6 +138,7 @@ export async function upsertKboGame(
       game.homeScore,
       game.awayScore,
       game.status,
+      game.cancellationReason,
       KBO_EXTERNAL_SOURCE,
       game.externalId,
     ],

@@ -24,7 +24,7 @@ import {
 import { createNotification } from '../notifications/notification.repository.js';
 import { attendancePhotoUpload } from './upload.js';
 import { findUserById } from '../users/user.repository.js';
-import { assertValidCheeredTeamId } from './attendance-game.js';
+import { assertValidCheeredTeamId, isTeamInGame } from './attendance-game.js';
 import { buildAttendanceScoreFields } from './attendance-score.js';
 
 export const attendanceRouter = Router();
@@ -83,6 +83,32 @@ function normalizeCompanionUserIds(value: unknown) {
   return value
     .map((item) => Number(item))
     .filter((item) => Number.isInteger(item) && item > 0);
+}
+
+function resolveScoreFavoriteTeamId(input: {
+  game: Awaited<ReturnType<typeof findGameById>>;
+  ownerFavoriteTeamId: number | null | undefined;
+  editorFavoriteTeamId?: number | null | undefined;
+}) {
+  if (!input.game) {
+    return null;
+  }
+
+  if (
+    input.ownerFavoriteTeamId &&
+    isTeamInGame(input.game, input.ownerFavoriteTeamId)
+  ) {
+    return input.ownerFavoriteTeamId;
+  }
+
+  if (
+    input.editorFavoriteTeamId &&
+    isTeamInGame(input.game, input.editorFavoriteTeamId)
+  ) {
+    return input.editorFavoriteTeamId;
+  }
+
+  return input.ownerFavoriteTeamId ?? input.editorFavoriteTeamId ?? null;
 }
 
 async function saveCompanionsAndNotify(input: {
@@ -175,6 +201,7 @@ attendanceRouter.post(
       const cheeredTeamId = assertValidCheeredTeamId({
         game,
         ownerFavoriteTeamId: user?.favoriteTeamId ?? null,
+        editorFavoriteTeamId: user?.favoriteTeamId ?? null,
         cheeredTeamId: (req.body as { cheeredTeamId?: number }).cheeredTeamId,
       });
 
@@ -184,7 +211,11 @@ attendanceRouter.post(
 
       const scoreFields = buildAttendanceScoreFields({
         game,
-        favoriteTeamId: user?.favoriteTeamId ?? null,
+        favoriteTeamId: resolveScoreFavoriteTeamId({
+          game,
+          ownerFavoriteTeamId: user?.favoriteTeamId ?? null,
+          editorFavoriteTeamId: user?.favoriteTeamId ?? null,
+        }),
         cheeredTeamId,
       });
 
@@ -278,9 +309,11 @@ attendanceRouter.patch(
       }
 
       const owner = await findUserById(record.userId);
+      const editor = await findUserById(req.user?.id ?? 0);
       const cheeredTeamId = assertValidCheeredTeamId({
         game,
         ownerFavoriteTeamId: owner?.favoriteTeamId ?? null,
+        editorFavoriteTeamId: editor?.favoriteTeamId ?? null,
         cheeredTeamId: (req.body as { cheeredTeamId?: number }).cheeredTeamId,
       });
 
@@ -290,7 +323,11 @@ attendanceRouter.patch(
 
       const scoreFields = buildAttendanceScoreFields({
         game,
-        favoriteTeamId: owner?.favoriteTeamId ?? null,
+        favoriteTeamId: resolveScoreFavoriteTeamId({
+          game,
+          ownerFavoriteTeamId: owner?.favoriteTeamId ?? null,
+          editorFavoriteTeamId: editor?.favoriteTeamId ?? null,
+        }),
         cheeredTeamId,
       });
 

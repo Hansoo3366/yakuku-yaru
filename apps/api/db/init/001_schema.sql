@@ -68,6 +68,7 @@ CREATE TABLE IF NOT EXISTS games (
   home_score INT NULL,
   away_score INT NULL,
   status VARCHAR(20) NOT NULL DEFAULT 'scheduled',
+  cancellation_reason VARCHAR(30) NULL,
   external_source VARCHAR(20) NULL,
   external_id VARCHAR(64) NULL,
   ticket_url VARCHAR(500) NULL,
@@ -84,6 +85,90 @@ CREATE TABLE IF NOT EXISTS games (
     FOREIGN KEY (home_team_id) REFERENCES teams(id),
   CONSTRAINT fk_games_away_team
     FOREIGN KEY (away_team_id) REFERENCES teams(id)
+);
+
+CREATE TABLE IF NOT EXISTS players (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  team_id BIGINT UNSIGNED NOT NULL,
+  kbo_player_id VARCHAR(64) NULL,
+  name VARCHAR(50) NOT NULL,
+  back_number VARCHAR(10) NULL,
+  position VARCHAR(20) NULL,
+  height_cm INT NULL,
+  weight_kg INT NULL,
+  throws_hand VARCHAR(10) NULL,
+  bats_hand VARCHAR(10) NULL,
+  birth_date DATE NULL,
+  school VARCHAR(500) NULL,
+  profile_image_url VARCHAR(500) NULL,
+  is_active BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_players_kbo_player_id (kbo_player_id),
+  KEY idx_players_team_id (team_id),
+  KEY idx_players_name (name),
+  CONSTRAINT fk_players_team
+    FOREIGN KEY (team_id) REFERENCES teams(id)
+    ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS game_starting_pitchers (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  game_id BIGINT UNSIGNED NOT NULL,
+  team_id BIGINT UNSIGNED NOT NULL,
+  player_id BIGINT UNSIGNED NOT NULL,
+  is_confirmed BOOLEAN NOT NULL DEFAULT FALSE,
+  era DECIMAL(5,2) NULL,
+  war DECIMAL(5,2) NULL,
+  games INT NULL,
+  starter_average_innings VARCHAR(10) NULL,
+  quality_starts INT NULL,
+  whip DECIMAL(5,2) NULL,
+  season_record VARCHAR(50) NULL,
+  source VARCHAR(20) NULL,
+  synced_at DATETIME NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_game_starting_pitchers_game_team (game_id, team_id),
+  KEY idx_game_starting_pitchers_player_id (player_id),
+  CONSTRAINT fk_game_starting_pitchers_game
+    FOREIGN KEY (game_id) REFERENCES games(id)
+    ON DELETE CASCADE,
+  CONSTRAINT fk_game_starting_pitchers_team
+    FOREIGN KEY (team_id) REFERENCES teams(id)
+    ON DELETE CASCADE,
+  CONSTRAINT fk_game_starting_pitchers_player
+    FOREIGN KEY (player_id) REFERENCES players(id)
+    ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS game_lineups (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  game_id BIGINT UNSIGNED NOT NULL,
+  team_id BIGINT UNSIGNED NOT NULL,
+  player_id BIGINT UNSIGNED NOT NULL,
+  batting_order INT NULL,
+  field_position VARCHAR(20) NULL,
+  war DECIMAL(5,2) NULL,
+  is_starter BOOLEAN NOT NULL DEFAULT TRUE,
+  source VARCHAR(20) NULL,
+  synced_at DATETIME NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_game_lineups_game_team_order (game_id, team_id, batting_order),
+  KEY idx_game_lineups_player_id (player_id),
+  CONSTRAINT fk_game_lineups_game
+    FOREIGN KEY (game_id) REFERENCES games(id)
+    ON DELETE CASCADE,
+  CONSTRAINT fk_game_lineups_team
+    FOREIGN KEY (team_id) REFERENCES teams(id)
+    ON DELETE CASCADE,
+  CONSTRAINT fk_game_lineups_player
+    FOREIGN KEY (player_id) REFERENCES players(id)
+    ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS stadium_guides (

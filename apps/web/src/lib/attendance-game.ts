@@ -1,7 +1,12 @@
 type GameTeamsLike = {
   homeTeam: { id: number };
   awayTeam: { id: number };
+  status?: string;
 };
+
+export function isGameCancelled(game: { status?: string }) {
+  return game.status === 'cancelled';
+}
 
 export function isTeamInGame(
   game: GameTeamsLike,
@@ -33,7 +38,18 @@ export function countsTowardWinRate(
   game: GameTeamsLike,
   favoriteTeamId: number | null | undefined,
 ) {
+  if (isGameCancelled(game)) {
+    return false;
+  }
+
   return isTeamInGame(game, favoriteTeamId);
+}
+
+export function requiresCheeredTeamPick(
+  game: GameTeamsLike,
+  favoriteTeamId: number | null | undefined,
+) {
+  return isNeutralAttendance(game, favoriteTeamId) && !isGameCancelled(game);
 }
 
 export function resolveCheeredTeamId(

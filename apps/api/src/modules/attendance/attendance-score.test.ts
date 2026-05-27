@@ -18,6 +18,9 @@ const baseGame = {
   homeScore: 5,
   awayScore: 3,
   status: 'finished',
+  cancellationReason: null,
+  probablePitchers: { home: null, away: null },
+  lineups: { home: [], away: [] },
   ticketUrl: null,
   ticketOpenAt: null,
   stadiumGuide: null,
@@ -79,5 +82,38 @@ assert.equal(resolveAttendanceTitle(0, 80), null);
 assert.equal(resolveAttendanceTitle(5, 60), '승리요정');
 assert.equal(resolveAttendanceTitle(5, 50), '패배요정');
 assert.equal(resolveAttendanceTitle(5, 20), '패배요정');
+
+const cancelledGame = {
+  ...baseGame,
+  homeScore: 0,
+  awayScore: 0,
+  status: 'cancelled',
+} satisfies Game;
+
+assert.equal(gameHasOfficialScores(cancelledGame), false);
+assert.equal(
+  resolveAttendanceScoresFromGame(cancelledGame, 1),
+  null,
+);
+assert.equal(
+  resolveAttendanceOutcome(
+    {
+      myTeamScore: 0,
+      opponentScore: 0,
+      result: 'win',
+      game: cancelledGame,
+    },
+    1,
+  ),
+  null,
+);
+assert.equal(
+  buildAttendanceScoreFields({
+    game: cancelledGame,
+    favoriteTeamId: 1,
+    cheeredTeamId: null,
+  }).result,
+  null,
+);
 
 console.log('attendance-score.test.ts: ok');

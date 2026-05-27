@@ -1,5 +1,5 @@
 import type { Game } from './baseball-api';
-import { resolveOutcomeTeamId } from '@/lib/attendance-game';
+import { isGameCancelled, resolveOutcomeTeamId } from '@/lib/attendance-game';
 import { isGameFinished } from '@/lib/game-outcome';
 
 export type AttendanceResult = 'win' | 'lose' | 'draw';
@@ -15,6 +15,7 @@ export type GameForAttendanceScore = {
 
 export function gameHasOfficialScores(game: GameForAttendanceScore) {
   return (
+    !isGameCancelled(game) &&
     isGameFinished(game) &&
     game.homeScore !== null &&
     game.awayScore !== null
@@ -89,6 +90,10 @@ export function resolveAttendanceOutcome(
   record: AttendanceRecordForOutcome,
   favoriteTeamId: number | null | undefined,
 ): AttendanceResult | null {
+  if (isGameCancelled(record.game)) {
+    return null;
+  }
+
   const outcomeTeamId = resolveOutcomeTeamId({
     game: record.game,
     favoriteTeamId,
@@ -150,6 +155,14 @@ export function getAttendanceTicketView(
   },
   viewerFavoriteTeamId: number | null | undefined,
 ): AttendanceTicketView {
+  if (isGameCancelled(record.game)) {
+    return {
+      outcome: null,
+      awayScore: null,
+      homeScore: null,
+    };
+  }
+
   const favoriteTeamId = resolveOutcomeFavoriteTeamId(
     record,
     viewerFavoriteTeamId,

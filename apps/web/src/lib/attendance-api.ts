@@ -38,6 +38,7 @@ export type AttendanceRecord = {
     homeScore: number | null;
     awayScore: number | null;
     status: string;
+    cancellationReason?: string | null;
   };
 };
 

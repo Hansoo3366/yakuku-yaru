@@ -23,6 +23,7 @@ export type ParsedKboGame = {
   homeScore: number | null;
   stadium: string;
   status: 'scheduled' | 'finished' | 'cancelled';
+  cancellationReason: string | null;
   note: string | null;
 };
 
@@ -132,8 +133,40 @@ function findNote(cells: KboScheduleCell[]) {
   return text && text !== '-' ? text : null;
 }
 
+function resolveCancellationReason(note: string | null) {
+  if (!note) {
+    return null;
+  }
+
+  if (/우천|비/.test(note)) {
+    return 'rain';
+  }
+
+  if (/황사|미세먼지|먼지/.test(note)) {
+    return 'dust';
+  }
+
+  if (/그라운드|운동장|구장/.test(note)) {
+    return 'ground';
+  }
+
+  if (/폭염|더위/.test(note)) {
+    return 'heat';
+  }
+
+  if (/한파|추위/.test(note)) {
+    return 'cold';
+  }
+
+  if (note.includes('취소')) {
+    return 'other';
+  }
+
+  return null;
+}
+
 function resolveStatus(playHtml: string, note: string | null, cells: KboScheduleCell[]) {
-  if (note?.includes('취소')) {
+  if (resolveCancellationReason(note)) {
     return 'cancelled' as const;
   }
 
@@ -189,6 +222,7 @@ export function parseKboScheduleTable(table: KboScheduleTable, seasonYear: numbe
 
     const note = findNote(cells);
     const scores = parseScores(playCell.Text);
+    const cancellationReason = resolveCancellationReason(note);
     const status = resolveStatus(playCell.Text, note, cells);
     const gameDate = `${currentDate} ${time}`;
     const externalId =
@@ -208,6 +242,7 @@ export function parseKboScheduleTable(table: KboScheduleTable, seasonYear: numbe
       homeScore: scores.homeScore,
       stadium: findStadium(cells),
       status,
+      cancellationReason,
       note,
     });
   }

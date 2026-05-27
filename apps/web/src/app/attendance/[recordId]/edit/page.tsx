@@ -24,7 +24,11 @@ import {
 } from '@/components/CompanionPicker';
 import { Skeleton } from '@/components/Skeleton';
 import type { Game } from '@/lib/baseball-api';
-import { isNeutralAttendance } from '@/lib/attendance-game';
+import {
+  isGameCancelled,
+  isNeutralAttendance,
+  requiresCheeredTeamPick,
+} from '@/lib/attendance-game';
 import {
   resolveAttendanceScoresFromGame,
   type AttendanceResult,
@@ -55,11 +59,24 @@ export default function EditAttendancePage() {
   const [cheeredTeamId, setCheeredTeamId] = useState<number | null>(null);
 
   const isNeutral = game ? isNeutralAttendance(game, favoriteTeamId) : false;
+  const needsCheeredTeam = game
+    ? requiresCheeredTeamPick(game, favoriteTeamId)
+    : false;
+  const isCancelledGame = game ? isGameCancelled(game) : false;
 
   function applyOfficialScores(
     targetGame: Game,
     outcomeTeamId: number | null,
   ) {
+    if (isGameCancelled(targetGame)) {
+      setMyTeamScore('');
+      setOpponentScore('');
+      setResult(null);
+      setResultManuallySet(true);
+      setScoreLocked(true);
+      return;
+    }
+
     const official = resolveAttendanceScoresFromGame(targetGame, outcomeTeamId);
 
     if (official) {
@@ -98,6 +115,9 @@ export default function EditAttendancePage() {
           homeScore: r.game.homeScore,
           awayScore: r.game.awayScore,
           status: r.game.status,
+          cancellationReason: r.game.cancellationReason ?? null,
+          probablePitchers: { home: null, away: null },
+          lineups: { home: [], away: [] },
           ticketUrl: null,
           ticketOpenAt: null,
           stadiumGuide: null,
@@ -174,7 +194,7 @@ export default function EditAttendancePage() {
       return;
     }
 
-    if (isNeutral && !cheeredTeamId) {
+    if (needsCheeredTeam && !cheeredTeamId) {
       setErrorMessage('이 경기에서 응원한 팀을 선택해주세요.');
       return;
     }
@@ -192,7 +212,7 @@ export default function EditAttendancePage() {
           watchType,
           result: null,
           isScoreModified: false,
-          cheeredTeamId: isNeutral ? cheeredTeamId : null,
+          cheeredTeamId: needsCheeredTeam ? cheeredTeamId : null,
           companionUserIds: companions.map((companion) => companion.id),
         },
         token,
@@ -329,7 +349,7 @@ export default function EditAttendancePage() {
           )}
         </section>
 
-        {game && isNeutral ? (
+        {game && needsCheeredTeam ? (
           <CheeredTeamPicker
             game={game}
             onChange={setCheeredTeamId}
@@ -337,16 +357,26 @@ export default function EditAttendancePage() {
           />
         ) : null}
 
-        <AttendanceScoreSection
-          myTeamScore={myTeamScore}
-          opponentScore={opponentScore}
-          onMyTeamScoreChange={(value) => handleScoreChange('my', value)}
-          onOpponentScoreChange={(value) => handleScoreChange('opponent', value)}
-          onPickResult={pickResult}
-          result={result}
-          resultManuallySet={resultManuallySet}
-          scoreLocked={scoreLocked}
-        />
+        {isCancelledGame ? (
+          <section className="card stack">
+            <p className="score-input-hint">
+              취소된 경기는 승패·스코어를 기록하지 않아요. 사진과 메모만 수정하면 됩니다.
+            </p>
+          </section>
+        ) : (
+          <AttendanceScoreSection
+            myTeamScore={myTeamScore}
+            opponentScore={opponentScore}
+            onMyTeamScoreChange={(value) => handleScoreChange('my', value)}
+            onOpponentScoreChange={(value) =>
+              handleScoreChange('opponent', value)
+            }
+            onPickResult={pickResult}
+            result={result}
+            resultManuallySet={resultManuallySet}
+            scoreLocked={scoreLocked}
+          />
+        )}
 
         {record.companions.length ? (
           <section className="card stack-sm">

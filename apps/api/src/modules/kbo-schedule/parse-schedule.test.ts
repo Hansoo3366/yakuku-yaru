@@ -60,6 +60,7 @@ assert.equal(games[0].status, 'finished');
 assert.equal(games[1].awayTeamShortName, '롯데');
 assert.equal(games[1].homeTeamShortName, 'KT');
 assert.equal(games[1].status, 'cancelled');
+assert.equal(games[1].cancellationReason, 'rain');
 assert.equal(games[1].stadium, '수원 KT위즈파크');
 
 const previewSample = {

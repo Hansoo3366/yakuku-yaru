@@ -18,6 +18,49 @@ export type Game = {
   homeScore: number | null;
   awayScore: number | null;
   status: string;
+  cancellationReason: string | null;
+  probablePitchers: {
+    home: {
+      id: number;
+      name: string;
+      backNumber: string | null;
+      profileImageUrl: string | null;
+      throwsHand: string | null;
+      batsHand: string | null;
+      isConfirmed: boolean;
+      stats: {
+        era: number | null;
+        war: number | null;
+        games: number | null;
+        starterAverageInnings: string | null;
+        qualityStarts: number | null;
+        whip: number | null;
+        seasonRecord: string | null;
+      };
+    } | null;
+    away: {
+      id: number;
+      name: string;
+      backNumber: string | null;
+      profileImageUrl: string | null;
+      throwsHand: string | null;
+      batsHand: string | null;
+      isConfirmed: boolean;
+      stats: {
+        era: number | null;
+        war: number | null;
+        games: number | null;
+        starterAverageInnings: string | null;
+        qualityStarts: number | null;
+        whip: number | null;
+        seasonRecord: string | null;
+      };
+    } | null;
+  };
+  lineups: {
+    home: GameLineupPlayer[];
+    away: GameLineupPlayer[];
+  };
   ticketUrl: string | null;
   ticketOpenAt: string | null;
   stadiumGuide: {
@@ -25,6 +68,18 @@ export type Game = {
     parkingSummary: string | null;
     mapUrl: string | null;
   } | null;
+};
+
+export type GameLineupPlayer = {
+  id: number;
+  playerId: number;
+  name: string;
+  backNumber: string | null;
+  profileImageUrl: string | null;
+  battingOrder: number | null;
+  fieldPosition: string | null;
+  war: number | null;
+  isStarter: boolean;
 };
 
 export type TeamStanding = {

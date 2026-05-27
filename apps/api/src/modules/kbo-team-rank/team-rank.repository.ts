@@ -1,4 +1,4 @@
-import type { ResultSetHeader, RowDataPacket } from 'mysql2';
+import type { RowDataPacket } from 'mysql2';
 import { db } from '../../config/database.js';
 import type { ParsedKboTeamStanding } from './parse-team-rank.js';
 

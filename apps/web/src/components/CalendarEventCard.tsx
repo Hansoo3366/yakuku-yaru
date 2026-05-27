@@ -11,6 +11,7 @@ import {
   getGameOutcomeLabel,
   type GameOutcome,
 } from '@/lib/game-outcome';
+import { getCancellationMeta } from '@/lib/game-cancellation';
 import { getTeamLogoSrc } from '@/lib/team-logo';
 
 type TeamLike = {
@@ -30,6 +31,11 @@ type GameLike = {
   homeScore: number | null;
   awayScore: number | null;
   status: string;
+  cancellationReason?: string | null;
+  probablePitchers?: {
+    home: { name: string; isConfirmed?: boolean } | null;
+    away: { name: string; isConfirmed?: boolean } | null;
+  };
 };
 
 type Props = {
@@ -45,7 +51,23 @@ function formatScoreLine(game: GameLike) {
     return null;
   }
 
-  return `${game.awayTeam.shortName} ${game.awayScore} : ${game.homeScore} ${game.homeTeam.shortName}`;
+  return `${game.awayScore} : ${game.homeScore}`;
+}
+
+function formatPitcherLine(game: GameLike) {
+  const awayPitcher = game.probablePitchers?.away;
+  const homePitcher = game.probablePitchers?.home;
+
+  if (!awayPitcher && !homePitcher) {
+    return null;
+  }
+
+  const awayLabel = awayPitcher?.name ?? '-';
+  const homeLabel = homePitcher?.name ?? '-';
+  const isConfirmed =
+    awayPitcher?.isConfirmed === true || homePitcher?.isConfirmed === true;
+
+  return `${isConfirmed ? '선발' : '예상'} ${awayLabel} / ${homeLabel}`;
 }
 
 export function CalendarEventCard({
@@ -55,14 +77,22 @@ export function CalendarEventCard({
   attendance,
   dense = false,
 }: Props) {
-  const outcome: GameOutcome = attendance
-    ? (resolveAttendanceOutcome(attendance, favoriteTeamId) ??
-      getFavoriteTeamGameOutcome(game, favoriteTeamId ?? null))
-    : getFavoriteTeamGameOutcome(game, favoriteTeamId ?? null);
+  const outcome: GameOutcome =
+    game.status === 'cancelled'
+      ? 'cancelled'
+      : attendance
+        ? (resolveAttendanceOutcome(attendance, favoriteTeamId) ??
+          getFavoriteTeamGameOutcome(game, favoriteTeamId ?? null))
+        : getFavoriteTeamGameOutcome(game, favoriteTeamId ?? null);
   const outcomeLabel = getGameOutcomeLabel(outcome);
   const matchupLabel = `${game.awayTeam.shortName} vs ${game.homeTeam.shortName}`;
   const timeLabel = formatGameTime(game.gameDate);
   const scoreLine = formatScoreLine(game);
+  const pitcherLine = formatPitcherLine(game);
+  const cancellationMeta =
+    game.status === 'cancelled'
+      ? getCancellationMeta(game.cancellationReason)
+      : null;
   const isNeutral =
     attendance &&
     isNeutralAttendance(attendance.game, favoriteTeamId ?? null);
@@ -95,8 +125,20 @@ export function CalendarEventCard({
       <span className="calendar-event-body">
         <span className="calendar-event-time">{timeLabel}</span>
         <span className="calendar-event-matchup">{matchupLabel}</span>
-        {!dense && scoreLine ? (
+        {scoreLine ? (
           <span className="calendar-event-score">{scoreLine}</span>
+        ) : null}
+        {cancellationMeta ? (
+          <span
+            className="calendar-event-cancel"
+            data-reason={game.cancellationReason ?? 'other'}
+          >
+            <span aria-hidden="true">{cancellationMeta.icon}</span>
+            {cancellationMeta.label}
+          </span>
+        ) : null}
+        {pitcherLine ? (
+          <span className="calendar-event-pitchers">{pitcherLine}</span>
         ) : null}
         {!dense ? (
           <span className="calendar-event-stadium">{game.stadium}</span>

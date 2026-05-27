@@ -80,6 +80,15 @@ export async function runMigrations() {
     );
   }
 
+  const hasCancellationReason = await columnExists('games', 'cancellation_reason');
+
+  if (!hasCancellationReason) {
+    await db.execute(
+      `ALTER TABLE games
+       ADD COLUMN cancellation_reason VARCHAR(30) NULL AFTER status`,
+    );
+  }
+
   const hasProfileImageUrl = await columnExists('users', 'profile_image_url');
 
   if (!hasProfileImageUrl) {
@@ -170,6 +179,156 @@ export async function runMigrations() {
         ON DELETE CASCADE
     )`,
   );
+
+  await db.execute(
+    `CREATE TABLE IF NOT EXISTS players (
+      id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+      team_id BIGINT UNSIGNED NOT NULL,
+      kbo_player_id VARCHAR(64) NULL,
+      name VARCHAR(50) NOT NULL,
+      back_number VARCHAR(10) NULL,
+      position VARCHAR(20) NULL,
+      height_cm INT NULL,
+      weight_kg INT NULL,
+      throws_hand VARCHAR(10) NULL,
+      bats_hand VARCHAR(10) NULL,
+      birth_date DATE NULL,
+      school VARCHAR(500) NULL,
+      is_active BOOLEAN NOT NULL DEFAULT TRUE,
+      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      PRIMARY KEY (id),
+      UNIQUE KEY uq_players_kbo_player_id (kbo_player_id),
+      KEY idx_players_team_id (team_id),
+      KEY idx_players_name (name),
+      CONSTRAINT fk_players_team
+        FOREIGN KEY (team_id) REFERENCES teams(id)
+        ON DELETE CASCADE
+    )`,
+  );
+
+  const hasPlayerHeight = await columnExists('players', 'height_cm');
+
+  if (!hasPlayerHeight) {
+    await db.execute(
+      `ALTER TABLE players
+       ADD COLUMN height_cm INT NULL AFTER position,
+       ADD COLUMN weight_kg INT NULL AFTER height_cm`,
+    );
+  }
+
+  const hasPlayerSchool = await columnExists('players', 'school');
+
+  if (!hasPlayerSchool) {
+    await db.execute(
+      `ALTER TABLE players
+       ADD COLUMN school VARCHAR(500) NULL AFTER birth_date`,
+    );
+  }
+
+  const hasPlayerProfileImageUrl = await columnExists(
+    'players',
+    'profile_image_url',
+  );
+
+  if (!hasPlayerProfileImageUrl) {
+    await db.execute(
+      `ALTER TABLE players
+       ADD COLUMN profile_image_url VARCHAR(500) NULL AFTER school`,
+    );
+  }
+
+  await db.execute(
+    `CREATE TABLE IF NOT EXISTS game_starting_pitchers (
+      id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+      game_id BIGINT UNSIGNED NOT NULL,
+      team_id BIGINT UNSIGNED NOT NULL,
+      player_id BIGINT UNSIGNED NOT NULL,
+      is_confirmed BOOLEAN NOT NULL DEFAULT FALSE,
+      era DECIMAL(5,2) NULL,
+      war DECIMAL(5,2) NULL,
+      games INT NULL,
+      starter_average_innings VARCHAR(10) NULL,
+      quality_starts INT NULL,
+      whip DECIMAL(5,2) NULL,
+      season_record VARCHAR(50) NULL,
+      source VARCHAR(20) NULL,
+      synced_at DATETIME NULL,
+      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      PRIMARY KEY (id),
+      UNIQUE KEY uq_game_starting_pitchers_game_team (game_id, team_id),
+      KEY idx_game_starting_pitchers_player_id (player_id),
+      CONSTRAINT fk_game_starting_pitchers_game
+        FOREIGN KEY (game_id) REFERENCES games(id)
+        ON DELETE CASCADE,
+      CONSTRAINT fk_game_starting_pitchers_team
+        FOREIGN KEY (team_id) REFERENCES teams(id)
+        ON DELETE CASCADE,
+      CONSTRAINT fk_game_starting_pitchers_player
+        FOREIGN KEY (player_id) REFERENCES players(id)
+        ON DELETE CASCADE
+    )`,
+  );
+
+  const startingPitcherStatColumns = [
+    ['era', 'DECIMAL(5,2) NULL AFTER is_confirmed'],
+    ['war', 'DECIMAL(5,2) NULL AFTER era'],
+    ['games', 'INT NULL AFTER war'],
+    ['starter_average_innings', 'VARCHAR(10) NULL AFTER games'],
+    ['quality_starts', 'INT NULL AFTER starter_average_innings'],
+    ['whip', 'DECIMAL(5,2) NULL AFTER quality_starts'],
+    ['season_record', 'VARCHAR(50) NULL AFTER whip'],
+  ] as const;
+
+  for (const [columnName, columnSql] of startingPitcherStatColumns) {
+    const exists = await columnExists('game_starting_pitchers', columnName);
+
+    if (!exists) {
+      await db.execute(
+        `ALTER TABLE game_starting_pitchers
+         ADD COLUMN ${columnName} ${columnSql}`,
+      );
+    }
+  }
+
+  await db.execute(
+    `CREATE TABLE IF NOT EXISTS game_lineups (
+      id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+      game_id BIGINT UNSIGNED NOT NULL,
+      team_id BIGINT UNSIGNED NOT NULL,
+      player_id BIGINT UNSIGNED NOT NULL,
+      batting_order INT NULL,
+      field_position VARCHAR(20) NULL,
+      war DECIMAL(5,2) NULL,
+      is_starter BOOLEAN NOT NULL DEFAULT TRUE,
+      source VARCHAR(20) NULL,
+      synced_at DATETIME NULL,
+      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      PRIMARY KEY (id),
+      UNIQUE KEY uq_game_lineups_game_team_order (game_id, team_id, batting_order),
+      KEY idx_game_lineups_player_id (player_id),
+      CONSTRAINT fk_game_lineups_game
+        FOREIGN KEY (game_id) REFERENCES games(id)
+        ON DELETE CASCADE,
+      CONSTRAINT fk_game_lineups_team
+        FOREIGN KEY (team_id) REFERENCES teams(id)
+        ON DELETE CASCADE,
+      CONSTRAINT fk_game_lineups_player
+        FOREIGN KEY (player_id) REFERENCES players(id)
+        ON DELETE CASCADE
+    )`,
+  );
+
+  const hasLineupWar = await columnExists('game_lineups', 'war');
+
+  if (!hasLineupWar) {
+    await db.execute(
+      `ALTER TABLE game_lineups
+       ADD COLUMN war DECIMAL(5,2) NULL AFTER field_position`,
+    );
+  }
 
   await db.execute(
     `CREATE TABLE IF NOT EXISTS attendance_companions (

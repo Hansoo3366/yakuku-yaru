@@ -42,6 +42,7 @@ export type AttendanceRecordRow = RowDataPacket & {
   away_team_short_name: string;
   away_score: number | null;
   game_status: string;
+  cancellation_reason: string | null;
   owner_nickname: string;
   owner_favorite_team_id: number | null;
   last_modified_by_nickname: string | null;
@@ -87,6 +88,7 @@ export type AttendanceRecord = {
     homeScore: number | null;
     awayScore: number | null;
     status: string;
+    cancellationReason: string | null;
   };
 };
 
@@ -118,6 +120,7 @@ function attendanceSelectSql() {
       at.short_name AS away_team_short_name,
       g.away_score,
       g.status AS game_status,
+      g.cancellation_reason,
       u.nickname AS owner_nickname,
       u.favorite_team_id AS owner_favorite_team_id,
       lmu.nickname AS last_modified_by_nickname
@@ -169,6 +172,7 @@ export function toAttendanceRecord(row: AttendanceRecordRow): AttendanceRecord {
       homeScore: row.home_score,
       awayScore: row.away_score,
       status: row.game_status,
+      cancellationReason: row.cancellation_reason,
     },
   };
 }
@@ -378,6 +382,29 @@ function storageOutcomeTeamId(record: AttendanceRecord) {
 }
 
 async function reconcileAttendanceRecord(record: AttendanceRecord) {
+  if (record.game.status === 'cancelled') {
+    const needsClear =
+      record.myTeamScore !== null ||
+      record.opponentScore !== null ||
+      record.result !== null ||
+      record.isScoreModified;
+
+    if (!needsClear) {
+      return;
+    }
+
+    await db.execute(
+      `UPDATE attendance_records
+       SET my_team_score = NULL,
+           opponent_score = NULL,
+           result = NULL,
+           is_score_modified = 0
+       WHERE id = ?`,
+      [record.id],
+    );
+    return;
+  }
+
   const outcomeTeamId = storageOutcomeTeamId(record);
   const fromGame = resolveAttendanceScoresFromGame(record.game, outcomeTeamId);
 

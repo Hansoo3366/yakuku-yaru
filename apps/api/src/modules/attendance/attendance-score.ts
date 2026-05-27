@@ -4,6 +4,7 @@ import { db } from '../../config/database.js';
 import { findGameById } from '../games/game.repository.js';
 import { findUserById } from '../users/user.repository.js';
 import {
+  isGameCancelled,
   resolveOutcomeTeamId,
   resolveStorageOutcomeTeamId,
 } from './attendance-game.js';
@@ -43,6 +44,7 @@ export function isGameFinished(
 
 export function gameHasOfficialScores(game: GameForAttendanceScore) {
   return (
+    !isGameCancelled(game) &&
     isGameFinished(game) &&
     game.homeScore !== null &&
     game.awayScore !== null
@@ -114,6 +116,10 @@ export function resolveAttendanceOutcome(
   record: AttendanceRecordForOutcome,
   favoriteTeamId: number | null,
 ): AttendanceResult | null {
+  if (isGameCancelled(record.game)) {
+    return null;
+  }
+
   const outcomeTeamId = resolveOutcomeTeamId({
     game: record.game,
     favoriteTeamId,
@@ -162,6 +168,15 @@ export function buildAttendanceScoreFields(input: {
   favoriteTeamId: number | null;
   cheeredTeamId?: number | null;
 }) {
+  if (isGameCancelled(input.game)) {
+    return {
+      myTeamScore: null,
+      opponentScore: null,
+      result: null,
+      isScoreModified: false,
+    };
+  }
+
   const outcomeTeamId = resolveStorageOutcomeTeamId({
     game: input.game,
     ownerFavoriteTeamId: input.favoriteTeamId,
@@ -190,7 +205,12 @@ export function buildAttendanceScoreFields(input: {
 export async function syncAttendanceScoresForGame(gameId: number) {
   const game = await findGameById(gameId);
 
-  if (!game || !isGameFinished(game) || !gameHasOfficialScores(game)) {
+  if (
+    !game ||
+    isGameCancelled(game) ||
+    !isGameFinished(game) ||
+    !gameHasOfficialScores(game)
+  ) {
     return 0;
   }
 

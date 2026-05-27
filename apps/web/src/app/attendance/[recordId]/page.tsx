@@ -13,8 +13,10 @@ import {
   type AttendanceRecord,
 } from '@/lib/attendance-api';
 import { fetchMe } from '@/lib/auth-api';
+import { isGameCancelled } from '@/lib/attendance-game';
 import { getAttendanceTicketView } from '@/lib/attendance-score';
 import { getAssetUrl } from '@/lib/api';
+import { getCancellationTicketStubLines } from '@/lib/game-cancellation';
 import { getTeamLogoSrc } from '@/lib/team-logo';
 import { Skeleton } from '@/components/Skeleton';
 
@@ -34,8 +36,8 @@ function formatTime(value: string) {
   });
 }
 
-function resultLabel(result: string | null) {
-  switch (result) {
+function ticketStubOutcomeLabel(outcome: string | null) {
+  switch (outcome) {
     case 'win':
       return 'WIN';
     case 'lose':
@@ -116,9 +118,17 @@ export default function AttendanceDetailPage() {
     (companion) => companion.status === 'accepted',
   );
   const ticket = getAttendanceTicketView(record, viewerFavoriteTeamId);
-  const winLossClass = ticket.outcome ? `is-${ticket.outcome}` : 'is-blank';
+  const isCancelled = isGameCancelled(record.game);
+  const winLossClass = isCancelled
+    ? 'is-cancelled'
+    : ticket.outcome
+      ? `is-${ticket.outcome}`
+      : 'is-blank';
   const watchLabel = record.watchType === 'home' ? '집관' : '직관';
   const hasScore = ticket.awayScore !== null && ticket.homeScore !== null;
+  const cancelStub = isCancelled
+    ? getCancellationTicketStubLines(record.game.cancellationReason)
+    : null;
 
   return (
     <main className="app-shell">
@@ -129,8 +139,25 @@ export default function AttendanceDetailPage() {
       <article className={`photo-ticket ${winLossClass}`} aria-label="직관 포토 티켓">
         <div className="photo-ticket-stub">
           <span className="photo-ticket-stub-label">{watchLabel}</span>
-          <span className="photo-ticket-stub-result">
-            {resultLabel(ticket.outcome)}
+          <span
+            className={`photo-ticket-stub-result${
+              cancelStub ? ' photo-ticket-stub-result--cancel' : ''
+            }`}
+          >
+            {cancelStub ? (
+              <>
+                <span className="photo-ticket-stub-cancel-line">
+                  {cancelStub.reason}
+                </span>
+                {cancelStub.status ? (
+                  <span className="photo-ticket-stub-cancel-line photo-ticket-stub-cancel-line--status">
+                    {cancelStub.status}
+                  </span>
+                ) : null}
+              </>
+            ) : (
+              ticketStubOutcomeLabel(ticket.outcome)
+            )}
           </span>
           <span className="photo-ticket-stub-meta">
             {new Date(record.game.gameDate).toLocaleDateString('ko-KR', {

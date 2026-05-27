@@ -29,12 +29,18 @@ import {
   getGameStatusLabel,
   getGameStatusTone,
 } from '@/lib/game-status';
+import { isGameCancelled } from '@/lib/attendance-game';
 import { resolveAttendanceOutcome } from '@/lib/attendance-score';
+import { getCancellationLabel } from '@/lib/game-cancellation';
 
 function formatAttendanceResultLabel(
   record: AttendanceRecord,
   favoriteTeamId: number | null | undefined,
 ) {
+  if (isGameCancelled(record.game)) {
+    return getCancellationLabel(record.game.cancellationReason);
+  }
+
   const outcome = resolveAttendanceOutcome(record, favoriteTeamId);
 
   if (outcome === 'win') return '승';
