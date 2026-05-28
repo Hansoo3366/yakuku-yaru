@@ -99,6 +99,8 @@ export type TeamStanding = {
   draws: number;
   winRate: number;
   gamesBehind: number;
+  recentTen: string;
+  streak: string;
 };
 
 export type TeamStandingsResponse = {

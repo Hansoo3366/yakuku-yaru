@@ -335,6 +335,28 @@ export default function MyPage() {
         </div>
       </section>
 
+      <section className="card stack-sm" aria-label="알림">
+        <div className="section-heading" style={{ marginBottom: 0 }}>
+          <div>
+            <h2>알림</h2>
+            <p>프로필과 설정 변경 내역을 확인해요.</p>
+          </div>
+        </div>
+        {statusMessage ? (
+          <p
+            className="muted"
+            style={{ fontSize: 'var(--text-sm)' }}
+            role="status"
+          >
+            {statusMessage}
+          </p>
+        ) : (
+          <p className="muted" style={{ fontSize: 'var(--text-sm)' }}>
+            새로운 알림이 없어요.
+          </p>
+        )}
+      </section>
+
       <section className="card">
         <div className="section-heading">
           <div>
@@ -403,14 +425,6 @@ export default function MyPage() {
             })}
           </div>
         )}
-        {statusMessage ? (
-          <p
-            className="muted"
-            style={{ fontSize: 'var(--text-xs)', marginTop: 'var(--space-3)' }}
-          >
-            {statusMessage}
-          </p>
-        ) : null}
       </section>
 
       <section className="card stack-sm" aria-label="계정">

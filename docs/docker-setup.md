@@ -59,12 +59,17 @@ docker compose ps
 docker compose logs mysql
 ```
 
-초기 실행 시 `apps/api/db/init` 안의 SQL 파일이 자동 실행됩니다.
+초기 실행 시 `apps/api/db/init/*.sql` 파일이 파일명 순서대로 자동 실행됩니다.
 
-- `001_schema.sql`
-- `002_seed_teams.sql`
+주요 내용:
 
-이 과정에서 테이블 생성과 KBO 팀 seed 데이터가 들어갑니다.
+- `001_schema.sql`: 테이블 생성
+- `002_seed_teams.sql`: KBO 팀 seed
+- `003_seed_games.sql`: 개발용 경기 seed
+- `004_repair_seed_text.sql`: seed 텍스트 보정
+- `005_seed_stadium_guides.sql`: 구장 맛집/주차 seed
+
+이 과정에서 테이블 생성, KBO 팀, 개발용 경기, 구장 정보가 들어갑니다.
 
 ## 6. MySQL 접속 확인
 
@@ -79,6 +84,7 @@ docker compose exec mysql mysql -u yakuku -pyakuku_password yakuku_yaru
 ```sql
 SHOW TABLES;
 SELECT * FROM teams;
+SELECT COUNT(*) FROM games;
 ```
 
 종료는 다음 명령입니다.

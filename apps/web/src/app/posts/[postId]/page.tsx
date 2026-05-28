@@ -128,10 +128,11 @@ export default function PostDetailPage() {
                     post.authorFavoriteTeamShortName,
                   )}
                 />
-                {post.authorNickname}
+                <span>{post.authorNickname}</span>
               </span>
-              {' · '}
-              {new Date(post.createdAt).toLocaleString('ko-KR')}
+              <time dateTime={post.createdAt}>
+                {new Date(post.createdAt).toLocaleString('ko-KR')}
+              </time>
             </p>
           </div>
           {isAuthor ? (
@@ -180,7 +181,7 @@ export default function PostDetailPage() {
               <div className="comment-card" key={comment.id}>
                 <p>{comment.content}</p>
                 <div className="comment-card-meta">
-                  <span>
+                  <span className="comment-card-author-line">
                     <span className="author-inline">
                       <img
                         alt=""
@@ -189,10 +190,11 @@ export default function PostDetailPage() {
                           comment.authorFavoriteTeamShortName,
                         )}
                       />
-                      {comment.authorNickname}
+                      <span>{comment.authorNickname}</span>
                     </span>
-                    {' · '}
-                    {new Date(comment.createdAt).toLocaleString('ko-KR')}
+                    <time dateTime={comment.createdAt}>
+                      {new Date(comment.createdAt).toLocaleString('ko-KR')}
+                    </time>
                   </span>
                   {currentUser?.id === comment.userId ? (
                     <button

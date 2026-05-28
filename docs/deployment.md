@@ -203,6 +203,17 @@ ssh-keygen -lf ~/.ssh/github_actions_yakuku_yaru.pub
 
 `DEPLOY_SSH_KEY`는 **Update**로 덮어쓰기. 줄바꿈이 깨지면 Secret을 삭제 후 새로 만드는 편이 낫습니다.
 
+#### 권장: GCP VM 메타데이터 SSH key 사용
+
+GCP 브라우저 SSH를 자주 쓰거나 OS Login/metadata 설정 때문에 `authorized_keys`가 사라지는 경우가 있습니다. 이때는 GitHub Actions용 공개키를 **VM 메타데이터 SSH 키**에 등록하는 방식이 더 안정적입니다.
+
+1. GitHub Actions용 key pair를 생성합니다.
+2. private key 전체를 `DEPLOY_SSH_KEY` Secret에 넣습니다.
+3. public key 내용을 GCP Console의 VM → `수정` → `SSH 키`에 추가합니다.
+4. 형식은 보통 `ssh-ed25519 AAAA... hanso3366` 입니다. 맨 끝 사용자명이 `DEPLOY_USER`와 같아야 합니다.
+
+이 방식을 쓰면 서버 안의 `~/.ssh/authorized_keys`가 없어져도 VM 메타데이터가 다시 키를 주입하므로 반복 장애가 줄어듭니다.
+
 #### C. Mac에서 접속 테스트 (선택, 권장)
 
 서버에서 private key 파일을 Mac으로 복사한 뒤:
@@ -255,6 +266,33 @@ DEPLOY_COMPOSE_PROFILES=proxy
 ```
 
 도메인 HTTPS 접속이 확인되면 Google Cloud 방화벽에서 `3000`, `4000` 포트는 닫고 `80`, `443`만 외부에 열어두는 것을 권장합니다.
+
+## 10-1. 운영 환경 변수
+
+`.env.production`에는 최소 아래 값이 필요합니다.
+
+```env
+NODE_ENV=production
+APP_URL=https://yakuku-yaru.today
+APP_DOMAIN=yakuku-yaru.today
+NEXT_PUBLIC_API_URL=https://yakuku-yaru.today/api
+
+JWT_SECRET=replace-with-long-random-secret
+JWT_EXPIRES_IN=1d
+
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=465
+SMTP_SECURE=true
+SMTP_USER=your-gmail@gmail.com
+SMTP_PASSWORD=your-gmail-app-password
+SMTP_FROM="야크크 야르 <your-gmail@gmail.com>"
+```
+
+`.env.production`만 수정했을 때는 Caddy만 재시작하면 안 되고, 해당 환경 변수를 사용하는 `api`와 필요 시 `web` 컨테이너를 다시 올려야 합니다.
+
+```bash
+docker compose --env-file .env.production -f docker-compose.prod.yml --profile proxy up -d --build api web caddy
+```
 
 ## 11. 데이터 보존
 

@@ -64,7 +64,13 @@ docker compose -f docker-compose.prod.yml --env-file .env.production exec -T \
   api sh -c 'cd apps/api && npm run db:reset-app'
 ```
 
-KBO만 나중에 돌리려면: `SKIP_KBO_SYNC=true` 추가 후, 별도로 `npm run sync:kbo-schedule -- --mode=season`
+KBO만 나중에 돌리려면: `SKIP_KBO_SYNC=true` 추가 후, 별도로 일정/선수/경기센터 동기화를 실행합니다.
+
+```bash
+npm run sync:kbo-schedule -- --mode=season
+npm run sync:kbo-players
+npm run sync:kbo-game-center -- --mode=today
+```
 
 ### 로컬
 
@@ -74,7 +80,7 @@ npm run build
 ADMIN_EMAIL=admin@yakuku.local ADMIN_PASSWORD='Admin1234!' npm run db:reset-app
 ```
 
-캘린더·메인 **팀 순위**는 DB `team_standings`에 데이터가 있어야 합니다. 로컬에서 한 번:
+캘린더·메인 **팀 순위**는 DB에 순위 데이터가 있어야 합니다. 로컬에서 한 번:
 
 ```bash
 cd apps/api
@@ -128,15 +134,16 @@ docker compose -f docker-compose.prod.yml --env-file .env.production down
 docker volume rm <프로젝트>_mysql_data   # docker volume ls 로 확인
 docker compose -f docker-compose.prod.yml --env-file .env.production up -d
 # 이후 db:reset-app (경기 시드는 더 이상 없음)
+# 이후 db:reset-app 또는 KBO 동기화 실행
 ```
 
 ---
 
 ## 스크립트 요약
 
-| 명령 | 경기 | 사용자 등 | KBO sync |
-|------|------|-----------|----------|
-| `db:reset-app` | 삭제 | 삭제 + 관리자 생성 | season+week+today |
-| `db:reset-users` | 유지 | 삭제 + 관리자 생성 | 없음 |
+| 명령 | 경기 | 선수/라인업 | 사용자 등 | KBO sync |
+|------|------|-------------|-----------|----------|
+| `db:reset-app` | 삭제 | 재동기화 필요 | 삭제 + 관리자 생성 | season+week+today |
+| `db:reset-users` | 유지 | 유지 | 삭제 + 관리자 생성 | 없음 |
 
 운영 비밀번호는 반드시 `ADMIN_PASSWORD`로 지정하세요. 기본값 `Admin1234!`는 로컬용입니다.

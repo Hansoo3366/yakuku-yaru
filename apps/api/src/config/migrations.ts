@@ -461,6 +461,8 @@ export async function runMigrations() {
          draws INT NOT NULL,
          win_rate DECIMAL(5, 3) NOT NULL,
          games_behind DECIMAL(4, 1) NOT NULL DEFAULT 0,
+         recent_ten VARCHAR(20) NULL,
+         streak VARCHAR(20) NULL,
          synced_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
          PRIMARY KEY (id),
          UNIQUE KEY uq_team_standings_snapshot (season_year, rank_date, series_id, team_id),
@@ -469,6 +471,27 @@ export async function runMigrations() {
            FOREIGN KEY (team_id) REFERENCES teams(id)
            ON DELETE CASCADE
        )`,
+    );
+  }
+
+  const hasTeamStandingsRecentTen = await columnExists(
+    'team_standings',
+    'recent_ten',
+  );
+
+  if (!hasTeamStandingsRecentTen) {
+    await db.execute(
+      `ALTER TABLE team_standings
+       ADD COLUMN recent_ten VARCHAR(20) NULL AFTER games_behind`,
+    );
+  }
+
+  const hasTeamStandingsStreak = await columnExists('team_standings', 'streak');
+
+  if (!hasTeamStandingsStreak) {
+    await db.execute(
+      `ALTER TABLE team_standings
+       ADD COLUMN streak VARCHAR(20) NULL AFTER recent_ten`,
     );
   }
 

@@ -92,8 +92,7 @@ export function CalendarEventCard({
       ? getCancellationMeta(game.cancellationReason)
       : null;
   const isNeutral =
-    attendance &&
-    isNeutralAttendance(attendance.game, favoriteTeamId ?? null);
+    attendance && isNeutralAttendance(attendance.game, favoriteTeamId ?? null);
   const tagKind = attendance
     ? attendance.viewerRelation === 'companion'
       ? 'companion'
@@ -101,6 +100,13 @@ export function CalendarEventCard({
         ? 'neutral'
         : attendance.watchType
     : null;
+
+  const logos = (
+    <span aria-hidden="true" className="calendar-event-logos">
+      <img alt="" src={getTeamLogoSrc(game.awayTeam)} />
+      <img alt="" src={getTeamLogoSrc(game.homeTeam)} />
+    </span>
+  );
 
   return (
     <Link
@@ -113,15 +119,16 @@ export function CalendarEventCard({
       data-outcome={outcome !== 'unknown' ? outcome : undefined}
       href={href}
     >
-      <span
-        aria-hidden="true"
-        className="calendar-event-logos"
-      >
-        <img alt="" src={getTeamLogoSrc(game.awayTeam)} />
-        <img alt="" src={getTeamLogoSrc(game.homeTeam)} />
-      </span>
+      {dense ? (
+        <span className="calendar-event-head">
+          <span className="calendar-event-time">{timeLabel}</span>
+          {logos}
+        </span>
+      ) : (
+        logos
+      )}
       <span className="calendar-event-body">
-        <span className="calendar-event-time">{timeLabel}</span>
+        {!dense ? <span className="calendar-event-time">{timeLabel}</span> : null}
         <span className="calendar-event-matchup">{matchupLabel}</span>
         {scoreLine ? (
           <span className="calendar-event-score">{scoreLine}</span>

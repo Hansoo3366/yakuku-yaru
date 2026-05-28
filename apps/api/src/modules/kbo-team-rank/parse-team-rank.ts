@@ -7,6 +7,8 @@ export type ParsedKboTeamStanding = {
   draws: number;
   winRate: number;
   gamesBehind: number;
+  recentTen: string;
+  streak: string;
 };
 
 export type ParsedKboTeamRankPage = {
@@ -51,6 +53,24 @@ function extractStandingsTableHtml(html: string) {
   return tableMatch?.[0] ?? null;
 }
 
+function cleanCellText(value: string) {
+  return value
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function parseGamesBehind(value: string) {
+  const numeric = Number(value);
+
+  if (Number.isFinite(numeric)) {
+    return numeric;
+  }
+
+  return 0;
+}
+
 export function parseKboTeamRankHtml(html: string): ParsedKboTeamRankPage {
   const rankDate = parseRankDateFromHtml(html);
   const seasonYear = Number(rankDate.slice(0, 4));
@@ -61,21 +81,40 @@ export function parseKboTeamRankHtml(html: string): ParsedKboTeamRankPage {
     throw new Error('KBO 팀 순위 표를 찾지 못했습니다.');
   }
 
-  const rowPattern =
-    /<tr>\s*<td>(\d+)<\/td>\s*<td>([^<]+)<\/td>\s*<td>(\d+)<\/td>\s*<td>(\d+)<\/td>\s*<td>(\d+)<\/td>\s*<td>(\d+)<\/td>\s*<td>([\d.]+)<\/td>\s*<td>([\d.]+)<\/td>/g;
-
   const standings: ParsedKboTeamStanding[] = [];
 
-  for (const match of tableHtml.matchAll(rowPattern)) {
+  for (const rowMatch of tableHtml.matchAll(/<tr[^>]*>([\s\S]*?)<\/tr>/gi)) {
+    const rowHtml = rowMatch[1];
+
+    if (!rowHtml) {
+      continue;
+    }
+
+    const cells = [...rowHtml.matchAll(/<td[^>]*>([\s\S]*?)<\/td>/gi)].map(
+      (match) => cleanCellText(match[1] ?? ''),
+    );
+
+    if (cells.length < 10) {
+      continue;
+    }
+
+    const rank = Number(cells[0]);
+
+    if (!Number.isFinite(rank)) {
+      continue;
+    }
+
     standings.push({
-      rank: Number(match[1]),
-      teamShortName: match[2].trim(),
-      games: Number(match[3]),
-      wins: Number(match[4]),
-      losses: Number(match[5]),
-      draws: Number(match[6]),
-      winRate: Number(match[7]),
-      gamesBehind: Number(match[8]),
+      rank,
+      teamShortName: cells[1],
+      games: Number(cells[2]),
+      wins: Number(cells[3]),
+      losses: Number(cells[4]),
+      draws: Number(cells[5]),
+      winRate: Number(cells[6]),
+      gamesBehind: parseGamesBehind(cells[7]),
+      recentTen: cells[8],
+      streak: cells[9],
     });
   }
 

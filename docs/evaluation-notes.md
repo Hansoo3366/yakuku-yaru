@@ -35,22 +35,28 @@ Authorization: Bearer <accessToken>
 
 ### 권한 처리
 
-게시글, 댓글, 직관 기록은 작성자만 수정/삭제할 수 있습니다.
+게시글, 댓글, 직관/집관 기록은 작성자 또는 허용된 관리자만 수정/삭제할 수 있습니다.
 
 예:
 
 - 게시글 수정/삭제 시 `post.user_id === req.user.id` 확인
 - 댓글 삭제 시 `comment.user_id === req.user.id` 확인
-- 직관 기록 수정/삭제 시 `record.userId === req.user.id` 확인
+- 직관 기록 수정/삭제 시 소유자 또는 수락된 동행자 편집 정책 확인
+- 관리자 API 접근 시 `users.role === 'admin'` 확인
 
 ## Database
 
 ### 주요 테이블
 
-- `users`: 사용자 계정, 내 팀 설정
+- `users`: 사용자 계정, 프로필, 내 팀, 관리자 권한
 - `teams`: KBO 팀
-- `games`: 경기 일정, 스코어, 예매 정보
-- `attendance_records`: 직관 기록, 사진, 수정 스코어, 승패
+- `games`: 경기 일정, 스코어, 취소 사유, 예매 정보, KBO 외부 ID
+- `players`: KBO 선수 마스터
+- `game_starting_pitchers`: 경기별 선발 투수와 ERA/WHIP/WAR/QS
+- `game_lineups`: 경기별 라인업
+- `attendance_records`: 직관/집관 기록, 사진, 공식 스코어 기준 승패
+- `attendance_companions`: 동행자 태그와 수락/거절 상태
+- `notifications`: 동행 태그, 댓글, 응답 결과 알림
 - `posts`: 직관 후기 게시글
 - `comments`: 게시글 댓글
 - `email_verification_tokens`: 이메일 인증 토큰
@@ -59,10 +65,11 @@ Authorization: Bearer <accessToken>
 
 - 한 사용자는 여러 게시글을 작성할 수 있습니다.
 - 한 게시글은 여러 댓글을 가질 수 있습니다.
-- 한 사용자는 여러 직관 기록을 가질 수 있습니다.
+- 한 사용자는 여러 직관/집관 기록을 가질 수 있습니다.
 - 한 직관 기록은 하나의 경기와 연결됩니다.
 - 한 경기는 홈 팀과 원정 팀을 각각 참조합니다.
 - 한 사용자는 하나의 내 팀을 설정할 수 있습니다.
+- 한 기록은 여러 동행자를 가질 수 있고, 수락된 동행자에게만 캘린더에 노출됩니다.
 
 ### 중복 방지
 
@@ -128,14 +135,30 @@ Authorization: Bearer <accessToken>
 
 ## File Upload
 
-직관 사진은 `multipart/form-data`로 업로드합니다.
+직관 사진과 프로필 사진은 `multipart/form-data`로 업로드합니다.
 
 저장 방식:
 
-- API 서버의 `apps/api/uploads`
+- API 서버의 Docker upload volume
 - `/uploads/<filename>` 정적 파일로 제공
+- 서버에서 형식/용량을 검증하고 WebP로 변환
 
 프론트엔드는 업로드 전에는 `URL.createObjectURL(file)`로 미리보기를 표시하고, 저장 후에는 API 서버의 `/uploads` URL을 사용합니다.
+
+## KBO Data
+
+KBO 공식 공개 API가 없기 때문에 웹 페이지와 브라우저 호출 데이터를 기반으로 동기화합니다.
+
+동기화 대상:
+
+- 일정/결과/취소 사유
+- 팀 순위
+- 선수 마스터
+- 선발 투수
+- 선발 투수 스탯
+- 라인업
+
+운영 서버에서는 `scripts/kbo-sync/`와 crontab으로 주기 실행합니다. 외부 페이지 구조가 바뀌면 파서 수정이 필요합니다.
 
 ## PWA
 
@@ -167,13 +190,13 @@ production 환경에서 service worker를 등록합니다. 개발 중 service wo
 
 GitHub Actions는 `main` 브랜치 push 시 VM에 SSH로 접속해 최신 코드를 반영하고 Docker Compose를 다시 실행합니다.
 
-현재는 단일 VM 구조이므로 배포 중 짧은 다운타임이 발생할 수 있습니다. 무중단 배포가 필요하면 Caddy/Nginx 기반 blue-green 배포 또는 Load Balancer와 다중 인스턴스 구조로 확장할 수 있습니다.
+현재는 단일 VM 구조이므로 배포 중 짧은 다운타임이 발생할 수 있습니다. 무중단 배포가 필요하면 Caddy 기반 blue-green 배포 또는 Load Balancer와 다중 인스턴스 구조로 확장할 수 있습니다.
 
 ## Current Limitations
 
-- 이메일 인증은 Gmail SMTP로 인증 링크를 발송합니다. 개발 환경에서 SMTP 설정이 없을 때만 개발용 인증 링크를 응답으로 보여줍니다.
-- 경기 일정은 seed 데이터 기반입니다.
-- 예매처/예매 오픈 시간은 seed 데이터 기반입니다.
-- 업로드 파일은 로컬 디스크 저장 방식입니다. 배포 환경에서는 object storage로 확장하는 것이 좋습니다.
-- 디자인은 기능 검증용 MVP 수준이며 추후 개선 예정입니다.
+- 이메일 인증은 Gmail SMTP로 인증번호를 발송합니다. 개발 환경에서 SMTP 설정이 없을 때만 개발용 인증 정보를 응답으로 보여줍니다.
+- KBO 데이터는 크롤링/파싱 기반이므로 장애 대응과 fallback seed가 필요합니다.
+- 예매처/예매 오픈 시간은 팀/경기 데이터 기반이며 일부는 관리자가 보정해야 합니다.
+- 업로드 파일은 서버 volume 저장 방식입니다. 사용량이 늘면 Object Storage 또는 NAS로 확장하는 것이 좋습니다.
+- UI는 기능 검증을 넘어 기본 사용성 개선까지 반영했지만, 시각 완성도는 계속 개선 대상입니다.
 - 현재는 단일 VM 배포이므로 배포 중 짧은 다운타임이 발생할 수 있습니다.

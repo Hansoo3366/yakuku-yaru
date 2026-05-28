@@ -21,7 +21,7 @@ const WATCH_LABELS: Record<WatchTypeFilter, string> = {
 };
 
 type Props = {
-  isMobile: boolean;
+  layout: 'mobile' | 'rail';
   viewMode: ViewMode;
   onViewModeChange: (mode: ViewMode) => void;
   scheduleFilter: ScheduleFilter;
@@ -32,7 +32,7 @@ type Props = {
 };
 
 export function CalendarFilterBar({
-  isMobile,
+  layout,
   viewMode,
   onViewModeChange,
   scheduleFilter,
@@ -46,10 +46,17 @@ export function CalendarFilterBar({
   const summary = `${viewMode === 'month' ? '월간' : '주간'} · ${SCHEDULE_LABELS[scheduleFilter]} · ${WATCH_LABELS[watchTypeFilter]}`;
 
   function collapseIfMobile() {
-    if (isMobile) {
+    if (layout === 'mobile') {
       setExpanded(false);
     }
   }
+
+  const outcomeLegend = favoriteTeamId ? (
+    <div className="calendar-filter-legend-block">
+      <span className="filter-group-label">결과</span>
+      <CalendarOutcomeLegend />
+    </div>
+  ) : null;
 
   const filterGroups = (
     <>
@@ -133,7 +140,7 @@ export function CalendarFilterBar({
     </>
   );
 
-  if (isMobile) {
+  if (layout === 'mobile') {
     return (
       <section
         aria-label="캘린더 필터"
@@ -154,7 +161,7 @@ export function CalendarFilterBar({
         {expanded ? (
           <div className="calendar-filter-dock__panel">
             <div className="calendar-filter-groups">{filterGroups}</div>
-            {favoriteTeamId ? <CalendarOutcomeLegend /> : null}
+            {outcomeLegend}
           </div>
         ) : null}
       </section>
@@ -162,9 +169,9 @@ export function CalendarFilterBar({
   }
 
   return (
-    <section aria-label="캘린더 필터" className="calendar-filter-bar">
+    <section aria-label="캘린더 필터" className="calendar-filter-panel">
       <div className="calendar-filter-groups">{filterGroups}</div>
-      {favoriteTeamId ? <CalendarOutcomeLegend /> : null}
+      {outcomeLegend}
     </section>
   );
 }

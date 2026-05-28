@@ -25,10 +25,7 @@ import { getAssetUrl } from '@/lib/api';
 import { getTeamLogoSrc } from '@/lib/team-logo';
 import { Skeleton, SkeletonCard } from '@/components/Skeleton';
 import { EmptyState } from '@/components/EmptyState';
-import {
-  getGameStatusLabel,
-  getGameStatusTone,
-} from '@/lib/game-status';
+import { getGameStatusLabel, getGameStatusTone } from '@/lib/game-status';
 import { isGameCancelled } from '@/lib/attendance-game';
 import { resolveAttendanceOutcome } from '@/lib/attendance-score';
 import { getCancellationLabel } from '@/lib/game-cancellation';
@@ -63,7 +60,8 @@ const features = [
   {
     icon: '★',
     title: '승리요정 · 패배요정',
-    description: '승률에 따라 마이페이지에 승리요정 또는 패배요정 타이틀이 붙어요.',
+    description:
+      '승률에 따라 마이페이지에 승리요정 또는 패배요정 타이틀이 붙어요.',
   },
 ];
 
@@ -85,17 +83,16 @@ function isUpcoming(value: string) {
 }
 
 export default function HomePage() {
-  const [authState, setAuthState] = useState<
-    'checking' | 'guest' | 'authed'
-  >('checking');
+  const [authState, setAuthState] = useState<'checking' | 'guest' | 'authed'>(
+    'checking',
+  );
   const [user, setUser] = useState<PublicUser | null>(null);
   const [favoriteTeam, setFavoriteTeam] = useState<Team | null>(null);
   const [stats, setStats] = useState<AttendanceStats | null>(null);
   const [upcomingGames, setUpcomingGames] = useState<Game[]>([]);
   const [recentRecords, setRecentRecords] = useState<AttendanceRecord[]>([]);
-  const [teamStandings, setTeamStandings] = useState<TeamStandingsResponse | null>(
-    null,
-  );
+  const [teamStandings, setTeamStandings] =
+    useState<TeamStandingsResponse | null>(null);
 
   useEffect(() => {
     const seasonYear = new Date().getFullYear();
@@ -125,15 +122,16 @@ export default function HomePage() {
         const isoFrom = today.toISOString().slice(0, 10);
         const isoTo = monthLater.toISOString().slice(0, 10);
 
-        const [teamsResponse, gamesResponse, recordsResponse] = await Promise.all([
-          listTeams(),
-          listGames({
-            from: isoFrom,
-            to: isoTo,
-            teamId: current.favoriteTeamId ?? undefined,
-          }),
-          listAttendanceRecords({}, token),
-        ]);
+        const [teamsResponse, gamesResponse, recordsResponse] =
+          await Promise.all([
+            listTeams(),
+            listGames({
+              from: isoFrom,
+              to: isoTo,
+              teamId: current.favoriteTeamId ?? undefined,
+            }),
+            listAttendanceRecords({}, token),
+          ]);
 
         setFavoriteTeam(
           teamsResponse.items.find(
@@ -141,7 +139,9 @@ export default function HomePage() {
           ) ?? null,
         );
         setUpcomingGames(
-          gamesResponse.items.filter((game) => isUpcoming(game.gameDate)).slice(0, 5),
+          gamesResponse.items
+            .filter((game) => isUpcoming(game.gameDate))
+            .slice(0, 5),
         );
         const ownedRecords = recordsResponse.items.filter(
           (record) => record.viewerRelation === 'owner',
@@ -219,26 +219,6 @@ export default function HomePage() {
 
   return (
     <main className="page-shell">
-      <section className="card stack">
-        <div className="section-heading">
-          <div>
-            <h2>KBO 팀 순위</h2>
-            <p>
-              {favoriteTeam
-                ? `${favoriteTeam.shortName}는 ${
-                    teamStandings?.items.find((item) => item.teamId === favoriteTeam.id)
-                      ?.rank ?? '—'
-                  }위예요.`
-                : '응원 팀을 설정하면 순위를 강조해 보여드려요.'}
-            </p>
-          </div>
-        </div>
-        <TeamStandingsTable
-          highlightTeamId={favoriteTeam?.id}
-          standings={teamStandings}
-        />
-      </section>
-
       <section className="dashboard-grid">
         <div className="dashboard-greeting">
           <div>
@@ -423,21 +403,24 @@ export default function HomePage() {
                     <div className="dashboard-game-info">
                       <span className="matchup">
                         <span className="matchup-team">
-                          <img alt="" src={getTeamLogoSrc(record.game.awayTeam)} />
+                          <img
+                            alt=""
+                            src={getTeamLogoSrc(record.game.awayTeam)}
+                          />
                           <strong>{record.game.awayTeam.shortName}</strong>
                         </span>
                         <span className="matchup-vs">vs</span>
                         <span className="matchup-team">
-                          <img alt="" src={getTeamLogoSrc(record.game.homeTeam)} />
+                          <img
+                            alt=""
+                            src={getTeamLogoSrc(record.game.homeTeam)}
+                          />
                           <strong>{record.game.homeTeam.shortName}</strong>
                         </span>
                       </span>
                       <span>
                         {record.watchType === 'home' ? '집관' : '직관'} ·{' '}
-                        {formatAttendanceResultLabel(
-                          record,
-                          favoriteTeam?.id,
-                        )}
+                        {formatAttendanceResultLabel(record, favoriteTeam?.id)}
                       </span>
                     </div>
                     {record.photoUrl ? (
@@ -460,6 +443,27 @@ export default function HomePage() {
             </div>
           </section>
         ) : null}
+      </section>
+
+      <section className="card stack">
+        <div className="section-heading">
+          <div>
+            <h2>KBO 팀 순위</h2>
+            <p>
+              {favoriteTeam
+                ? `${favoriteTeam.shortName}는 ${
+                    teamStandings?.items.find(
+                      (item) => item.teamId === favoriteTeam.id,
+                    )?.rank ?? '—'
+                  }위예요.`
+                : '응원 팀을 설정하면 순위를 강조해 보여드려요.'}
+            </p>
+          </div>
+        </div>
+        <TeamStandingsTable
+          highlightTeamId={favoriteTeam?.id}
+          standings={teamStandings}
+        />
       </section>
     </main>
   );

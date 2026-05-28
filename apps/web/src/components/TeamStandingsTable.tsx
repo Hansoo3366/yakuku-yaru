@@ -16,6 +16,41 @@ function formatStandingWinRate(winRate: number) {
   return `${(winRate * 100).toFixed(1)}%`;
 }
 
+function formatRecentTenRecord(value: string | null | undefined) {
+  if (!value) {
+    return '-';
+  }
+
+  const normalized = value.replace(/\s+/g, '');
+  const match = normalized.match(/^(\d+승)(\d+무)(\d+패)$/);
+
+  if (!match) {
+    return value;
+  }
+
+  return `${match[1]}-${match[2]}-${match[3]}`;
+}
+
+function getStreakBadgeKind(value: string | null | undefined) {
+  if (!value) {
+    return 'none';
+  }
+
+  if (value.includes('승')) {
+    return 'win';
+  }
+
+  if (value.includes('패')) {
+    return 'lose';
+  }
+
+  if (value.includes('무')) {
+    return 'draw';
+  }
+
+  return 'none';
+}
+
 export function TeamStandingsTable({ standings, highlightTeamId }: Props) {
   if (!standings?.items.length) {
     return (
@@ -29,7 +64,8 @@ export function TeamStandingsTable({ standings, highlightTeamId }: Props) {
     <div className="standings-table-wrap">
       {standings.rankDate ? (
         <p className="standings-as-of muted">
-          {standings.seasonYear}시즌 · {standings.rankDate.replace(/-/g, '.')} 기준
+          {standings.seasonYear}시즌 · {standings.rankDate.replace(/-/g, '.')}{' '}
+          기준
         </p>
       ) : null}
       <table className="standings-table">
@@ -43,6 +79,8 @@ export function TeamStandingsTable({ standings, highlightTeamId }: Props) {
             <th scope="col">무</th>
             <th scope="col">승률</th>
             <th scope="col">게임차</th>
+            <th scope="col">최근 10경기</th>
+            <th scope="col">연속</th>
           </tr>
         </thead>
         <tbody>
@@ -70,6 +108,15 @@ export function TeamStandingsTable({ standings, highlightTeamId }: Props) {
                 <td>{item.draws}</td>
                 <td>{formatStandingWinRate(item.winRate)}</td>
                 <td>{item.gamesBehind}</td>
+                <td>{formatRecentTenRecord(item.recentTen)}</td>
+                <td>
+                  <span
+                    className="standings-streak-badge"
+                    data-kind={getStreakBadgeKind(item.streak)}
+                  >
+                    {item.streak || '-'}
+                  </span>
+                </td>
               </tr>
             );
           })}

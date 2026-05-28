@@ -7,6 +7,7 @@ import { useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { fetchGame, type Game } from '@/lib/baseball-api';
 import { getAccessToken } from '@/lib/auth';
+import { fetchMe } from '@/lib/auth-api';
 import {
   listAttendanceRecords,
   type AttendanceRecord,
@@ -20,11 +21,20 @@ import {
   getGameStatusTone,
 } from '@/lib/game-status';
 import { hasGameStarted, isGameFinished } from '@/lib/game-outcome';
-import { canWriteAttendanceRecord } from '@/lib/attendance-game';
+import { canWriteAttendanceRecord, isGameCancelled } from '@/lib/attendance-game';
+import { getAttendanceTicketView } from '@/lib/attendance-score';
+import { getAssetUrl } from '@/lib/api';
 import { StatTerm } from '@/components/StatGlossary';
 import { StadiumPersonalNotes } from '@/components/StadiumPersonalNotes';
 
 function formatDateTime(value: string) {
+  return new Date(value).toLocaleString('ko-KR', {
+    dateStyle: 'long',
+    timeStyle: 'short',
+  });
+}
+
+function formatTicketOpenAt(value: string) {
   return new Date(value).toLocaleString('ko-KR', {
     dateStyle: 'long',
     timeStyle: 'short',
@@ -43,6 +53,19 @@ function formatRate(value: number | null) {
   const formatted = value.toFixed(3);
 
   return formatted.startsWith('0') ? formatted.slice(1) : formatted;
+}
+
+function ticketOutcomeLabel(outcome: string | null) {
+  switch (outcome) {
+    case 'win':
+      return '승';
+    case 'lose':
+      return '패';
+    case 'draw':
+      return '무';
+    default:
+      return '결과 미입력';
+  }
 }
 
 type Pitcher = NonNullable<Game['probablePitchers']['home']>;
@@ -183,28 +206,143 @@ function LineupPanel({
   );
 }
 
+function GameRecordPanel({
+  game,
+  attendanceRecord,
+  canWriteAttendance,
+  viewerFavoriteTeamId,
+}: {
+  game: Game;
+  attendanceRecord: AttendanceRecord | null;
+  canWriteAttendance: boolean;
+  viewerFavoriteTeamId: number | null;
+}) {
+  if (attendanceRecord) {
+    const ticket = getAttendanceTicketView(
+      attendanceRecord,
+      viewerFavoriteTeamId,
+    );
+    const cancelled = isGameCancelled(attendanceRecord.game);
+    const watchLabel =
+      attendanceRecord.watchType === 'home' ? '집관' : '직관';
+    const outcomeLabel = cancelled
+      ? '우취'
+      : ticketOutcomeLabel(ticket.outcome);
+    const hasScore =
+      ticket.awayScore !== null && ticket.homeScore !== null;
+    const scoreText = hasScore
+      ? `${ticket.awayScore} : ${ticket.homeScore}`
+      : null;
+
+    return (
+      <section aria-label="내 직관 기록" className="card game-record-panel">
+        <div className="section-heading">
+          <div>
+            <h2>내 직관 기록</h2>
+            <p>이 경기에 남긴 포토 티켓</p>
+          </div>
+        </div>
+        <Link
+          className="game-record-ticket-link"
+          href={`/attendance/${attendanceRecord.id}`}
+        >
+          <div className="game-record-ticket-preview">
+            <div className="game-record-ticket-photo">
+              {attendanceRecord.photoUrl ? (
+                <img
+                  alt="직관 사진"
+                  src={getAssetUrl(attendanceRecord.photoUrl)}
+                />
+              ) : (
+                <span className="game-record-ticket-photo-empty">사진 없음</span>
+              )}
+            </div>
+            <div className="game-record-ticket-copy">
+              <span
+                className={`game-record-ticket-outcome game-record-ticket-outcome--${
+                  cancelled
+                    ? 'cancelled'
+                    : ticket.outcome ?? 'blank'
+                }`}
+              >
+                {watchLabel} · {outcomeLabel}
+              </span>
+              <strong>
+                {game.awayTeam.shortName} vs {game.homeTeam.shortName}
+              </strong>
+              <p>
+                {scoreText ?? '스코어 미확정'} · {game.stadium}
+              </p>
+            </div>
+          </div>
+          <span className="btn btn-ghost">티켓 전체 보기</span>
+        </Link>
+      </section>
+    );
+  }
+
+  return (
+    <section aria-label="직관 기록" className="card game-record-panel">
+      <div className="section-heading">
+        <div>
+          <h2>직관 기록</h2>
+          <p>경기 후 포토 티켓으로 남겨보세요</p>
+        </div>
+      </div>
+      {canWriteAttendance ? (
+        <Link
+          className="btn btn-primary btn-lg game-record-cta"
+          href={`/attendance/new?gameId=${game.id}`}
+        >
+          직관 기록 작성
+        </Link>
+      ) : (
+        <p className="score-input-hint">
+          경기 시작 후에 직관 기록을 작성할 수 있어요.
+        </p>
+      )}
+    </section>
+  );
+}
+
 export default function GameDetailPage() {
   const params = useParams<{ gameId: string }>();
   const gameId = Number(params.gameId);
   const [game, setGame] = useState<Game | null>(null);
   const [attendanceRecord, setAttendanceRecord] =
     useState<AttendanceRecord | null>(null);
+  const [viewerFavoriteTeamId, setViewerFavoriteTeamId] = useState<
+    number | null
+  >(null);
+
   useEffect(() => {
     fetchGame(gameId).then((response) => setGame(response.game));
 
     const token = getAccessToken();
-    if (token) {
-      listAttendanceRecords({}, token).then((response) => {
-        setAttendanceRecord(
-          response.items.find((record) => record.gameId === gameId) ?? null,
-        );
-      });
+    if (!token) {
+      return;
     }
+
+    Promise.all([listAttendanceRecords({}, token), fetchMe(token)])
+      .then(([attendanceResponse, meResponse]) => {
+        setAttendanceRecord(
+          attendanceResponse.items.find((record) => record.gameId === gameId) ??
+            null,
+        );
+        setViewerFavoriteTeamId(meResponse.user.favoriteTeamId);
+      })
+      .catch(() => {
+        listAttendanceRecords({}, token).then((response) => {
+          setAttendanceRecord(
+            response.items.find((record) => record.gameId === gameId) ?? null,
+          );
+        });
+      });
   }, [gameId]);
 
   if (!game) {
     return (
-      <main className="app-shell">
+      <main className="app-shell app-shell--game-detail">
         <Skeleton height={220} radius={10} />
         <Skeleton height={140} radius={10} />
         <Skeleton height={120} radius={10} />
@@ -212,6 +350,7 @@ export default function GameDetailPage() {
     );
   }
 
+  const statusTone = getGameStatusTone(game);
   const isCancelled = game.status === 'cancelled';
   const isFinished =
     !isCancelled &&
@@ -232,21 +371,33 @@ export default function GameDetailPage() {
     game.status !== 'cancelled' &&
     !hasGameStarted(game);
   const canWriteAttendance = canWriteAttendanceRecord(game);
+  const hasTicketExtras = Boolean(game.ticketUrl || game.ticketOpenAt);
 
   return (
-    <main className="app-shell">
+    <main className="app-shell app-shell--game-detail">
       <Link className="back-link" href="/calendar">
         캘린더로
       </Link>
 
-      <section aria-label="경기 매치업" className="match-hero">
-        <div>
-          <span className="eyebrow">Game Detail</span>
+      <section
+        aria-label="경기 스코어보드"
+        className="match-hero match-hero--report"
+      >
+        <div className="match-hero-copy">
+          <span className="eyebrow">Game Preview</span>
           <h1>
             {game.awayTeam.name} vs {game.homeTeam.name}
           </h1>
           <p className="match-hero-stadium">
-            {formatDateTime(game.gameDate)} · {game.stadium}
+            <span className={getGameStatusBadgeClass(statusTone)}>
+              {getGameStatusLabel(statusTone)}
+            </span>
+            <span className="match-hero-stadium-sep" aria-hidden="true">
+              ·
+            </span>
+            <span>
+              {formatDateTime(game.gameDate)} · {game.stadium}
+            </span>
           </p>
         </div>
 
@@ -284,70 +435,14 @@ export default function GameDetailPage() {
         </div>
       </section>
 
-      <section className="card stack">
-        <div className="action-bar">
-          {attendanceRecord ? (
-            <Link
-              className="btn btn-primary btn-lg"
-              href={`/attendance/${attendanceRecord.id}`}
-            >
-              직관 기록 보기
-            </Link>
-          ) : canWriteAttendance ? (
-            <Link
-              className="btn btn-primary btn-lg"
-              href={`/attendance/new?gameId=${game.id}`}
-            >
-              직관 기록 작성
-            </Link>
-          ) : (
-            <p className="score-input-hint">
-              경기 시작 후에 직관 기록을 작성할 수 있어요.
-            </p>
-          )}
-          {game.ticketUrl ? (
-            <a
-              className="btn btn-ghost btn-lg"
-              href={game.ticketUrl}
-              rel="noreferrer"
-              target="_blank"
-            >
-              예매처 열기
-            </a>
-          ) : null}
-        </div>
-      </section>
+      <GameRecordPanel
+        attendanceRecord={attendanceRecord}
+        canWriteAttendance={canWriteAttendance}
+        game={game}
+        viewerFavoriteTeamId={viewerFavoriteTeamId}
+      />
 
-      <section className="card">
-        <div className="section-heading">
-          <h2>경기 정보</h2>
-        </div>
-        <dl style={{ margin: 0 }}>
-          <div className="info-row">
-            <dt>경기 일시</dt>
-            <dd>{formatDateTime(game.gameDate)}</dd>
-          </div>
-          <div className="info-row">
-            <dt>구장</dt>
-            <dd>{game.stadium}</dd>
-          </div>
-          <div className="info-row">
-            <dt>경기 상태</dt>
-            <dd>
-              {(() => {
-                const tone = getGameStatusTone(game);
-                return (
-                  <span className={getGameStatusBadgeClass(tone)}>
-                    {getGameStatusLabel(tone)}
-                  </span>
-                );
-              })()}
-            </dd>
-          </div>
-        </dl>
-      </section>
-
-      <section className="card">
+      <section aria-label="선발 투수" className="card game-report-section">
         <div className="section-heading">
           <div>
             <h2>선발 투수</h2>
@@ -368,7 +463,7 @@ export default function GameDetailPage() {
         </div>
       </section>
 
-      <section className="card">
+      <section aria-label="라인업" className="card game-report-section">
         <div className="section-heading">
           <div>
             <h2>라인업</h2>
@@ -386,6 +481,41 @@ export default function GameDetailPage() {
           <LineupPanel players={game.lineups.away} team={game.awayTeam} />
           <LineupPanel players={game.lineups.home} team={game.homeTeam} />
         </div>
+      </section>
+
+      <section
+        aria-label="예매 및 티켓 오픈"
+        className="card game-report-section game-extras-panel"
+      >
+        <div className="section-heading">
+          <div>
+            <h2>예매 · 알림</h2>
+            <p>티켓 예매와 오픈 일정</p>
+          </div>
+        </div>
+        {hasTicketExtras ? (
+          <div className="game-extras-stack">
+            {game.ticketOpenAt ? (
+              <div className="game-ticket-open-notice">
+                <span className="game-ticket-open-label">티켓 오픈 예정</span>
+                <strong>{formatTicketOpenAt(game.ticketOpenAt)}</strong>
+                <p>오픈 시각을 확인하고 예매를 준비해 보세요.</p>
+              </div>
+            ) : null}
+            {game.ticketUrl ? (
+              <a
+                className="btn btn-primary btn-lg"
+                href={game.ticketUrl}
+                rel="noreferrer"
+                target="_blank"
+              >
+                예매처 열기
+              </a>
+            ) : null}
+          </div>
+        ) : (
+          <p className="muted">등록된 예매·오픈 정보가 없어요.</p>
+        )}
       </section>
 
       <StadiumPersonalNotes stadium={game.stadium} />

@@ -72,9 +72,11 @@ export function AppHeader() {
 
   const favoriteTeam = teams.find((team) => team.id === user?.favoriteTeamId);
   useTeamTheme(favoriteTeam?.primaryColor ?? null);
+  const isWideLayout =
+    pathname === '/calendar' || pathname.startsWith('/calendar/');
 
   return (
-    <header className="site-header">
+    <header className={`site-header${isWideLayout ? ' is-layout-wide' : ''}`}>
       <div className="site-header-inner">
         <Link className="brand-link" href="/">
           <span className="brand-mark" aria-hidden="true">
@@ -89,7 +91,9 @@ export function AppHeader() {
         <nav className="site-nav" aria-label="상단 메뉴">
           {primaryLinks.map((item) => (
             <Link
-              aria-current={isActivePath(pathname, item.href) ? 'page' : undefined}
+              aria-current={
+                isActivePath(pathname, item.href) ? 'page' : undefined
+              }
               className={isActivePath(pathname, item.href) ? 'active' : ''}
               href={item.href}
               key={item.href}
@@ -99,7 +103,9 @@ export function AppHeader() {
           ))}
           {user?.role === 'admin' ? (
             <Link
-              aria-current={isActivePath(pathname, '/admin') ? 'page' : undefined}
+              aria-current={
+                isActivePath(pathname, '/admin') ? 'page' : undefined
+              }
               className={isActivePath(pathname, '/admin') ? 'active' : ''}
               href="/admin"
             >
@@ -144,8 +150,12 @@ export function AppHeader() {
 }
 
 export function AppFooter() {
+  const pathname = usePathname();
+  const isWideLayout =
+    pathname === '/calendar' || pathname.startsWith('/calendar/');
+
   return (
-    <footer className="site-footer">
+    <footer className={`site-footer${isWideLayout ? ' is-layout-wide' : ''}`}>
       <div className="site-footer-inner">
         <div>
           <strong>야크크 야르~ 섹시야구</strong>

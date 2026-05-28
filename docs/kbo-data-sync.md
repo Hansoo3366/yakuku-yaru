@@ -1,9 +1,12 @@
-# KBO 경기 일정 동기화
+# KBO 데이터 동기화
 
 ## 데이터 소스
 
-- **페이지**: [KBO 경기일정/결과](https://www.koreabaseball.com/Schedule/Schedule.aspx)
-- **실제 API** (브라우저가 호출): `POST https://www.koreabaseball.com/ws/Schedule.asmx/GetScheduleList`
+- **경기 일정/결과**: [KBO 경기일정/결과](https://www.koreabaseball.com/Schedule/Schedule.aspx)
+- **경기 일정 실제 호출**: `POST https://www.koreabaseball.com/ws/Schedule.asmx/GetScheduleList`
+- **선수 목록**: [KBO 선수 조회](https://www.koreabaseball.com/Player/Search.aspx)
+- **경기센터**: [KBO GameCenter](https://www.koreabaseball.com/Schedule/GameCenter/Main.aspx)
+- **순위**: KBO 팀 순위 페이지
 
 KBO API는 **월 단위**만 제공합니다. 주·일 단위 갱신은 해당 월을 받아온 뒤 **KST 날짜로 필터**해 upsert합니다.
 
@@ -24,7 +27,7 @@ KBO API는 **월 단위**만 제공합니다. 주·일 단위 갱신은 해당 �
 |----------|------------|------|
 | `daily.sh` | 매일 **06:00** | `schedule week` → `standings` |
 | `live.sh` | **08:00, 10:30, 13:00, 15:30, 17:00, 18:30, 20:00, 21:30** | `schedule today` → `game-center today` |
-| `weekly.sh` | 매주 월 **06:30** | `sync:kbo-players` (타율·OPS·생년월일 포함) |
+| `weekly.sh` | 매주 월 **06:30** | `sync:kbo-players` (선수 마스터, 프로필 이미지, 생년월일, 타격 지표) |
 | `month.sh` | 매월 1일 **06:00** | `schedule month` |
 | `season.sh` | 매년 3/1 **06:00** | `schedule season` |
 
@@ -44,6 +47,8 @@ sed "s|PROJECT_DIR|$(pwd)|g" scripts/kbo-sync/crontab.example | crontab -
 `docker-compose.prod.yml` 기본값 `KBO_SYNC_ENABLED=false` — 호스트 cron과 중복하지 않습니다.
 
 **팀 순위**는 `live.sh`에 없고, `daily.sh` 또는 API **week** 동기화(매일 06:00 KST) 때만 갱신됩니다.
+
+**경기센터** 동기화는 선발 투수, 선발 투수 스탯, 라인업을 저장합니다. 라인업은 당일에도 확정 전일 수 있어 데이터가 비어 있을 수 있습니다.
 
 긴급히 API 프로세스 안에서만 돌리려면 `.env.production`에 `KBO_SYNC_ENABLED=true` (비권장).
 
@@ -94,8 +99,24 @@ KBO **스케줄** workflow는 제거했습니다. 배포만 `deploy.yml`을 사�
 | 경기 ID | KBO `gameId` → `external_id`. **미래 일정**은 API에 `gameId`가 없을 수 있어 `pending-YYYYMMDDhhmm-원정-홈` 으로 저장 |
 | upsert | `external_id` 우선, 없으면 `(game_date, home_team_id, away_team_id)` — 나중에 실제 `gameId`가 생기면 같은 경기로 **갱신** |
 | `external_source` | `kbo` |
+| 취소 사유 | KBO 상태 문구를 `rain`, `dust`, `ground`, `heat`, `cold`, `other`로 분류 |
+| 선수 | `players.kbo_player_id` 기준 upsert |
+| 선발 투수 | `(game_id, team_id)` 기준 upsert |
+| 라인업 | `(game_id, team_id, batting_order)` 기준 upsert |
 
-상세 파싱 규칙은 `apps/api/src/modules/kbo-schedule/parse-schedule.ts` 참고.
+상세 파싱 규칙은 아래 파일을 참고합니다.
+
+- `apps/api/src/modules/kbo-schedule/parse-schedule.ts`
+- `apps/api/src/modules/kbo-players/parse-player-search.ts`
+- `apps/api/src/modules/kbo-game-center/`
+- `apps/api/src/modules/kbo-team-rank/`
+
+## 화면 반영
+
+- 캘린더: 시간, 팀, 스코어, 취소 사유, 선발 투수
+- 경기 상세: 선발 투수 프로필, ERA, WHIP, WAR, QS, 라인업
+- 홈/마이페이지: 내 팀 경기와 직관 인사이트
+- 관리자: 경기 데이터 점검과 수동 수정
 
 ## 주의
 

@@ -13,6 +13,8 @@ export type TeamStandingRow = {
   draws: number;
   winRate: number;
   gamesBehind: number;
+  recentTen: string;
+  streak: string;
 };
 
 type StandingMetaRow = RowDataPacket & {
@@ -54,9 +56,11 @@ export async function replaceTeamStandings(input: {
            losses,
            draws,
            win_rate,
-           games_behind
+           games_behind,
+           recent_ten,
+           streak
          )
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           input.seasonYear,
           input.rankDate,
@@ -69,6 +73,8 @@ export async function replaceTeamStandings(input: {
           standing.draws,
           standing.winRate,
           standing.gamesBehind,
+          standing.recentTen,
+          standing.streak,
         ],
       );
     }
@@ -126,6 +132,8 @@ export async function listTeamStandings(seasonYear: number, seriesId = '0') {
       draws: number;
       win_rate: number;
       games_behind: number;
+      recent_ten: string | null;
+      streak: string | null;
       rank_date: Date | string;
     })[]
   >(
@@ -140,6 +148,8 @@ export async function listTeamStandings(seasonYear: number, seriesId = '0') {
        ts.draws,
        ts.win_rate,
        ts.games_behind,
+       ts.recent_ten,
+       ts.streak,
        ts.rank_date
      FROM team_standings ts
      INNER JOIN teams t ON t.id = ts.team_id
@@ -173,6 +183,8 @@ export async function listTeamStandings(seasonYear: number, seriesId = '0') {
       draws: Number(row.draws),
       winRate: Number(row.win_rate),
       gamesBehind: Number(row.games_behind),
+      recentTen: row.recent_ten ?? '-',
+      streak: row.streak ?? '-',
     })) satisfies TeamStandingRow[],
   };
 }
