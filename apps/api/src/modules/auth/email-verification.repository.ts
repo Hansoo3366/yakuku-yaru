@@ -13,6 +13,9 @@ type EmailVerificationTokenRow = RowDataPacket & {
   expires_at: Date;
   used_at: Date | null;
   created_at: Date;
+  expires_in_seconds: number;
+  resend_available_at: Date;
+  resend_in_seconds: number;
 };
 
 export function generateEmailVerificationCode() {
@@ -41,13 +44,27 @@ export async function createEmailVerificationToken(userId: number) {
   );
 
   const [rows] = await db.query<EmailVerificationTokenRow[]>(
-    `SELECT id, user_id, token, expires_at, used_at, created_at
+    `SELECT
+       id,
+       user_id,
+       token,
+       expires_at,
+       used_at,
+       created_at,
+       GREATEST(0, TIMESTAMPDIFF(SECOND, CURRENT_TIMESTAMP, expires_at)) AS expires_in_seconds,
+       DATE_ADD(created_at, INTERVAL ? SECOND) AS resend_available_at,
+       GREATEST(0, TIMESTAMPDIFF(SECOND, CURRENT_TIMESTAMP, DATE_ADD(created_at, INTERVAL ? SECOND))) AS resend_in_seconds
      FROM email_verification_tokens
      WHERE user_id = ?
        AND token = ?
      ORDER BY id DESC
      LIMIT 1`,
-    [userId, token],
+    [
+      EMAIL_VERIFICATION_RESEND_COOLDOWN_SECONDS,
+      EMAIL_VERIFICATION_RESEND_COOLDOWN_SECONDS,
+      userId,
+      token,
+    ],
   );
 
   const row = rows[0];
@@ -74,12 +91,25 @@ export async function countEmailVerificationSends(userId: number) {
 
 export async function getLatestEmailVerificationToken(userId: number) {
   const [rows] = await db.query<EmailVerificationTokenRow[]>(
-    `SELECT id, user_id, token, expires_at, used_at, created_at
+    `SELECT
+       id,
+       user_id,
+       token,
+       expires_at,
+       used_at,
+       created_at,
+       GREATEST(0, TIMESTAMPDIFF(SECOND, CURRENT_TIMESTAMP, expires_at)) AS expires_in_seconds,
+       DATE_ADD(created_at, INTERVAL ? SECOND) AS resend_available_at,
+       GREATEST(0, TIMESTAMPDIFF(SECOND, CURRENT_TIMESTAMP, DATE_ADD(created_at, INTERVAL ? SECOND))) AS resend_in_seconds
      FROM email_verification_tokens
      WHERE user_id = ?
      ORDER BY id DESC
      LIMIT 1`,
-    [userId],
+    [
+      EMAIL_VERIFICATION_RESEND_COOLDOWN_SECONDS,
+      EMAIL_VERIFICATION_RESEND_COOLDOWN_SECONDS,
+      userId,
+    ],
   );
 
   return rows[0] ?? null;

@@ -17,6 +17,30 @@ function getSecondsUntil(date: Date) {
   return Math.max(0, Math.ceil((date.getTime() - Date.now()) / 1000));
 }
 
+function getExpiresInSeconds(token: {
+  expires_at: Date;
+  expires_in_seconds?: number;
+}) {
+  return Math.max(
+    0,
+    Number.isFinite(token.expires_in_seconds)
+      ? Number(token.expires_in_seconds)
+      : getSecondsUntil(token.expires_at),
+  );
+}
+
+function getResendInSeconds(token: {
+  created_at: Date;
+  resend_in_seconds?: number;
+}) {
+  return Math.max(
+    0,
+    Number.isFinite(token.resend_in_seconds)
+      ? Number(token.resend_in_seconds)
+      : getSecondsUntil(getResendAvailableAt(token.created_at)),
+  );
+}
+
 function getResendAvailableAt(createdAt: Date) {
   return new Date(
     createdAt.getTime() + EMAIL_VERIFICATION_RESEND_COOLDOWN_SECONDS * 1000,
@@ -46,12 +70,9 @@ export async function issueEmailVerification(input: {
     const latest = await getLatestEmailVerificationToken(input.userId);
 
     if (latest) {
-      const resendAvailableAt = getResendAvailableAt(latest.created_at);
+      const retryAfterSeconds = getResendInSeconds(latest);
 
-      if (resendAvailableAt.getTime() > Date.now()) {
-        const retryAfterSeconds = Math.ceil(
-          (resendAvailableAt.getTime() - Date.now()) / 1000,
-        );
+      if (retryAfterSeconds > 0) {
         throw new HttpError(
           429,
           'VERIFICATION_RESEND_COOLDOWN',
@@ -69,15 +90,16 @@ export async function issueEmailVerification(input: {
   });
 
   const sendCount = await countEmailVerificationSends(input.userId);
-  const resendAvailableAt = getResendAvailableAt(tokenRow.created_at);
+  const resendAvailableAt =
+    tokenRow.resend_available_at ?? getResendAvailableAt(tokenRow.created_at);
 
   return {
     emailSent,
     code: tokenRow.token,
     expiresAt: toIso(tokenRow.expires_at),
-    expiresInSeconds: getSecondsUntil(tokenRow.expires_at),
+    expiresInSeconds: getExpiresInSeconds(tokenRow),
     resendAvailableAt: toIso(resendAvailableAt),
-    resendInSeconds: getSecondsUntil(resendAvailableAt),
+    resendInSeconds: getResendInSeconds(tokenRow),
     resendsRemaining: getVerificationResendsRemaining(sendCount),
   };
 }
@@ -102,9 +124,10 @@ export async function resendEmailVerification(email: string) {
 
 function isUsableVerificationToken(token: {
   expires_at: Date;
+  expires_in_seconds?: number;
   used_at: Date | null;
 }) {
-  return !token.used_at && new Date(token.expires_at).getTime() > Date.now();
+  return !token.used_at && getExpiresInSeconds(token) > 0;
 }
 
 export async function getEmailVerificationStatus(email: string) {
@@ -136,14 +159,15 @@ export async function getEmailVerificationStatus(email: string) {
     };
   }
 
-  const resendAvailableAt = getResendAvailableAt(latest.created_at);
+  const resendAvailableAt =
+    latest.resend_available_at ?? getResendAvailableAt(latest.created_at);
 
   return {
     emailSent: true,
     expiresAt: toIso(latest.expires_at),
-    expiresInSeconds: getSecondsUntil(latest.expires_at),
+    expiresInSeconds: getExpiresInSeconds(latest),
     resendAvailableAt: toIso(resendAvailableAt),
-    resendInSeconds: getSecondsUntil(resendAvailableAt),
+    resendInSeconds: getResendInSeconds(latest),
     resendsRemaining,
     needsResend: false,
   };
