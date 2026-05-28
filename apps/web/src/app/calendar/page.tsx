@@ -78,13 +78,17 @@ function readPersistedViewMode(): ViewMode {
   return value === 'week' ? 'week' : 'month';
 }
 
-function readPersistedScheduleFilter(): ScheduleFilter {
+function readPersistedScheduleFilter(): ScheduleFilter | null {
   if (typeof window === 'undefined') {
-    return 'all';
+    return null;
   }
 
   const value = window.localStorage.getItem(CALENDAR_SCHEDULE_FILTER_KEY);
-  return value === 'favorite' || value === 'favorite-home' ? value : 'all';
+  if (value === 'favorite' || value === 'favorite-home' || value === 'all') {
+    return value;
+  }
+
+  return null;
 }
 
 function readPersistedWatchTypeFilter(): WatchTypeFilter {
@@ -174,6 +178,9 @@ export default function CalendarPage() {
   const router = useRouter();
   useAuthGuard();
   const [viewMode, setViewMode] = useState<ViewMode>(() => readPersistedViewMode());
+  const [persistedScheduleFilter] = useState<ScheduleFilter | null>(() =>
+    readPersistedScheduleFilter(),
+  );
   const [anchorDate, setAnchorDate] = useState(() => getMonthStart(new Date()));
   const [todayJumpTick, setTodayJumpTick] = useState(0);
   const [user, setUser] = useState<PublicUser | null>(null);
@@ -188,8 +195,8 @@ export default function CalendarPage() {
   const [yearSeasonGames, setYearSeasonGames] = useState<Game[]>([]);
   const [teamStandings, setTeamStandings] =
     useState<TeamStandingsResponse | null>(null);
-  const [scheduleFilter, setScheduleFilter] = useState<ScheduleFilter>(() =>
-    readPersistedScheduleFilter(),
+  const [scheduleFilter, setScheduleFilter] = useState<ScheduleFilter>(
+    () => persistedScheduleFilter ?? 'all',
   );
   const hasInitializedScheduleFilter = useRef(false);
   const [watchTypeFilter, setWatchTypeFilter] = useState<WatchTypeFilter>(() =>
@@ -224,10 +231,10 @@ export default function CalendarPage() {
       return;
     }
 
-    if (scheduleFilter === 'all') {
+    if (persistedScheduleFilter === null) {
       setScheduleFilter('favorite');
     }
-  }, [user, scheduleFilter]);
+  }, [user, persistedScheduleFilter]);
 
   useEffect(() => {
     if (typeof window === 'undefined') {
