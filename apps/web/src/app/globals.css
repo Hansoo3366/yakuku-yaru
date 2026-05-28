@@ -289,11 +289,7 @@ img {
  * ========================================================= */
 
 .site-header {
-  background: color-mix(
-    in srgb,
-    var(--color-night-navy) 92%,
-    var(--team-color, var(--color-field-700)) 8%
-  );
+  background: var(--team-color, var(--color-field-700));
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   color: var(--color-white);
   position: fixed;
