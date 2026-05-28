@@ -8,7 +8,8 @@ GitHub Actions 스케줄 대신 **프로덕션 서버 호스트 crontab**에서 
 | 파일 | 내용 |
 |------|------|
 | `daily.sh` | `sync:kbo-schedule --mode=week` → `sync:kbo-standings` |
-| `live.sh` | `sync:kbo-schedule --mode=today` → `sync:kbo-game-center` (선발·라인업·공식 여부) |
+| `live.sh` | `sync:kbo-schedule --mode=today` → `sync:kbo-game-center` (선발·라인업·공식 여부). **21~23시 KST**에는 순위도 함께 |
+| `standings.sh` | `sync:kbo-standings` 만 |
 | `weekly.sh` | `sync:kbo-players` |
 | `season.sh` | `sync:kbo-schedule --mode=season` |
 | `month.sh` | `sync:kbo-schedule --mode=month` |
@@ -48,7 +49,10 @@ GCP VM이 UTC여도 `TZ=Asia/Seoul` 이라 주석의 KST 시각 그대로 동작
 | KST | 스크립트 |
 |-----|----------|
 | 06:00 매일 | `daily.sh` |
-| 08:00, 10:30, 13:00, 15:30, 17:00, 18:30, 20:00, 21:30 | **`live.sh`** |
+| 08:00, 10:30, 13:00, 15:30 | `live.sh` |
+| **17:00~23:30 매 30분** | **`live.sh`** (선발·라인업) |
+| **21:00~23:30 매 30분** | **`standings.sh`** (+ `live.sh` 21~23시에도 순위 포함) |
+| 00:05 | `standings.sh` (막판 경기) |
 | 월 06:30 | `weekly.sh` |
 | 매월 1일 06:00 | `month.sh` |
 | 3/1 06:00 | `season.sh` |

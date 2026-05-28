@@ -13,6 +13,10 @@ function toIso(date: Date) {
   return date.toISOString();
 }
 
+function getSecondsUntil(date: Date) {
+  return Math.max(0, Math.ceil((date.getTime() - Date.now()) / 1000));
+}
+
 function getResendAvailableAt(createdAt: Date) {
   return new Date(
     createdAt.getTime() + EMAIL_VERIFICATION_RESEND_COOLDOWN_SECONDS * 1000,
@@ -71,7 +75,9 @@ export async function issueEmailVerification(input: {
     emailSent,
     code: tokenRow.token,
     expiresAt: toIso(tokenRow.expires_at),
+    expiresInSeconds: getSecondsUntil(tokenRow.expires_at),
     resendAvailableAt: toIso(resendAvailableAt),
+    resendInSeconds: getSecondsUntil(resendAvailableAt),
     resendsRemaining: getVerificationResendsRemaining(sendCount),
   };
 }
@@ -117,19 +123,27 @@ export async function getEmailVerificationStatus(email: string) {
   const latest = await getLatestEmailVerificationToken(user.id);
 
   if (!latest || !isUsableVerificationToken(latest)) {
+    const resendAvailableAt = new Date();
+
     return {
       emailSent: false,
       expiresAt: null,
-      resendAvailableAt: toIso(new Date()),
+      expiresInSeconds: 0,
+      resendAvailableAt: toIso(resendAvailableAt),
+      resendInSeconds: 0,
       resendsRemaining,
       needsResend: true,
     };
   }
 
+  const resendAvailableAt = getResendAvailableAt(latest.created_at);
+
   return {
     emailSent: true,
     expiresAt: toIso(latest.expires_at),
-    resendAvailableAt: toIso(getResendAvailableAt(latest.created_at)),
+    expiresInSeconds: getSecondsUntil(latest.expires_at),
+    resendAvailableAt: toIso(resendAvailableAt),
+    resendInSeconds: getSecondsUntil(resendAvailableAt),
     resendsRemaining,
     needsResend: false,
   };

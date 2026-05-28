@@ -22,6 +22,33 @@ function normalizeTeamId(value: number) {
 
 const TYPICAL_GAME_MS = 2.5 * 60 * 60 * 1000;
 
+/** 개시 시각이 지났거나 스코어가 있으면 경기 시작 후로 봄 */
+export function hasGameStarted(
+  game: Pick<GameLike, 'status' | 'homeScore' | 'awayScore'> & {
+    gameDate?: string | Date;
+  },
+) {
+  if (game.status === 'cancelled') {
+    return false;
+  }
+
+  if (game.homeScore !== null && game.awayScore !== null) {
+    return true;
+  }
+
+  if (!game.gameDate) {
+    return false;
+  }
+
+  const startedAt = new Date(game.gameDate).getTime();
+
+  if (Number.isNaN(startedAt)) {
+    return false;
+  }
+
+  return startedAt <= Date.now();
+}
+
 /** DB가 일찍 finished로 잡혀도, 개시 후 2.5시간 전이면 경기 중·예정으로 봄 */
 export function isGameFinished(
   game: Pick<GameLike, 'status'> & { gameDate?: string | Date },

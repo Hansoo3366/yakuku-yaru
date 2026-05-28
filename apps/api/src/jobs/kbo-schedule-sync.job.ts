@@ -1,5 +1,6 @@
 import cron from 'node-cron';
 import { env } from '../config/env.js';
+import { syncKboTeamRank } from '../modules/kbo-team-rank/sync-team-rank.js';
 import { runKboSyncMode } from '../modules/kbo-schedule/sync-modes.js';
 
 const KST_TIME_ZONE = 'Asia/Seoul';
@@ -16,6 +17,13 @@ async function runGuarded(mode: 'week' | 'today') {
 
   try {
     await runKboSyncMode(mode);
+
+    if (mode === 'week') {
+      const result = await syncKboTeamRank();
+      console.log(
+        `[kbo-sync] 팀 순위 반영 — ${result.seasonYear}시즌 ${result.rankDate} 기준 ${result.teamCount}팀`,
+      );
+    }
   } finally {
     isRunning = false;
   }

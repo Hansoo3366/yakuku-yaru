@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { fetchMe } from '@/lib/auth-api';
 import { clearAccessToken, getAccessToken, type PublicUser } from '@/lib/auth';
 import { useAuthGuard } from '@/lib/use-auth-guard';
@@ -18,8 +18,11 @@ import {
   type AttendanceRecord,
 } from '@/lib/attendance-api';
 import { CalendarAgendaView } from '@/components/CalendarAgendaView';
+import {
+  CalendarFilterBar,
+  getCalendarViewAnchorDate,
+} from '@/components/CalendarFilterBar';
 import { CalendarEventCard } from '@/components/CalendarEventCard';
-import { CalendarOutcomeLegend } from '@/components/CalendarOutcomeLegend';
 import { EmptyState } from '@/components/EmptyState';
 import { Skeleton } from '@/components/Skeleton';
 import { getStadiumAttendanceOpponentInsights } from '@/lib/calendar-opponent-insights';
@@ -111,7 +114,8 @@ export default function CalendarPage() {
   );
   const [scheduleFilter, setScheduleFilter] = useState<
     'favorite' | 'favorite-home' | 'all'
-  >('favorite');
+  >('all');
+  const hasInitializedScheduleFilter = useRef(false);
   const [watchTypeFilter, setWatchTypeFilter] = useState<
     'all' | 'stadium' | 'home'
   >('all');
@@ -130,6 +134,15 @@ export default function CalendarPage() {
   );
   const statsYear = anchorDate.getFullYear();
   const yearRange = useMemo(() => getYearRange(statsYear), [statsYear]);
+
+  useEffect(() => {
+    if (!user || hasInitializedScheduleFilter.current) {
+      return;
+    }
+
+    hasInitializedScheduleFilter.current = true;
+    setScheduleFilter(user.favoriteTeamId ? 'favorite' : 'all');
+  }, [user]);
 
   useEffect(() => {
     let isMounted = true;
@@ -546,7 +559,11 @@ export default function CalendarPage() {
       : null;
 
   return (
-    <main className="app-shell app-shell--calendar with-bottom-nav">
+    <main
+      className={`app-shell app-shell--calendar with-bottom-nav${
+        isMobile ? ' has-calendar-filter-dock' : ''
+      }`}
+    >
       <header className="app-page-header">
         <span className="eyebrow">Calendar</span>
         <h1>
@@ -662,75 +679,21 @@ export default function CalendarPage() {
         </button>
       </section>
 
-      <section className="calendar-filter-bar" aria-label="캘린더 필터">
-        <div className="calendar-filter-groups">
-        <div className="filter-group">
-          <span className="filter-group-label">보기</span>
-          <button
-            className={`filter-pill ${viewMode === 'month' ? 'is-selected' : ''}`}
-            onClick={() => {
-              setViewMode('month');
-              setAnchorDate(getMonthStart(anchorDate));
-            }}
-            type="button"
-          >
-            월간
-          </button>
-          <button
-            className={`filter-pill ${viewMode === 'week' ? 'is-selected' : ''}`}
-            onClick={() => {
-              setViewMode('week');
-              setAnchorDate(getWeekStart(new Date()));
-            }}
-            type="button"
-          >
-            주간
-          </button>
-        </div>
-        <div className="filter-group">
-          <span className="filter-group-label">경기</span>
-          <button
-            className={`filter-pill ${scheduleFilter === 'favorite' ? 'is-selected' : ''}`}
-            onClick={() => setScheduleFilter('favorite')}
-            title="응원 팀 경기 전체 (홈·원정)"
-            type="button"
-          >
-            응원팀
-          </button>
-          <button
-            className={`filter-pill ${scheduleFilter === 'favorite-home' ? 'is-selected' : ''}`}
-            disabled={!user?.favoriteTeamId}
-            onClick={() => setScheduleFilter('favorite-home')}
-            title="우리 팀이 홈팀인 경기만"
-            type="button"
-          >
-            홈구장
-          </button>
-          <button
-            className={`filter-pill ${scheduleFilter === 'all' ? 'is-selected' : ''}`}
-            onClick={() => setScheduleFilter('all')}
-            title="KBO 전체 팀 일정"
-            type="button"
-          >
-            리그 전체
-          </button>
-        </div>
-        <div className="filter-group">
-          <span className="filter-group-label">기록</span>
-          {(['all', 'stadium', 'home'] as const).map((type) => (
-            <button
-              className={`filter-pill ${watchTypeFilter === type ? 'is-selected' : ''}`}
-              key={type}
-              onClick={() => setWatchTypeFilter(type)}
-              type="button"
-            >
-              {type === 'all' ? '전체' : type === 'stadium' ? '직관' : '집관'}
-            </button>
-          ))}
-        </div>
-        </div>
-        {user?.favoriteTeamId ? <CalendarOutcomeLegend /> : null}
-      </section>
+      {!isMobile ? (
+        <CalendarFilterBar
+          favoriteTeamId={user?.favoriteTeamId}
+          isMobile={false}
+          onScheduleFilterChange={setScheduleFilter}
+          onViewModeChange={(mode) => {
+            setViewMode(mode);
+            setAnchorDate(getCalendarViewAnchorDate(mode, anchorDate));
+          }}
+          onWatchTypeFilterChange={setWatchTypeFilter}
+          scheduleFilter={scheduleFilter}
+          viewMode={viewMode}
+          watchTypeFilter={watchTypeFilter}
+        />
+      ) : null}
 
       {isLoading ? (
         <div className="card">
@@ -756,6 +719,19 @@ export default function CalendarPage() {
           >
             오늘
           </button>
+          <CalendarFilterBar
+            favoriteTeamId={user?.favoriteTeamId}
+            isMobile
+            onScheduleFilterChange={setScheduleFilter}
+            onViewModeChange={(mode) => {
+              setViewMode(mode);
+              setAnchorDate(getCalendarViewAnchorDate(mode, anchorDate));
+            }}
+            onWatchTypeFilterChange={setWatchTypeFilter}
+            scheduleFilter={scheduleFilter}
+            viewMode={viewMode}
+            watchTypeFilter={watchTypeFilter}
+          />
         </>
       ) : (
         <section

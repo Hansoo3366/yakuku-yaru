@@ -19,7 +19,7 @@ import {
   getGameStatusLabel,
   getGameStatusTone,
 } from '@/lib/game-status';
-import { isGameFinished } from '@/lib/game-outcome';
+import { hasGameStarted, isGameFinished } from '@/lib/game-outcome';
 import { canWriteAttendanceRecord } from '@/lib/attendance-game';
 import { StatTerm } from '@/components/StatGlossary';
 import { StadiumPersonalNotes } from '@/components/StadiumPersonalNotes';
@@ -227,9 +227,10 @@ export default function GameDetailPage() {
     game.lineups.home.length > 0 || game.lineups.away.length > 0;
   const showLineupPredictedNotice =
     hasLineup &&
-    game.lineupConfirmed === false &&
+    game.lineupConfirmed !== true &&
     !isFinished &&
-    game.status !== 'cancelled';
+    game.status !== 'cancelled' &&
+    !hasGameStarted(game);
   const canWriteAttendance = canWriteAttendanceRecord(game);
 
   return (

@@ -43,6 +43,8 @@ sed "s|PROJECT_DIR|$(pwd)|g" scripts/kbo-sync/crontab.example | crontab -
 
 `docker-compose.prod.yml` 기본값 `KBO_SYNC_ENABLED=false` — 호스트 cron과 중복하지 않습니다.
 
+**팀 순위**는 `live.sh`에 없고, `daily.sh` 또는 API **week** 동기화(매일 06:00 KST) 때만 갱신됩니다.
+
 긴급히 API 프로세스 안에서만 돌리려면 `.env.production`에 `KBO_SYNC_ENABLED=true` (비권장).
 
 | 변수 | 기본값 (prod compose) | 설명 |

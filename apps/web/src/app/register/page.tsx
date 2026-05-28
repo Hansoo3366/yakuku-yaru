@@ -3,7 +3,7 @@
 /* eslint-disable @next/next/no-img-element */
 
 import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { FormEvent, Suspense, useEffect, useState } from 'react';
 import { ApiError } from '@/lib/api';
 import {
@@ -27,12 +27,7 @@ import {
   validatePasswordClient,
 } from '@/lib/user-input';
 
-type Step = 'account' | 'team' | 'done';
-
-function getSecondsUntil(isoDate: string | null) {
-  if (!isoDate) return 0;
-  return Math.max(0, Math.ceil((new Date(isoDate).getTime() - Date.now()) / 1000));
-}
+type Step = 'account' | 'team' | 'done' | 'complete';
 
 function formatCountdown(seconds: number) {
   const minutes = Math.floor(seconds / 60);
@@ -41,7 +36,6 @@ function formatCountdown(seconds: number) {
 }
 
 function RegisterPageContent() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const isVerifyResume = searchParams.get('verify') === '1';
   const resumeEmail = searchParams.get('email')?.trim() ?? '';
@@ -93,7 +87,9 @@ function RegisterPageContent() {
         applyVerificationMeta({
           emailSent: status.emailSent,
           expiresAt: status.expiresAt,
+          expiresInSeconds: status.expiresInSeconds,
           resendAvailableAt: status.resendAvailableAt,
+          resendInSeconds: status.resendInSeconds,
           resendsRemaining: status.resendsRemaining,
           verificationCode: status.verificationCode ?? null,
         });
@@ -127,20 +123,20 @@ function RegisterPageContent() {
   useEffect(() => {
     if (step !== 'done') return;
 
-    const updateTimers = () => {
-      setCodeSecondsLeft(getSecondsUntil(expiresAt));
-      setResendSecondsLeft(getSecondsUntil(resendAvailableAt));
-    };
+    const timer = window.setInterval(() => {
+      setCodeSecondsLeft((current) => Math.max(0, current - 1));
+      setResendSecondsLeft((current) => Math.max(0, current - 1));
+    }, 1000);
 
-    updateTimers();
-    const timer = window.setInterval(updateTimers, 1000);
     return () => window.clearInterval(timer);
-  }, [step, expiresAt, resendAvailableAt]);
+  }, [step]);
 
   function applyVerificationMeta(response: {
     emailSent: boolean;
     expiresAt: string | null;
+    expiresInSeconds: number;
     resendAvailableAt: string;
+    resendInSeconds: number;
     resendsRemaining: number;
     verificationCode?: string | null;
   }) {
@@ -150,8 +146,8 @@ function RegisterPageContent() {
     setResendsRemaining(response.resendsRemaining);
     setDevVerificationCode(response.verificationCode ?? null);
     setVerificationCode('');
-    setCodeSecondsLeft(getSecondsUntil(response.expiresAt));
-    setResendSecondsLeft(getSecondsUntil(response.resendAvailableAt));
+    setCodeSecondsLeft(response.expiresInSeconds);
+    setResendSecondsLeft(response.resendInSeconds);
   }
 
   async function handleAccountNext(event: FormEvent<HTMLFormElement>) {
@@ -250,7 +246,7 @@ function RegisterPageContent() {
 
     try {
       await verifyEmail({ email, code: normalizedCode });
-      router.push('/login');
+      setStep('complete');
     } catch (error) {
       if (error instanceof ApiError) {
         setErrorMessage(error.message);
@@ -282,7 +278,7 @@ function RegisterPageContent() {
     } catch (error) {
       if (error instanceof ApiError) {
         if (error.code === 'EMAIL_ALREADY_VERIFIED') {
-          router.push('/login');
+          setStep('complete');
           return;
         }
         setErrorMessage(error.message);
@@ -517,7 +513,7 @@ function RegisterPageContent() {
               <span className="field-hint">
                 {codeSecondsLeft > 0
                   ? `남은 시간 ${formatCountdown(codeSecondsLeft)}`
-                  : '남은 시간이 0초로 보이면 먼저 인증번호 확인을 눌러보고, 실패하면 재전송해주세요.'}
+                  : '인증번호가 만료되었습니다. 재전송해주세요.'}
               </span>
             </div>
             {infoMessage ? (
@@ -550,15 +546,29 @@ function RegisterPageContent() {
           </form>
         ) : null}
 
-        {step !== 'done' ? (
+        {step === 'complete' ? (
+          <div className="form-grid">
+            <div className="notice-card">
+              <strong>가입을 완료했어요!</strong>
+              <span className="muted" style={{ fontSize: 'var(--text-sm)' }}>
+                이메일 인증이 끝났어요. 로그인해서 직관 기록을 시작해보세요.
+              </span>
+            </div>
+            <Link className="btn btn-primary btn-lg btn-block" href="/login">
+              로그인하러 가기
+            </Link>
+          </div>
+        ) : null}
+
+        {step !== 'done' && step !== 'complete' ? (
           <p className="auth-footnote">
             이미 계정이 있다면 <Link href="/login">로그인</Link>
           </p>
-        ) : (
+        ) : step === 'done' ? (
           <p className="auth-footnote">
             인증을 마치면 <Link href="/login">로그인</Link>할 수 있어요.
           </p>
-        )}
+        ) : null}
       </section>
     </main>
   );

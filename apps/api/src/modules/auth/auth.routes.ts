@@ -173,7 +173,9 @@ authRouter.post('/register', registerRateLimit, async (req, res, next) => {
       user: toPublicUser(user),
       emailSent: verification.emailSent,
       expiresAt: verification.expiresAt,
+      expiresInSeconds: verification.expiresInSeconds,
       resendAvailableAt: verification.resendAvailableAt,
+      resendInSeconds: verification.resendInSeconds,
       resendsRemaining: verification.resendsRemaining,
       verificationCode:
         env.nodeEnv !== 'production' && !verification.emailSent
@@ -351,7 +353,9 @@ authRouter.post(
       res.json({
         emailSent: verification.emailSent,
         expiresAt: verification.expiresAt,
+        expiresInSeconds: verification.expiresInSeconds,
         resendAvailableAt: verification.resendAvailableAt,
+        resendInSeconds: verification.resendInSeconds,
         resendsRemaining: verification.resendsRemaining,
         verificationCode:
           env.nodeEnv !== 'production' && !verification.emailSent

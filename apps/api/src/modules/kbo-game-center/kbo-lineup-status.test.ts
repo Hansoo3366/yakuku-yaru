@@ -7,6 +7,8 @@ import {
 
 assert.equal(parseLineupAnalysisConfirmed([{ LINEUP_CK: true }]), true);
 assert.equal(parseLineupAnalysisConfirmed([{ LINEUP_CK: false }]), false);
+assert.equal(parseLineupAnalysisConfirmed([{ LINEUP_CK: 33 }]), true);
+assert.equal(parseLineupAnalysisConfirmed([{ LINEUP_CK: 0 }]), false);
 assert.equal(parseLineupAnalysisConfirmed({ LINEUP_CK: true }), true);
 assert.equal(parseLineupAnalysisConfirmed(null), false);
 

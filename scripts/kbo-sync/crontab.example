@@ -14,15 +14,19 @@ TZ=Asia/Seoul
 # 매일 06:00 KST — 일정(week) + 팀 순위
 0 6 * * * cd PROJECT_DIR && ./scripts/kbo-sync/daily.sh
 
-# 당일 일정 + 선발·라인업·lineup_confirmed (KST, 경기일 하루 8회)
-0 8 * * * cd PROJECT_DIR && ./scripts/kbo-sync/live.sh
-30 10 * * * cd PROJECT_DIR && ./scripts/kbo-sync/live.sh
-0 13 * * * cd PROJECT_DIR && ./scripts/kbo-sync/live.sh
-30 15 * * * cd PROJECT_DIR && ./scripts/kbo-sync/live.sh
-0 17 * * * cd PROJECT_DIR && ./scripts/kbo-sync/live.sh
-30 18 * * * cd PROJECT_DIR && ./scripts/kbo-sync/live.sh
-0 20 * * * cd PROJECT_DIR && ./scripts/kbo-sync/live.sh
-30 21 * * * cd PROJECT_DIR && ./scripts/kbo-sync/live.sh
+# 당일 일정 + 선발·라인업 (오전·오후)
+0 8,13 * * * cd PROJECT_DIR && ./scripts/kbo-sync/live.sh
+30 10,15 * * * cd PROJECT_DIR && ./scripts/kbo-sync/live.sh
+
+# 17:00~23:30 KST — 30분마다 선발·라인업·lineup_confirmed
+0 17-23 * * * cd PROJECT_DIR && ./scripts/kbo-sync/live.sh
+30 17-23 * * * cd PROJECT_DIR && ./scripts/kbo-sync/live.sh
+
+# 21:00~23:30 KST — 30분마다 팀 순위 (live.sh 21~23시에도 순위 포함, 이중 백업)
+0,30 21-23 * * * cd PROJECT_DIR && ./scripts/kbo-sync/standings.sh
+
+# 자정 직후 — 막판 경기 반영 순위
+5 0 * * * cd PROJECT_DIR && ./scripts/kbo-sync/standings.sh
 
 # 매주 월요일 06:30 KST — 선수 마스터(타율·OPS·생년월일)
 30 6 * * 1 cd PROJECT_DIR && ./scripts/kbo-sync/weekly.sh

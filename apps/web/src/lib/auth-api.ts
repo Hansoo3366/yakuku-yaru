@@ -9,7 +9,9 @@ export type AuthResponse = {
 export type EmailVerificationMeta = {
   emailSent: boolean;
   expiresAt: string | null;
+  expiresInSeconds: number;
   resendAvailableAt: string;
+  resendInSeconds: number;
   resendsRemaining: number;
   verificationCode?: string | null;
   needsResend?: boolean;
