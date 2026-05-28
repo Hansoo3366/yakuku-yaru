@@ -114,11 +114,6 @@ function NewAttendanceForm() {
         const favoriteShortName = meResponse.user.favoriteTeamShortName ?? null;
         setFavoriteTeamId(favoriteTeamId);
         setFavoriteTeamShortName(favoriteShortName);
-        const neutral = isNeutralAttendance(
-          gameResponse.game,
-          favoriteTeamId,
-          favoriteShortName,
-        );
         const teamInGameId = resolveFavoriteTeamIdInGame(
           gameResponse.game,
           favoriteTeamId,

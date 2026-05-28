@@ -99,6 +99,7 @@ export default function CalendarPage() {
   useAuthGuard();
   const [viewMode, setViewMode] = useState<ViewMode>('month');
   const [anchorDate, setAnchorDate] = useState(() => getMonthStart(new Date()));
+  const [todayJumpTick, setTodayJumpTick] = useState(0);
   const [user, setUser] = useState<PublicUser | null>(null);
   const [teams, setTeams] = useState<Team[]>([]);
   const [games, setGames] = useState<Game[]>([]);
@@ -453,6 +454,7 @@ export default function CalendarPage() {
       viewMode === 'week' ? 'calendar-day--week' : '',
       isOutside ? 'is-outside' : '',
       isToday ? 'is-today' : '',
+      agendaFocusDateKey === key ? 'is-focused-day' : '',
       dayRecords.length ? 'has-record' : '',
       dayOfWeek === 0 ? 'is-sunday' : '',
       dayOfWeek === 6 ? 'is-saturday' : '',
@@ -461,7 +463,12 @@ export default function CalendarPage() {
       .join(' ');
 
     return (
-      <div className={classNames} key={key}>
+      <div
+        className={classNames}
+        id={`calendar-day-${key}`}
+        key={key}
+        tabIndex={-1}
+      >
         <span className="calendar-day-number">{date.getDate()}</span>
         <div className="calendar-events">
           {dayGames.map((game) => {
@@ -493,6 +500,8 @@ export default function CalendarPage() {
                 homeScore: record.game.homeScore,
                 awayScore: record.game.awayScore,
                 status: record.game.status,
+                cancellationReason: null,
+                probablePitchers: { home: null, away: null },
               }}
               href={`/games/${record.gameId}`}
               key={`record-${record.id}`}
@@ -516,6 +525,7 @@ export default function CalendarPage() {
     setAnchorDate(
       viewMode === 'month' ? getMonthStart(today) : getWeekStart(today),
     );
+    setTodayJumpTick((current) => current + 1);
   }
 
   useEffect(() => {
@@ -546,6 +556,43 @@ export default function CalendarPage() {
       window.cancelAnimationFrame(frame);
     };
   }, [agendaFocusDateKey, isMobile, isLoading, anchorDate, displayGamesByDate]);
+
+  useEffect(() => {
+    if (isMobile || isLoading || !agendaFocusDateKey || todayJumpTick === 0) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const frame = window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => {
+        if (cancelled) {
+          return;
+        }
+
+        const element = document.getElementById(
+          `calendar-day-${agendaFocusDateKey}`,
+        );
+
+        if (element) {
+          element.scrollIntoView({ block: 'center', behavior: 'smooth' });
+          element.focus({ preventScroll: true });
+        }
+      });
+    });
+
+    return () => {
+      cancelled = true;
+      window.cancelAnimationFrame(frame);
+    };
+  }, [
+    agendaFocusDateKey,
+    anchorDate,
+    displayGamesByDate,
+    isLoading,
+    isMobile,
+    todayJumpTick,
+  ]);
 
   const periodLabel = viewMode === 'month' ? '이번 달' : '이번 주';
   const showTeamWinRate = Boolean(user?.favoriteTeamId);
@@ -650,50 +697,61 @@ export default function CalendarPage() {
         ) : null}
       </section>
 
-      <section className="calendar-toolbar" aria-label="기간 이동">
-        <button
-          aria-label={viewMode === 'month' ? '이전 달' : '이전 주'}
-          className="icon-button"
-          onClick={() => {
-            setAgendaFocusDateKey(null);
-            setAnchorDate((current) => shiftAnchor(current, viewMode, -1));
-          }}
-          type="button"
-        >
-          ←
-        </button>
-        <div className="calendar-month-label">
-          <small>{viewMode === 'month' ? 'Monthly' : 'Weekly'}</small>
-          <span>{toolbarTitle}</span>
-        </div>
-        <button
-          aria-label={viewMode === 'month' ? '다음 달' : '다음 주'}
-          className="icon-button"
-          onClick={() => {
-            setAgendaFocusDateKey(null);
-            setAnchorDate((current) => shiftAnchor(current, viewMode, 1));
-          }}
-          type="button"
-        >
-          →
-        </button>
-      </section>
+      <div className="calendar-controls-sticky">
+        <section className="calendar-toolbar" aria-label="기간 이동">
+          <button
+            aria-label={viewMode === 'month' ? '이전 달' : '이전 주'}
+            className="icon-button"
+            onClick={() => {
+              setAgendaFocusDateKey(null);
+              setAnchorDate((current) => shiftAnchor(current, viewMode, -1));
+            }}
+            type="button"
+          >
+            ←
+          </button>
+          <div className="calendar-month-label">
+            <small>{viewMode === 'month' ? 'Monthly' : 'Weekly'}</small>
+            <span>{toolbarTitle}</span>
+          </div>
+          <button
+            aria-label={viewMode === 'month' ? '다음 달' : '다음 주'}
+            className="icon-button"
+            onClick={() => {
+              setAgendaFocusDateKey(null);
+              setAnchorDate((current) => shiftAnchor(current, viewMode, 1));
+            }}
+            type="button"
+          >
+            →
+          </button>
+          {!isMobile ? (
+            <button
+              className="calendar-today-button"
+              onClick={goToToday}
+              type="button"
+            >
+              오늘
+            </button>
+          ) : null}
+        </section>
 
-      {!isMobile ? (
-        <CalendarFilterBar
-          favoriteTeamId={user?.favoriteTeamId}
-          isMobile={false}
-          onScheduleFilterChange={setScheduleFilter}
-          onViewModeChange={(mode) => {
-            setViewMode(mode);
-            setAnchorDate(getCalendarViewAnchorDate(mode, anchorDate));
-          }}
-          onWatchTypeFilterChange={setWatchTypeFilter}
-          scheduleFilter={scheduleFilter}
-          viewMode={viewMode}
-          watchTypeFilter={watchTypeFilter}
-        />
-      ) : null}
+        {!isMobile ? (
+          <CalendarFilterBar
+            favoriteTeamId={user?.favoriteTeamId}
+            isMobile={false}
+            onScheduleFilterChange={setScheduleFilter}
+            onViewModeChange={(mode) => {
+              setViewMode(mode);
+              setAnchorDate(getCalendarViewAnchorDate(mode, anchorDate));
+            }}
+            onWatchTypeFilterChange={setWatchTypeFilter}
+            scheduleFilter={scheduleFilter}
+            viewMode={viewMode}
+            watchTypeFilter={watchTypeFilter}
+          />
+        ) : null}
+      </div>
 
       {isLoading ? (
         <div className="card">

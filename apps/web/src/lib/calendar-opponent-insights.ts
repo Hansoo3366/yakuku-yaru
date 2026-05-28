@@ -138,7 +138,7 @@ function buildStadiumOpponentStats(
   const stadiumOpponentStats = new Map<number, OpponentAccumulator>();
 
   for (const record of records) {
-    if (record.viewerRelation !== 'owner' || record.watchType !== 'stadium') {
+    if (record.watchType !== 'stadium') {
       continue;
     }
 

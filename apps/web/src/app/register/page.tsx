@@ -51,8 +51,6 @@ function RegisterPageContent() {
   const [emailSent, setEmailSent] = useState(false);
   const [verificationCode, setVerificationCode] = useState('');
   const [devVerificationCode, setDevVerificationCode] = useState<string | null>(null);
-  const [expiresAt, setExpiresAt] = useState<string | null>(null);
-  const [resendAvailableAt, setResendAvailableAt] = useState<string | null>(null);
   const [resendsRemaining, setResendsRemaining] = useState(3);
   const [codeSecondsLeft, setCodeSecondsLeft] = useState(0);
   const [resendSecondsLeft, setResendSecondsLeft] = useState(0);
@@ -141,8 +139,6 @@ function RegisterPageContent() {
     verificationCode?: string | null;
   }) {
     setEmailSent(response.emailSent);
-    setExpiresAt(response.expiresAt);
-    setResendAvailableAt(response.resendAvailableAt);
     setResendsRemaining(response.resendsRemaining);
     setDevVerificationCode(response.verificationCode ?? null);
     setVerificationCode('');
