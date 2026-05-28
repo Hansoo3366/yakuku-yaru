@@ -104,11 +104,9 @@ function StarterPitcherCard({
 
       {pitcher ? (
         <>
-          {pitcher.stats.seasonRecord ? (
-            <p className="starter-pitcher-record">
-              {pitcher.stats.seasonRecord}
-            </p>
-          ) : null}
+          <p className="starter-pitcher-record">
+            {pitcher.stats.seasonRecord || '-'}
+          </p>
           <dl className="starter-pitcher-stats">
             <div>
               <dt>

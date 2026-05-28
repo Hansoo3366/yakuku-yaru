@@ -2867,11 +2867,6 @@ img {
   color: var(--color-night-navy);
 }
 
-.calendar-opponent-ranking__toggle-spacer {
-  display: block;
-  min-height: 1.25rem;
-}
-
 .opponent-ranking-modal {
   inset: 0;
   position: fixed;

@@ -135,7 +135,11 @@
 }
 
 .calendar-outcome-swatch[data-outcome='scheduled'] {
-  background: color-mix(in srgb, var(--color-scheduled) 38%, var(--color-white));
+  background: color-mix(
+    in srgb,
+    var(--color-scheduled) 38%,
+    var(--color-white)
+  );
   border: 2px solid var(--color-scheduled);
 }
 
@@ -147,7 +151,8 @@
     #e8e4e1 2px,
     #e8e4e1 4px
   );
-  border: 1px solid color-mix(in srgb, var(--color-cancelled) 70%, var(--color-line));
+  border: 1px solid
+    color-mix(in srgb, var(--color-cancelled) 70%, var(--color-line));
 }
 
 .calendar-card {
@@ -170,6 +175,23 @@
   grid-template-columns: minmax(0, max-content) minmax(0, 1fr);
   min-width: 0;
   overflow: hidden;
+}
+
+.calendar-event-time {
+  font-size: 11px;
+}
+
+.calendar-event-matchup {
+  font-size: var(--text-sm);
+  line-height: 1.35;
+}
+
+.calendar-event-score,
+.calendar-event-stadium,
+.calendar-event-pitchers,
+.calendar-event-cancel {
+  font-size: 11px;
+  line-height: 1.35;
 }
 
 .calendar-event-head {
@@ -211,7 +233,7 @@
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
   display: -webkit-box;
-  font-size: 9px;
+  font-size: 10px;
   line-clamp: 2;
   line-height: 1.25;
   overflow: hidden;
@@ -219,13 +241,59 @@
 }
 
 .calendar-event:not(.calendar-event--dense) {
-  grid-template-columns: 28px minmax(0, 1fr);
+  align-items: stretch;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-height: 72px;
+  padding: 6px;
 }
 
-.calendar-event:not(.calendar-event--dense) .calendar-event-logos {
-  justify-content: center;
-  max-width: 28px;
-  width: 28px;
+.calendar-event:not(.calendar-event--dense) .calendar-event-body {
+  width: 100%;
+}
+
+.calendar-event:not(.calendar-event--dense) .calendar-event-photo {
+  margin-top: 4px;
+  max-height: 72px;
+}
+
+.calendar-card--week .calendar-day--week {
+  min-height: 220px;
+}
+
+.calendar-card--week .calendar-day--week .calendar-events {
+  display: grid;
+  gap: 8px;
+  max-height: 420px;
+}
+
+.calendar-card--week .calendar-event:not(.calendar-event--dense) {
+  gap: 6px;
+  min-height: 132px;
+  padding: 10px;
+}
+
+.calendar-card--week
+  .calendar-event:not(.calendar-event--dense)
+  .calendar-event-time {
+  font-size: 11px;
+}
+
+.calendar-card--week
+  .calendar-event:not(.calendar-event--dense)
+  .calendar-event-head {
+  margin-bottom: 2px;
+}
+
+.calendar-card--week
+  .calendar-event:not(.calendar-event--dense)
+  .calendar-event-matchup {
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  display: -webkit-box;
+  line-clamp: 2;
+  white-space: normal;
 }
 
 .calendar-event-logos {
@@ -270,14 +338,22 @@
 }
 
 .calendar-event[data-outcome='scheduled'] {
-  background: color-mix(in srgb, var(--color-scheduled) 26%, var(--color-white) 74%);
+  background: color-mix(
+    in srgb,
+    var(--color-scheduled) 26%,
+    var(--color-white) 74%
+  );
   border: 1px dashed
     color-mix(in srgb, var(--color-scheduled) 70%, var(--color-line) 30%);
   box-shadow: none;
 }
 
 .calendar-event[data-outcome='scheduled'] .calendar-event-time {
-  color: color-mix(in srgb, var(--color-scheduled) 90%, var(--color-night-navy));
+  color: color-mix(
+    in srgb,
+    var(--color-scheduled) 90%,
+    var(--color-night-navy)
+  );
 }
 
 @container calendar-day (max-width: 118px) {
@@ -305,7 +381,11 @@
   }
 
   .calendar-insight-rail .calendar-win-rate-panel {
-    background: color-mix(in srgb, var(--color-white) 94%, var(--color-paper) 6%);
+    background: color-mix(
+      in srgb,
+      var(--color-white) 94%,
+      var(--color-paper) 6%
+    );
     border: 1px solid rgba(23, 32, 51, 0.08);
     border-radius: var(--radius-md);
     box-shadow: 0 12px 30px rgba(23, 32, 51, 0.08);
@@ -379,8 +459,10 @@
 @media (min-width: 1100px) {
   .calendar-main-layout--with-rails {
     gap: var(--space-3);
-    grid-template-columns:
-      minmax(124px, 140px) minmax(0, 1fr) minmax(220px, 248px);
+    grid-template-columns: minmax(124px, 140px) minmax(0, 1fr) minmax(
+        220px,
+        248px
+      );
   }
 
   .calendar-filter-rail {

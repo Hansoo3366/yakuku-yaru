@@ -171,9 +171,7 @@ export function OpponentInsightRanking({
           >
             전체 보기
           </button>
-        ) : (
-          <span aria-hidden="true" className="calendar-opponent-ranking__toggle-spacer" />
-        )}
+        ) : null}
       </div>
       {open ? (
         <OpponentRankingModal

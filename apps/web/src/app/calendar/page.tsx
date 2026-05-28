@@ -62,6 +62,39 @@ import { useMediaQuery } from '@/lib/use-media-query';
 const weekdayLabels = ['일', '월', '화', '수', '목', '금', '토'];
 
 type ViewMode = 'month' | 'week';
+type ScheduleFilter = 'favorite' | 'favorite-home' | 'all';
+type WatchTypeFilter = 'all' | 'stadium' | 'home';
+
+const CALENDAR_VIEW_MODE_KEY = 'calendar:viewMode';
+const CALENDAR_SCHEDULE_FILTER_KEY = 'calendar:scheduleFilter';
+const CALENDAR_WATCH_FILTER_KEY = 'calendar:watchTypeFilter';
+
+function readPersistedViewMode(): ViewMode {
+  if (typeof window === 'undefined') {
+    return 'month';
+  }
+
+  const value = window.localStorage.getItem(CALENDAR_VIEW_MODE_KEY);
+  return value === 'week' ? 'week' : 'month';
+}
+
+function readPersistedScheduleFilter(): ScheduleFilter {
+  if (typeof window === 'undefined') {
+    return 'all';
+  }
+
+  const value = window.localStorage.getItem(CALENDAR_SCHEDULE_FILTER_KEY);
+  return value === 'favorite' || value === 'favorite-home' ? value : 'all';
+}
+
+function readPersistedWatchTypeFilter(): WatchTypeFilter {
+  if (typeof window === 'undefined') {
+    return 'all';
+  }
+
+  const value = window.localStorage.getItem(CALENDAR_WATCH_FILTER_KEY);
+  return value === 'stadium' || value === 'home' ? value : 'all';
+}
 
 function gameFromAttendanceRecord(
   record: AttendanceRecord,
@@ -140,7 +173,7 @@ function getStreakKind(value: string | null | undefined) {
 export default function CalendarPage() {
   const router = useRouter();
   useAuthGuard();
-  const [viewMode, setViewMode] = useState<ViewMode>('month');
+  const [viewMode, setViewMode] = useState<ViewMode>(() => readPersistedViewMode());
   const [anchorDate, setAnchorDate] = useState(() => getMonthStart(new Date()));
   const [todayJumpTick, setTodayJumpTick] = useState(0);
   const [user, setUser] = useState<PublicUser | null>(null);
@@ -155,13 +188,13 @@ export default function CalendarPage() {
   const [yearSeasonGames, setYearSeasonGames] = useState<Game[]>([]);
   const [teamStandings, setTeamStandings] =
     useState<TeamStandingsResponse | null>(null);
-  const [scheduleFilter, setScheduleFilter] = useState<
-    'favorite' | 'favorite-home' | 'all'
-  >('all');
+  const [scheduleFilter, setScheduleFilter] = useState<ScheduleFilter>(() =>
+    readPersistedScheduleFilter(),
+  );
   const hasInitializedScheduleFilter = useRef(false);
-  const [watchTypeFilter, setWatchTypeFilter] = useState<
-    'all' | 'stadium' | 'home'
-  >('all');
+  const [watchTypeFilter, setWatchTypeFilter] = useState<WatchTypeFilter>(() =>
+    readPersistedWatchTypeFilter(),
+  );
   const [isLoading, setIsLoading] = useState(true);
   const [agendaFocusDateKey, setAgendaFocusDateKey] = useState<string | null>(
     null,
@@ -186,8 +219,36 @@ export default function CalendarPage() {
     }
 
     hasInitializedScheduleFilter.current = true;
-    setScheduleFilter(user.favoriteTeamId ? 'favorite' : 'all');
-  }, [user]);
+    if (!user.favoriteTeamId) {
+      setScheduleFilter('all');
+      return;
+    }
+
+    if (scheduleFilter === 'all') {
+      setScheduleFilter('favorite');
+    }
+  }, [user, scheduleFilter]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+    window.localStorage.setItem(CALENDAR_VIEW_MODE_KEY, viewMode);
+  }, [viewMode]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+    window.localStorage.setItem(CALENDAR_SCHEDULE_FILTER_KEY, scheduleFilter);
+  }, [scheduleFilter]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+    window.localStorage.setItem(CALENDAR_WATCH_FILTER_KEY, watchTypeFilter);
+  }, [watchTypeFilter]);
 
   useEffect(() => {
     let isMounted = true;
@@ -489,6 +550,15 @@ export default function CalendarPage() {
 
   const favoriteTeam = teams.find((team) => team.id === user?.favoriteTeamId);
 
+  function handleScheduleFilterChange(
+    filter: ScheduleFilter,
+  ) {
+    setScheduleFilter(filter);
+    if (filter === 'all') {
+      setWatchTypeFilter('all');
+    }
+  }
+
   function renderDayCell(
     date: Date,
     options: { dense: boolean; inMonth: boolean },
@@ -735,7 +805,7 @@ export default function CalendarPage() {
             <CalendarFilterBar
               favoriteTeamId={user?.favoriteTeamId}
               layout="rail"
-              onScheduleFilterChange={setScheduleFilter}
+              onScheduleFilterChange={handleScheduleFilterChange}
               onViewModeChange={(mode) => {
                 setViewMode(mode);
                 setAnchorDate(getCalendarViewAnchorDate(mode, anchorDate));
@@ -811,7 +881,7 @@ export default function CalendarPage() {
               <CalendarFilterBar
                 favoriteTeamId={user?.favoriteTeamId}
                 layout="mobile"
-                onScheduleFilterChange={setScheduleFilter}
+                onScheduleFilterChange={handleScheduleFilterChange}
                 onViewModeChange={(mode) => {
                   setViewMode(mode);
                   setAnchorDate(getCalendarViewAnchorDate(mode, anchorDate));

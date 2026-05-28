@@ -119,16 +119,11 @@ export function CalendarEventCard({
       data-outcome={outcome !== 'unknown' ? outcome : undefined}
       href={href}
     >
-      {dense ? (
-        <span className="calendar-event-head">
-          <span className="calendar-event-time">{timeLabel}</span>
-          {logos}
-        </span>
-      ) : (
-        logos
-      )}
+      <span className="calendar-event-head">
+        <span className="calendar-event-time">{timeLabel}</span>
+        {logos}
+      </span>
       <span className="calendar-event-body">
-        {!dense ? <span className="calendar-event-time">{timeLabel}</span> : null}
         <span className="calendar-event-matchup">{matchupLabel}</span>
         {scoreLine ? (
           <span className="calendar-event-score">{scoreLine}</span>
