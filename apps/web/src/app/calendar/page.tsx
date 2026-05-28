@@ -181,7 +181,9 @@ export default function CalendarPage() {
   const [persistedScheduleFilter] = useState<ScheduleFilter | null>(() =>
     readPersistedScheduleFilter(),
   );
-  const [anchorDate, setAnchorDate] = useState(() => getMonthStart(new Date()));
+  const [anchorDate, setAnchorDate] = useState(() =>
+    getCalendarViewAnchorDate(readPersistedViewMode(), new Date()),
+  );
   const [todayJumpTick, setTodayJumpTick] = useState(0);
   const [user, setUser] = useState<PublicUser | null>(null);
   const [teams, setTeams] = useState<Team[]>([]);
