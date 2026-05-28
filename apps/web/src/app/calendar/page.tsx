@@ -102,6 +102,41 @@ function shiftAnchor(date: Date, viewMode: ViewMode, amount: number) {
   return getWeekStart(next);
 }
 
+function formatRecentTenLabel(value: string | null | undefined) {
+  if (!value) {
+    return null;
+  }
+
+  const normalized = value.replace(/\s+/g, '');
+  const match = normalized.match(/^(\d+승)(\d+무)(\d+패)$/);
+
+  if (!match) {
+    return value;
+  }
+
+  return `${match[1]}-${match[2]}-${match[3]}`;
+}
+
+function getStreakKind(value: string | null | undefined) {
+  if (!value) {
+    return 'none';
+  }
+
+  if (value.includes('승')) {
+    return 'win';
+  }
+
+  if (value.includes('패')) {
+    return 'lose';
+  }
+
+  if (value.includes('무')) {
+    return 'draw';
+  }
+
+  return 'none';
+}
+
 export default function CalendarPage() {
   const router = useRouter();
   useAuthGuard();
@@ -624,7 +659,9 @@ export default function CalendarPage() {
     : favoriteTeam
       ? '—'
       : null;
-  const favoriteRecentTenLabel = favoriteTeamStanding?.recentTen ?? null;
+  const favoriteRecentTenLabel = formatRecentTenLabel(
+    favoriteTeamStanding?.recentTen ?? null,
+  );
   const favoriteStreakLabel = favoriteTeamStanding?.streak ?? null;
 
   return (
@@ -666,11 +703,23 @@ export default function CalendarPage() {
             <span>{favoriteTeam?.shortName ?? '우리팀'} 순위</span>
             <strong>{favoriteRankLabel}</strong>
             {favoriteRecentTenLabel || favoriteStreakLabel ? (
-              <small className="muted" style={{ marginTop: 4 }}>
-                {favoriteRecentTenLabel ? `최근10 ${favoriteRecentTenLabel}` : ''}
-                {favoriteRecentTenLabel && favoriteStreakLabel ? ' · ' : ''}
-                {favoriteStreakLabel ? `연속 ${favoriteStreakLabel}` : ''}
-              </small>
+              <div className="calendar-summary-trends">
+                {favoriteRecentTenLabel ? (
+                  <span className="calendar-summary-trend-chip">
+                    <span className="calendar-summary-trend-label">최근 10경기</span>
+                    <strong>{favoriteRecentTenLabel}</strong>
+                  </span>
+                ) : null}
+                {favoriteStreakLabel ? (
+                  <span
+                    className="calendar-summary-trend-chip"
+                    data-kind={getStreakKind(favoriteStreakLabel)}
+                  >
+                    <span className="calendar-summary-trend-label">연속</span>
+                    <strong>{favoriteStreakLabel}</strong>
+                  </span>
+                ) : null}
+              </div>
             ) : null}
           </div>
         ) : null}
