@@ -4,8 +4,10 @@
 
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { useQueryClient } from '@tanstack/react-query';
-import { FormEvent, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useForm } from 'react-hook-form';
 import { getAccessToken } from '@/lib/auth';
 import { fetchMe } from '@/lib/auth-api';
 import { useAuthGuard } from '@/lib/use-auth-guard';
@@ -38,6 +40,11 @@ import {
 } from '@/lib/attendance-score';
 import { AttendanceScoreSection } from '@/components/AttendanceScoreSection';
 import { CheeredTeamPicker } from '@/components/CheeredTeamPicker';
+import { formatKoreanDateShort } from '@/lib/date-format';
+import {
+  attendanceFormSchema,
+  type AttendanceFormValues,
+} from '@/lib/form-schemas';
 
 export default function EditAttendancePage() {
   const params = useParams<{ recordId: string }>();
@@ -46,10 +53,8 @@ export default function EditAttendancePage() {
   useAuthGuard();
   const recordId = Number(params.recordId);
   const [record, setRecord] = useState<AttendanceRecord | null>(null);
-  const [memo, setMemo] = useState('');
   const [myTeamScore, setMyTeamScore] = useState('');
   const [opponentScore, setOpponentScore] = useState('');
-  const [watchType, setWatchType] = useState<'stadium' | 'home'>('stadium');
   const [result, setResult] = useState<AttendanceResult | null>(null);
   const [resultManuallySet, setResultManuallySet] = useState(true);
   const [scoreLocked, setScoreLocked] = useState(true);
@@ -57,13 +62,24 @@ export default function EditAttendancePage() {
   const [photo, setPhoto] = useState<File | null>(null);
   const [photoPreviewUrl, setPhotoPreviewUrl] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [game, setGame] = useState<Game | null>(null);
   const [favoriteTeamId, setFavoriteTeamId] = useState<number | null>(null);
   const [favoriteTeamShortName, setFavoriteTeamShortName] = useState<string | null>(
     null,
   );
   const [cheeredTeamId, setCheeredTeamId] = useState<number | null>(null);
+  const {
+    formState: { errors, isSubmitting },
+    handleSubmit,
+    register,
+    reset,
+    setValue,
+    watch,
+  } = useForm<AttendanceFormValues>({
+    defaultValues: { memo: '', watchType: 'stadium' },
+    resolver: zodResolver(attendanceFormSchema),
+  });
+  const watchType = watch('watchType');
 
   const isNeutral = game
     ? isNeutralAttendance(game, favoriteTeamId, favoriteTeamShortName)
@@ -142,8 +158,7 @@ export default function EditAttendancePage() {
         setFavoriteTeamId(favoriteTeamId);
         setFavoriteTeamShortName(favoriteShortName);
         setCheeredTeamId(r.cheeredTeamId ?? null);
-        setMemo(r.memo ?? '');
-        setWatchType(r.watchType);
+        reset({ memo: r.memo ?? '', watchType: r.watchType });
         setCompanions(toSelectedCompanions(r.companions));
 
         const teamInGameId = resolveFavoriteTeamIdInGame(
@@ -161,7 +176,7 @@ export default function EditAttendancePage() {
         }
       },
     );
-  }, [recordId, router]);
+  }, [recordId, reset, router]);
 
   useEffect(() => {
     if (!game || !isNeutral || !cheeredTeamId) {
@@ -200,9 +215,7 @@ export default function EditAttendancePage() {
     setResultManuallySet(false);
   }
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (isSubmitting) return;
+  async function onSubmit(values: AttendanceFormValues) {
     const token = getAccessToken();
 
     if (!token) {
@@ -216,16 +229,15 @@ export default function EditAttendancePage() {
     }
 
     setErrorMessage('');
-    setIsSubmitting(true);
 
     try {
       await updateAttendanceRecord(
         recordId,
         {
-          memo,
+          memo: values.memo,
           myTeamScore: null,
           opponentScore: null,
-          watchType,
+          watchType: values.watchType,
           result: null,
           isScoreModified: false,
           cheeredTeamId: needsCheeredTeam ? cheeredTeamId : null,
@@ -247,8 +259,6 @@ export default function EditAttendancePage() {
           ? error.message
           : '직관 기록 수정 중 오류가 발생했습니다.',
       );
-    } finally {
-      setIsSubmitting(false);
     }
   }
 
@@ -293,11 +303,11 @@ export default function EditAttendancePage() {
         <h1>직관 기록 수정</h1>
         <p>
           {matchupTitle} ·{' '}
-          {new Date(record.game.gameDate).toLocaleDateString('ko-KR')}
+          {formatKoreanDateShort(record.game.gameDate)}
         </p>
       </header>
 
-      <form className="form-grid" onSubmit={handleSubmit}>
+      <form className="form-grid" onSubmit={handleSubmit(onSubmit)}>
         <section className="card stack">
           <div className="section-heading" style={{ marginBottom: 0 }}>
             <h2>관람 유형</h2>
@@ -306,7 +316,9 @@ export default function EditAttendancePage() {
             <button
               aria-checked={watchType === 'stadium'}
               className={`choice-button ${watchType === 'stadium' ? 'is-selected' : ''}`}
-              onClick={() => setWatchType('stadium')}
+              onClick={() =>
+                setValue('watchType', 'stadium', { shouldValidate: true })
+              }
               role="radio"
               type="button"
             >
@@ -315,7 +327,9 @@ export default function EditAttendancePage() {
             <button
               aria-checked={watchType === 'home'}
               className={`choice-button ${watchType === 'home' ? 'is-selected' : ''}`}
-              onClick={() => setWatchType('home')}
+              onClick={() =>
+                setValue('watchType', 'home', { shouldValidate: true })
+              }
               role="radio"
               type="button"
             >
@@ -452,11 +466,13 @@ export default function EditAttendancePage() {
             <textarea
               className="form-textarea"
               id="memo-input"
-              onChange={(event) => setMemo(event.target.value)}
               placeholder="응원가, 분위기, 음식, 함께한 사람 등 자유롭게"
               rows={6}
-              value={memo}
+              {...register('memo')}
             />
+            {errors.memo?.message ? (
+              <p className="form-error">{errors.memo.message}</p>
+            ) : null}
           </div>
         </section>
 

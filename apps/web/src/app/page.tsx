@@ -23,6 +23,11 @@ import {
   useTeamsQuery,
   useTeamStandingsQuery,
 } from '@/lib/queries';
+import {
+  formatKoreanMonthDay,
+  formatKoreanTime,
+  formatKoreanWeekday,
+} from '@/lib/date-format';
 
 function formatAttendanceResultLabel(
   record: AttendanceRecord,
@@ -60,15 +65,12 @@ const features = [
 ];
 
 function formatDateParts(value: string) {
-  const date = new Date(value);
+  const [month, day] = formatKoreanMonthDay(value).split('월 ');
   return {
-    month: String(date.getMonth() + 1).padStart(2, '0'),
-    day: String(date.getDate()).padStart(2, '0'),
-    weekday: date.toLocaleDateString('ko-KR', { weekday: 'short' }),
-    time: date.toLocaleTimeString('ko-KR', {
-      hour: '2-digit',
-      minute: '2-digit',
-    }),
+    month,
+    day: day.replace('일', ''),
+    weekday: formatKoreanWeekday(value),
+    time: formatKoreanTime(value),
   };
 }
 

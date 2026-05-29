@@ -7,6 +7,7 @@ import { FormEvent, useState } from 'react';
 import { useAuthStore } from '@/lib/auth-store';
 import { usePostsQuery } from '@/lib/queries';
 import { useMediaQuery } from '@/lib/use-media-query';
+import { formatKoreanDateShort } from '@/lib/date-format';
 import { EmptyState } from '@/components/EmptyState';
 import { SkeletonCard } from '@/components/Skeleton';
 
@@ -78,7 +79,7 @@ export default function PostsPage() {
                   <span className="post-row-title">{post.title}</span>
                   <span className="post-row-meta">
                     <span className="post-row-author">{post.authorNickname}</span>
-                    {new Date(post.createdAt).toLocaleDateString('ko-KR')}
+                    {formatKoreanDateShort(post.createdAt)}
                   </span>
                 </span>
                 <span className="post-row-comments">댓글 {post.commentCount}</span>

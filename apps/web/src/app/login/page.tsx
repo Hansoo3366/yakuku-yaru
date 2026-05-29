@@ -2,11 +2,17 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { useQueryClient } from '@tanstack/react-query';
-import { FormEvent, useState } from 'react';
+import { useState } from 'react';
+import { useForm } from 'react-hook-form';
 import { ApiError } from '@/lib/api';
 import { login } from '@/lib/auth-api';
 import { PasswordField } from '@/components/PasswordField';
+import {
+  loginSchema,
+  type LoginFormValues,
+} from '@/lib/form-schemas';
 import { useAuthStore } from '@/lib/auth-store';
 import { queryKeys } from '@/lib/query-keys';
 import { PASSWORD_MAX_LENGTH } from '@/lib/user-input';
@@ -15,18 +21,23 @@ export default function LoginPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const setSession = useAuthStore((state) => state.setSession);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const {
+    formState: { errors, isSubmitting },
+    handleSubmit,
+    register,
+    setValue,
+    watch,
+  } = useForm<LoginFormValues>({
+    defaultValues: { email: '', password: '' },
+    resolver: zodResolver(loginSchema),
+  });
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  async function onSubmit(values: LoginFormValues) {
     setErrorMessage('');
-    setIsSubmitting(true);
 
     try {
-      const response = await login({ email, password });
+      const response = await login(values);
       setSession({ token: response.accessToken, user: response.user });
       queryClient.setQueryData(queryKeys.me(response.accessToken), {
         user: response.user,
@@ -35,7 +46,7 @@ export default function LoginPage() {
     } catch (error) {
       if (error instanceof ApiError && error.code === 'EMAIL_NOT_VERIFIED') {
         router.push(
-          `/register?verify=1&email=${encodeURIComponent(email.trim())}`,
+          `/register?verify=1&email=${encodeURIComponent(values.email.trim())}`,
         );
         return;
       }
@@ -45,8 +56,6 @@ export default function LoginPage() {
       } else {
         setErrorMessage('로그인 중 오류가 발생했습니다.');
       }
-    } finally {
-      setIsSubmitting(false);
     }
   }
 
@@ -62,7 +71,7 @@ export default function LoginPage() {
           <p>직관 캘린더와 승률 기록을 이어서 확인하세요.</p>
         </header>
 
-        <form className="form-grid" onSubmit={handleSubmit}>
+        <form className="form-grid" onSubmit={handleSubmit(onSubmit)}>
           <div className="field">
             <label className="field-label" htmlFor="email">
               이메일
@@ -71,13 +80,13 @@ export default function LoginPage() {
               autoComplete="email"
               className="form-input"
               id="email"
-              name="email"
-              onChange={(event) => setEmail(event.target.value)}
               placeholder="you@example.com"
-              required
               type="email"
-              value={email}
+              {...register('email')}
             />
+            {errors.email?.message ? (
+              <p className="form-error">{errors.email.message}</p>
+            ) : null}
           </div>
           <PasswordField
             autoComplete="current-password"
@@ -90,10 +99,14 @@ export default function LoginPage() {
             }
             maxLength={PASSWORD_MAX_LENGTH}
             name="password"
-            onChange={setPassword}
-            required
-            value={password}
+            onChange={(value) =>
+              setValue('password', value, { shouldValidate: true })
+            }
+            value={watch('password')}
           />
+          {errors.password?.message ? (
+            <p className="form-error">{errors.password.message}</p>
+          ) : null}
           {errorMessage ? <p className="form-error">{errorMessage}</p> : null}
           <button
             className="btn btn-primary btn-lg btn-block"

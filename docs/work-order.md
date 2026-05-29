@@ -79,6 +79,8 @@
 - [x] `/auth/me`로 로그인 상태 복원
 - [x] Zustand로 로그인 세션 전역 상태 분리
 - [x] TanStack Query로 사용자/팀/경기/직관/게시판 서버 데이터 캐싱
+- [x] React Hook Form + Zod 기반 폼 검증 도입
+- [x] date-fns 기반 날짜 포맷 유틸 도입
 - [x] 인증 필요 페이지 보호
 - [x] 공통 에러 처리 기본 구조
 

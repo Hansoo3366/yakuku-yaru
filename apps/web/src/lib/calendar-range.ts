@@ -1,3 +1,5 @@
+import { formatKoreanTime } from '@/lib/date-format';
+
 export function formatDateInput(date: Date) {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -126,11 +128,7 @@ export function isSameDay(a: Date, b: Date) {
 export function formatGameTime(gameDate: string) {
   const date = new Date(gameDate);
   if (Number.isNaN(date.getTime())) return '';
-  return date.toLocaleTimeString('ko-KR', {
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  });
+  return formatKoreanTime(date);
 }
 
 export function formatWeekLabel(weekStart: Date) {

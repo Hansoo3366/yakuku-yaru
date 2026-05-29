@@ -34,19 +34,14 @@ import {
   useMeQuery,
 } from '@/lib/queries';
 import { queryKeys } from '@/lib/query-keys';
+import { formatKoreanDateTime } from '@/lib/date-format';
 
 function formatDateTime(value: string) {
-  return new Date(value).toLocaleString('ko-KR', {
-    dateStyle: 'long',
-    timeStyle: 'short',
-  });
+  return formatKoreanDateTime(value);
 }
 
 function formatTicketOpenAt(value: string) {
-  return new Date(value).toLocaleString('ko-KR', {
-    dateStyle: 'long',
-    timeStyle: 'short',
-  });
+  return formatKoreanDateTime(value);
 }
 
 function formatStat(value: number | null, digits = 2) {

@@ -37,6 +37,8 @@
 
 - 서버 데이터: TanStack Query로 캐싱, 중복 호출 방지, stale/refetch 제어
 - 인증 세션: Zustand store로 token/user 상태 공유
+- 폼 상태와 검증: React Hook Form + Zod를 우선 로그인/게시판 폼에 적용
+- 날짜 포맷: date-fns 기반 공통 유틸 사용
 - 영속 저장: access token과 캘린더 필터는 localStorage 사용
 - 화면 전용 상태: 폼 입력, 업로드 미리보기, UI open/close는 컴포넌트 state 사용
 

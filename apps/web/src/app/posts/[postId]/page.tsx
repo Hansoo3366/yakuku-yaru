@@ -4,8 +4,10 @@
 
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { useQueryClient } from '@tanstack/react-query';
-import { FormEvent, useState } from 'react';
+import { useState } from 'react';
+import { useForm } from 'react-hook-form';
 import { ApiError } from '@/lib/api';
 import { getAccessToken } from '@/lib/auth';
 import { useAuthStore } from '@/lib/auth-store';
@@ -18,11 +20,16 @@ import {
 import { Skeleton } from '@/components/Skeleton';
 import { EmptyState } from '@/components/EmptyState';
 import {
+  commentFormSchema,
+  type CommentFormValues,
+} from '@/lib/form-schemas';
+import {
   useCommentsQuery,
   useMeQuery,
   usePostQuery,
 } from '@/lib/queries';
 import { queryKeys } from '@/lib/query-keys';
+import { formatKoreanDateTimeShort } from '@/lib/date-format';
 
 export default function PostDetailPage() {
   const params = useParams<{ postId: string }>();
@@ -37,9 +44,16 @@ export default function PostDetailPage() {
   const post = postQuery.data?.post ?? null;
   const comments = commentsQuery.data?.items ?? [];
   const currentUser = meQuery.data?.user ?? storedUser;
-  const [commentContent, setCommentContent] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const {
+    formState: { errors, isSubmitting },
+    handleSubmit,
+    register,
+    reset,
+  } = useForm<CommentFormValues>({
+    defaultValues: { content: '' },
+    resolver: zodResolver(commentFormSchema),
+  });
 
   async function handleDeletePost() {
     const token = getAccessToken();
@@ -55,9 +69,7 @@ export default function PostDetailPage() {
     router.push('/posts');
   }
 
-  async function handleCreateComment(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (isSubmitting) return;
+  async function handleCreateComment(values: CommentFormValues) {
     const token = getAccessToken();
     if (!token) {
       router.replace('/');
@@ -65,24 +77,21 @@ export default function PostDetailPage() {
     }
 
     setErrorMessage('');
-    setIsSubmitting(true);
 
     try {
-      const response = await createComment(postId, commentContent, token);
+      const response = await createComment(postId, values.content, token);
       queryClient.setQueryData(queryKeys.comments(postId), {
         items: [...comments, response.comment],
       });
       void queryClient.invalidateQueries({ queryKey: queryKeys.post(postId) });
       void queryClient.invalidateQueries({ queryKey: ['posts'] });
-      setCommentContent('');
+      reset();
     } catch (error) {
       if (error instanceof ApiError) {
         setErrorMessage(error.message);
       } else {
         setErrorMessage('댓글 작성 중 오류가 발생했습니다.');
       }
-    } finally {
-      setIsSubmitting(false);
     }
   }
 
@@ -135,7 +144,7 @@ export default function PostDetailPage() {
                 <span>{post.authorNickname}</span>
               </span>
               <time dateTime={post.createdAt}>
-                {new Date(post.createdAt).toLocaleString('ko-KR')}
+                {formatKoreanDateTimeShort(post.createdAt)}
               </time>
             </p>
           </div>
@@ -197,7 +206,7 @@ export default function PostDetailPage() {
                       <span>{comment.authorNickname}</span>
                     </span>
                     <time dateTime={comment.createdAt}>
-                      {new Date(comment.createdAt).toLocaleString('ko-KR')}
+                      {formatKoreanDateTimeShort(comment.createdAt)}
                     </time>
                   </span>
                   {currentUser?.id === comment.userId ? (
@@ -231,16 +240,17 @@ export default function PostDetailPage() {
         {currentUser ? (
           <form
             className="form-grid-tight comment-write-form"
-            onSubmit={handleCreateComment}
+            onSubmit={handleSubmit(handleCreateComment)}
           >
             <textarea
               className="form-textarea"
-              onChange={(event) => setCommentContent(event.target.value)}
               placeholder="댓글을 입력하세요"
-              required
               rows={3}
-              value={commentContent}
+              {...register('content')}
             />
+            {errors.content?.message ? (
+              <p className="form-error">{errors.content.message}</p>
+            ) : null}
             {errorMessage ? <p className="form-error">{errorMessage}</p> : null}
             <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
               <button

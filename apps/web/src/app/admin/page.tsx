@@ -25,6 +25,7 @@ import {
 import { getAccessToken } from '@/lib/auth';
 import { fetchMe } from '@/lib/auth-api';
 import { listTeams, type Team } from '@/lib/baseball-api';
+import { formatKoreanDateTimeShort } from '@/lib/date-format';
 
 type AdminTab = 'users' | 'posts' | 'comments' | 'games';
 
@@ -57,7 +58,7 @@ function toInput(form: GameForm): AdminGameInput {
 }
 
 function formatDate(value: string) {
-  return new Date(value).toLocaleString('ko-KR');
+  return formatKoreanDateTimeShort(value);
 }
 
 export default function AdminPage() {

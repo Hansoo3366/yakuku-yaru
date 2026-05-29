@@ -4,8 +4,10 @@
 
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { useQueryClient } from '@tanstack/react-query';
-import { FormEvent, Suspense, useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
+import { useForm } from 'react-hook-form';
 import { getAccessToken } from '@/lib/auth';
 import { fetchMe } from '@/lib/auth-api';
 import { useAuthGuard } from '@/lib/use-auth-guard';
@@ -33,6 +35,10 @@ import {
 } from '@/components/CompanionPicker';
 import { AttendanceScoreSection } from '@/components/AttendanceScoreSection';
 import { CheeredTeamPicker } from '@/components/CheeredTeamPicker';
+import {
+  attendanceFormSchema,
+  type AttendanceFormValues,
+} from '@/lib/form-schemas';
 
 function NewAttendanceForm() {
   const router = useRouter();
@@ -40,10 +46,8 @@ function NewAttendanceForm() {
   useAuthGuard();
   const searchParams = useSearchParams();
   const gameId = Number(searchParams.get('gameId'));
-  const [memo, setMemo] = useState('');
   const [myTeamScore, setMyTeamScore] = useState('');
   const [opponentScore, setOpponentScore] = useState('');
-  const [watchType, setWatchType] = useState<'stadium' | 'home'>('stadium');
   const [result, setResult] = useState<AttendanceResult | null>(null);
   const [resultManuallySet, setResultManuallySet] = useState(false);
   const [scoreLocked, setScoreLocked] = useState(true);
@@ -51,7 +55,6 @@ function NewAttendanceForm() {
   const [photo, setPhoto] = useState<File | null>(null);
   const [photoPreviewUrl, setPhotoPreviewUrl] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoadingGame, setIsLoadingGame] = useState(true);
   const [game, setGame] = useState<Game | null>(null);
   const [favoriteTeamId, setFavoriteTeamId] = useState<number | null>(null);
@@ -59,6 +62,17 @@ function NewAttendanceForm() {
     null,
   );
   const [cheeredTeamId, setCheeredTeamId] = useState<number | null>(null);
+  const {
+    formState: { errors, isSubmitting },
+    handleSubmit,
+    register,
+    setValue,
+    watch,
+  } = useForm<AttendanceFormValues>({
+    defaultValues: { memo: '', watchType: 'stadium' },
+    resolver: zodResolver(attendanceFormSchema),
+  });
+  const watchType = watch('watchType');
 
   const isNeutral = game
     ? isNeutralAttendance(game, favoriteTeamId, favoriteTeamShortName)
@@ -173,9 +187,7 @@ function NewAttendanceForm() {
     setResultManuallySet(false);
   }
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (isSubmitting) return;
+  async function onSubmit(values: AttendanceFormValues) {
     const token = getAccessToken();
 
     if (!token) {
@@ -193,17 +205,16 @@ function NewAttendanceForm() {
       return;
     }
 
-    setIsSubmitting(true);
     setErrorMessage('');
 
     try {
       const response = await createAttendanceRecord(
         {
           gameId,
-          memo,
+          memo: values.memo,
           myTeamScore: null,
           opponentScore: null,
-          watchType,
+          watchType: values.watchType,
           result: null,
           isScoreModified: false,
           cheeredTeamId: needsCheeredTeam ? cheeredTeamId : null,
@@ -225,8 +236,6 @@ function NewAttendanceForm() {
           ? error.message
           : '직관 기록 저장 중 오류가 발생했습니다.',
       );
-    } finally {
-      setIsSubmitting(false);
     }
   }
 
@@ -256,7 +265,7 @@ function NewAttendanceForm() {
           </Link>
         </section>
       ) : (
-        <form className="form-grid" onSubmit={handleSubmit}>
+        <form className="form-grid" onSubmit={handleSubmit(onSubmit)}>
           <section className="card stack">
             <div className="section-heading" style={{ marginBottom: 0 }}>
               <h2>관람 유형</h2>
@@ -265,7 +274,9 @@ function NewAttendanceForm() {
               <button
                 aria-checked={watchType === 'stadium'}
                 className={`choice-button ${watchType === 'stadium' ? 'is-selected' : ''}`}
-                onClick={() => setWatchType('stadium')}
+                onClick={() =>
+                  setValue('watchType', 'stadium', { shouldValidate: true })
+                }
                 role="radio"
                 type="button"
               >
@@ -274,7 +285,9 @@ function NewAttendanceForm() {
               <button
                 aria-checked={watchType === 'home'}
                 className={`choice-button ${watchType === 'home' ? 'is-selected' : ''}`}
-                onClick={() => setWatchType('home')}
+                onClick={() =>
+                  setValue('watchType', 'home', { shouldValidate: true })
+                }
                 role="radio"
                 type="button"
               >
@@ -379,11 +392,13 @@ function NewAttendanceForm() {
               <textarea
                 className="form-textarea"
                 id="memo-input"
-                onChange={(event) => setMemo(event.target.value)}
                 placeholder="응원가, 분위기, 음식, 함께한 사람 등 자유롭게"
                 rows={6}
-                value={memo}
+                {...register('memo')}
               />
+              {errors.memo?.message ? (
+                <p className="form-error">{errors.memo.message}</p>
+              ) : null}
             </div>
           </section>
 

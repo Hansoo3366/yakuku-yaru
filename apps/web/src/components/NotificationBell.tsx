@@ -15,6 +15,10 @@ import {
   fetchAttendanceRecord,
   respondAttendanceCompanion,
 } from '@/lib/attendance-api';
+import {
+  formatKoreanDateShort,
+  formatTimeAgo as formatRelativeTimeAgo,
+} from '@/lib/date-format';
 
 type RespondedRecords = Record<number, 'accepted' | 'rejected'>;
 
@@ -25,13 +29,10 @@ type NotificationBellProps = {
 function formatTimeAgo(value: string) {
   const diff = Date.now() - new Date(value).getTime();
   const minute = 60 * 1000;
-  const hour = 60 * minute;
-  const day = 24 * hour;
+  const day = 24 * 60 * minute;
   if (diff < minute) return '방금 전';
-  if (diff < hour) return `${Math.floor(diff / minute)}분 전`;
-  if (diff < day) return `${Math.floor(diff / hour)}시간 전`;
-  if (diff < 7 * day) return `${Math.floor(diff / day)}일 전`;
-  return new Date(value).toLocaleDateString('ko-KR');
+  if (diff < 7 * day) return formatRelativeTimeAgo(value);
+  return formatKoreanDateShort(value);
 }
 
 export function NotificationBell({ userId }: NotificationBellProps) {

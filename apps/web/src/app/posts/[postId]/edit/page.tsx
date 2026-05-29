@@ -2,23 +2,38 @@
 
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { FormEvent, useEffect, useState } from 'react';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useQueryClient } from '@tanstack/react-query';
+import { useEffect, useState } from 'react';
+import { useForm } from 'react-hook-form';
 import { ApiError } from '@/lib/api';
 import { getAccessToken } from '@/lib/auth';
 import { useAuthGuard } from '@/lib/use-auth-guard';
 import { fetchPost, updatePost } from '@/lib/post-api';
 import { Skeleton } from '@/components/Skeleton';
+import {
+  postFormSchema,
+  type PostFormValues,
+} from '@/lib/form-schemas';
+import { queryKeys } from '@/lib/query-keys';
 
 export default function EditPostPage() {
   const params = useParams<{ postId: string }>();
   const router = useRouter();
+  const queryClient = useQueryClient();
   useAuthGuard();
   const postId = Number(params.postId);
-  const [title, setTitle] = useState('');
-  const [content, setContent] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
+  const {
+    formState: { errors, isSubmitting },
+    handleSubmit,
+    register,
+    reset,
+  } = useForm<PostFormValues>({
+    defaultValues: { title: '', content: '' },
+    resolver: zodResolver(postFormSchema),
+  });
 
   useEffect(() => {
     if (!getAccessToken()) {
@@ -28,15 +43,15 @@ export default function EditPostPage() {
 
     fetchPost(postId)
       .then((response) => {
-        setTitle(response.post.title);
-        setContent(response.post.content);
+        reset({
+          title: response.post.title,
+          content: response.post.content,
+        });
       })
       .finally(() => setIsLoaded(true));
-  }, [postId, router]);
+  }, [postId, reset, router]);
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (isSubmitting) return;
+  async function onSubmit(values: PostFormValues) {
     const token = getAccessToken();
 
     if (!token) {
@@ -44,11 +59,14 @@ export default function EditPostPage() {
       return;
     }
 
-    setIsSubmitting(true);
     setErrorMessage('');
 
     try {
-      await updatePost(postId, { title, content }, token);
+      const response = await updatePost(postId, values, token);
+      queryClient.setQueryData(queryKeys.post(postId), {
+        post: response.post,
+      });
+      void queryClient.invalidateQueries({ queryKey: ['posts'] });
       router.push(`/posts/${postId}`);
     } catch (error) {
       if (error instanceof ApiError) {
@@ -56,8 +74,6 @@ export default function EditPostPage() {
       } else {
         setErrorMessage('게시글 수정 중 오류가 발생했습니다.');
       }
-    } finally {
-      setIsSubmitting(false);
     }
   }
 
@@ -81,7 +97,7 @@ export default function EditPostPage() {
         <h1>후기 수정</h1>
       </header>
 
-      <form className="form-grid" onSubmit={handleSubmit}>
+      <form className="form-grid" onSubmit={handleSubmit(onSubmit)}>
         <section className="card stack">
           <div className="field">
             <label className="field-label" htmlFor="title-input">
@@ -90,10 +106,11 @@ export default function EditPostPage() {
             <input
               className="form-input"
               id="title-input"
-              onChange={(event) => setTitle(event.target.value)}
-              required
-              value={title}
+              {...register('title')}
             />
+            {errors.title?.message ? (
+              <p className="form-error">{errors.title.message}</p>
+            ) : null}
           </div>
           <div className="field">
             <label className="field-label" htmlFor="content-input">
@@ -102,11 +119,12 @@ export default function EditPostPage() {
             <textarea
               className="form-textarea"
               id="content-input"
-              onChange={(event) => setContent(event.target.value)}
-              required
               rows={10}
-              value={content}
+              {...register('content')}
             />
+            {errors.content?.message ? (
+              <p className="form-error">{errors.content.message}</p>
+            ) : null}
           </div>
         </section>
 

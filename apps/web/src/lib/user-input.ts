@@ -3,6 +3,10 @@ export const PASSWORD_MIN_LENGTH = 8;
 export const PASSWORD_MAX_LENGTH = 128;
 export const NICKNAME_MIN_LENGTH = 2;
 export const NICKNAME_MAX_LENGTH = 20;
+export const POST_TITLE_MAX_LENGTH = 200;
+export const POST_CONTENT_MAX_LENGTH = 10000;
+export const COMMENT_CONTENT_MAX_LENGTH = 2000;
+export const ATTENDANCE_MEMO_MAX_LENGTH = 4000;
 export const STADIUM_NOTE_MAX_LENGTH = 4000;
 
 const EMAIL_PATTERN =
@@ -112,6 +116,36 @@ export function validateStadiumNoteClient(value: string): string | null {
 
   if (value.length > STADIUM_NOTE_MAX_LENGTH) {
     return `${STADIUM_NOTE_MAX_LENGTH}자 이하로 입력해주세요.`;
+  }
+
+  return null;
+}
+
+export function validateBoardTextClient(
+  value: string,
+  maxLength: number,
+): string | null {
+  const normalized = value
+    .replace(/\r\n/g, '\n')
+    .replace(/<[^>]*>/g, '')
+    .split('')
+    .filter((char) => {
+      const code = char.charCodeAt(0);
+      return code === 10 || code === 9 || (code >= 32 && code !== 127);
+    })
+    .join('')
+    .trim();
+
+  if (!normalized) {
+    return '내용을 입력해주세요.';
+  }
+
+  if (containsBlockedPayload(normalized)) {
+    return '스크립트, CSS, HTML 태그는 입력할 수 없습니다.';
+  }
+
+  if (normalized.length > maxLength) {
+    return `${maxLength}자 이하로 입력해주세요.`;
   }
 
   return null;

@@ -2,19 +2,32 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { FormEvent, useEffect, useState } from 'react';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useQueryClient } from '@tanstack/react-query';
+import { useEffect, useState } from 'react';
+import { useForm } from 'react-hook-form';
 import { ApiError } from '@/lib/api';
 import { getAccessToken } from '@/lib/auth';
 import { useAuthGuard } from '@/lib/use-auth-guard';
 import { createPost } from '@/lib/post-api';
+import {
+  postFormSchema,
+  type PostFormValues,
+} from '@/lib/form-schemas';
 
 export default function NewPostPage() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   useAuthGuard();
-  const [title, setTitle] = useState('');
-  const [content, setContent] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const {
+    formState: { errors, isSubmitting },
+    handleSubmit,
+    register,
+  } = useForm<PostFormValues>({
+    defaultValues: { title: '', content: '' },
+    resolver: zodResolver(postFormSchema),
+  });
 
   useEffect(() => {
     if (!getAccessToken()) {
@@ -22,9 +35,7 @@ export default function NewPostPage() {
     }
   }, [router]);
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (isSubmitting) return;
+  async function onSubmit(values: PostFormValues) {
     const token = getAccessToken();
 
     if (!token) {
@@ -32,11 +43,11 @@ export default function NewPostPage() {
       return;
     }
 
-    setIsSubmitting(true);
     setErrorMessage('');
 
     try {
-      const response = await createPost({ title, content }, token);
+      const response = await createPost(values, token);
+      void queryClient.invalidateQueries({ queryKey: ['posts'] });
       router.push(`/posts/${response.post.id}`);
     } catch (error) {
       if (error instanceof ApiError) {
@@ -44,8 +55,6 @@ export default function NewPostPage() {
       } else {
         setErrorMessage('게시글 작성 중 오류가 발생했습니다.');
       }
-    } finally {
-      setIsSubmitting(false);
     }
   }
 
@@ -61,7 +70,7 @@ export default function NewPostPage() {
         <p>경기장에서 느낀 분위기와 직관 팁을 공유해보세요.</p>
       </header>
 
-      <form className="form-grid" onSubmit={handleSubmit}>
+      <form className="form-grid" onSubmit={handleSubmit(onSubmit)}>
         <section className="card stack">
           <div className="field">
             <label className="field-label" htmlFor="title-input">
@@ -70,11 +79,12 @@ export default function NewPostPage() {
             <input
               className="form-input"
               id="title-input"
-              onChange={(event) => setTitle(event.target.value)}
               placeholder="예) 잠실 직관 첫 끝내기 승리 후기"
-              required
-              value={title}
+              {...register('title')}
             />
+            {errors.title?.message ? (
+              <p className="form-error">{errors.title.message}</p>
+            ) : null}
           </div>
           <div className="field">
             <label className="field-label" htmlFor="content-input">
@@ -83,12 +93,13 @@ export default function NewPostPage() {
             <textarea
               className="form-textarea"
               id="content-input"
-              onChange={(event) => setContent(event.target.value)}
               placeholder="경기 분위기, 인상 깊었던 장면, 팁 등 자유롭게"
-              required
               rows={10}
-              value={content}
+              {...register('content')}
             />
+            {errors.content?.message ? (
+              <p className="form-error">{errors.content.message}</p>
+            ) : null}
           </div>
         </section>
 

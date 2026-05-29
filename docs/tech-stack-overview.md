@@ -25,6 +25,8 @@ Client (Browser / PWA 성격)
 - 데이터 통신: `fetch` 기반 API 모듈(`src/lib/*-api.ts`)
 - 서버 상태 관리: **TanStack Query**
 - 클라이언트 세션 상태: **Zustand**
+- 폼 상태/검증: **React Hook Form + Zod**
+- 날짜 포맷: **date-fns**
 
 핵심 화면:
 - 캘린더(월간/주간, 필터, 승률 인사이트)

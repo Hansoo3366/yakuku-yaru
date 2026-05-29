@@ -10,6 +10,7 @@ import {
 } from '@/lib/stadium-note-api';
 import { StadiumSeatMapViewer } from '@/components/StadiumSeatMapViewer';
 import { validateStadiumNoteClient } from '@/lib/user-input';
+import { formatKoreanDateTimeShort } from '@/lib/date-format';
 
 type Props = {
   stadium: string;
@@ -20,10 +21,7 @@ function formatUpdatedAt(value: string | null) {
     return null;
   }
 
-  return new Date(value).toLocaleString('ko-KR', {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  });
+  return formatKoreanDateTimeShort(value);
 }
 
 export function StadiumPersonalNotes({ stadium }: Props) {

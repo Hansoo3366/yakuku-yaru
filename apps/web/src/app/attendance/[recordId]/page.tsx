@@ -20,21 +20,19 @@ import { getAssetUrl } from '@/lib/api';
 import { getCancellationTicketStubLines } from '@/lib/game-cancellation';
 import { getTeamLogoSrc } from '@/lib/team-logo';
 import { Skeleton } from '@/components/Skeleton';
+import {
+  formatKoreanDate,
+  formatKoreanDateTimeShort,
+  formatKoreanMonthDay,
+  formatKoreanTime,
+} from '@/lib/date-format';
 
 function formatDate(value: string) {
-  return new Date(value).toLocaleDateString('ko-KR', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    weekday: 'short',
-  });
+  return formatKoreanDate(value);
 }
 
 function formatTime(value: string) {
-  return new Date(value).toLocaleTimeString('ko-KR', {
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+  return formatKoreanTime(value);
 }
 
 function ticketStubOutcomeLabel(outcome: string | null) {
@@ -164,10 +162,7 @@ export default function AttendanceDetailPage() {
             )}
           </span>
           <span className="photo-ticket-stub-meta">
-            {new Date(record.game.gameDate).toLocaleDateString('ko-KR', {
-              month: '2-digit',
-              day: '2-digit',
-            })}
+            {formatKoreanMonthDay(record.game.gameDate)}
           </span>
         </div>
         <div className="photo-ticket-perforation" aria-hidden="true" />
@@ -269,7 +264,7 @@ export default function AttendanceDetailPage() {
         </div>
         <p className="muted" style={{ fontSize: 'var(--text-xs)' }}>
           최근 수정 · {record.lastModifiedByNickname ?? record.ownerNickname} ·{' '}
-          {new Date(record.updatedAt).toLocaleString('ko-KR')}
+          {formatKoreanDateTimeShort(record.updatedAt)}
         </p>
       </section>
 
