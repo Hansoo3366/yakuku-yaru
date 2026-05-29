@@ -2157,7 +2157,6 @@ img {
   max-height: none;
   overflow-y: auto;
   overscroll-behavior: contain;
-  scrollbar-gutter: stable;
   width: 100%;
 }
 
