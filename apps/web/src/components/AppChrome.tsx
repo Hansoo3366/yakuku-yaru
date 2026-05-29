@@ -18,13 +18,22 @@ import { applyTeamTheme, useTeamTheme } from '@/lib/team-theme';
 import { getProfileImageSrc } from '@/lib/profile-image';
 import { NotificationBell } from '@/components/NotificationBell';
 
-const primaryLinks = [
+const primaryLinks: Array<{
+  href: string;
+  label: string;
+  exact?: boolean;
+}> = [
+  { href: '/', label: '홈', exact: true },
   { href: '/calendar', label: '캘린더' },
   { href: '/posts', label: '게시판' },
   { href: '/me', label: '마이페이지' },
 ];
 
-function isActivePath(pathname: string, href: string) {
+function isActivePath(pathname: string, href: string, exact = false) {
+  if (exact) {
+    return pathname === href;
+  }
+
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
@@ -92,9 +101,13 @@ export function AppHeader() {
           {primaryLinks.map((item) => (
             <Link
               aria-current={
-                isActivePath(pathname, item.href) ? 'page' : undefined
+                isActivePath(pathname, item.href, item.exact)
+                  ? 'page'
+                  : undefined
               }
-              className={isActivePath(pathname, item.href) ? 'active' : ''}
+              className={
+                isActivePath(pathname, item.href, item.exact) ? 'active' : ''
+              }
               href={item.href}
               key={item.href}
             >
@@ -162,6 +175,7 @@ export function AppFooter() {
           <p>야구장 직관과 집관을 캘린더에 남기는 KBO 팬 기록 웹앱입니다.</p>
         </div>
         <nav aria-label="하단 링크">
+          <Link href="/">홈</Link>
           <Link href="/calendar">캘린더</Link>
           <Link href="/posts">게시판</Link>
           <Link href="/me">마이페이지</Link>

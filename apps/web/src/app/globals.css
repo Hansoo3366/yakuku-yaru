@@ -210,6 +210,7 @@ img {
  * ========================================================= */
 
 .page-shell {
+  container-type: inline-size;
   display: grid;
   gap: var(--space-6);
   margin: 0 auto;
@@ -289,6 +290,12 @@ img {
  * ========================================================= */
 
 .site-header {
+  --header-accent: color-mix(
+    in srgb,
+    var(--color-ticket-gold) 42%,
+    color-mix(in srgb, var(--team-color, var(--color-field-700)) 22%, white 78%)
+      58%
+  );
   background: var(--team-color, var(--color-field-700));
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   color: var(--color-white);
@@ -371,30 +378,36 @@ img {
 
 .site-nav a {
   align-items: center;
-  border-radius: var(--radius-sm);
+  border-radius: 0;
   color: rgba(255, 255, 255, 0.78);
   display: inline-flex;
   font-size: var(--text-base);
   font-weight: var(--weight-bold);
   height: 36px;
   padding: 0 var(--space-3);
-  transition:
-    background 0.15s ease,
-    color 0.15s ease;
+  position: relative;
+  transition: color 0.15s ease;
 }
 
 .site-nav a:hover {
-  background: rgba(255, 255, 255, 0.12);
+  background: transparent;
   color: var(--color-white);
 }
 
 .site-nav a.active {
-  background: color-mix(
-    in srgb,
-    var(--team-color, var(--color-field-700)) 22%,
-    var(--color-white) 78%
-  );
-  color: var(--color-night-navy);
+  background: transparent;
+  color: var(--color-white);
+}
+
+.site-nav a.active::after {
+  background: var(--header-accent, var(--color-ticket-gold));
+  border-radius: 2px;
+  bottom: 0;
+  content: '';
+  height: 2px;
+  left: 10px;
+  position: absolute;
+  right: 10px;
 }
 
 .account-actions {
@@ -2136,14 +2149,16 @@ img {
 }
 
 .calendar-card--week .calendar-grid {
+  align-items: stretch;
   min-height: 0;
 }
 
 .calendar-day--week .calendar-events {
-  max-height: 220px;
+  max-height: none;
   overflow-y: auto;
   overscroll-behavior: contain;
   scrollbar-gutter: stable;
+  width: 100%;
 }
 
 .calendar-day-number {
@@ -4120,10 +4135,9 @@ img {
 }
 
 .admin-row--user {
-  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1.2fr) minmax(
-      72px,
-      0.7fr
-    ) minmax(96px, 0.85fr) 92px 112px auto;
+  grid-template-columns:
+    minmax(0, 1.2fr) minmax(0, 1.2fr) minmax(72px, 0.7fr)
+    minmax(96px, 0.85fr) 92px 112px auto;
 }
 
 .admin-row .btn {
@@ -4775,28 +4789,64 @@ img {
 .home-hero {
   background:
     linear-gradient(
-      135deg,
-      rgba(15, 107, 79, 0.92) 0%,
-      rgba(10, 74, 58, 0.95) 100%
+      120deg,
+      rgba(8, 14, 28, 0.84) 0%,
+      rgba(8, 14, 28, 0.52) 48%,
+      rgba(8, 14, 28, 0.78) 100%
     ),
-    url('https://images.unsplash.com/photo-1566577739112-5180d4bf9390?auto=format&fit=crop&w=1600&q=80');
+    url('/main_kv.png');
   background-position: center;
   background-size: cover;
   border-radius: var(--radius-lg);
   color: var(--color-white);
   display: grid;
   gap: var(--space-4);
+  overflow: hidden;
   padding: var(--space-7) var(--space-5);
   position: relative;
+}
+
+.dashboard-greeting {
+  align-items: flex-start;
+  background-color: #080e1c;
+  background-image:
+    linear-gradient(
+      120deg,
+      rgba(8, 14, 28, 0.84) 0%,
+      rgba(8, 14, 28, 0.52) 48%,
+      rgba(8, 14, 28, 0.78) 100%
+    ),
+    url('/main_kv_login.png');
+  background-position: center center;
+  background-repeat: no-repeat;
+  background-size: 100% auto;
+  border-radius: var(--radius-lg);
+  color: var(--color-white);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  justify-content: center;
+  min-height: calc(100cqw * 538 / 2172);
+  min-width: 0;
   overflow: hidden;
+  padding: clamp(var(--space-3), 2.5vw, var(--space-5));
+  position: relative;
+  width: 100%;
 }
 
 .home-hero h1 {
+  color: var(--color-white);
   font-size: clamp(var(--text-2xl), 6vw, var(--text-3xl));
   font-weight: var(--weight-black);
   letter-spacing: 0;
   line-height: 1.15;
   max-width: 520px;
+}
+
+.home-hero .eyebrow,
+.dashboard-greeting .eyebrow {
+  color: var(--color-ticket-gold);
+  letter-spacing: 0.1em;
 }
 
 .home-hero p {
@@ -4813,23 +4863,29 @@ img {
   margin-top: var(--space-2);
 }
 
-.home-hero .btn-primary {
+.home-hero .btn-primary,
+.dashboard-greeting .btn-primary {
   background: var(--color-ticket-gold);
+  border-color: var(--color-ticket-gold);
   color: var(--color-night-navy);
 }
 
-.home-hero .btn-primary:hover {
+.home-hero .btn-primary:hover:not(:disabled),
+.dashboard-greeting .btn-primary:hover:not(:disabled) {
   background: #f4b554;
+  border-color: #f4b554;
 }
 
 .home-hero .btn-ghost {
-  background: rgba(255, 255, 255, 0.12);
-  border-color: rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.45);
   color: var(--color-white);
 }
 
-.home-hero .btn-ghost:hover {
+.home-hero .btn-ghost:hover:not(:disabled) {
   background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.65);
+  color: var(--color-white);
 }
 
 .home-features {
@@ -4874,33 +4930,27 @@ img {
 
 /* Logged-in dashboard */
 .dashboard-grid {
+  container-type: inline-size;
   display: grid;
   gap: var(--space-4);
-}
-
-.dashboard-greeting {
-  align-items: center;
-  background: var(--color-white);
-  border: 1px solid var(--color-line);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-sm);
-  display: grid;
-  gap: var(--space-3);
-  grid-template-columns: 1fr auto;
-  padding: var(--space-4) var(--space-5);
+  min-width: 0;
+  width: 100%;
 }
 
 .dashboard-greeting h2 {
-  color: var(--color-night-navy);
-  font-size: var(--text-xl);
+  color: var(--color-white);
+  font-size: clamp(var(--text-lg), 4vw, var(--text-xl));
   font-weight: var(--weight-black);
   letter-spacing: 0;
+  line-height: 1.25;
 }
 
 .dashboard-greeting p {
-  color: var(--color-muted);
+  color: rgba(255, 255, 255, 0.85);
   font-size: var(--text-sm);
-  margin-top: 2px;
+  line-height: 1.6;
+  margin-top: 4px;
+  max-width: 420px;
 }
 
 .dashboard-section-grid {
@@ -5108,6 +5158,17 @@ img {
 
   .dashboard-section-grid {
     grid-template-columns: 1fr;
+  }
+
+  .home-hero {
+    background-color: #080e1c;
+    background-position: center top;
+    background-size: 100% auto;
+    min-height: max(280px, calc(100cqw * 724 / 2172));
+  }
+
+  .dashboard-greeting {
+    min-height: calc(100cqw * 724 / 2172);
   }
 
   .info-row {
@@ -5379,6 +5440,11 @@ img {
 
   .home-hero {
     padding: var(--space-6) var(--space-4);
+  }
+
+  .dashboard-greeting {
+    min-height: calc(100cqw * 724 / 2172 + 64px);
+    padding: var(--space-4);
   }
 
   .dashboard-game-row {
@@ -6245,7 +6311,11 @@ img {
 
 .calendar-event[data-outcome='lose'] {
   background: color-mix(in srgb, var(--color-lose) 32%, var(--color-white) 68%);
-  border-color: color-mix(in srgb, var(--color-lose) 60%, var(--color-line) 40%);
+  border-color: color-mix(
+    in srgb,
+    var(--color-lose) 60%,
+    var(--color-line) 40%
+  );
   box-shadow: 0 1px 2px rgba(26, 86, 184, 0.12);
 }
 
@@ -6271,7 +6341,11 @@ img {
       color-mix(in srgb, var(--color-white) 94%, var(--color-line)) 4px 8px
     ),
     color-mix(in srgb, var(--color-cancelled) 22%, var(--color-white) 78%);
-  border-color: color-mix(in srgb, var(--color-cancelled) 58%, var(--color-line) 42%);
+  border-color: color-mix(
+    in srgb,
+    var(--color-cancelled) 58%,
+    var(--color-line) 42%
+  );
   box-shadow: 0 1px 2px rgba(138, 109, 98, 0.1);
 }
 
@@ -6285,7 +6359,11 @@ img {
 }
 
 .calendar-event[data-outcome='scheduled'] {
-  background: color-mix(in srgb, var(--color-scheduled) 26%, var(--color-white) 74%);
+  background: color-mix(
+    in srgb,
+    var(--color-scheduled) 26%,
+    var(--color-white) 74%
+  );
   border-color: color-mix(
     in srgb,
     var(--color-scheduled) 70%,
@@ -6296,7 +6374,11 @@ img {
 }
 
 .calendar-event[data-outcome='scheduled'] .calendar-event-time {
-  color: color-mix(in srgb, var(--color-scheduled) 90%, var(--color-night-navy));
+  color: color-mix(
+    in srgb,
+    var(--color-scheduled) 90%,
+    var(--color-night-navy)
+  );
 }
 
 .calendar-event[data-outcome='unknown'] {
@@ -6338,7 +6420,6 @@ img {
 .calendar-opponent-ranking__team {
   letter-spacing: 0;
 }
-
 
 .comment-card,
 .notification-card {
@@ -6402,7 +6483,35 @@ img {
 
 .home-hero {
   border-radius: var(--radius-lg);
-  min-height: 360px;
+}
+
+@media (min-width: 881px) {
+  .home-hero {
+    min-height: 360px;
+  }
+}
+
+.home-hero .eyebrow,
+.dashboard-greeting .eyebrow {
+  color: var(--color-ticket-gold);
+}
+
+.home-hero .btn-primary,
+.dashboard-greeting .btn-primary {
+  background: var(--color-ticket-gold);
+  border-color: var(--color-ticket-gold);
+  color: var(--color-night-navy);
+}
+
+.home-hero .btn-primary:hover:not(:disabled),
+.dashboard-greeting .btn-primary:hover:not(:disabled) {
+  background: #f4b554;
+  border-color: #f4b554;
+}
+
+.home-hero .btn-ghost {
+  border-color: rgba(255, 255, 255, 0.45);
+  color: var(--color-white);
 }
 
 .home-feature-card {
@@ -6524,7 +6633,6 @@ img {
   padding: 4px 6px;
 }
 
-.dashboard-greeting,
 .dashboard-game-row {
   border: 1px solid rgba(23, 32, 51, 0.08);
   box-shadow: 0 8px 20px rgba(23, 32, 51, 0.04);
