@@ -39,7 +39,7 @@
 - 인증 세션: Zustand store로 token/user 상태 공유
 - 폼 상태와 검증: React Hook Form + Zod를 우선 로그인/게시판 폼에 적용
 - 날짜 포맷: date-fns 기반 공통 유틸 사용
-- 영속 저장: access token은 localStorage 사용
+- 인증 쿠키: access token은 API가 httpOnly cookie로 설정하며 프론트 JS 저장소에 보관하지 않음
 - 캘린더 UI 상태: 보기/경기 필터/기록 필터는 Zustand store로 공유
 - 화면 전용 상태: 폼 입력, 업로드 미리보기, UI open/close는 컴포넌트 state 사용
 

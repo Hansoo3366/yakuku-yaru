@@ -1,3 +1,5 @@
+import { shouldSendAuthorizationHeader } from '@/lib/auth';
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api';
 const ASSET_URL = API_URL.replace(/\/api\/?$/, '');
 
@@ -27,7 +29,7 @@ export async function request<T>(path: string, options: RequestOptions = {}) {
 
   headers.set('Content-Type', 'application/json');
 
-  if (options.token) {
+  if (shouldSendAuthorizationHeader(options.token)) {
     headers.set('Authorization', `Bearer ${options.token}`);
   }
 
@@ -35,6 +37,7 @@ export async function request<T>(path: string, options: RequestOptions = {}) {
     method: options.method ?? 'GET',
     headers,
     body: options.body ? JSON.stringify(options.body) : undefined,
+    credentials: 'include',
   });
 
   if (!response.ok) {

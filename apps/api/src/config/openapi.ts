@@ -684,7 +684,6 @@ export const openApiDocument = {
       AuthResponse: {
         type: 'object',
         properties: {
-          accessToken: { type: 'string' },
           user: { $ref: '#/components/schemas/User' },
         },
       },

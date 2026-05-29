@@ -6,7 +6,7 @@
 
 ### JWT 인증 구현
 
-로그인 성공 시 백엔드가 access token을 발급합니다.
+로그인 성공 시 백엔드가 access token을 발급하고 httpOnly cookie로 내려줍니다.
 
 토큰 payload:
 
@@ -17,13 +17,13 @@
 }
 ```
 
-토큰에는 민감한 정보나 비밀번호를 넣지 않습니다. API 요청 시 프론트엔드는 아래 헤더로 토큰을 전달합니다.
+토큰에는 민감한 정보나 비밀번호를 넣지 않습니다. API 요청 시 브라우저가 쿠키를 함께 보내고, 프론트엔드는 토큰 값을 직접 읽거나 저장하지 않습니다.
 
 ```txt
-Authorization: Bearer <accessToken>
+Cookie: yakuku_session=<httpOnly JWT>
 ```
 
-백엔드의 `authenticate` middleware가 토큰을 검증하고 `req.user`에 사용자 정보를 넣습니다.
+백엔드의 `authenticate` middleware가 쿠키 토큰을 검증하고 `req.user`에 사용자 정보를 넣습니다. 기존 Bearer 헤더도 호환 경로로 유지합니다.
 
 ### 비밀번호 저장
 
@@ -79,11 +79,11 @@ Authorization: Bearer <accessToken>
 
 ### 상태 관리
 
-현재는 TanStack Query, Zustand, React state, localStorage를 역할별로 나눠 사용합니다.
+현재는 TanStack Query, Zustand, React state를 역할별로 나눠 사용합니다.
 
 관리 대상:
 
-- access token: localStorage
+- access token: API가 httpOnly cookie로 설정
 - 로그인 사용자 정보: Zustand store + TanStack Query의 `/auth/me` 캐시
 - 팀/경기/직관 기록/순위/게시글/댓글: TanStack Query 캐시
 - 캘린더 보기/필터: Zustand store
@@ -94,9 +94,9 @@ Authorization: Bearer <accessToken>
 
 ### 로그인 상태 유지
 
-로그인 성공 시 access token을 localStorage에 저장합니다.
+로그인 성공 시 API가 httpOnly cookie로 access token을 설정합니다.
 
-새로고침 후에는 앱 provider가 localStorage의 token을 Zustand에 복원하고, `/auth/me`는 TanStack Query 캐시를 통해 공유합니다.
+새로고침 후에는 앱 provider가 쿠키 세션 확인용 메모리 토큰을 Zustand에 세팅하고, `/auth/me`는 쿠키 인증과 TanStack Query 캐시를 통해 공유합니다.
 
 토큰이 없거나 `/auth/me`가 실패하면 로그인 페이지로 이동합니다.
 

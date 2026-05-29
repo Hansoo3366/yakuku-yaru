@@ -2,14 +2,17 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { AUTH_LOGOUT_EVENT, getAccessToken } from '@/lib/auth';
+import { AUTH_LOGOUT_EVENT } from '@/lib/auth';
+import { useAuthStore } from '@/lib/auth-store';
 
 export function useAuthGuard(redirectTo = '/') {
   const router = useRouter();
+  const hasHydrated = useAuthStore((state) => state.hasHydrated);
+  const token = useAuthStore((state) => state.token);
 
   useEffect(() => {
     function redirectIfGuest() {
-      if (!getAccessToken()) {
+      if (hasHydrated && !token) {
         router.replace(redirectTo);
       }
     }
@@ -17,5 +20,5 @@ export function useAuthGuard(redirectTo = '/') {
     redirectIfGuest();
     window.addEventListener(AUTH_LOGOUT_EVENT, redirectIfGuest);
     return () => window.removeEventListener(AUTH_LOGOUT_EVENT, redirectIfGuest);
-  }, [router, redirectTo]);
+  }, [hasHydrated, redirectTo, router, token]);
 }

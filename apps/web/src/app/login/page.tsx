@@ -7,6 +7,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { ApiError } from '@/lib/api';
+import { COOKIE_SESSION_TOKEN } from '@/lib/auth';
 import { login } from '@/lib/auth-api';
 import { PasswordField } from '@/components/PasswordField';
 import {
@@ -38,8 +39,8 @@ export default function LoginPage() {
 
     try {
       const response = await login(values);
-      setSession({ token: response.accessToken, user: response.user });
-      queryClient.setQueryData(queryKeys.me(response.accessToken), {
+      setSession({ user: response.user });
+      queryClient.setQueryData(queryKeys.me(COOKIE_SESSION_TOKEN), {
         user: response.user,
       });
       router.push('/calendar');

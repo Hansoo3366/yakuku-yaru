@@ -1,4 +1,5 @@
 import { request } from './api';
+import { shouldSendAuthorizationHeader } from './auth';
 
 export type AttendanceRecord = {
   id: number;
@@ -230,10 +231,11 @@ export async function uploadAttendancePhoto(
     `${API_URL}/attendance-records/${recordId}/photo`,
     {
       method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
+      headers: shouldSendAuthorizationHeader(token)
+        ? { Authorization: `Bearer ${token}` }
+        : undefined,
       body: formData,
+      credentials: 'include',
     },
   );
 

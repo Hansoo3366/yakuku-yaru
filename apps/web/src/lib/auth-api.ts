@@ -1,8 +1,7 @@
 import { request } from './api';
-import type { PublicUser } from './auth';
+import { shouldSendAuthorizationHeader, type PublicUser } from './auth';
 
 export type AuthResponse = {
-  accessToken: string;
   user: PublicUser;
 };
 
@@ -25,6 +24,12 @@ export function login(input: { email: string; password: string }) {
   return request<AuthResponse>('/auth/login', {
     method: 'POST',
     body: input,
+  });
+}
+
+export function logout() {
+  return request<void>('/auth/logout', {
+    method: 'POST',
   });
 }
 
@@ -161,10 +166,11 @@ export async function uploadProfilePhoto(photo: File, token: string) {
 
   const response = await fetch(`${API_URL}/users/me/profile-photo`, {
     method: 'POST',
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
+    headers: shouldSendAuthorizationHeader(token)
+      ? { Authorization: `Bearer ${token}` }
+      : undefined,
     body: formData,
+    credentials: 'include',
   });
 
   if (!response.ok) {

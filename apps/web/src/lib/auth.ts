@@ -2,9 +2,8 @@
 
 import { applyTeamTheme } from '@/lib/team-theme';
 
-const ACCESS_TOKEN_KEY = 'yakuku.accessToken';
-
 export const AUTH_LOGOUT_EVENT = 'yakuku:auth:logout';
+export const COOKIE_SESSION_TOKEN = 'cookie-session';
 
 export type PublicUser = {
   id: number;
@@ -17,20 +16,28 @@ export type PublicUser = {
   emailVerifiedAt: string | null;
 };
 
-export function getAccessToken() {
-  if (typeof window === 'undefined') {
-    return null;
-  }
+let currentSessionToken: string | null = null;
 
-  return window.localStorage.getItem(ACCESS_TOKEN_KEY);
+export function clearLegacyStoredAccessToken() {
+  if (typeof window !== 'undefined') {
+    window.localStorage.removeItem('yakuku.accessToken');
+  }
 }
 
-export function setAccessToken(token: string) {
-  window.localStorage.setItem(ACCESS_TOKEN_KEY, token);
+export function getAccessToken() {
+  return currentSessionToken;
+}
+
+export function setCookieSessionToken() {
+  currentSessionToken = COOKIE_SESSION_TOKEN;
 }
 
 export function clearAccessToken() {
-  window.localStorage.removeItem(ACCESS_TOKEN_KEY);
+  currentSessionToken = null;
+}
+
+export function shouldSendAuthorizationHeader(token: string | null | undefined) {
+  return Boolean(token && token !== COOKIE_SESSION_TOKEN);
 }
 
 export function setRootAuthState(state: 'authed' | 'guest') {

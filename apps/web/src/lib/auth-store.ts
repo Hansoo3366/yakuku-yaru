@@ -3,12 +3,14 @@
 import { create } from 'zustand';
 import {
   AUTH_LOGOUT_EVENT,
+  COOKIE_SESSION_TOKEN,
   clearAccessToken,
-  getAccessToken,
-  setAccessToken,
+  clearLegacyStoredAccessToken,
+  setCookieSessionToken,
   setRootAuthState,
   type PublicUser,
 } from '@/lib/auth';
+import { logout } from '@/lib/auth-api';
 import { applyTeamTheme } from '@/lib/team-theme';
 
 type AuthState = {
@@ -16,7 +18,7 @@ type AuthState = {
   user: PublicUser | null;
   hasHydrated: boolean;
   hydrate: () => void;
-  setSession: (input: { token: string; user?: PublicUser | null }) => void;
+  setSession: (input: { token?: string; user?: PublicUser | null }) => void;
   setUser: (user: PublicUser | null) => void;
   clearSession: () => void;
 };
@@ -26,19 +28,20 @@ export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   hasHydrated: false,
   hydrate: () => {
-    const token = getAccessToken();
-    setRootAuthState(token ? 'authed' : 'guest');
-    set({ token, hasHydrated: true });
+    clearLegacyStoredAccessToken();
+    setCookieSessionToken();
+    set({ token: COOKIE_SESSION_TOKEN, hasHydrated: true });
   },
-  setSession: ({ token, user }) => {
-    setAccessToken(token);
+  setSession: ({ user }) => {
+    setCookieSessionToken();
     setRootAuthState('authed');
-    set({ token, user: user ?? null, hasHydrated: true });
+    set({ token: COOKIE_SESSION_TOKEN, user: user ?? null, hasHydrated: true });
   },
   setUser: (user) => {
     set({ user });
   },
   clearSession: () => {
+    void logout().catch(() => undefined);
     clearAccessToken();
     applyTeamTheme(null);
     setRootAuthState('guest');

@@ -35,6 +35,7 @@ import {
   validateNickname,
   validatePassword,
 } from '../../utils/user-input.js';
+import { clearAuthCookie, setAuthCookie } from './auth-cookie.js';
 import { findTeamById } from '../teams/team.repository.js';
 
 export const authRouter = Router();
@@ -224,13 +225,19 @@ authRouter.post('/login', loginRateLimit, async (req, res, next) => {
       email: user.email,
     });
 
+    setAuthCookie(res, accessToken);
+
     res.json({
-      accessToken,
       user: toPublicUser(user),
     });
   } catch (error) {
     next(error);
   }
+});
+
+authRouter.post('/logout', (_req, res) => {
+  clearAuthCookie(res);
+  res.status(204).send();
 });
 
 authRouter.get('/me', authenticate, async (req, res, next) => {

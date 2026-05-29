@@ -9,8 +9,7 @@ const bootScript = `
 (function () {
   try {
     var root = document.documentElement;
-    var token = window.localStorage.getItem('yakuku.accessToken');
-    root.dataset.authState = token ? 'authed' : 'guest';
+    root.dataset.authState = 'guest';
     var teamColor = window.localStorage.getItem('yakuku.teamColor');
     if (teamColor) {
       root.style.setProperty('--team-color', teamColor);
@@ -58,8 +57,8 @@ export default function RootLayout({
       <head>
         <script
           dangerouslySetInnerHTML={{ __html: bootScript }}
-          // 첫 paint 전에 localStorage 기반으로 auth 상태/팀 컬러를 root에 미리 세팅하여
-          // 로그인 버튼 / 디폴트 테마 색이 잠깐 보였다 사라지는 깜빡임을 방지합니다.
+          // 첫 paint 전에 팀 컬러를 root에 미리 세팅하여
+          // 디폴트 테마 색이 잠깐 보였다 사라지는 깜빡임을 방지합니다.
         />
       </head>
       <body>

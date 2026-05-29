@@ -2,7 +2,7 @@
 
 Base URL: `/api`
 
-인증이 필요한 API는 `Authorization: Bearer <accessToken>` 헤더를 사용합니다. 상세 스키마는 Swagger (`/api-docs`)를 우선 기준으로 합니다.
+인증이 필요한 API는 로그인 시 발급되는 httpOnly cookie(`yakuku_session`)를 사용합니다. 기존 `Authorization: Bearer <accessToken>` 헤더도 호환됩니다. 상세 스키마는 Swagger (`/api-docs`)를 우선 기준으로 합니다.
 
 ## Auth
 

@@ -1,6 +1,10 @@
 import type { RequestHandler } from 'express';
 import { verifyAccessToken } from '../utils/jwt.js';
 import { HttpError } from '../utils/http-error.js';
+import {
+  AUTH_COOKIE_NAME,
+  readCookieHeader,
+} from '../modules/auth/auth-cookie.js';
 
 declare global {
   // eslint-disable-next-line @typescript-eslint/no-namespace
@@ -17,14 +21,16 @@ declare global {
 export const authenticate: RequestHandler = (req, _res, next) => {
   const authorization = req.header('authorization');
   const [scheme, token] = authorization?.split(' ') ?? [];
+  const cookieToken = readCookieHeader(req.header('cookie'), AUTH_COOKIE_NAME);
+  const accessToken = scheme === 'Bearer' && token ? token : cookieToken;
 
-  if (scheme !== 'Bearer' || !token) {
+  if (!accessToken) {
     next(new HttpError(401, 'AUTH_REQUIRED', '로그인이 필요합니다.'));
     return;
   }
 
   try {
-    const payload = verifyAccessToken(token);
+    const payload = verifyAccessToken(accessToken);
 
     req.user = {
       id: payload.userId,
