@@ -3,7 +3,7 @@
 import './calendar.css';
 
 import { useRouter } from 'next/navigation';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { fetchMe } from '@/lib/auth-api';
 import { clearAccessToken, getAccessToken, type PublicUser } from '@/lib/auth';
 import { useAuthGuard } from '@/lib/use-auth-guard';
@@ -89,6 +89,22 @@ function readPersistedScheduleFilter(): ScheduleFilter | null {
   }
 
   return null;
+}
+
+function resolveScheduleFilter(
+  favoriteTeamId: number | null | undefined,
+): ScheduleFilter {
+  const persisted = readPersistedScheduleFilter();
+
+  if (persisted !== null) {
+    if (persisted !== 'all' && !favoriteTeamId) {
+      return 'all';
+    }
+
+    return persisted;
+  }
+
+  return favoriteTeamId ? 'favorite' : 'all';
 }
 
 function readPersistedWatchTypeFilter(): WatchTypeFilter {
@@ -178,9 +194,6 @@ export default function CalendarPage() {
   const router = useRouter();
   useAuthGuard();
   const [viewMode, setViewMode] = useState<ViewMode>(() => readPersistedViewMode());
-  const [persistedScheduleFilter] = useState<ScheduleFilter | null>(() =>
-    readPersistedScheduleFilter(),
-  );
   const [anchorDate, setAnchorDate] = useState(() =>
     getCalendarViewAnchorDate(readPersistedViewMode(), new Date()),
   );
@@ -198,9 +211,8 @@ export default function CalendarPage() {
   const [teamStandings, setTeamStandings] =
     useState<TeamStandingsResponse | null>(null);
   const [scheduleFilter, setScheduleFilter] = useState<ScheduleFilter>(
-    () => persistedScheduleFilter ?? 'all',
+    () => readPersistedScheduleFilter() ?? 'all',
   );
-  const hasInitializedScheduleFilter = useRef(false);
   const [watchTypeFilter, setWatchTypeFilter] = useState<WatchTypeFilter>(() =>
     readPersistedWatchTypeFilter(),
   );
@@ -221,22 +233,6 @@ export default function CalendarPage() {
   );
   const statsYear = anchorDate.getFullYear();
   const yearRange = useMemo(() => getYearRange(statsYear), [statsYear]);
-
-  useEffect(() => {
-    if (!user || hasInitializedScheduleFilter.current) {
-      return;
-    }
-
-    hasInitializedScheduleFilter.current = true;
-    if (!user.favoriteTeamId) {
-      setScheduleFilter('all');
-      return;
-    }
-
-    if (persistedScheduleFilter === null) {
-      setScheduleFilter('favorite');
-    }
-  }, [user, persistedScheduleFilter]);
 
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -278,11 +274,14 @@ export default function CalendarPage() {
         setTeams(teamsResponse.items);
 
         const favoriteTeamId = meResponse.user.favoriteTeamId;
+        const activeScheduleFilter = resolveScheduleFilter(favoriteTeamId);
+        setScheduleFilter(activeScheduleFilter);
+
         const [gamesResponse, attendanceResponse] = await Promise.all([
           listGames({
             ...range,
             teamId:
-              scheduleFilter !== 'all'
+              activeScheduleFilter !== 'all'
                 ? (favoriteTeamId ?? undefined)
                 : undefined,
           }),
@@ -292,7 +291,7 @@ export default function CalendarPage() {
         if (!isMounted) return null;
 
         const nextGames = gamesResponse.items.filter((game) =>
-          isGameInScheduleFilter(game, scheduleFilter, favoriteTeamId),
+          isGameInScheduleFilter(game, activeScheduleFilter, favoriteTeamId),
         );
 
         return { nextGames, attendanceResponse };
