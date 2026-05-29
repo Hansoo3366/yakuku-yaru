@@ -10,6 +10,7 @@ const KBO_LINEUP_ANALYSIS_URL =
 export type KboGameCenterGame = {
   G_ID: string;
   G_DT: string;
+  G_TM?: string | null;
   AWAY_ID: string;
   HOME_ID: string;
   AWAY_NM: string;

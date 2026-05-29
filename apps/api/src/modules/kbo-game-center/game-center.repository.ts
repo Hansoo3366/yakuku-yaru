@@ -103,21 +103,36 @@ export async function findKboGameIdForGameCenterGame(
 
   const awayTeamId = teamIdsByCode.get(game.AWAY_ID);
   const homeTeamId = teamIdsByCode.get(game.HOME_ID);
+
+  if (!awayTeamId || !homeTeamId) {
+    return null;
+  }
+
   const gameDate = formatGameCenterGameDate(game.G_DT, game.G_TM);
 
-  if (!awayTeamId || !homeTeamId || !gameDate) {
+  if (!/^\d{8}$/.test(game.G_DT)) {
     return null;
   }
 
   const [rows] = await db.query<GameIdExternalRow[]>(
-    `SELECT id, external_id
-     FROM games
-     WHERE external_source = ?
-       AND game_date = ?
-       AND home_team_id = ?
-       AND away_team_id = ?
-     LIMIT 1`,
-    [KBO_EXTERNAL_SOURCE, gameDate, homeTeamId, awayTeamId],
+    gameDate
+      ? `SELECT id, external_id
+         FROM games
+         WHERE external_source = ?
+           AND game_date = ?
+           AND home_team_id = ?
+           AND away_team_id = ?
+         LIMIT 1`
+      : `SELECT id, external_id
+         FROM games
+         WHERE external_source = ?
+           AND DATE_FORMAT(game_date, '%Y%m%d') = ?
+           AND home_team_id = ?
+           AND away_team_id = ?
+         LIMIT 1`,
+    gameDate
+      ? [KBO_EXTERNAL_SOURCE, gameDate, homeTeamId, awayTeamId]
+      : [KBO_EXTERNAL_SOURCE, game.G_DT, homeTeamId, awayTeamId],
   );
 
   const matched = rows[0];
