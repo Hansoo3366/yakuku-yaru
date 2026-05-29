@@ -86,7 +86,8 @@ Authorization: Bearer <accessToken>
 - access token: localStorage
 - 로그인 사용자 정보: Zustand store + TanStack Query의 `/auth/me` 캐시
 - 팀/경기/직관 기록/순위/게시글/댓글: TanStack Query 캐시
-- 캘린더 월/필터: 페이지 state + localStorage
+- 캘린더 보기/필터: Zustand store
+- 캘린더 기준 월/주: 페이지 state
 - 사진 미리보기: object URL state
 
 같은 API를 여러 컴포넌트가 호출하는 문제를 줄이기 위해 공통 query hook을 `src/lib/queries.ts`에 모았습니다.

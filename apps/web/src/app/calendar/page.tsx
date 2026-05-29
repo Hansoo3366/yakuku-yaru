@@ -48,6 +48,12 @@ import {
 import { useMediaQuery } from '@/lib/use-media-query';
 import { useAuthStore } from '@/lib/auth-store';
 import {
+  type CalendarScheduleFilter,
+  type CalendarViewMode,
+  type CalendarWatchTypeFilter,
+  useCalendarUiStore,
+} from '@/lib/calendar-ui-store';
+import {
   useAttendanceRecordsQuery,
   useGamesQuery,
   useMeQuery,
@@ -57,59 +63,10 @@ import {
 
 const weekdayLabels = ['일', '월', '화', '수', '목', '금', '토'];
 
-type ViewMode = 'month' | 'week';
-type ScheduleFilter = 'favorite' | 'favorite-home' | 'all';
-type WatchTypeFilter = 'all' | 'stadium' | 'home';
-
-const CALENDAR_VIEW_MODE_KEY = 'calendar:viewMode';
-const CALENDAR_SCHEDULE_FILTER_KEY = 'calendar:scheduleFilter';
-const CALENDAR_WATCH_FILTER_KEY = 'calendar:watchTypeFilter';
-
-function readPersistedViewMode(): ViewMode {
-  if (typeof window === 'undefined') {
-    return 'month';
-  }
-
-  const value = window.localStorage.getItem(CALENDAR_VIEW_MODE_KEY);
-  return value === 'week' ? 'week' : 'month';
-}
-
-function readPersistedScheduleFilter(): ScheduleFilter | null {
-  if (typeof window === 'undefined') {
-    return null;
-  }
-
-  const value = window.localStorage.getItem(CALENDAR_SCHEDULE_FILTER_KEY);
-  if (value === 'favorite' || value === 'favorite-home' || value === 'all') {
-    return value;
-  }
-
-  return null;
-}
-
 function resolveScheduleFilter(
   favoriteTeamId: number | null | undefined,
-): ScheduleFilter {
-  const persisted = readPersistedScheduleFilter();
-
-  if (persisted !== null) {
-    if (persisted !== 'all' && !favoriteTeamId) {
-      return 'all';
-    }
-
-    return persisted;
-  }
-
+): CalendarScheduleFilter {
   return favoriteTeamId ? 'favorite' : 'all';
-}
-
-function readPersistedWatchTypeFilter(): WatchTypeFilter {
-  if (typeof window === 'undefined') {
-    return 'all';
-  }
-
-  const value = window.localStorage.getItem(CALENDAR_WATCH_FILTER_KEY);
-  return value === 'stadium' || value === 'home' ? value : 'all';
 }
 
 function gameFromAttendanceRecord(
@@ -141,7 +98,7 @@ function gameFromAttendanceRecord(
   };
 }
 
-function shiftAnchor(date: Date, viewMode: ViewMode, amount: number) {
+function shiftAnchor(date: Date, viewMode: CalendarViewMode, amount: number) {
   if (viewMode === 'month') {
     return new Date(date.getFullYear(), date.getMonth() + amount, 1);
   }
@@ -189,17 +146,26 @@ function getStreakKind(value: string | null | undefined) {
 export default function CalendarPage() {
   const router = useRouter();
   useAuthGuard();
-  const [viewMode, setViewMode] = useState<ViewMode>(() => readPersistedViewMode());
+  const viewMode = useCalendarUiStore((state) => state.viewMode);
+  const setViewMode = useCalendarUiStore((state) => state.setViewMode);
+  const scheduleFilter = useCalendarUiStore((state) => state.scheduleFilter);
+  const setScheduleFilter = useCalendarUiStore(
+    (state) => state.setScheduleFilter,
+  );
+  const watchTypeFilter = useCalendarUiStore((state) => state.watchTypeFilter);
+  const setWatchTypeFilter = useCalendarUiStore(
+    (state) => state.setWatchTypeFilter,
+  );
+  const hasAppliedDefaultScheduleFilter = useCalendarUiStore(
+    (state) => state.hasAppliedDefaultScheduleFilter,
+  );
+  const markDefaultScheduleFilterApplied = useCalendarUiStore(
+    (state) => state.markDefaultScheduleFilterApplied,
+  );
   const [anchorDate, setAnchorDate] = useState(() =>
-    getCalendarViewAnchorDate(readPersistedViewMode(), new Date()),
+    getCalendarViewAnchorDate(viewMode, new Date()),
   );
   const [todayJumpTick, setTodayJumpTick] = useState(0);
-  const [scheduleFilter, setScheduleFilter] = useState<ScheduleFilter>(
-    () => readPersistedScheduleFilter() ?? 'all',
-  );
-  const [watchTypeFilter, setWatchTypeFilter] = useState<WatchTypeFilter>(() =>
-    readPersistedWatchTypeFilter(),
-  );
   const [agendaFocusDateKey, setAgendaFocusDateKey] = useState<string | null>(
     null,
   );
@@ -224,27 +190,6 @@ export default function CalendarPage() {
   const yearRange = useMemo(() => getYearRange(statsYear), [statsYear]);
 
   useEffect(() => {
-    if (typeof window === 'undefined') {
-      return;
-    }
-    window.localStorage.setItem(CALENDAR_VIEW_MODE_KEY, viewMode);
-  }, [viewMode]);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') {
-      return;
-    }
-    window.localStorage.setItem(CALENDAR_SCHEDULE_FILTER_KEY, scheduleFilter);
-  }, [scheduleFilter]);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') {
-      return;
-    }
-    window.localStorage.setItem(CALENDAR_WATCH_FILTER_KEY, watchTypeFilter);
-  }, [watchTypeFilter]);
-
-  useEffect(() => {
     if (meQuery.isError) {
       clearSession();
       router.replace('/');
@@ -252,10 +197,18 @@ export default function CalendarPage() {
   }, [clearSession, meQuery.isError, router]);
 
   useEffect(() => {
-    if (meQuery.data?.user) {
-      setScheduleFilter(resolveScheduleFilter(meQuery.data.user.favoriteTeamId));
+    if (!meQuery.data?.user || hasAppliedDefaultScheduleFilter) {
+      return;
     }
-  }, [meQuery.data?.user]);
+
+    setScheduleFilter(resolveScheduleFilter(meQuery.data.user.favoriteTeamId));
+    markDefaultScheduleFilterApplied();
+  }, [
+    hasAppliedDefaultScheduleFilter,
+    markDefaultScheduleFilterApplied,
+    meQuery.data?.user,
+    setScheduleFilter,
+  ]);
 
   const activeTeamId =
     scheduleFilter !== 'all' ? (favoriteTeamId ?? undefined) : undefined;
@@ -480,13 +433,15 @@ export default function CalendarPage() {
 
   const favoriteTeam = teams.find((team) => team.id === user?.favoriteTeamId);
 
-  function handleScheduleFilterChange(
-    filter: ScheduleFilter,
-  ) {
+  function handleScheduleFilterChange(filter: CalendarScheduleFilter) {
     setScheduleFilter(filter);
     if (filter === 'all') {
       setWatchTypeFilter('all');
     }
+  }
+
+  function handleWatchTypeFilterChange(filter: CalendarWatchTypeFilter) {
+    setWatchTypeFilter(filter);
   }
 
   function renderDayCell(
@@ -740,7 +695,7 @@ export default function CalendarPage() {
                 setViewMode(mode);
                 setAnchorDate(getCalendarViewAnchorDate(mode, anchorDate));
               }}
-              onWatchTypeFilterChange={setWatchTypeFilter}
+              onWatchTypeFilterChange={handleWatchTypeFilterChange}
               scheduleFilter={scheduleFilter}
               viewMode={viewMode}
               watchTypeFilter={watchTypeFilter}
@@ -816,7 +771,7 @@ export default function CalendarPage() {
                   setViewMode(mode);
                   setAnchorDate(getCalendarViewAnchorDate(mode, anchorDate));
                 }}
-                onWatchTypeFilterChange={setWatchTypeFilter}
+                onWatchTypeFilterChange={handleWatchTypeFilterChange}
                 scheduleFilter={scheduleFilter}
                 viewMode={viewMode}
                 watchTypeFilter={watchTypeFilter}
