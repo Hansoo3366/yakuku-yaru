@@ -212,7 +212,7 @@ img {
 .page-shell {
   container-type: inline-size;
   display: grid;
-  gap: var(--space-6);
+  gap: var(--space-4);
   margin: 0 auto;
   max-width: var(--container-max);
   padding: var(--space-6) var(--space-4) var(--space-7);
