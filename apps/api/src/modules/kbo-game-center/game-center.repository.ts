@@ -1,7 +1,11 @@
 import type { ResultSetHeader, RowDataPacket } from 'mysql2';
 import { db } from '../../config/database.js';
 import { KBO_EXTERNAL_SOURCE } from '../kbo-schedule/kbo-game.repository.js';
-import type { KboLineupPlayer, KboPitcherAnalysis } from './kbo-game-center.client.js';
+import type {
+  KboGameCenterGame,
+  KboLineupPlayer,
+  KboPitcherAnalysis,
+} from './kbo-game-center.client.js';
 
 const KBO_TEAM_CODE_TO_SHORT_NAME: Record<string, string> = {
   SS: '삼성',
@@ -22,6 +26,11 @@ type DateRow = RowDataPacket & {
 
 type IdRow = RowDataPacket & {
   id: number;
+};
+
+type GameIdExternalRow = RowDataPacket & {
+  id: number;
+  external_id: string;
 };
 
 type TeamIdRow = RowDataPacket & {
@@ -57,6 +66,76 @@ export async function findKboGameIdByExternalId(externalId: string) {
   );
 
   return rows[0]?.id ?? null;
+}
+
+export function formatGameCenterGameDate(
+  gameDateYmd: string,
+  gameTime: string | null | undefined,
+) {
+  if (!/^\d{8}$/.test(gameDateYmd)) {
+    return null;
+  }
+
+  const year = gameDateYmd.slice(0, 4);
+  const month = gameDateYmd.slice(4, 6);
+  const day = gameDateYmd.slice(6, 8);
+  const timeMatch = gameTime?.trim().match(/^(\d{1,2}):(\d{2})$/);
+
+  if (!timeMatch) {
+    return null;
+  }
+
+  const hour = String(timeMatch[1]).padStart(2, '0');
+  const minute = timeMatch[2];
+
+  return `${year}-${month}-${day} ${hour}:${minute}:00`;
+}
+
+export async function findKboGameIdForGameCenterGame(
+  game: Pick<KboGameCenterGame, 'G_ID' | 'G_DT' | 'G_TM' | 'AWAY_ID' | 'HOME_ID'>,
+  teamIdsByCode: Map<string, number>,
+) {
+  const matchedByExternalId = await findKboGameIdByExternalId(game.G_ID);
+
+  if (matchedByExternalId) {
+    return matchedByExternalId;
+  }
+
+  const awayTeamId = teamIdsByCode.get(game.AWAY_ID);
+  const homeTeamId = teamIdsByCode.get(game.HOME_ID);
+  const gameDate = formatGameCenterGameDate(game.G_DT, game.G_TM);
+
+  if (!awayTeamId || !homeTeamId || !gameDate) {
+    return null;
+  }
+
+  const [rows] = await db.query<GameIdExternalRow[]>(
+    `SELECT id, external_id
+     FROM games
+     WHERE external_source = ?
+       AND game_date = ?
+       AND home_team_id = ?
+       AND away_team_id = ?
+     LIMIT 1`,
+    [KBO_EXTERNAL_SOURCE, gameDate, homeTeamId, awayTeamId],
+  );
+
+  const matched = rows[0];
+
+  if (!matched) {
+    return null;
+  }
+
+  if (matched.external_id !== game.G_ID) {
+    await db.execute(
+      `UPDATE games
+       SET external_id = ?
+       WHERE id = ?`,
+      [game.G_ID, matched.id],
+    );
+  }
+
+  return matched.id;
 }
 
 export async function listKboTeamIdsByCode() {

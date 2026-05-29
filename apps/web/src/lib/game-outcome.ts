@@ -21,6 +21,9 @@ function normalizeTeamId(value: number) {
 }
 
 const TYPICAL_GAME_MS = 2.5 * 60 * 60 * 1000;
+const LINEUP_POLL_BEFORE_MS = 4 * 60 * 60 * 1000;
+const LINEUP_POLL_AFTER_MS = 3 * 60 * 60 * 1000;
+const LINEUP_POLL_INTERVAL_MS = 60 * 1000;
 
 /** 개시 시각이 지났거나 스코어가 있으면 경기 시작 후로 봄 */
 export function hasGameStarted(
@@ -48,6 +51,34 @@ export function hasGameStarted(
 
   return startedAt <= Date.now();
 }
+
+/** 경기 전후 라인업 갱신 구간(개시 4시간 전 ~ 3시간 후)이면 주기적으로 다시 조회 */
+export function shouldPollGameLineup(
+  game: Pick<GameLike, 'status'> & { gameDate?: string | Date },
+) {
+  if (game.status === 'cancelled' || isGameFinished(game)) {
+    return false;
+  }
+
+  if (!game.gameDate) {
+    return false;
+  }
+
+  const startedAt = new Date(game.gameDate).getTime();
+
+  if (Number.isNaN(startedAt)) {
+    return false;
+  }
+
+  const now = Date.now();
+
+  return (
+    now >= startedAt - LINEUP_POLL_BEFORE_MS &&
+    now <= startedAt + LINEUP_POLL_AFTER_MS
+  );
+}
+
+export { LINEUP_POLL_INTERVAL_MS };
 
 /** DB가 일찍 finished로 잡혀도, 개시 후 2.5시간 전이면 경기 중·예정으로 봄 */
 export function isGameFinished(

@@ -20,7 +20,12 @@ import {
   getGameStatusLabel,
   getGameStatusTone,
 } from '@/lib/game-status';
-import { hasGameStarted, isGameFinished } from '@/lib/game-outcome';
+import {
+  hasGameStarted,
+  isGameFinished,
+  LINEUP_POLL_INTERVAL_MS,
+  shouldPollGameLineup,
+} from '@/lib/game-outcome';
 import { canWriteAttendanceRecord, isGameCancelled } from '@/lib/attendance-game';
 import { getAttendanceTicketView } from '@/lib/attendance-score';
 import { getAssetUrl } from '@/lib/api';
@@ -150,9 +155,11 @@ function StarterPitcherCard({
 }
 
 function LineupPanel({
+  gameStarted,
   players,
   team,
 }: {
+  gameStarted: boolean;
   players: LineupPlayer[];
   team: Game['homeTeam'];
 }) {
@@ -196,8 +203,12 @@ function LineupPanel({
         </ol>
       ) : (
         <div className="lineup-empty">
-          <strong>라인업 발표 전</strong>
-          <p>동기화 후 발표된 라인업이 여기에 표시됩니다.</p>
+          <strong>라인업 정보 없음</strong>
+          <p>
+            {gameStarted
+              ? '동기화가 끝나면 공식 라인업이 표시됩니다. 잠시 후 새로고침해 주세요.'
+              : '데이터 동기화 후 라인업이 여기에 표시됩니다.'}
+          </p>
         </div>
       )}
     </div>
@@ -314,7 +325,17 @@ export default function GameDetailPage() {
   >(null);
 
   useEffect(() => {
-    fetchGame(gameId).then((response) => setGame(response.game));
+    let cancelled = false;
+
+    function loadGame() {
+      return fetchGame(gameId).then((response) => {
+        if (!cancelled) {
+          setGame(response.game);
+        }
+      });
+    }
+
+    void loadGame();
 
     const token = getAccessToken();
     if (!token) {
@@ -336,7 +357,25 @@ export default function GameDetailPage() {
           );
         });
       });
+
+    return () => {
+      cancelled = true;
+    };
   }, [gameId]);
+
+  useEffect(() => {
+    if (!game || !shouldPollGameLineup(game)) {
+      return;
+    }
+
+    const intervalId = window.setInterval(() => {
+      void fetchGame(gameId).then((response) => setGame(response.game));
+    }, LINEUP_POLL_INTERVAL_MS);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [gameId, game?.gameDate, game?.status]);
 
   if (!game) {
     return (
@@ -470,14 +509,29 @@ export default function GameDetailPage() {
         </div>
         {showLineupPredictedNotice ? (
           <p className="lineup-notice" role="status">
-            <strong>공식 라인업 발표 전입니다.</strong>
-            KBO 게임센터 분석 기준 예상 타순이며, 실제 출전 순서와 다를 수
-            있습니다.
+            <strong>예상 라인업입니다.</strong>
+            KBO 게임센터의 최근 라인업 기준이며, 공식 타순 발표 후 자동으로
+            갱신됩니다.
+          </p>
+        ) : null}
+        {!showLineupPredictedNotice &&
+        hasLineup &&
+        game.lineupConfirmed === true ? (
+          <p className="lineup-notice lineup-notice--confirmed" role="status">
+            <strong>공식 라인업입니다.</strong>
           </p>
         ) : null}
         <div className="lineup-grid">
-          <LineupPanel players={game.lineups.away} team={game.awayTeam} />
-          <LineupPanel players={game.lineups.home} team={game.homeTeam} />
+          <LineupPanel
+            gameStarted={hasGameStarted(game)}
+            players={game.lineups.away}
+            team={game.awayTeam}
+          />
+          <LineupPanel
+            gameStarted={hasGameStarted(game)}
+            players={game.lineups.home}
+            team={game.homeTeam}
+          />
         </div>
       </section>
 

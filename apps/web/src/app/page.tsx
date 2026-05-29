@@ -175,8 +175,8 @@ export default function HomePage() {
           <span className="eyebrow">야크크 야르~ 섹시야구</span>
           <h1>오늘의 직관, 캘린더에 새기다</h1>
           <p>
-            경기 일정과 직관 사진, 스코어와 승률, 그리고 같이 간 친구의 기록까지
-            한 페이지에 정리되는 야구 팬을 위한 모바일 친화 PWA입니다.
+            경기 일정과 직관 사진, 스코어와 승률, <br />
+            그리고 같이 간 친구의 기록까지 기록할 수 있는 야구 앱입니다.
           </p>
           <div className="actions">
             <Link className="btn btn-primary btn-lg" href="/register">

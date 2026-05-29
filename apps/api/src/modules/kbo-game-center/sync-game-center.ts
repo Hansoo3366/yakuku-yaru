@@ -6,7 +6,7 @@ import {
 } from './kbo-game-center.client.js';
 import { isGameListLineupConfirmed } from './kbo-lineup-status.js';
 import {
-  findKboGameIdByExternalId,
+  findKboGameIdForGameCenterGame,
   listKboGameCenterTargetDates,
   listKboTeamIdsByCode,
   replaceGameLineup,
@@ -114,9 +114,13 @@ export async function syncKboGameCenter(input?: {
     );
 
     for (const game of games) {
-      const gameId = await findKboGameIdByExternalId(game.G_ID);
+      const gameId = await findKboGameIdForGameCenterGame(game, teamIdsByCode);
 
       if (!gameId) {
+        syncLog(
+          'kbo-game-center',
+          `  ${game.G_ID} ${game.AWAY_NM} vs ${game.HOME_NM} — DB 경기 매칭 실패 (건너뜀)`,
+        );
         skipped += 1;
         continue;
       }
