@@ -33,21 +33,26 @@
 
 ## State Management
 
-현재 구현은 외부 상태 관리 라이브러리 없이 React state, effect, localStorage, 공통 API client를 사용합니다.
+현재 구현은 서버 데이터와 클라이언트 전역 상태를 분리합니다.
+
+- 서버 데이터: TanStack Query로 캐싱, 중복 호출 방지, stale/refetch 제어
+- 인증 세션: Zustand store로 token/user 상태 공유
+- 영속 저장: access token과 캘린더 필터는 localStorage 사용
+- 화면 전용 상태: 폼 입력, 업로드 미리보기, UI open/close는 컴포넌트 state 사용
 
 ### Server State
 
-- 사용자 정보
-- 팀 목록
-- 경기 일정/상세
-- 직관/집관 기록
-- 동행자 상태와 알림
-- 게시글/댓글
-- 관리자 데이터
+- 사용자 정보: `useMeQuery`
+- 팀 목록: `useTeamsQuery`
+- 팀 순위: `useTeamStandingsQuery`
+- 경기 일정/상세: `useGamesQuery`, `useGameQuery`
+- 직관/집관 기록과 통계: `useAttendanceRecordsQuery`, `useAttendanceStatsQuery`
+- 게시글/댓글: `usePostsQuery`, `usePostQuery`, `useCommentsQuery`
+- 관리자 데이터: 관리자 화면 단위 API 호출
 
 ### Client State
 
-- 로그인 토큰
+- 로그인 토큰과 현재 사용자
 - 현재 선택한 캘린더 월
 - 캘린더 필터
 - 업로드 미리보기 이미지

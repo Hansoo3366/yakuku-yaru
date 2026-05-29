@@ -52,6 +52,8 @@ KBO 공식 공개 API가 없으므로, KBO 일정/결과 페이지와 경기센�
 ## Frontend Responsibilities
 
 - Next.js App Router 화면 제공
+- TanStack Query 기반 서버 데이터 캐싱과 중복 호출 방지
+- Zustand 기반 로그인 세션 전역 상태 관리
 - 로그인 토큰 저장과 인증 상태 복원
 - 캘린더, 경기 상세, 직관/집관 기록, 게시판, 마이페이지, 관리자 UI
 - 팀 로고와 팀 컬러 기반 테마 적용

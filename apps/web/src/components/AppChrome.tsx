@@ -4,17 +4,11 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
-import { fetchMe } from '@/lib/auth-api';
-import {
-  clearAccessToken,
-  getAccessToken,
-  performLogout,
-  setRootAuthState,
-  type PublicUser,
-} from '@/lib/auth';
-import { listTeams, type Team } from '@/lib/baseball-api';
-import { applyTeamTheme, useTeamTheme } from '@/lib/team-theme';
+import { useEffect } from 'react';
+import { setRootAuthState } from '@/lib/auth';
+import { useAuthStore } from '@/lib/auth-store';
+import { useMeQuery, useTeamsQuery } from '@/lib/queries';
+import { useTeamTheme } from '@/lib/team-theme';
 import { getProfileImageSrc } from '@/lib/profile-image';
 import { NotificationBell } from '@/components/NotificationBell';
 
@@ -40,45 +34,39 @@ function isActivePath(pathname: string, href: string, exact = false) {
 export function AppHeader() {
   const pathname = usePathname();
   const router = useRouter();
-  const [user, setUser] = useState<PublicUser | null>(null);
-  const [teams, setTeams] = useState<Team[]>([]);
+  const token = useAuthStore((state) => state.token);
+  const storedUser = useAuthStore((state) => state.user);
+  const setUser = useAuthStore((state) => state.setUser);
+  const clearSession = useAuthStore((state) => state.clearSession);
+  const meQuery = useMeQuery(token);
+  const teamsQuery = useTeamsQuery();
 
   useEffect(() => {
-    let isMounted = true;
-    const token = getAccessToken();
-
     if (!token) {
       setRootAuthState('guest');
       setUser(null);
       return;
     }
 
-    Promise.all([fetchMe(token), listTeams()])
-      .then(([response, teamsResponse]) => {
-        if (!isMounted) return;
-        setUser(response.user);
-        setTeams(teamsResponse.items);
-        setRootAuthState('authed');
-      })
-      .catch(() => {
-        clearAccessToken();
-        applyTeamTheme(null);
-        if (isMounted) {
-          setUser(null);
-          setRootAuthState('guest');
-        }
-      });
+    if (meQuery.data?.user) {
+      setUser(meQuery.data.user);
+      setRootAuthState('authed');
+    }
+  }, [meQuery.data?.user, setUser, token]);
 
-    return () => {
-      isMounted = false;
-    };
-  }, [pathname]);
+  useEffect(() => {
+    if (meQuery.isError) {
+      clearSession();
+    }
+  }, [clearSession, meQuery.isError]);
 
   function handleLogout() {
-    setUser(null);
-    performLogout(router);
+    clearSession();
+    router.replace('/');
   }
 
+  const user = meQuery.data?.user ?? storedUser;
+  const teams = teamsQuery.data?.items ?? [];
   const favoriteTeam = teams.find((team) => team.id === user?.favoriteTeamId);
   useTeamTheme(favoriteTeam?.primaryColor ?? null);
   const isWideLayout =

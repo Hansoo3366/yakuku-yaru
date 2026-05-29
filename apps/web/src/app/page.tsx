@@ -3,23 +3,9 @@
 /* eslint-disable @next/next/no-img-element */
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
-import { fetchMe } from '@/lib/auth-api';
-import { clearAccessToken, getAccessToken, type PublicUser } from '@/lib/auth';
-import {
-  listAttendanceRecords,
-  type AttendanceStats,
-  type AttendanceRecord,
-} from '@/lib/attendance-api';
+import { useMemo } from 'react';
+import { type AttendanceRecord } from '@/lib/attendance-api';
 import { computeAttendanceStatsFromRecords } from '@/lib/attendance-stats';
-import {
-  listGames,
-  listTeamStandings,
-  listTeams,
-  type Game,
-  type Team,
-  type TeamStandingsResponse,
-} from '@/lib/baseball-api';
 import { TeamStandingsTable } from '@/components/TeamStandingsTable';
 import { getAssetUrl } from '@/lib/api';
 import { getTeamLogoSrc } from '@/lib/team-logo';
@@ -29,6 +15,14 @@ import { getGameStatusLabel, getGameStatusTone } from '@/lib/game-status';
 import { isGameCancelled } from '@/lib/attendance-game';
 import { resolveAttendanceOutcome } from '@/lib/attendance-score';
 import { getCancellationLabel } from '@/lib/game-cancellation';
+import { useAuthStore } from '@/lib/auth-store';
+import {
+  useAttendanceRecordsQuery,
+  useGamesQuery,
+  useMeQuery,
+  useTeamsQuery,
+  useTeamStandingsQuery,
+} from '@/lib/queries';
 
 function formatAttendanceResultLabel(
   record: AttendanceRecord,
@@ -83,90 +77,77 @@ function isUpcoming(value: string) {
 }
 
 export default function HomePage() {
-  const [authState, setAuthState] = useState<'checking' | 'guest' | 'authed'>(
-    'checking',
+  const token = useAuthStore((state) => state.token);
+  const hasHydrated = useAuthStore((state) => state.hasHydrated);
+  const storedUser = useAuthStore((state) => state.user);
+  const seasonYear = new Date().getFullYear();
+  const meQuery = useMeQuery(token);
+  const user = meQuery.data?.user ?? storedUser;
+  const teamsQuery = useTeamsQuery();
+  const teamStandingsQuery = useTeamStandingsQuery(seasonYear);
+  const scheduleRange = useMemo(() => {
+    const today = new Date();
+    const monthLater = new Date(today);
+    monthLater.setMonth(today.getMonth() + 2);
+
+    return {
+      from: today.toISOString().slice(0, 10),
+      to: monthLater.toISOString().slice(0, 10),
+    };
+  }, []);
+  const gamesQuery = useGamesQuery(
+    {
+      ...scheduleRange,
+      teamId: user?.favoriteTeamId ?? undefined,
+    },
+    { enabled: Boolean(token && user) },
   );
-  const [user, setUser] = useState<PublicUser | null>(null);
-  const [favoriteTeam, setFavoriteTeam] = useState<Team | null>(null);
-  const [stats, setStats] = useState<AttendanceStats | null>(null);
-  const [upcomingGames, setUpcomingGames] = useState<Game[]>([]);
-  const [recentRecords, setRecentRecords] = useState<AttendanceRecord[]>([]);
-  const [teamStandings, setTeamStandings] =
-    useState<TeamStandingsResponse | null>(null);
+  const recordsQuery = useAttendanceRecordsQuery({}, token, {
+    enabled: Boolean(token && user),
+  });
+  const authState: 'checking' | 'guest' | 'authed' = !hasHydrated
+    ? 'checking'
+    : token && !meQuery.isError
+      ? 'authed'
+      : 'guest';
+  const teams = teamsQuery.data?.items ?? [];
+  const favoriteTeam =
+    teams.find((team) => team.id === user?.favoriteTeamId) ?? null;
+  const teamStandings = teamStandingsQuery.data ?? null;
+  const attendanceRecords = useMemo(
+    () => recordsQuery.data?.items ?? [],
+    [recordsQuery.data?.items],
+  );
+  const upcomingGames = useMemo(
+    () =>
+      (gamesQuery.data?.items ?? [])
+        .filter((game) => isUpcoming(game.gameDate))
+        .slice(0, 5),
+    [gamesQuery.data?.items],
+  );
+  const recentRecords = useMemo(() => {
+    const ownedRecords = attendanceRecords.filter(
+      (record) => record.viewerRelation === 'owner',
+    );
 
-  useEffect(() => {
-    const seasonYear = new Date().getFullYear();
-    listTeamStandings(seasonYear)
-      .then(setTeamStandings)
-      .catch(() => setTeamStandings(null));
-  }, []);
-
-  useEffect(() => {
-    const token = getAccessToken();
-
-    if (!token) {
-      setAuthState('guest');
-      return;
-    }
-
-    fetchMe(token)
-      .then((response) => {
-        setUser(response.user);
-        setAuthState('authed');
-        return response.user;
-      })
-      .then(async (current) => {
-        const today = new Date();
-        const monthLater = new Date(today);
-        monthLater.setMonth(today.getMonth() + 2);
-        const isoFrom = today.toISOString().slice(0, 10);
-        const isoTo = monthLater.toISOString().slice(0, 10);
-
-        const [teamsResponse, gamesResponse, recordsResponse] =
-          await Promise.all([
-            listTeams(),
-            listGames({
-              from: isoFrom,
-              to: isoTo,
-              teamId: current.favoriteTeamId ?? undefined,
-            }),
-            listAttendanceRecords({}, token),
-          ]);
-
-        setFavoriteTeam(
-          teamsResponse.items.find(
-            (team) => team.id === current.favoriteTeamId,
-          ) ?? null,
-        );
-        setUpcomingGames(
-          gamesResponse.items
-            .filter((game) => isUpcoming(game.gameDate))
-            .slice(0, 5),
-        );
-        const ownedRecords = recordsResponse.items.filter(
-          (record) => record.viewerRelation === 'owner',
-        );
-        setRecentRecords(
-          [...ownedRecords]
-            .sort(
-              (a, b) =>
-                new Date(b.game.gameDate).getTime() -
-                new Date(a.game.gameDate).getTime(),
-            )
-            .slice(0, 3),
-        );
-        setStats(
-          computeAttendanceStatsFromRecords(
-            recordsResponse.items,
-            current.favoriteTeamId,
-          ),
-        );
-      })
-      .catch(() => {
-        clearAccessToken();
-        setAuthState('guest');
-      });
-  }, []);
+    return [...ownedRecords]
+      .sort(
+        (a, b) =>
+          new Date(b.game.gameDate).getTime() -
+          new Date(a.game.gameDate).getTime(),
+      )
+      .slice(0, 3);
+  }, [attendanceRecords]);
+  const stats = useMemo(
+    () =>
+      user
+        ? computeAttendanceStatsFromRecords(
+            attendanceRecords,
+            user.favoriteTeamId,
+          )
+        : null,
+    [attendanceRecords, user],
+  );
 
   if (authState === 'guest') {
     return (

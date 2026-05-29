@@ -4,6 +4,7 @@
 
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
 import { FormEvent, Suspense, useEffect, useState } from 'react';
 import { getAccessToken } from '@/lib/auth';
 import { fetchMe } from '@/lib/auth-api';
@@ -35,6 +36,7 @@ import { CheeredTeamPicker } from '@/components/CheeredTeamPicker';
 
 function NewAttendanceForm() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   useAuthGuard();
   const searchParams = useSearchParams();
   const gameId = Number(searchParams.get('gameId'));
@@ -214,6 +216,8 @@ function NewAttendanceForm() {
         await uploadAttendancePhoto(response.record.id, photo, token);
       }
 
+      void queryClient.invalidateQueries({ queryKey: ['attendance-records'] });
+      void queryClient.invalidateQueries({ queryKey: ['attendance-stats'] });
       router.push('/calendar');
     } catch (error) {
       setErrorMessage(

@@ -4,45 +4,42 @@
 
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { FormEvent, useEffect, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { FormEvent, useState } from 'react';
 import { ApiError } from '@/lib/api';
-import { fetchMe } from '@/lib/auth-api';
-import { getAccessToken, type PublicUser } from '@/lib/auth';
+import { getAccessToken } from '@/lib/auth';
+import { useAuthStore } from '@/lib/auth-store';
 import { getAuthorProfileImageSrc } from '@/lib/profile-image';
 import {
   createComment,
   deleteComment,
   deletePost,
-  fetchPost,
-  listComments,
-  type CommentItem,
-  type PostDetail,
 } from '@/lib/post-api';
 import { Skeleton } from '@/components/Skeleton';
 import { EmptyState } from '@/components/EmptyState';
+import {
+  useCommentsQuery,
+  useMeQuery,
+  usePostQuery,
+} from '@/lib/queries';
+import { queryKeys } from '@/lib/query-keys';
 
 export default function PostDetailPage() {
   const params = useParams<{ postId: string }>();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const postId = Number(params.postId);
-  const [post, setPost] = useState<PostDetail | null>(null);
-  const [comments, setComments] = useState<CommentItem[]>([]);
-  const [currentUser, setCurrentUser] = useState<PublicUser | null>(null);
+  const token = useAuthStore((state) => state.token);
+  const storedUser = useAuthStore((state) => state.user);
+  const postQuery = usePostQuery(postId);
+  const commentsQuery = useCommentsQuery(postId);
+  const meQuery = useMeQuery(token);
+  const post = postQuery.data?.post ?? null;
+  const comments = commentsQuery.data?.items ?? [];
+  const currentUser = meQuery.data?.user ?? storedUser;
   const [commentContent, setCommentContent] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  useEffect(() => {
-    fetchPost(postId).then((response) => setPost(response.post));
-    listComments(postId).then((response) => setComments(response.items));
-
-    const token = getAccessToken();
-    if (token) {
-      fetchMe(token)
-        .then((response) => setCurrentUser(response.user))
-        .catch(() => setCurrentUser(null));
-    }
-  }, [postId]);
 
   async function handleDeletePost() {
     const token = getAccessToken();
@@ -54,6 +51,7 @@ export default function PostDetailPage() {
     if (!window.confirm('이 글을 삭제할까요? 되돌릴 수 없어요.')) return;
 
     await deletePost(postId, token);
+    void queryClient.invalidateQueries({ queryKey: ['posts'] });
     router.push('/posts');
   }
 
@@ -71,7 +69,11 @@ export default function PostDetailPage() {
 
     try {
       const response = await createComment(postId, commentContent, token);
-      setComments((current) => [...current, response.comment]);
+      queryClient.setQueryData(queryKeys.comments(postId), {
+        items: [...comments, response.comment],
+      });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.post(postId) });
+      void queryClient.invalidateQueries({ queryKey: ['posts'] });
       setCommentContent('');
     } catch (error) {
       if (error instanceof ApiError) {
@@ -92,9 +94,11 @@ export default function PostDetailPage() {
     }
 
     await deleteComment(commentId, token);
-    setComments((current) =>
-      current.filter((comment) => comment.id !== commentId),
-    );
+    queryClient.setQueryData(queryKeys.comments(postId), {
+      items: comments.filter((comment) => comment.id !== commentId),
+    });
+    void queryClient.invalidateQueries({ queryKey: queryKeys.post(postId) });
+    void queryClient.invalidateQueries({ queryKey: ['posts'] });
   }
 
   if (!post) {

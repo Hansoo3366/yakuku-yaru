@@ -4,21 +4,9 @@ import './calendar.css';
 
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
-import { fetchMe } from '@/lib/auth-api';
-import { clearAccessToken, getAccessToken, type PublicUser } from '@/lib/auth';
 import { useAuthGuard } from '@/lib/use-auth-guard';
-import {
-  listGames,
-  listTeamStandings,
-  listTeams,
-  type Game,
-  type Team,
-  type TeamStandingsResponse,
-} from '@/lib/baseball-api';
-import {
-  listAttendanceRecords,
-  type AttendanceRecord,
-} from '@/lib/attendance-api';
+import { type Game } from '@/lib/baseball-api';
+import { type AttendanceRecord } from '@/lib/attendance-api';
 import { CalendarAgendaView } from '@/components/CalendarAgendaView';
 import {
   CalendarFilterBar,
@@ -58,6 +46,14 @@ import {
   isNeutralAttendance,
 } from '@/lib/attendance-game';
 import { useMediaQuery } from '@/lib/use-media-query';
+import { useAuthStore } from '@/lib/auth-store';
+import {
+  useAttendanceRecordsQuery,
+  useGamesQuery,
+  useMeQuery,
+  useTeamsQuery,
+  useTeamStandingsQuery,
+} from '@/lib/queries';
 
 const weekdayLabels = ['일', '월', '화', '수', '목', '금', '토'];
 
@@ -198,29 +194,22 @@ export default function CalendarPage() {
     getCalendarViewAnchorDate(readPersistedViewMode(), new Date()),
   );
   const [todayJumpTick, setTodayJumpTick] = useState(0);
-  const [user, setUser] = useState<PublicUser | null>(null);
-  const [teams, setTeams] = useState<Team[]>([]);
-  const [games, setGames] = useState<Game[]>([]);
-  const [attendanceRecords, setAttendanceRecords] = useState<
-    AttendanceRecord[]
-  >([]);
-  const [yearAttendanceRecords, setYearAttendanceRecords] = useState<
-    AttendanceRecord[]
-  >([]);
-  const [yearSeasonGames, setYearSeasonGames] = useState<Game[]>([]);
-  const [teamStandings, setTeamStandings] =
-    useState<TeamStandingsResponse | null>(null);
   const [scheduleFilter, setScheduleFilter] = useState<ScheduleFilter>(
     () => readPersistedScheduleFilter() ?? 'all',
   );
   const [watchTypeFilter, setWatchTypeFilter] = useState<WatchTypeFilter>(() =>
     readPersistedWatchTypeFilter(),
   );
-  const [isLoading, setIsLoading] = useState(true);
   const [agendaFocusDateKey, setAgendaFocusDateKey] = useState<string | null>(
     null,
   );
   const isMobile = useMediaQuery('(max-width: 720px)');
+  const token = useAuthStore((state) => state.token);
+  const storedUser = useAuthStore((state) => state.user);
+  const clearSession = useAuthStore((state) => state.clearSession);
+  const meQuery = useMeQuery(token);
+  const user = meQuery.data?.user ?? storedUser;
+  const favoriteTeamId = user?.favoriteTeamId ?? null;
 
   const monthStart = useMemo(() => getMonthStart(anchorDate), [anchorDate]);
   const weekStart = useMemo(() => getWeekStart(anchorDate), [anchorDate]);
@@ -256,135 +245,68 @@ export default function CalendarPage() {
   }, [watchTypeFilter]);
 
   useEffect(() => {
-    let isMounted = true;
-    const token = getAccessToken();
-
-    if (!token) {
+    if (meQuery.isError) {
+      clearSession();
       router.replace('/');
-      return;
     }
-
-    setIsLoading(true);
-
-    Promise.all([fetchMe(token), listTeams()])
-      .then(async ([meResponse, teamsResponse]) => {
-        if (!isMounted) return null;
-
-        setUser(meResponse.user);
-        setTeams(teamsResponse.items);
-
-        const favoriteTeamId = meResponse.user.favoriteTeamId;
-        const activeScheduleFilter = resolveScheduleFilter(favoriteTeamId);
-        setScheduleFilter(activeScheduleFilter);
-
-        const [gamesResponse, attendanceResponse] = await Promise.all([
-          listGames({
-            ...range,
-            teamId:
-              activeScheduleFilter !== 'all'
-                ? (favoriteTeamId ?? undefined)
-                : undefined,
-          }),
-          listAttendanceRecords(range, token),
-        ]);
-
-        if (!isMounted) return null;
-
-        const nextGames = gamesResponse.items.filter((game) =>
-          isGameInScheduleFilter(game, activeScheduleFilter, favoriteTeamId),
-        );
-
-        return { nextGames, attendanceResponse };
-      })
-      .then((result) => {
-        if (!result || !isMounted) return;
-        setGames(result.nextGames);
-        setAttendanceRecords(result.attendanceResponse.items);
-      })
-      .catch(() => {
-        clearAccessToken();
-        router.replace('/');
-      })
-      .finally(() => {
-        if (isMounted) setIsLoading(false);
-      });
-
-    return () => {
-      isMounted = false;
-    };
-  }, [range, router, scheduleFilter]);
+  }, [clearSession, meQuery.isError, router]);
 
   useEffect(() => {
-    let isMounted = true;
-    const token = getAccessToken();
-
-    if (!token) {
-      return;
+    if (meQuery.data?.user) {
+      setScheduleFilter(resolveScheduleFilter(meQuery.data.user.favoriteTeamId));
     }
+  }, [meQuery.data?.user]);
 
-    listAttendanceRecords(yearRange, token)
-      .then((response) => {
-        if (isMounted) {
-          setYearAttendanceRecords(response.items);
-        }
-      })
-      .catch(() => {
-        if (isMounted) {
-          setYearAttendanceRecords([]);
-        }
-      });
-
-    return () => {
-      isMounted = false;
-    };
-  }, [yearRange, router]);
-
-  useEffect(() => {
-    let isMounted = true;
-
-    listTeamStandings(statsYear)
-      .then((response) => {
-        if (isMounted) {
-          setTeamStandings(response);
-        }
-      })
-      .catch(() => {
-        if (isMounted) {
-          setTeamStandings(null);
-        }
-      });
-
-    return () => {
-      isMounted = false;
-    };
-  }, [statsYear]);
-
-  useEffect(() => {
-    let isMounted = true;
-
-    if (!user?.favoriteTeamId) {
-      setYearSeasonGames([]);
-      return () => {
-        isMounted = false;
-      };
-    }
-
-    listGames({ ...yearRange, teamId: user.favoriteTeamId })
-      .then((response) => {
-        if (isMounted) {
-          setYearSeasonGames(response.items);
-        }
-      })
-      .catch(() => {
-        if (isMounted) {
-          setYearSeasonGames([]);
-        }
-      });
-
-    return () => {
-      isMounted = false;
-    };
-  }, [yearRange, user?.favoriteTeamId]);
+  const activeTeamId =
+    scheduleFilter !== 'all' ? (favoriteTeamId ?? undefined) : undefined;
+  const teamsQuery = useTeamsQuery();
+  const gamesQuery = useGamesQuery(
+    { ...range, teamId: activeTeamId },
+    { enabled: Boolean(token && user) },
+  );
+  const attendanceRecordsQuery = useAttendanceRecordsQuery(range, token, {
+    enabled: Boolean(token && user),
+  });
+  const yearAttendanceRecordsQuery = useAttendanceRecordsQuery(
+    yearRange,
+    token,
+    { enabled: Boolean(token && user) },
+  );
+  const teamStandingsQuery = useTeamStandingsQuery(statsYear);
+  const yearSeasonGamesQuery = useGamesQuery(
+    { ...yearRange, teamId: favoriteTeamId ?? undefined },
+    { enabled: Boolean(token && favoriteTeamId) },
+  );
+  const teams = teamsQuery.data?.items ?? [];
+  const rawGames = useMemo(
+    () => gamesQuery.data?.items ?? [],
+    [gamesQuery.data?.items],
+  );
+  const games = useMemo(
+    () =>
+      rawGames.filter((game) =>
+        isGameInScheduleFilter(game, scheduleFilter, favoriteTeamId),
+      ),
+    [rawGames, scheduleFilter, favoriteTeamId],
+  );
+  const attendanceRecords = useMemo(
+    () => attendanceRecordsQuery.data?.items ?? [],
+    [attendanceRecordsQuery.data?.items],
+  );
+  const yearAttendanceRecords = useMemo(
+    () => yearAttendanceRecordsQuery.data?.items ?? [],
+    [yearAttendanceRecordsQuery.data?.items],
+  );
+  const teamStandings = teamStandingsQuery.data ?? null;
+  const yearSeasonGames = useMemo(
+    () => yearSeasonGamesQuery.data?.items ?? [],
+    [yearSeasonGamesQuery.data?.items],
+  );
+  const isLoading =
+    meQuery.isLoading ||
+    teamsQuery.isLoading ||
+    gamesQuery.isLoading ||
+    attendanceRecordsQuery.isLoading;
 
   const filteredAttendanceRecords = useMemo(() => {
     if (watchTypeFilter === 'all') {

@@ -23,6 +23,8 @@ Client (Browser / PWA 성격)
 - **TypeScript**
 - 스타일링: 프로젝트 단일 CSS 설계(`globals.css` + 페이지별 CSS)
 - 데이터 통신: `fetch` 기반 API 모듈(`src/lib/*-api.ts`)
+- 서버 상태 관리: **TanStack Query**
+- 클라이언트 세션 상태: **Zustand**
 
 핵심 화면:
 - 캘린더(월간/주간, 필터, 승률 인사이트)
@@ -92,4 +94,3 @@ KBO 소스에서 서버가 주기적으로 동기화:
 - MySQL 기반 관계형 데이터 모델이 경기/기록/통계 도메인과 잘 맞음
 - Docker Compose로 로컬-운영 실행 방식 통일
 - KBO 데이터 동기화를 서버 측 배치로 처리해 프론트 성능과 안정성 확보
-

@@ -3,36 +3,24 @@
 /* eslint-disable @next/next/no-img-element */
 
 import Link from 'next/link';
-import { FormEvent, useEffect, useState } from 'react';
-import { listPosts, type PostListItem } from '@/lib/post-api';
-import { getAccessToken } from '@/lib/auth';
+import { FormEvent, useState } from 'react';
+import { useAuthStore } from '@/lib/auth-store';
+import { usePostsQuery } from '@/lib/queries';
 import { useMediaQuery } from '@/lib/use-media-query';
 import { EmptyState } from '@/components/EmptyState';
 import { SkeletonCard } from '@/components/Skeleton';
 
 export default function PostsPage() {
-  const [posts, setPosts] = useState<PostListItem[]>([]);
   const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
   const [keyword, setKeyword] = useState('');
   const [appliedKeyword, setAppliedKeyword] = useState('');
-  const [hasToken, setHasToken] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const token = useAuthStore((state) => state.token);
+  const postsQuery = usePostsQuery({ page, keyword: appliedKeyword });
+  const posts = postsQuery.data?.items ?? [];
+  const totalPages = Math.max(postsQuery.data?.totalPages ?? 1, 1);
+  const hasToken = Boolean(token);
+  const isLoading = postsQuery.isLoading;
   const isMobile = useMediaQuery('(max-width: 720px)');
-
-  useEffect(() => {
-    setHasToken(Boolean(getAccessToken()));
-  }, []);
-
-  useEffect(() => {
-    setIsLoading(true);
-    listPosts({ page, keyword: appliedKeyword })
-      .then((response) => {
-        setPosts(response.items);
-        setTotalPages(Math.max(response.totalPages, 1));
-      })
-      .finally(() => setIsLoading(false));
-  }, [appliedKeyword, page]);
 
   function handleSearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();

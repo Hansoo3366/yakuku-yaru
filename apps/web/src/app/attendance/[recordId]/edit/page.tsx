@@ -4,6 +4,7 @@
 
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
 import { FormEvent, useEffect, useState } from 'react';
 import { getAccessToken } from '@/lib/auth';
 import { fetchMe } from '@/lib/auth-api';
@@ -41,6 +42,7 @@ import { CheeredTeamPicker } from '@/components/CheeredTeamPicker';
 export default function EditAttendancePage() {
   const params = useParams<{ recordId: string }>();
   const router = useRouter();
+  const queryClient = useQueryClient();
   useAuthGuard();
   const recordId = Number(params.recordId);
   const [record, setRecord] = useState<AttendanceRecord | null>(null);
@@ -236,6 +238,8 @@ export default function EditAttendancePage() {
         await uploadAttendancePhoto(recordId, photo, token);
       }
 
+      void queryClient.invalidateQueries({ queryKey: ['attendance-records'] });
+      void queryClient.invalidateQueries({ queryKey: ['attendance-stats'] });
       router.push('/calendar');
     } catch (error) {
       setErrorMessage(
@@ -260,6 +264,8 @@ export default function EditAttendancePage() {
     }
 
     await deleteAttendanceRecord(recordId, token);
+    void queryClient.invalidateQueries({ queryKey: ['attendance-records'] });
+    void queryClient.invalidateQueries({ queryKey: ['attendance-stats'] });
     router.push('/calendar');
   }
 

@@ -2,15 +2,19 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
 import { FormEvent, useState } from 'react';
 import { ApiError } from '@/lib/api';
 import { login } from '@/lib/auth-api';
 import { PasswordField } from '@/components/PasswordField';
-import { setAccessToken } from '@/lib/auth';
+import { useAuthStore } from '@/lib/auth-store';
+import { queryKeys } from '@/lib/query-keys';
 import { PASSWORD_MAX_LENGTH } from '@/lib/user-input';
 
 export default function LoginPage() {
   const router = useRouter();
+  const queryClient = useQueryClient();
+  const setSession = useAuthStore((state) => state.setSession);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
@@ -23,7 +27,10 @@ export default function LoginPage() {
 
     try {
       const response = await login({ email, password });
-      setAccessToken(response.accessToken);
+      setSession({ token: response.accessToken, user: response.user });
+      queryClient.setQueryData(queryKeys.me(response.accessToken), {
+        user: response.user,
+      });
       router.push('/calendar');
     } catch (error) {
       if (error instanceof ApiError && error.code === 'EMAIL_NOT_VERIFIED') {

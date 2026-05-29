@@ -4,14 +4,10 @@
 
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
-import { fetchGame, type Game } from '@/lib/baseball-api';
-import { getAccessToken } from '@/lib/auth';
-import { fetchMe } from '@/lib/auth-api';
-import {
-  listAttendanceRecords,
-  type AttendanceRecord,
-} from '@/lib/attendance-api';
+import { useQueryClient } from '@tanstack/react-query';
+import { useEffect, useMemo } from 'react';
+import { type Game } from '@/lib/baseball-api';
+import { type AttendanceRecord } from '@/lib/attendance-api';
 import { PlayerPhoto } from '@/components/PlayerPhoto';
 import { getTeamLogoSrc } from '@/lib/team-logo';
 import { Skeleton } from '@/components/Skeleton';
@@ -31,6 +27,13 @@ import { getAttendanceTicketView } from '@/lib/attendance-score';
 import { getAssetUrl } from '@/lib/api';
 import { StatTerm } from '@/components/StatGlossary';
 import { StadiumPersonalNotes } from '@/components/StadiumPersonalNotes';
+import { useAuthStore } from '@/lib/auth-store';
+import {
+  useAttendanceRecordsQuery,
+  useGameQuery,
+  useMeQuery,
+} from '@/lib/queries';
+import { queryKeys } from '@/lib/query-keys';
 
 function formatDateTime(value: string) {
   return new Date(value).toLocaleString('ko-KR', {
@@ -317,51 +320,20 @@ function GameRecordPanel({
 export default function GameDetailPage() {
   const params = useParams<{ gameId: string }>();
   const gameId = Number(params.gameId);
-  const [game, setGame] = useState<Game | null>(null);
-  const [attendanceRecord, setAttendanceRecord] =
-    useState<AttendanceRecord | null>(null);
-  const [viewerFavoriteTeamId, setViewerFavoriteTeamId] = useState<
-    number | null
-  >(null);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    function loadGame() {
-      return fetchGame(gameId).then((response) => {
-        if (!cancelled) {
-          setGame(response.game);
-        }
-      });
-    }
-
-    void loadGame();
-
-    const token = getAccessToken();
-    if (!token) {
-      return;
-    }
-
-    Promise.all([listAttendanceRecords({}, token), fetchMe(token)])
-      .then(([attendanceResponse, meResponse]) => {
-        setAttendanceRecord(
-          attendanceResponse.items.find((record) => record.gameId === gameId) ??
-            null,
-        );
-        setViewerFavoriteTeamId(meResponse.user.favoriteTeamId);
-      })
-      .catch(() => {
-        listAttendanceRecords({}, token).then((response) => {
-          setAttendanceRecord(
-            response.items.find((record) => record.gameId === gameId) ?? null,
-          );
-        });
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [gameId]);
+  const queryClient = useQueryClient();
+  const token = useAuthStore((state) => state.token);
+  const gameQuery = useGameQuery(gameId);
+  const meQuery = useMeQuery(token);
+  const attendanceRecordsQuery = useAttendanceRecordsQuery({}, token);
+  const game = gameQuery.data?.game ?? null;
+  const attendanceRecord = useMemo(
+    () =>
+      attendanceRecordsQuery.data?.items.find(
+        (record) => record.gameId === gameId,
+      ) ?? null,
+    [attendanceRecordsQuery.data?.items, gameId],
+  );
+  const viewerFavoriteTeamId = meQuery.data?.user.favoriteTeamId ?? null;
 
   useEffect(() => {
     if (!game || !shouldPollGameLineup(game)) {
@@ -369,13 +341,13 @@ export default function GameDetailPage() {
     }
 
     const intervalId = window.setInterval(() => {
-      void fetchGame(gameId).then((response) => setGame(response.game));
+      void queryClient.invalidateQueries({ queryKey: queryKeys.game(gameId) });
     }, LINEUP_POLL_INTERVAL_MS);
 
     return () => {
       window.clearInterval(intervalId);
     };
-  }, [gameId, game?.gameDate, game?.status]);
+  }, [game, gameId, queryClient]);
 
   if (!game) {
     return (

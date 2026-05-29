@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import { AppFooter, AppHeader } from '@/components/AppChrome';
+import { AppProviders } from '@/components/AppProviders';
 import { BottomNav } from '@/components/BottomNav';
 import { ServiceWorkerRegister } from '@/components/ServiceWorkerRegister';
 import './globals.css';
@@ -62,11 +63,13 @@ export default function RootLayout({
         />
       </head>
       <body>
-        <AppHeader />
-        {children}
-        <BottomNav />
-        <AppFooter />
-        <ServiceWorkerRegister />
+        <AppProviders>
+          <AppHeader />
+          {children}
+          <BottomNav />
+          <AppFooter />
+          <ServiceWorkerRegister />
+        </AppProviders>
       </body>
     </html>
   );

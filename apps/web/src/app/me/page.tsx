@@ -3,41 +3,46 @@
 /* eslint-disable @next/next/no-img-element */
 
 import { useRouter } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
 import { ApiError } from '@/lib/api';
 import {
-  fetchMe,
   PROFILE_PHOTO_ACCEPT,
   updateNickname,
   uploadProfilePhoto,
 } from '@/lib/auth-api';
-import {
-  clearAccessToken,
-  getAccessToken,
-  performLogout,
-  type PublicUser,
-} from '@/lib/auth';
+import { getAccessToken } from '@/lib/auth';
+import { useAuthStore } from '@/lib/auth-store';
 import { useAuthGuard } from '@/lib/use-auth-guard';
-import {
-  fetchAttendanceStats,
-  type AttendanceStats,
-} from '@/lib/attendance-api';
-import { listTeams, updateFavoriteTeam, type Team } from '@/lib/baseball-api';
+import { updateFavoriteTeam } from '@/lib/baseball-api';
 import { getTeamLogoSrc } from '@/lib/team-logo';
 import { getProfileImageSrc } from '@/lib/profile-image';
 import { applyTeamTheme, useTeamTheme } from '@/lib/team-theme';
 import { NICKNAME_MAX_LENGTH, validateNicknameClient } from '@/lib/user-input';
 import { Skeleton } from '@/components/Skeleton';
+import {
+  useAttendanceStatsQuery,
+  useMeQuery,
+  useTeamsQuery,
+} from '@/lib/queries';
+import { queryKeys } from '@/lib/query-keys';
 
 export default function MyPage() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   useAuthGuard();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [user, setUser] = useState<PublicUser | null>(null);
-  const [stats, setStats] = useState<AttendanceStats | null>(null);
-  const [teams, setTeams] = useState<Team[]>([]);
+  const token = useAuthStore((state) => state.token);
+  const storedUser = useAuthStore((state) => state.user);
+  const setStoredUser = useAuthStore((state) => state.setUser);
+  const clearSession = useAuthStore((state) => state.clearSession);
+  const meQuery = useMeQuery(token);
+  const statsQuery = useAttendanceStatsQuery(token);
+  const teamsQuery = useTeamsQuery();
+  const user = meQuery.data?.user ?? storedUser;
+  const stats = statsQuery.data ?? null;
+  const teams = teamsQuery.data?.items ?? [];
   const [statusMessage, setStatusMessage] = useState('');
-  const [isLoading, setIsLoading] = useState(true);
   const [showTeamPicker, setShowTeamPicker] = useState(false);
   const [isEditingNickname, setIsEditingNickname] = useState(false);
   const [nicknameDraft, setNicknameDraft] = useState('');
@@ -45,28 +50,18 @@ export default function MyPage() {
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
 
   useEffect(() => {
-    const token = getAccessToken();
-
-    if (!token) {
-      router.replace('/');
-      return;
+    if (meQuery.data?.user) {
+      setStoredUser(meQuery.data.user);
+      setNicknameDraft(meQuery.data.user.nickname);
     }
+  }, [meQuery.data?.user, setStoredUser]);
 
-    Promise.all([fetchMe(token), fetchAttendanceStats(token), listTeams()])
-      .then(([meResponse, statsResponse, teamsResponse]) => {
-        setUser(meResponse.user);
-        setNicknameDraft(meResponse.user.nickname);
-        setStats(statsResponse);
-        setTeams(teamsResponse.items);
-      })
-      .catch(() => {
-        clearAccessToken();
-        router.replace('/');
-      })
-      .finally(() => {
-        setIsLoading(false);
-      });
-  }, [router]);
+  useEffect(() => {
+    if (meQuery.isError) {
+      clearSession();
+      router.replace('/');
+    }
+  }, [clearSession, meQuery.isError, router]);
 
   const favoriteTeam = teams.find((team) => team.id === user?.favoriteTeamId);
   useTeamTheme(favoriteTeam?.primaryColor ?? null);
@@ -74,7 +69,7 @@ export default function MyPage() {
   const profileImageSrc = getProfileImageSrc(user, favoriteTeam);
   const hasCustomProfilePhoto = Boolean(user?.profileImageUrl);
 
-  if (isLoading || !stats) {
+  if (meQuery.isLoading || statsQuery.isLoading || teamsQuery.isLoading || !stats) {
     return (
       <main className="app-shell">
         <Skeleton height={200} radius={10} />
@@ -100,7 +95,11 @@ export default function MyPage() {
     applyTeamTheme(nextTeam?.primaryColor ?? null);
 
     const response = await updateFavoriteTeam(teamId, token);
-    setUser(response.user);
+    setStoredUser(response.user);
+    queryClient.setQueryData(queryKeys.me(token), { user: response.user });
+    void queryClient.invalidateQueries({
+      queryKey: queryKeys.attendanceStats(token),
+    });
     setStatusMessage('내 팀이 변경되었습니다.');
     setShowTeamPicker(false);
   }
@@ -122,7 +121,8 @@ export default function MyPage() {
     setIsSavingNickname(true);
     try {
       const response = await updateNickname(nicknameDraft, token);
-      setUser(response.user);
+      setStoredUser(response.user);
+      queryClient.setQueryData(queryKeys.me(token), { user: response.user });
       setNicknameDraft(response.user.nickname);
       setIsEditingNickname(false);
       setStatusMessage('닉네임이 변경되었습니다.');
@@ -147,7 +147,8 @@ export default function MyPage() {
     setIsUploadingPhoto(true);
     try {
       const response = await uploadProfilePhoto(file, token);
-      setUser(response.user);
+      setStoredUser(response.user);
+      queryClient.setQueryData(queryKeys.me(token), { user: response.user });
       setStatusMessage('프로필 사진이 등록되었습니다.');
     } catch (error) {
       setStatusMessage(
@@ -433,7 +434,10 @@ export default function MyPage() {
         </div>
         <button
           className="btn btn-ghost"
-          onClick={() => performLogout(router)}
+          onClick={() => {
+            clearSession();
+            router.replace('/');
+          }}
           type="button"
         >
           로그아웃

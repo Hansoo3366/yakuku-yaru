@@ -79,23 +79,23 @@ Authorization: Bearer <accessToken>
 
 ### 상태 관리
 
-현재는 별도 전역 상태관리 라이브러리 없이 React state와 localStorage를 사용합니다.
+현재는 TanStack Query, Zustand, React state, localStorage를 역할별로 나눠 사용합니다.
 
 관리 대상:
 
 - access token: localStorage
-- 로그인 사용자 정보: 페이지 진입 시 `/auth/me`로 복원
-- 캘린더 월/경기/직관 기록: 페이지 state
-- 게시글/댓글 목록: 페이지 state
+- 로그인 사용자 정보: Zustand store + TanStack Query의 `/auth/me` 캐시
+- 팀/경기/직관 기록/순위/게시글/댓글: TanStack Query 캐시
+- 캘린더 월/필터: 페이지 state + localStorage
 - 사진 미리보기: object URL state
 
-초기 MVP에서는 화면 간 공유 상태가 복잡하지 않기 때문에 Zustand 같은 전역 store를 추가하지 않았습니다. 필요해지면 auth/user 상태부터 store로 분리할 수 있습니다.
+같은 API를 여러 컴포넌트가 호출하는 문제를 줄이기 위해 공통 query hook을 `src/lib/queries.ts`에 모았습니다.
 
 ### 로그인 상태 유지
 
 로그인 성공 시 access token을 localStorage에 저장합니다.
 
-새로고침 후에는 보호 페이지에서 localStorage의 token을 읽고 `/auth/me`를 호출합니다.
+새로고침 후에는 앱 provider가 localStorage의 token을 Zustand에 복원하고, `/auth/me`는 TanStack Query 캐시를 통해 공유합니다.
 
 토큰이 없거나 `/auth/me`가 실패하면 로그인 페이지로 이동합니다.
 

@@ -4,6 +4,7 @@
 
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { getAccessToken } from '@/lib/auth';
 import { useAuthGuard } from '@/lib/use-auth-guard';
@@ -52,6 +53,7 @@ function ticketStubOutcomeLabel(outcome: string | null) {
 export default function AttendanceDetailPage() {
   const params = useParams<{ recordId: string }>();
   const router = useRouter();
+  const queryClient = useQueryClient();
   useAuthGuard();
   const recordId = Number(params.recordId);
   const [record, setRecord] = useState<AttendanceRecord | null>(null);
@@ -86,6 +88,8 @@ export default function AttendanceDetailPage() {
     setIsDeleting(true);
     try {
       await deleteAttendanceRecord(record.id, token);
+      void queryClient.invalidateQueries({ queryKey: ['attendance-records'] });
+      void queryClient.invalidateQueries({ queryKey: ['attendance-stats'] });
       router.push('/calendar');
     } catch {
       setErrorMessage('삭제에 실패했어요. 잠시 후 다시 시도해주세요.');
