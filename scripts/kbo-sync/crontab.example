@@ -14,16 +14,14 @@ TZ=Asia/Seoul
 # 매일 06:00 KST — 일정(week) + 팀 순위
 0 6 * * * cd PROJECT_DIR && ./scripts/kbo-sync/daily.sh
 
-# 당일 일정 + 선발·라인업 (오전·오후)
-0 8,13 * * * cd PROJECT_DIR && ./scripts/kbo-sync/live.sh
-30 10,15 * * * cd PROJECT_DIR && ./scripts/kbo-sync/live.sh
+# 당일 일정 + 선발·라인업 + 스코어
+# 주말 14:00 경기, 주말/공휴일 17:00 경기까지 고려해 낮 경기 전후부터 촘촘하게 갱신
+0 8,11,12 * * * cd PROJECT_DIR && ./scripts/kbo-sync/live.sh
+30 10-12 * * * cd PROJECT_DIR && ./scripts/kbo-sync/live.sh
+0,30 13-23 * * * cd PROJECT_DIR && ./scripts/kbo-sync/live.sh
 
-# 17:00~23:30 KST — 30분마다 선발·라인업·lineup_confirmed
-0 17-23 * * * cd PROJECT_DIR && ./scripts/kbo-sync/live.sh
-30 17-23 * * * cd PROJECT_DIR && ./scripts/kbo-sync/live.sh
-
-# 21:00~23:30 KST — 30분마다 팀 순위 (live.sh 21~23시에도 순위 포함, 이중 백업)
-0,30 21-23 * * * cd PROJECT_DIR && ./scripts/kbo-sync/standings.sh
+# 16:00~23:30 KST — 낮 경기 종료/저녁 경기 종료 후 팀 순위 백업 갱신
+0,30 16-23 * * * cd PROJECT_DIR && ./scripts/kbo-sync/standings.sh
 
 # 자정 직후 — 막판 경기 반영 순위
 5 0 * * * cd PROJECT_DIR && ./scripts/kbo-sync/standings.sh
