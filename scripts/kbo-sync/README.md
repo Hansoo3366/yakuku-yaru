@@ -8,7 +8,7 @@ GitHub Actions 스케줄 대신 **프로덕션 서버 호스트 crontab**에서 
 | 파일 | 내용 |
 |------|------|
 | `daily.sh` | `sync:kbo-schedule --mode=week` → `sync:kbo-standings` |
-| `live.sh` | `sync:kbo-schedule --mode=today` → `sync:kbo-game-center` (선발·라인업·공식 여부). **21~23시 KST**에는 순위도 함께 |
+| `live.sh` | `sync:kbo-schedule --mode=today` → `sync:kbo-game-center` (선발·라인업·공식 여부). **16~23시 KST**에는 순위도 함께 |
 | `standings.sh` | `sync:kbo-standings` 만 |
 | `weekly.sh` | `sync:kbo-players` |
 | `season.sh` | `sync:kbo-schedule --mode=season` |
@@ -27,7 +27,7 @@ tail -f logs/kbo-sync/$(ls -t logs/kbo-sync/ | head -1)
 
 ## 서버 설치 (cron — `live.sh` 자동 갱신 포함)
 
-`crontab.example`에 **live.sh가 경기일 하루 8회**(08:00~21:30 KST) 등록되어 있습니다.  
+`crontab.example`에 주말 낮 경기와 공휴일 17시 경기를 고려한 `live.sh` 자동 갱신이 등록되어 있습니다.  
 일정·순위·선수·시즌 일정도 함께 들어 있습니다.
 
 ```bash
@@ -49,15 +49,17 @@ GCP VM이 UTC여도 `TZ=Asia/Seoul` 이라 주석의 KST 시각 그대로 동작
 | KST | 스크립트 |
 |-----|----------|
 | 06:00 매일 | `daily.sh` |
-| 08:00, 10:30, 13:00, 15:30 | `live.sh` |
-| **17:00~23:30 매 30분** | **`live.sh`** (선발·라인업) |
-| **21:00~23:30 매 30분** | **`standings.sh`** (+ `live.sh` 21~23시에도 순위 포함) |
+| 08:00 | `live.sh` |
+| 10:30~12:30 | `live.sh` (14시 경기 사전 갱신) |
+| 13:00~23:30 매 30분 | `live.sh` (선발·라인업·스코어) |
+| 16:00~23:30 매 30분 | `standings.sh` (+ `live.sh` 16~23시에도 순위 포함) |
 | 00:05 | `standings.sh` (막판 경기) |
 | 월 06:30 | `weekly.sh` |
-| 매월 1일 06:00 | `month.sh` |
-| 3/1 06:00 | `season.sh` |
+| 매월 1일 06:10 | `month.sh` |
+| 3/1 06:20 | `season.sh` |
 
 동시에 두 배치가 겹치면 flock 때문에 하나는 “건너뜀”으로 끝납니다 (`weekly` 길 때 `live`가 스킵될 수 있음).
+매월/매년 배치는 `daily.sh`와 같은 06:00에 겹치지 않도록 시간을 분리했습니다.
 
 수동 실행:
 

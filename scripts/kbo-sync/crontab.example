@@ -29,8 +29,8 @@ TZ=Asia/Seoul
 # 매주 월요일 06:30 KST — 선수 마스터(타율·OPS·생년월일)
 30 6 * * 1 cd PROJECT_DIR && ./scripts/kbo-sync/weekly.sh
 
-# 매월 1일 06:00 KST — 당월 일정
-0 6 1 * * cd PROJECT_DIR && ./scripts/kbo-sync/month.sh
+# 매월 1일 06:10 KST — 당월 일정 (daily.sh와 lock 충돌 방지)
+10 6 1 * * cd PROJECT_DIR && ./scripts/kbo-sync/month.sh
 
-# 매년 3월 1일 06:00 KST — 시즌 전체 일정
-0 6 1 3 * cd PROJECT_DIR && ./scripts/kbo-sync/season.sh
+# 매년 3월 1일 06:20 KST — 시즌 전체 일정 (daily/month와 lock 충돌 방지)
+20 6 1 3 * cd PROJECT_DIR && ./scripts/kbo-sync/season.sh

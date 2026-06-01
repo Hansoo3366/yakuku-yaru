@@ -26,10 +26,10 @@ KBO API는 **월 단위**만 제공합니다. 주·일 단위 갱신은 해당 �
 | 스크립트 | 시각 (KST) | 내용 |
 |----------|------------|------|
 | `daily.sh` | 매일 **06:00** | `schedule week` → `standings` |
-| `live.sh` | **08:00, 10:30, 13:00, 15:30, 17:00, 18:30, 20:00, 21:30** | `schedule today` → `game-center today` |
+| `live.sh` | **08:00, 10:30~12:30, 13:00~23:30 매 30분** | `schedule today` → `game-center today` |
 | `weekly.sh` | 매주 월 **06:30** | `sync:kbo-players` (선수 마스터, 프로필 이미지, 생년월일, 타격 지표) |
-| `month.sh` | 매월 1일 **06:00** | `schedule month` |
-| `season.sh` | 매년 3/1 **06:00** | `schedule season` |
+| `month.sh` | 매월 1일 **06:10** | `schedule month` |
+| `season.sh` | 매년 3/1 **06:20** | `schedule season` |
 
 설치 예:
 
@@ -46,7 +46,9 @@ sed "s|PROJECT_DIR|$(pwd)|g" scripts/kbo-sync/crontab.example | crontab -
 
 `docker-compose.prod.yml` 기본값 `KBO_SYNC_ENABLED=false` — 호스트 cron과 중복하지 않습니다.
 
-**팀 순위**는 `live.sh`에 없고, `daily.sh` 또는 API **week** 동기화(매일 06:00 KST) 때만 갱신됩니다.
+**팀 순위**는 `daily.sh`와 `standings.sh`에서 갱신하고, 16~23시 KST에는 `live.sh`도 함께 갱신합니다.
+
+`daily.sh`, `month.sh`, `season.sh`는 같은 lock 파일을 사용합니다. 매월 1일과 3월 1일에도 서로 건너뛰지 않도록 실행 시간을 06:00, 06:10, 06:20으로 분리합니다.
 
 **경기센터** 동기화는 선발 투수, 선발 투수 스탯, 라인업을 저장합니다. 라인업은 당일에도 확정 전일 수 있어 데이터가 비어 있을 수 있습니다.
 
