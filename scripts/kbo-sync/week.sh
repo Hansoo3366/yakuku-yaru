@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-BATCH_NAME=daily
+BATCH_NAME=week
 # shellcheck source=common.sh
 source "$(cd "$(dirname "$0")" && pwd)/common.sh"
 

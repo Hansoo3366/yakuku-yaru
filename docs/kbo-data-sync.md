@@ -25,11 +25,15 @@ KBO API는 **월 단위**만 제공합니다. 주·일 단위 갱신은 해당 �
 
 | 스크립트 | 시각 (KST) | 내용 |
 |----------|------------|------|
-| `daily.sh` | 매일 **06:00** | `schedule week` → `standings` |
-| `live.sh` | **08:00, 10:30~12:30, 13:00~23:30 매 30분** | `schedule today` → `game-center today` |
-| `weekly.sh` | 매주 월 **06:30** | `sync:kbo-players` (선수 마스터, 프로필 이미지, 생년월일, 타격 지표) |
-| `month.sh` | 매월 1일 **06:10** | `schedule month` |
-| `season.sh` | 매년 3/1 **06:20** | `schedule season` |
+| `week.sh` | 매일 **06:00** | `schedule week` |
+| `game-center.sh` | 매일 **06:10** | `game-center week` |
+| `standings.sh` | 매일 **06:20** | `standings` |
+| `today.sh` | **08:00, 10:30~12:30, 13:00~23:30 매 30분** | `schedule today` |
+| `game-center.sh` | **08:05, 10:35~12:35, 13:05~23:35 매 30분** | `game-center today` |
+| `standings.sh` | **16:10~23:40 매 30분**, **00:05** | `standings` |
+| `weekly.sh` | 매주 월 **07:10** | `sync:kbo-players` (선수 마스터, 프로필 이미지, 생년월일, 타격 지표) |
+| `month.sh` | 매월 1일 **06:30** | `schedule month` |
+| `season.sh` | 매년 3/1 **06:50** | `schedule season` |
 
 설치 예:
 
@@ -46,9 +50,9 @@ sed "s|PROJECT_DIR|$(pwd)|g" scripts/kbo-sync/crontab.example | crontab -
 
 `docker-compose.prod.yml` 기본값 `KBO_SYNC_ENABLED=false` — 호스트 cron과 중복하지 않습니다.
 
-**팀 순위**는 `daily.sh`와 `standings.sh`에서 갱신하고, 16~23시 KST에는 `live.sh`도 함께 갱신합니다.
+**팀 순위**는 `standings.sh`에서만 갱신합니다.
 
-`daily.sh`, `month.sh`, `season.sh`는 같은 lock 파일을 사용합니다. 매월 1일과 3월 1일에도 서로 건너뛰지 않도록 실행 시간을 06:00, 06:10, 06:20으로 분리합니다.
+모든 배치는 같은 lock 파일을 사용합니다. 자동 크론은 일정/스코어, 게임센터, 순위 배치를 5~10분씩 분리해 서로 건너뛰는 일을 줄입니다.
 
 **경기센터** 동기화는 선발 투수, 선발 투수 스탯, 라인업을 저장합니다. 라인업은 당일에도 확정 전일 수 있어 데이터가 비어 있을 수 있습니다.
 
@@ -68,8 +72,11 @@ sed "s|PROJECT_DIR|$(pwd)|g" scripts/kbo-sync/crontab.example | crontab -
 ```bash
 cd ~/yakuku-yaru
 ./scripts/kbo-sync/daily.sh
+./scripts/kbo-sync/week.sh
+./scripts/kbo-sync/today.sh
+./scripts/kbo-sync/game-center.sh
+GC_MODE=week ./scripts/kbo-sync/game-center.sh
 ./scripts/kbo-sync/live.sh
-GC_MODE=week ./scripts/kbo-sync/live.sh
 ./scripts/kbo-sync/weekly.sh
 ./scripts/kbo-sync/season.sh
 ./scripts/kbo-sync/month.sh

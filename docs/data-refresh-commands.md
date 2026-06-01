@@ -33,8 +33,11 @@ npm run sync:kbo-game-center:dev --workspace @yakuku-yaru/api -- --mode=week
 
 ```bash
 # 권장: 래퍼 스크립트 사용
-./scripts/kbo-sync/daily.sh      # week 일정 + 순위
-./scripts/kbo-sync/live.sh       # today 일정 + 게임센터
+./scripts/kbo-sync/daily.sh      # legacy alias: week 일정
+./scripts/kbo-sync/week.sh       # week 일정만
+./scripts/kbo-sync/today.sh      # today 일정/스코어만
+./scripts/kbo-sync/game-center.sh # 게임센터(선발/라인업)만
+./scripts/kbo-sync/live.sh       # today 일정 + 게임센터를 한 번에 수동 갱신
 ./scripts/kbo-sync/standings.sh  # 순위만
 ./scripts/kbo-sync/weekly.sh     # 선수
 ./scripts/kbo-sync/month.sh      # month 일정
@@ -43,17 +46,23 @@ npm run sync:kbo-game-center:dev --workspace @yakuku-yaru/api -- --mode=week
 
 운영 crontab 기준 자동 갱신 시간(KST):
 
-- `06:00`: 주간 일정 + 팀 순위
-- 매월 1일 `06:10`: 당월 전체 일정
-- 매년 3월 1일 `06:20`: 시즌 전체 일정
-- `08:00`: 당일 일정/게임센터 1차 점검
-- `10:30`, `11:00`, `11:30`, `12:00`, `12:30`: 주말 14:00 경기 선발/라인업 사전 갱신
-- `13:00~23:30`: 30분마다 당일 일정, 선발, 라인업, 스코어 갱신
-- `16:00~23:30`: 30분마다 팀 순위 백업 갱신
+- `06:00`: 주간 일정
+- `06:10`: 주간 게임센터(선발/라인업) 보강
+- `06:20`: 팀 순위
+- 매월 1일 `06:30`: 당월 전체 일정
+- 매년 3월 1일 `06:50`: 시즌 전체 일정
+- 매주 월요일 `07:10`: 선수 마스터
+- `08:00`: 당일 일정/스코어 1차 점검
+- `08:05`: 당일 게임센터 1차 점검
+- `10:30~12:30`: 당일 일정/스코어 사전 갱신
+- `10:35~12:35`: 주말 14:00 경기 선발/라인업 사전 갱신
+- `13:00~23:30`: 30분마다 당일 일정/스코어 갱신
+- `13:05~23:35`: 30분마다 선발/라인업 갱신
+- `16:10~23:40`: 30분마다 팀 순위 백업 갱신
 - `00:05`: 자정 직후 막판 순위 반영
 
-주말 14:00 경기, 주말/공휴일 17:00 경기, 평일 18:30 경기를 모두 커버하기 위해 `live.sh`는 낮부터 밤까지 넓게 실행합니다.
-`daily.sh`, `month.sh`, `season.sh`는 같은 lock 파일을 쓰기 때문에 1일/3월 1일에도 동시에 실행되지 않도록 시간을 분리합니다.
+주말 14:00 경기, 주말/공휴일 17:00 경기, 평일 18:30 경기를 모두 커버하기 위해 당일 일정과 게임센터는 낮부터 밤까지 넓게 실행합니다.
+자동 크론에서는 주간 일정(`week.sh`), 당일 일정/스코어(`today.sh`), 선발/라인업(`game-center.sh`), 순위(`standings.sh`)를 분리하고 5~10분 간격을 둬 lock 충돌과 원인 파악 문제를 줄입니다.
 
 직접 컨테이너 실행(동일 동작):
 
@@ -77,7 +86,14 @@ docker compose -f docker-compose.prod.yml --env-file .env.production exec -T api
 
 ### C. 전체 상태 점검용(일일 배치와 동일)
 ```bash
-./scripts/kbo-sync/daily.sh
+./scripts/kbo-sync/week.sh
+GC_MODE=week ./scripts/kbo-sync/game-center.sh
+./scripts/kbo-sync/standings.sh
+```
+
+### D. 선발투수/라인업만 넓게 즉시 갱신
+```bash
+GC_MODE=week ./scripts/kbo-sync/game-center.sh
 ```
 
 ## 4) 로그 확인
