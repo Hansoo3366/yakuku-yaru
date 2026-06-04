@@ -6,6 +6,11 @@ import { syncAttendanceScoresForGame } from '../attendance/attendance-score.js';
 export const KBO_EXTERNAL_SOURCE = 'kbo';
 
 type GameIdRow = RowDataPacket & { id: number };
+type GameMatchRow = RowDataPacket & {
+  id: number;
+  external_id: string | null;
+};
+type CountRow = RowDataPacket & { count: number };
 
 type TeamIdRow = RowDataPacket & {
   id: number;
@@ -56,6 +61,181 @@ async function findGameIdByMatch(input: {
   return rows[0]?.id ?? null;
 }
 
+async function findGameIdsBySameDayMatch(input: {
+  gameDate: string;
+  homeTeamId: number;
+  awayTeamId: number;
+}) {
+  const [rows] = await db.query<GameMatchRow[]>(
+    `SELECT id, external_id
+     FROM games
+     WHERE DATE(game_date) = DATE(?)
+       AND home_team_id = ?
+       AND away_team_id = ?
+       AND external_source = ?
+     ORDER BY
+       CASE WHEN game_date = ? THEN 0 ELSE 1 END,
+       CASE WHEN external_id LIKE 'pending-%' THEN 0 ELSE 1 END,
+       id ASC`,
+    [
+      input.gameDate,
+      input.homeTeamId,
+      input.awayTeamId,
+      KBO_EXTERNAL_SOURCE,
+      input.gameDate,
+    ],
+  );
+
+  return rows;
+}
+
+async function countAttendanceRecordsForGame(gameId: number) {
+  const [rows] = await db.query<CountRow[]>(
+    `SELECT COUNT(*) AS count
+     FROM attendance_records
+     WHERE game_id = ?`,
+    [gameId],
+  );
+
+  return rows[0]?.count ?? 0;
+}
+
+async function mergeDuplicateGameIntoCanonical(input: {
+  canonicalGameId: number;
+  duplicateGameId: number;
+}) {
+  if (input.canonicalGameId === input.duplicateGameId) {
+    return;
+  }
+
+  await db.execute(
+    `INSERT IGNORE INTO game_reminders (user_id, game_id, reminder_type, created_at)
+     SELECT user_id, ?, reminder_type, created_at
+     FROM game_reminders
+     WHERE game_id = ?`,
+    [input.canonicalGameId, input.duplicateGameId],
+  );
+  await db.execute(`DELETE FROM game_reminders WHERE game_id = ?`, [
+    input.duplicateGameId,
+  ]);
+
+  await db.execute(
+    `INSERT IGNORE INTO game_starting_pitchers (
+       game_id,
+       team_id,
+       player_id,
+       is_confirmed,
+       era,
+       war,
+       games,
+       starter_average_innings,
+       quality_starts,
+       whip,
+       season_record,
+       source,
+       synced_at,
+       created_at,
+       updated_at
+     )
+     SELECT
+       ?,
+       team_id,
+       player_id,
+       is_confirmed,
+       era,
+       war,
+       games,
+       starter_average_innings,
+       quality_starts,
+       whip,
+       season_record,
+       source,
+       synced_at,
+       created_at,
+       updated_at
+     FROM game_starting_pitchers
+     WHERE game_id = ?`,
+    [input.canonicalGameId, input.duplicateGameId],
+  );
+  await db.execute(`DELETE FROM game_starting_pitchers WHERE game_id = ?`, [
+    input.duplicateGameId,
+  ]);
+
+  await db.execute(
+    `INSERT IGNORE INTO game_lineups (
+       game_id,
+       team_id,
+       player_id,
+       batting_order,
+       field_position,
+       war,
+       is_starter,
+       source,
+       synced_at,
+       created_at,
+       updated_at
+     )
+     SELECT
+       ?,
+       team_id,
+       player_id,
+       batting_order,
+       field_position,
+       war,
+       is_starter,
+       source,
+       synced_at,
+       created_at,
+       updated_at
+     FROM game_lineups
+     WHERE game_id = ?`,
+    [input.canonicalGameId, input.duplicateGameId],
+  );
+  await db.execute(`DELETE FROM game_lineups WHERE game_id = ?`, [
+    input.duplicateGameId,
+  ]);
+
+  await db.execute(
+    `UPDATE IGNORE attendance_records
+     SET game_id = ?
+     WHERE game_id = ?`,
+    [input.canonicalGameId, input.duplicateGameId],
+  );
+
+  if ((await countAttendanceRecordsForGame(input.duplicateGameId)) > 0) {
+    console.warn(
+      `[kbo-sync] 중복 경기 ${input.duplicateGameId} 삭제 보류: 충돌하는 직관 기록이 남아있습니다.`,
+    );
+    return;
+  }
+
+  await db.execute(`DELETE FROM games WHERE id = ?`, [input.duplicateGameId]);
+}
+
+async function mergeSameDayDuplicateGames(input: {
+  canonicalGameId: number;
+  gameDate: string;
+  homeTeamId: number;
+  awayTeamId: number;
+}) {
+  const duplicates = await findGameIdsBySameDayMatch({
+    gameDate: input.gameDate,
+    homeTeamId: input.homeTeamId,
+    awayTeamId: input.awayTeamId,
+  });
+
+  for (const duplicate of duplicates) {
+    if (duplicate.id === input.canonicalGameId) {
+      continue;
+    }
+
+    await mergeDuplicateGameIntoCanonical({
+      canonicalGameId: input.canonicalGameId,
+      duplicateGameId: duplicate.id,
+    });
+  }
+}
+
 export type UpsertKboGameResult = 'inserted' | 'updated' | 'skipped';
 
 export async function upsertKboGame(
@@ -78,7 +258,13 @@ export async function upsertKboGame(
       gameDate: game.gameDate,
       homeTeamId,
       awayTeamId,
-    }));
+    })) ??
+    (await findGameIdsBySameDayMatch({
+      gameDate: game.gameDate,
+      homeTeamId,
+      awayTeamId,
+    }))[0]?.id ??
+    null;
 
   if (existingId) {
     await db.execute(
@@ -112,6 +298,13 @@ export async function upsertKboGame(
     if (game.homeScore !== null && game.awayScore !== null) {
       await syncAttendanceScoresForGame(existingId);
     }
+
+    await mergeSameDayDuplicateGames({
+      canonicalGameId: existingId,
+      gameDate: game.gameDate,
+      homeTeamId,
+      awayTeamId,
+    });
 
     return 'updated';
   }
@@ -150,6 +343,15 @@ export async function upsertKboGame(
     game.awayScore !== null
   ) {
     await syncAttendanceScoresForGame(insertResult.insertId);
+  }
+
+  if (insertResult.insertId) {
+    await mergeSameDayDuplicateGames({
+      canonicalGameId: insertResult.insertId,
+      gameDate: game.gameDate,
+      homeTeamId,
+      awayTeamId,
+    });
   }
 
   return 'inserted';
