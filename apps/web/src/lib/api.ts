@@ -67,9 +67,31 @@ export function getAssetUrl(path: string | null) {
     return '';
   }
 
-  if (path.startsWith('http://') || path.startsWith('https://')) {
-    return path;
+  const trimmedPath = path.trim();
+
+  if (!trimmedPath) {
+    return '';
   }
 
-  return `${ASSET_URL}${path}`;
+  try {
+    const url = new URL(trimmedPath);
+
+    if (url.pathname.startsWith('/uploads/')) {
+      return `${ASSET_URL}${url.pathname}`;
+    }
+
+    return trimmedPath;
+  } catch {
+    const uploadsPathIndex = trimmedPath.indexOf('/uploads/');
+
+    if (uploadsPathIndex >= 0) {
+      return `${ASSET_URL}${trimmedPath.slice(uploadsPathIndex)}`;
+    }
+
+    const normalizedPath = trimmedPath.startsWith('/')
+      ? trimmedPath
+      : `/${trimmedPath}`;
+
+    return `${ASSET_URL}${normalizedPath}`;
+  }
 }

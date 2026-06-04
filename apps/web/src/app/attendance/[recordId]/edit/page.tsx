@@ -8,9 +8,9 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { getAccessToken } from '@/lib/auth';
 import { fetchMe } from '@/lib/auth-api';
 import { useAuthGuard } from '@/lib/use-auth-guard';
+import { useAuthStore } from '@/lib/auth-store';
 import {
   ATTENDANCE_PHOTO_ACCEPT,
   deleteAttendanceRecord,
@@ -51,6 +51,8 @@ export default function EditAttendancePage() {
   const router = useRouter();
   const queryClient = useQueryClient();
   useAuthGuard();
+  const token = useAuthStore((state) => state.token);
+  const hasHydrated = useAuthStore((state) => state.hasHydrated);
   const recordId = Number(params.recordId);
   const [record, setRecord] = useState<AttendanceRecord | null>(null);
   const [myTeamScore, setMyTeamScore] = useState('');
@@ -121,10 +123,7 @@ export default function EditAttendancePage() {
   }
 
   useEffect(() => {
-    const token = getAccessToken();
-
-    if (!token) {
-      router.replace('/');
+    if (!hasHydrated || !token) {
       return;
     }
 
@@ -176,7 +175,7 @@ export default function EditAttendancePage() {
         }
       },
     );
-  }, [recordId, reset, router]);
+  }, [hasHydrated, recordId, reset, token]);
 
   useEffect(() => {
     if (!game || !isNeutral || !cheeredTeamId) {
@@ -216,8 +215,6 @@ export default function EditAttendancePage() {
   }
 
   async function onSubmit(values: AttendanceFormValues) {
-    const token = getAccessToken();
-
     if (!token) {
       router.replace('/');
       return;
@@ -263,7 +260,6 @@ export default function EditAttendancePage() {
   }
 
   async function handleDelete() {
-    const token = getAccessToken();
     if (!token) {
       router.replace('/');
       return;

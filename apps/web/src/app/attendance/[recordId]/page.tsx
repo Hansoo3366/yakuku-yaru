@@ -6,8 +6,8 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
-import { getAccessToken } from '@/lib/auth';
 import { useAuthGuard } from '@/lib/use-auth-guard';
+import { useAuthStore } from '@/lib/auth-store';
 import {
   deleteAttendanceRecord,
   fetchAttendanceRecord,
@@ -53,6 +53,8 @@ export default function AttendanceDetailPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
   useAuthGuard();
+  const token = useAuthStore((state) => state.token);
+  const hasHydrated = useAuthStore((state) => state.hasHydrated);
   const recordId = Number(params.recordId);
   const [record, setRecord] = useState<AttendanceRecord | null>(null);
   const [viewerFavoriteTeamId, setViewerFavoriteTeamId] = useState<
@@ -63,9 +65,7 @@ export default function AttendanceDetailPage() {
   const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
-    const token = getAccessToken();
-    if (!token) {
-      router.replace('/');
+    if (!hasHydrated || !token) {
       return;
     }
 
@@ -76,12 +76,11 @@ export default function AttendanceDetailPage() {
       })
       .catch(() => setErrorMessage('직관 기록을 불러오지 못했어요.'))
       .finally(() => setIsLoading(false));
-  }, [recordId, router]);
+  }, [hasHydrated, recordId, token]);
 
   async function handleDelete() {
     if (!record) return;
     if (!confirm('이 직관 기록을 삭제할까요? 되돌릴 수 없습니다.')) return;
-    const token = getAccessToken();
     if (!token) return;
     setIsDeleting(true);
     try {

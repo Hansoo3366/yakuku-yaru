@@ -107,6 +107,22 @@ export async function runMigrations() {
     );
   }
 
+  await db.execute(
+    `UPDATE attendance_records
+     SET photo_url = SUBSTRING(photo_url, LOCATE('/uploads/', photo_url))
+     WHERE photo_url IS NOT NULL
+       AND photo_url NOT LIKE '/uploads/%'
+       AND LOCATE('/uploads/', photo_url) > 0`,
+  );
+
+  await db.execute(
+    `UPDATE users
+     SET profile_image_url = SUBSTRING(profile_image_url, LOCATE('/uploads/', profile_image_url))
+     WHERE profile_image_url IS NOT NULL
+       AND profile_image_url NOT LIKE '/uploads/%'
+       AND LOCATE('/uploads/', profile_image_url) > 0`,
+  );
+
   const hasUserRole = await columnExists('users', 'role');
 
   if (!hasUserRole) {
