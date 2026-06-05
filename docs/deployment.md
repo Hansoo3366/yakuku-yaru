@@ -133,6 +133,7 @@ DEPLOY_SSH_KEY   VM에 접속할 private key
 DEPLOY_PATH      서버의 repository 절대 경로
 DEPLOY_PORT      SSH 포트, 기본값은 22
 DEPLOY_COMPOSE_PROFILES  선택 값. Caddy를 켤 때 proxy
+NEXT_PUBLIC_API_URL  빌드 시 web 이미지에 주입할 API URL
 ```
 
 예시:
@@ -143,7 +144,12 @@ DEPLOY_USER=hanso3366
 DEPLOY_PATH=/home/hanso3366/yakuku-yaru
 DEPLOY_PORT=22
 DEPLOY_COMPOSE_PROFILES=proxy
+NEXT_PUBLIC_API_URL=https://yakuku-yaru.today/api
 ```
+
+GitHub Actions는 `api`, `web` Docker 이미지를 GitHub Container Registry(GHCR)에 먼저 빌드/push합니다.
+서버는 이미지를 pull한 뒤 `docker compose up -d --no-build`로 교체만 수행합니다.
+따라서 e2-small 같은 작은 VM에서도 배포 중 서버가 직접 Next.js 빌드를 수행하지 않습니다.
 
 `DEPLOY_SSH_KEY`는 GitHub가 서버에 접속할 때 사용할 **private key**입니다. 서버에서 한 번만 실행합니다.
 
@@ -254,7 +260,7 @@ APP_DOMAIN=YOUR_SUBDOMAIN.duckdns.org
 5. 서버에서 다시 배포합니다.
 
 ```bash
-docker compose --env-file .env.production -f docker-compose.prod.yml --profile proxy up -d --build
+docker compose --env-file .env.production -f docker-compose.prod.yml --profile proxy up -d
 ```
 
 Caddy는 `APP_DOMAIN` 기준으로 Let's Encrypt 인증서를 자동 발급하고 갱신합니다.
@@ -290,8 +296,10 @@ SMTP_FROM="야크크 야르 <your-gmail@gmail.com>"
 
 `.env.production`만 수정했을 때는 Caddy만 재시작하면 안 되고, 해당 환경 변수를 사용하는 `api`와 필요 시 `web` 컨테이너를 다시 올려야 합니다.
 
+GitHub Actions 배포에서는 이미지를 Actions에서 빌드하므로 서버에서 `--build`를 붙이지 않습니다.
+
 ```bash
-docker compose --env-file .env.production -f docker-compose.prod.yml --profile proxy up -d --build api web caddy
+docker compose --env-file .env.production -f docker-compose.prod.yml --profile proxy up -d --no-build api web caddy
 ```
 
 ## 11. 데이터 보존
