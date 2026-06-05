@@ -99,17 +99,51 @@ function rosterScope(value: unknown) {
   return 'firstTeam' as const;
 }
 
-function parsePlayerCheerInput(body: Record<string, unknown>, playerId: number) {
-  const youtubeUrl = nullableString(body.youtubeUrl);
+function extractYoutubeId(value: string | null) {
+  if (!value) {
+    return null;
+  }
 
-  if (youtubeUrl && !/^https?:\/\//i.test(youtubeUrl)) {
-    throw new HttpError(400, 'INVALID_INPUT', '유튜브 링크는 http 또는 https URL이어야 합니다.');
+  const trimmed = value.trim();
+
+  if (/^[A-Za-z0-9_-]{6,32}$/.test(trimmed)) {
+    return trimmed;
+  }
+
+  try {
+    const url = new URL(trimmed);
+
+    if (url.hostname.includes('youtu.be')) {
+      const id = url.pathname.split('/').filter(Boolean)[0] ?? '';
+      return /^[A-Za-z0-9_-]{6,32}$/.test(id) ? id : null;
+    }
+
+    const queryId = url.searchParams.get('v') ?? '';
+
+    if (/^[A-Za-z0-9_-]{6,32}$/.test(queryId)) {
+      return queryId;
+    }
+
+    const embedMatch = url.pathname.match(/\/embed\/([A-Za-z0-9_-]{6,32})/);
+    return embedMatch?.[1] ?? null;
+  } catch {
+    return null;
+  }
+}
+
+function parsePlayerCheerInput(body: Record<string, unknown>, playerId: number) {
+  const youtubeIdSource = nullableString(body.youtubeId) ?? nullableString(body.youtubeUrl);
+  const youtubeId = extractYoutubeId(youtubeIdSource);
+
+  if (youtubeIdSource && !youtubeId) {
+    throw new HttpError(400, 'INVALID_INPUT', '올바른 유튜브 영상 ID가 필요합니다.');
   }
 
   return {
     playerId,
     title: nullableString(body.title),
-    youtubeUrl,
+    youtubeId,
+    youtubeUrl: null,
     lyrics: nullableString(body.lyrics),
   };
 }

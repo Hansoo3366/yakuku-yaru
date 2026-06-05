@@ -373,6 +373,7 @@ export async function runMigrations() {
       id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
       player_id BIGINT UNSIGNED NOT NULL,
       title VARCHAR(100) NULL,
+      youtube_id VARCHAR(32) NULL,
       youtube_url VARCHAR(500) NULL,
       lyrics TEXT NULL,
       created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -384,6 +385,15 @@ export async function runMigrations() {
         ON DELETE CASCADE
     )`,
   );
+
+  const hasPlayerCheerYoutubeId = await columnExists('player_cheers', 'youtube_id');
+
+  if (!hasPlayerCheerYoutubeId) {
+    await db.execute(
+      `ALTER TABLE player_cheers
+       ADD COLUMN youtube_id VARCHAR(32) NULL AFTER title`,
+    );
+  }
 
   await db.execute(
     `CREATE TABLE IF NOT EXISTS attendance_companions (

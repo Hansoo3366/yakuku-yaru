@@ -54,7 +54,7 @@ type GameForm = typeof emptyGameForm;
 const emptyCheerForm = {
   lyrics: '',
   title: '',
-  youtubeUrl: '',
+  youtubeId: '',
 };
 
 type CheerForm = typeof emptyCheerForm;
@@ -220,7 +220,7 @@ export default function AdminPage() {
     setCheerForm({
       lyrics: player.lyrics ?? '',
       title: player.cheerTitle ?? '',
-      youtubeUrl: player.youtubeUrl ?? '',
+      youtubeId: player.youtubeId ?? '',
     });
   }
 
@@ -249,7 +249,8 @@ export default function AdminPage() {
       {
         lyrics: cheerForm.lyrics.trim() || null,
         title: cheerForm.title.trim() || null,
-        youtubeUrl: cheerForm.youtubeUrl.trim() || null,
+        youtubeId: cheerForm.youtubeId.trim() || null,
+        youtubeUrl: null,
       },
       token,
     );
@@ -530,12 +531,11 @@ export default function AdminPage() {
                 onChange={(event) =>
                   setCheerForm((current) => ({
                     ...current,
-                    youtubeUrl: event.target.value,
+                    youtubeId: event.target.value,
                   }))
                 }
-                placeholder="유튜브 링크"
-                type="url"
-                value={cheerForm.youtubeUrl}
+                placeholder="유튜브 영상 ID"
+                value={cheerForm.youtubeId}
               />
               <textarea
                 onChange={(event) =>

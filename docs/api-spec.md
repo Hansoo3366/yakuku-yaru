@@ -183,6 +183,7 @@ Base URL: `/api`
 | `PATCH` | `/admin/games/:gameId` | 경기 운영 데이터 수정 |
 
 `GET /admin/player-cheers`는 `keyword`, `teamId`, `rosterScope`, `page`, `size` query를 지원합니다.
+`PUT /admin/player-cheers/:playerId`는 `title`, `youtubeId`, `lyrics`를 저장합니다.
 
 ## Upload and Security Policy
 

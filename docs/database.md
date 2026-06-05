@@ -122,7 +122,8 @@ KBO 선수 마스터 데이터를 저장합니다.
 | --- | --- |
 | `player_id` | 선수 ID, unique |
 | `title` | 응원가 제목 |
-| `youtube_url` | 유튜브 링크 |
+| `youtube_id` | 유튜브 영상 ID |
+| `youtube_url` | 과거 호환용 유튜브 링크 |
 | `lyrics` | 관리자 입력 가사 |
 | `created_at`, `updated_at` | 생성/수정 시각 |
 

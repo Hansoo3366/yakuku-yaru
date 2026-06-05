@@ -8,12 +8,45 @@ type Props = {
   onClose: () => void;
 };
 
+function extractYoutubeId(value: string | null | undefined) {
+  if (!value) {
+    return null;
+  }
+
+  const trimmed = value.trim();
+
+  if (/^[A-Za-z0-9_-]{6,32}$/.test(trimmed)) {
+    return trimmed;
+  }
+
+  try {
+    const url = new URL(trimmed);
+
+    if (url.hostname.includes('youtu.be')) {
+      const id = url.pathname.split('/').filter(Boolean)[0] ?? '';
+      return /^[A-Za-z0-9_-]{6,32}$/.test(id) ? id : null;
+    }
+
+    const queryId = url.searchParams.get('v') ?? '';
+
+    if (/^[A-Za-z0-9_-]{6,32}$/.test(queryId)) {
+      return queryId;
+    }
+
+    const embedMatch = url.pathname.match(/\/embed\/([A-Za-z0-9_-]{6,32})/);
+    return embedMatch?.[1] ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export function PlayerCheerDialog({ player, onClose }: Props) {
   if (!player) {
     return null;
   }
 
   const hasCheer = Boolean(player.cheerId);
+  const youtubeId = player.youtubeId ?? extractYoutubeId(player.youtubeUrl);
 
   return (
     <div
@@ -49,15 +82,15 @@ export function PlayerCheerDialog({ player, onClose }: Props) {
         {hasCheer ? (
           <div className="player-cheer-dialog-body">
             <h3>{player.cheerTitle || `${player.name} 응원가`}</h3>
-            {player.youtubeUrl ? (
-              <a
-                className="btn btn-primary"
-                href={player.youtubeUrl}
-                rel="noreferrer"
-                target="_blank"
-              >
-                유튜브로 듣기
-              </a>
+            {youtubeId ? (
+              <div className="player-cheer-video">
+                <iframe
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  allowFullScreen
+                  src={`https://www.youtube-nocookie.com/embed/${youtubeId}`}
+                  title={`${player.name} 응원가 영상`}
+                />
+              </div>
             ) : null}
             {player.lyrics ? (
               <p className="player-cheer-dialog-lyrics">{player.lyrics}</p>

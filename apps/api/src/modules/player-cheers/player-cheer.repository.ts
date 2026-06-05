@@ -14,6 +14,7 @@ export type PlayerCheerRow = RowDataPacket & {
   teamPrimaryColor: string | null;
   cheerId: number | null;
   cheerTitle: string | null;
+  youtubeId: string | null;
   youtubeUrl: string | null;
   lyrics: string | null;
   cheerUpdatedAt: Date | null;
@@ -22,6 +23,7 @@ export type PlayerCheerRow = RowDataPacket & {
 export type PlayerCheerInput = {
   playerId: number;
   title: string | null;
+  youtubeId: string | null;
   youtubeUrl: string | null;
   lyrics: string | null;
 };
@@ -49,6 +51,7 @@ function playerCheerSelectSql() {
       t.primary_color AS teamPrimaryColor,
       pc.id AS cheerId,
       pc.title AS cheerTitle,
+      pc.youtube_id AS youtubeId,
       pc.youtube_url AS youtubeUrl,
       pc.lyrics,
       pc.updated_at AS cheerUpdatedAt
@@ -161,16 +164,18 @@ export async function upsertPlayerCheer(input: PlayerCheerInput) {
     `INSERT INTO player_cheers (
        player_id,
        title,
+       youtube_id,
        youtube_url,
        lyrics
      )
-     VALUES (?, ?, ?, ?)
+     VALUES (?, ?, ?, ?, ?)
      ON DUPLICATE KEY UPDATE
        id = LAST_INSERT_ID(id),
        title = VALUES(title),
+       youtube_id = VALUES(youtube_id),
        youtube_url = VALUES(youtube_url),
        lyrics = VALUES(lyrics)`,
-    [input.playerId, input.title, input.youtubeUrl, input.lyrics],
+    [input.playerId, input.title, input.youtubeId, input.youtubeUrl, input.lyrics],
   );
 
   return Number(result.insertId);

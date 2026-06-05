@@ -6870,6 +6870,20 @@ img {
   font-size: var(--text-xl);
 }
 
+.player-cheer-video {
+  aspect-ratio: 16 / 9;
+  background: var(--color-night-navy);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  width: 100%;
+}
+
+.player-cheer-video iframe {
+  border: 0;
+  height: 100%;
+  width: 100%;
+}
+
 .player-cheer-dialog-lyrics {
   background: var(--color-paper);
   border-radius: var(--radius-md);

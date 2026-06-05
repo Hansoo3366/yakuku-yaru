@@ -13,6 +13,7 @@ export type PlayerCheer = {
   teamPrimaryColor: string | null;
   cheerId: number | null;
   cheerTitle: string | null;
+  youtubeId: string | null;
   youtubeUrl: string | null;
   lyrics: string | null;
   cheerUpdatedAt: string | null;
@@ -20,6 +21,7 @@ export type PlayerCheer = {
 
 export type PlayerCheerInput = {
   title: string | null;
+  youtubeId: string | null;
   youtubeUrl: string | null;
   lyrics: string | null;
 };
