@@ -369,6 +369,23 @@ export async function runMigrations() {
   }
 
   await db.execute(
+    `CREATE TABLE IF NOT EXISTS player_cheers (
+      id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+      player_id BIGINT UNSIGNED NOT NULL,
+      title VARCHAR(100) NULL,
+      youtube_url VARCHAR(500) NULL,
+      lyrics TEXT NULL,
+      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      PRIMARY KEY (id),
+      UNIQUE KEY uq_player_cheers_player_id (player_id),
+      CONSTRAINT fk_player_cheers_player
+        FOREIGN KEY (player_id) REFERENCES players(id)
+        ON DELETE CASCADE
+    )`,
+  );
+
+  await db.execute(
     `CREATE TABLE IF NOT EXISTS attendance_companions (
       id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
       attendance_record_id BIGINT UNSIGNED NOT NULL,

@@ -4,6 +4,12 @@ import { requireAdmin } from '../../middleware/require-admin.js';
 import { rateLimit } from '../../middleware/rate-limit.js';
 import { HttpError } from '../../utils/http-error.js';
 import { deleteComment } from '../comments/comment.repository.js';
+import {
+  deletePlayerCheer,
+  findPlayerCheerByPlayerId,
+  listPlayerCheers,
+  upsertPlayerCheer,
+} from '../player-cheers/player-cheer.repository.js';
 import { deletePost } from '../posts/post.repository.js';
 import { findUserById, setUserEmailVerified } from '../users/user.repository.js';
 import {
@@ -36,6 +42,76 @@ function nullableNumber(value: unknown) {
   if (value === null || value === undefined || value === '') return null;
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : null;
+}
+
+function nullableString(value: unknown) {
+  if (typeof value !== 'string') {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  return trimmed || null;
+}
+
+function parsePlayerId(value: unknown) {
+  const playerId = Number(value);
+
+  if (!Number.isInteger(playerId) || playerId < 1) {
+    throw new HttpError(400, 'INVALID_INPUT', '올바른 선수 ID가 필요합니다.');
+  }
+
+  return playerId;
+}
+
+function optionalTeamId(value: unknown) {
+  if (typeof value !== 'string' || !value.trim()) {
+    return undefined;
+  }
+
+  const parsed = Number(value);
+
+  if (!Number.isInteger(parsed) || parsed < 1) {
+    throw new HttpError(400, 'INVALID_INPUT', '올바른 팀 ID가 필요합니다.');
+  }
+
+  return parsed;
+}
+
+function optionalPositiveInteger(value: unknown, fallback: number, label: string) {
+  if (typeof value !== 'string' || !value.trim()) {
+    return fallback;
+  }
+
+  const parsed = Number(value);
+
+  if (!Number.isInteger(parsed) || parsed < 1) {
+    throw new HttpError(400, 'INVALID_INPUT', `${label} 값이 올바르지 않습니다.`);
+  }
+
+  return parsed;
+}
+
+function rosterScope(value: unknown) {
+  if (value === 'all') {
+    return 'all' as const;
+  }
+
+  return 'firstTeam' as const;
+}
+
+function parsePlayerCheerInput(body: Record<string, unknown>, playerId: number) {
+  const youtubeUrl = nullableString(body.youtubeUrl);
+
+  if (youtubeUrl && !/^https?:\/\//i.test(youtubeUrl)) {
+    throw new HttpError(400, 'INVALID_INPUT', '유튜브 링크는 http 또는 https URL이어야 합니다.');
+  }
+
+  return {
+    playerId,
+    title: nullableString(body.title),
+    youtubeUrl,
+    lyrics: nullableString(body.lyrics),
+  };
 }
 
 function parseGameInput(body: Record<string, unknown>) {
@@ -167,6 +243,46 @@ adminRouter.get('/comments', async (req, res, next) => {
 adminRouter.delete('/comments/:commentId', adminWriteLimit, async (req, res, next) => {
   try {
     await deleteComment(Number(req.params.commentId));
+    res.status(204).send();
+  } catch (error) {
+    next(error);
+  }
+});
+
+adminRouter.get('/player-cheers', async (req, res, next) => {
+  try {
+    res.json(await listPlayerCheers({
+      keyword: optionalKeyword(req.query.keyword),
+      teamId: optionalTeamId(req.query.teamId),
+      page: optionalPositiveInteger(req.query.page, 1, 'page'),
+      rosterScope: rosterScope(req.query.rosterScope),
+      size: optionalPositiveInteger(req.query.size, 24, 'size'),
+    }));
+  } catch (error) {
+    next(error);
+  }
+});
+
+adminRouter.put('/player-cheers/:playerId', adminWriteLimit, async (req, res, next) => {
+  try {
+    const playerId = parsePlayerId(req.params.playerId);
+    const player = await findPlayerCheerByPlayerId(playerId);
+
+    if (!player) {
+      throw new HttpError(404, 'PLAYER_NOT_FOUND', '선수를 찾을 수 없습니다.');
+    }
+
+    await upsertPlayerCheer(parsePlayerCheerInput(req.body ?? {}, playerId));
+    res.json({ item: await findPlayerCheerByPlayerId(playerId) });
+  } catch (error) {
+    next(error);
+  }
+});
+
+adminRouter.delete('/player-cheers/:playerId', adminWriteLimit, async (req, res, next) => {
+  try {
+    const playerId = parsePlayerId(req.params.playerId);
+    await deletePlayerCheer(playerId);
     res.status(204).send();
   } catch (error) {
     next(error);

@@ -6,6 +6,7 @@
 teams 1 ── N users(favorite_team_id)
 teams 1 ── N games(home_team_id / away_team_id)
 teams 1 ── N players
+players 1 ── 0..1 player_cheers
 
 games 1 ── N attendance_records
 games 1 ── N game_starting_pitchers
@@ -112,6 +113,18 @@ KBO 선수 마스터 데이터를 저장합니다.
 | `profile_image_url` | 선수 프로필 이미지 |
 | `season_batting_avg`, `season_ops` | 시즌 타격 지표 |
 | `is_active` | 현역 여부 |
+
+### player_cheers
+
+선수별 응원가 운영 데이터를 저장합니다.
+
+| Column | Note |
+| --- | --- |
+| `player_id` | 선수 ID, unique |
+| `title` | 응원가 제목 |
+| `youtube_url` | 유튜브 링크 |
+| `lyrics` | 관리자 입력 가사 |
+| `created_at`, `updated_at` | 생성/수정 시각 |
 
 ### game_starting_pitchers
 

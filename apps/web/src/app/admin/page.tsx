@@ -26,8 +26,16 @@ import { useAuthStore } from '@/lib/auth-store';
 import { fetchMe } from '@/lib/auth-api';
 import { listTeams, type Team } from '@/lib/baseball-api';
 import { formatKoreanDateTimeShort } from '@/lib/date-format';
+import {
+  deleteAdminPlayerCheer,
+  listAdminPlayerCheers,
+  saveAdminPlayerCheer,
+  type PlayerCheer,
+  type PlayerCheerPagination,
+  type PlayerCheerRosterScope,
+} from '@/lib/player-cheer-api';
 
-type AdminTab = 'users' | 'posts' | 'comments' | 'games';
+type AdminTab = 'users' | 'posts' | 'comments' | 'games' | 'cheers';
 
 const emptyGameForm = {
   awayScore: '',
@@ -42,6 +50,14 @@ const emptyGameForm = {
 };
 
 type GameForm = typeof emptyGameForm;
+
+const emptyCheerForm = {
+  lyrics: '',
+  title: '',
+  youtubeUrl: '',
+};
+
+type CheerForm = typeof emptyCheerForm;
 
 function toInput(form: GameForm): AdminGameInput {
   return {
@@ -68,33 +84,70 @@ export default function AdminPage() {
   const [posts, setPosts] = useState<AdminPost[]>([]);
   const [comments, setComments] = useState<AdminComment[]>([]);
   const [games, setGames] = useState<AdminGame[]>([]);
+  const [playerCheers, setPlayerCheers] = useState<PlayerCheer[]>([]);
+  const [playerCheerPagination, setPlayerCheerPagination] =
+    useState<PlayerCheerPagination | null>(null);
   const [teams, setTeams] = useState<Team[]>([]);
   const [keyword, setKeyword] = useState('');
+  const [cheerKeyword, setCheerKeyword] = useState('');
+  const [cheerTeamId, setCheerTeamId] = useState<number | null>(null);
+  const [cheerPage, setCheerPage] = useState(1);
+  const [cheerRosterScope, setCheerRosterScope] =
+    useState<PlayerCheerRosterScope>('firstTeam');
   const [message, setMessage] = useState('');
   const [currentUserId, setCurrentUserId] = useState<number | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [editingGameId, setEditingGameId] = useState<number | null>(null);
   const [gameForm, setGameForm] = useState<GameForm>(emptyGameForm);
+  const [editingCheerPlayerId, setEditingCheerPlayerId] = useState<number | null>(null);
+  const [cheerForm, setCheerForm] = useState<CheerForm>(emptyCheerForm);
   const token = useAuthStore((state) => state.token);
   const hasHydrated = useAuthStore((state) => state.hasHydrated);
 
-  const loadAll = useCallback(async (nextKeyword: string) => {
+  const loadAll = useCallback(async (
+    nextKeyword: string,
+    cheerInput?: {
+      keyword?: string;
+      page?: number;
+      rosterScope?: PlayerCheerRosterScope;
+      teamId?: number | null;
+    },
+  ) => {
     if (!token) return;
-    const [summaryResponse, usersResponse, postsResponse, commentsResponse, gamesResponse] =
-      await Promise.all([
+    const nextCheerKeyword = cheerInput?.keyword ?? cheerKeyword;
+    const nextCheerRosterScope = cheerInput?.rosterScope ?? cheerRosterScope;
+    const nextCheerTeamId = cheerInput?.teamId ?? cheerTeamId;
+    const nextCheerPage = cheerInput?.page ?? cheerPage;
+    const [
+      summaryResponse,
+      usersResponse,
+      postsResponse,
+      commentsResponse,
+      gamesResponse,
+      cheersResponse,
+    ] = await Promise.all([
         fetchAdminSummary(token),
         listAdminUsers(token, nextKeyword),
         listAdminPosts(token, nextKeyword),
         listAdminComments(token, nextKeyword),
         listAdminGames(token),
+        listAdminPlayerCheers(token, {
+          keyword: nextCheerKeyword,
+          page: nextCheerPage,
+          rosterScope: nextCheerRosterScope,
+          size: 24,
+          teamId: nextCheerTeamId,
+        }),
       ]);
     setSummary(summaryResponse);
     setUsers(usersResponse.items);
     setPosts(postsResponse.items);
     setComments(commentsResponse.items);
     setGames(gamesResponse.items);
-  }, [token]);
+    setPlayerCheers(cheersResponse.items);
+    setPlayerCheerPagination(cheersResponse.pagination);
+  }, [cheerKeyword, cheerPage, cheerRosterScope, cheerTeamId, token]);
 
   useEffect(() => {
     if (!hasHydrated) {
@@ -126,6 +179,27 @@ export default function AdminPage() {
     await loadAll(keyword);
   }
 
+  async function handleCheerSearch(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setCheerPage(1);
+    await loadAll(keyword, {
+      keyword: cheerKeyword,
+      page: 1,
+      rosterScope: cheerRosterScope,
+      teamId: cheerTeamId,
+    });
+  }
+
+  async function updateCheerPage(nextPage: number) {
+    setCheerPage(nextPage);
+    await loadAll(keyword, {
+      keyword: cheerKeyword,
+      page: nextPage,
+      rosterScope: cheerRosterScope,
+      teamId: cheerTeamId,
+    });
+  }
+
   function editGame(game: AdminGame) {
     setEditingGameId(game.id);
     setGameForm({
@@ -138,6 +212,15 @@ export default function AdminPage() {
       status: game.status,
       ticketOpenAt: game.ticketOpenAt?.slice(0, 16) ?? '',
       ticketUrl: game.ticketUrl ?? '',
+    });
+  }
+
+  function editCheer(player: PlayerCheer) {
+    setEditingCheerPlayerId(player.playerId);
+    setCheerForm({
+      lyrics: player.lyrics ?? '',
+      title: player.cheerTitle ?? '',
+      youtubeUrl: player.youtubeUrl ?? '',
     });
   }
 
@@ -154,6 +237,25 @@ export default function AdminPage() {
     }
     setGameForm(emptyGameForm);
     setEditingGameId(null);
+    await loadAll(keyword);
+  }
+
+  async function submitCheer(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!token || !editingCheerPlayerId) return;
+
+    await saveAdminPlayerCheer(
+      editingCheerPlayerId,
+      {
+        lyrics: cheerForm.lyrics.trim() || null,
+        title: cheerForm.title.trim() || null,
+        youtubeUrl: cheerForm.youtubeUrl.trim() || null,
+      },
+      token,
+    );
+    setMessage('응원가 정보가 저장되었습니다.');
+    setEditingCheerPlayerId(null);
+    setCheerForm(emptyCheerForm);
     await loadAll(keyword);
   }
 
@@ -196,7 +298,7 @@ export default function AdminPage() {
 
       <form className="admin-toolbar" onSubmit={handleSearch}>
         <div className="admin-tabs" role="tablist" aria-label="관리 메뉴">
-          {(['users', 'posts', 'comments', 'games'] as const).map((item) => (
+          {(['users', 'posts', 'comments', 'games', 'cheers'] as const).map((item) => (
             <button
               className={tab === item ? 'active' : ''}
               key={item}
@@ -334,6 +436,202 @@ export default function AdminPage() {
               </div>
             ))}
           </div>
+        </section>
+      ) : null}
+
+      {tab === 'cheers' ? (
+        <section className="admin-table-card">
+          <h2>선수 응원가 관리</h2>
+          <form className="admin-cheer-filter" onSubmit={handleCheerSearch}>
+            <input
+              aria-label="응원가 관리 선수 검색"
+              onChange={(event) => setCheerKeyword(event.target.value)}
+              placeholder="선수명 또는 팀명 검색"
+              value={cheerKeyword}
+            />
+            <select
+              aria-label="응원가 관리 팀 필터"
+              onChange={async (event) => {
+                const nextTeamId = event.target.value
+                  ? Number(event.target.value)
+                  : null;
+                setCheerTeamId(nextTeamId);
+                setCheerPage(1);
+                await loadAll(keyword, {
+                  keyword: cheerKeyword,
+                  page: 1,
+                  rosterScope: cheerRosterScope,
+                  teamId: nextTeamId,
+                });
+              }}
+              value={cheerTeamId ?? ''}
+            >
+              <option value="">전체 팀</option>
+              {teams.map((team) => (
+                <option key={team.id} value={team.id}>
+                  {team.shortName}
+                </option>
+              ))}
+            </select>
+            <select
+              aria-label="응원가 관리 선수 범위"
+              onChange={async (event) => {
+                const nextScope = event.target.value as PlayerCheerRosterScope;
+                setCheerRosterScope(nextScope);
+                setCheerPage(1);
+                await loadAll(keyword, {
+                  keyword: cheerKeyword,
+                  page: 1,
+                  rosterScope: nextScope,
+                  teamId: cheerTeamId,
+                });
+              }}
+              value={cheerRosterScope}
+            >
+              <option value="firstTeam">1군 경기 기준</option>
+              <option value="all">전체 선수</option>
+            </select>
+            <button className="btn btn-secondary" type="submit">
+              검색
+            </button>
+          </form>
+          {editingCheerPlayerId ? (
+            <form className="admin-cheer-form" onSubmit={submitCheer}>
+              <div className="admin-cheer-form-head">
+                <strong>
+                  {
+                    playerCheers.find(
+                      (player) => player.playerId === editingCheerPlayerId,
+                    )?.name
+                  }
+                </strong>
+                <button
+                  className="btn btn-ghost btn-sm"
+                  onClick={() => {
+                    setEditingCheerPlayerId(null);
+                    setCheerForm(emptyCheerForm);
+                  }}
+                  type="button"
+                >
+                  취소
+                </button>
+              </div>
+              <input
+                onChange={(event) =>
+                  setCheerForm((current) => ({
+                    ...current,
+                    title: event.target.value,
+                  }))
+                }
+                placeholder="응원가 제목"
+                value={cheerForm.title}
+              />
+              <input
+                onChange={(event) =>
+                  setCheerForm((current) => ({
+                    ...current,
+                    youtubeUrl: event.target.value,
+                  }))
+                }
+                placeholder="유튜브 링크"
+                type="url"
+                value={cheerForm.youtubeUrl}
+              />
+              <textarea
+                onChange={(event) =>
+                  setCheerForm((current) => ({
+                    ...current,
+                    lyrics: event.target.value,
+                  }))
+                }
+                placeholder="가사"
+                rows={8}
+                value={cheerForm.lyrics}
+              />
+              <button className="btn btn-primary" type="submit">
+                응원가 저장
+              </button>
+            </form>
+          ) : (
+            <p className="muted">
+              선수 행의 등록/수정 버튼을 누르면 응원가 정보를 입력할 수 있습니다.
+            </p>
+          )}
+
+          <div className="admin-table">
+            {playerCheers.map((player) => (
+              <div className="admin-row admin-row--cheer" key={player.playerId}>
+                <strong>{player.name}</strong>
+                <span>
+                  {player.teamShortName}
+                  {player.backNumber ? ` · No.${player.backNumber}` : ''}
+                  {player.position ? ` · ${player.position}` : ''}
+                </span>
+                <span>{player.cheerId ? '등록됨' : '미등록'}</span>
+                <span>{player.cheerTitle ?? '-'}</span>
+                <button
+                  className="btn btn-ghost btn-sm"
+                  onClick={() => editCheer(player)}
+                  type="button"
+                >
+                  {player.cheerId ? '수정' : '등록'}
+                </button>
+                <button
+                  className="btn btn-ghost btn-sm"
+                  disabled={!player.cheerId}
+                  onClick={async () => {
+                    if (
+                      !token ||
+                      !player.cheerId ||
+                      !window.confirm(`${player.name} 응원가 정보를 삭제할까요?`)
+                    ) {
+                      return;
+                    }
+                    await deleteAdminPlayerCheer(player.playerId, token);
+                    setMessage('응원가 정보가 삭제되었습니다.');
+                    await loadAll(keyword);
+                  }}
+                  type="button"
+                >
+                  삭제
+                </button>
+              </div>
+            ))}
+          </div>
+          {playerCheerPagination && playerCheerPagination.totalPages > 1 ? (
+            <nav className="cheers-pagination" aria-label="응원가 관리 페이지">
+              <button
+                className="btn btn-ghost btn-sm"
+                disabled={playerCheerPagination.page <= 1}
+                onClick={() =>
+                  updateCheerPage(Math.max(1, playerCheerPagination.page - 1))
+                }
+                type="button"
+              >
+                이전
+              </button>
+              <span>
+                {playerCheerPagination.page} / {playerCheerPagination.totalPages}
+              </span>
+              <button
+                className="btn btn-ghost btn-sm"
+                disabled={
+                  playerCheerPagination.page >= playerCheerPagination.totalPages
+                }
+                onClick={() =>
+                  updateCheerPage(
+                    Math.min(
+                      playerCheerPagination.totalPages,
+                      playerCheerPagination.page + 1,
+                    ),
+                  )
+                }
+                type="button"
+              >
+                다음
+              </button>
+            </nav>
+          ) : null}
         </section>
       ) : null}
 

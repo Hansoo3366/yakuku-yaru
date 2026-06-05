@@ -53,6 +53,24 @@ Base URL: `/api`
 
 경기 응답에는 홈/원정 팀, 스코어, 상태, 취소 사유, 예매 정보, 구장 정보, 선발 투수, 라인업 데이터가 포함될 수 있습니다.
 
+## Player Cheers
+
+| Method | Path | Auth | Description |
+| --- | --- | --- | --- |
+| `GET` | `/player-cheers` | public | 선수 프로필과 응원가 등록 정보 목록 |
+| `GET` | `/player-cheers/:playerId` | public | 특정 선수 응원가 정보 |
+
+`GET /player-cheers` query:
+
+| Name | Required | Description |
+| --- | --- | --- |
+| `keyword` | false | 선수명 또는 팀명 검색 |
+| `teamId` | false | 특정 팀 필터 |
+| `onlyWithCheer` | false | `true`면 응원가 등록 선수만 조회 |
+| `rosterScope` | false | `firstTeam` 기본값. `all`이면 전체 선수 조회 |
+| `page` | false | 기본값 1 |
+| `size` | false | 기본값 24, 최대 100 |
+
 ## Attendance Records
 
 | Method | Path | Auth | Description |
@@ -157,9 +175,14 @@ Base URL: `/api`
 | `DELETE` | `/admin/posts/:postId` | 게시글 삭제 |
 | `GET` | `/admin/comments` | 댓글 관리 목록 |
 | `DELETE` | `/admin/comments/:commentId` | 댓글 삭제 |
+| `GET` | `/admin/player-cheers` | 선수 응원가 관리 목록 |
+| `PUT` | `/admin/player-cheers/:playerId` | 선수 응원가 등록/수정 |
+| `DELETE` | `/admin/player-cheers/:playerId` | 선수 응원가 삭제 |
 | `GET` | `/admin/games` | 경기/KBO 데이터 관리 목록 |
 | `POST` | `/admin/games` | 경기 생성 |
 | `PATCH` | `/admin/games/:gameId` | 경기 운영 데이터 수정 |
+
+`GET /admin/player-cheers`는 `keyword`, `teamId`, `rosterScope`, `page`, `size` query를 지원합니다.
 
 ## Upload and Security Policy
 

@@ -13,6 +13,10 @@ import {
   listAttendanceRecords,
 } from '@/lib/attendance-api';
 import { fetchPost, listComments, listPosts } from '@/lib/post-api';
+import {
+  fetchPlayerCheer,
+  listPlayerCheers,
+} from '@/lib/player-cheer-api';
 import { queryKeys } from '@/lib/query-keys';
 
 export function useMeQuery(token: string | null | undefined) {
@@ -56,6 +60,34 @@ export function useGameQuery(gameId: number) {
     queryKey: queryKeys.game(gameId),
     queryFn: () => fetchGame(gameId),
     enabled: Number.isInteger(gameId) && gameId > 0,
+  });
+}
+
+export function usePlayerCheersQuery(input: {
+  keyword?: string;
+  teamId?: number | null;
+  onlyWithCheer?: boolean;
+  page?: number;
+  rosterScope?: 'firstTeam' | 'all';
+  size?: number;
+}) {
+  return useQuery({
+    queryKey: queryKeys.playerCheers(input),
+    queryFn: () => listPlayerCheers(input),
+  });
+}
+
+export function usePlayerCheerQuery(
+  playerId: number,
+  options?: { enabled?: boolean },
+) {
+  return useQuery({
+    queryKey: queryKeys.playerCheer(playerId),
+    queryFn: () => fetchPlayerCheer(playerId),
+    enabled:
+      Number.isInteger(playerId) &&
+      playerId > 0 &&
+      (options?.enabled ?? true),
   });
 }
 

@@ -12,6 +12,7 @@ import { authRouter } from './modules/auth/auth.routes.js';
 import { gameRouter } from './modules/games/game.routes.js';
 import { meRouter } from './modules/me/me.routes.js';
 import { notificationRouter } from './modules/notifications/notification.routes.js';
+import { playerCheerRouter } from './modules/player-cheers/player-cheer.routes.js';
 import { postRouter } from './modules/posts/post.routes.js';
 import { reminderRouter } from './modules/reminders/reminder.routes.js';
 import { teamRouter } from './modules/teams/team.routes.js';
@@ -48,6 +49,7 @@ export function createApp() {
   app.use('/api/users/me', meRouter);
   app.use('/api/users', userRouter);
   app.use('/api/notifications', notificationRouter);
+  app.use('/api/player-cheers', playerCheerRouter);
   app.use('/api/health', healthRouter);
   app.use('/api/posts', postRouter);
   app.use('/api/comments', commentRouter);

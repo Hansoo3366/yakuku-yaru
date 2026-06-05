@@ -5,7 +5,7 @@
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { type Game } from '@/lib/baseball-api';
 import { type AttendanceRecord } from '@/lib/attendance-api';
 import { PlayerPhoto } from '@/components/PlayerPhoto';
@@ -35,6 +35,11 @@ import {
 } from '@/lib/queries';
 import { queryKeys } from '@/lib/query-keys';
 import { formatKoreanDateTime } from '@/lib/date-format';
+import { PlayerCheerDialog } from '@/components/PlayerCheerDialog';
+import {
+  fetchPlayerCheer,
+  type PlayerCheer,
+} from '@/lib/player-cheer-api';
 
 function formatDateTime(value: string) {
   return formatKoreanDateTime(value);
@@ -154,10 +159,12 @@ function StarterPitcherCard({
 
 function LineupPanel({
   gameStarted,
+  onPlayerClick,
   players,
   team,
 }: {
   gameStarted: boolean;
+  onPlayerClick: (playerId: number) => void;
   players: LineupPlayer[];
   team: Game['homeTeam'];
 }) {
@@ -171,31 +178,37 @@ function LineupPanel({
         <ol className="lineup-list">
           {players.map((player) => (
             <li key={player.id}>
-              <span className="lineup-order">{player.battingOrder}</span>
-              <PlayerPhoto
-                className="lineup-player-photo"
-                placeholderClassName="lineup-player-photo--placeholder"
-                profileImageUrl={player.profileImageUrl}
-              />
-              <div className="lineup-player-main">
-                <strong>
-                  {player.backNumber ? `${player.backNumber} ` : ''}
-                  {player.name}
-                </strong>
-                <span>
-                  {player.fieldPosition ?? '포지션 미정'}
-                  {player.age !== null ? ` · 만 ${player.age}세` : ''}
-                </span>
-              </div>
-              <div className="lineup-stats">
-                <span>타율 {formatRate(player.battingAvg)}</span>
-                <span>
-                  <StatTerm abbr="OPS" /> {formatRate(player.ops)}
-                </span>
-                <span>
-                  <StatTerm abbr="WAR" /> {formatStat(player.war)}
-                </span>
-              </div>
+              <button
+                className="lineup-player-button"
+                onClick={() => onPlayerClick(player.playerId)}
+                type="button"
+              >
+                <span className="lineup-order">{player.battingOrder}</span>
+                <PlayerPhoto
+                  className="lineup-player-photo"
+                  placeholderClassName="lineup-player-photo--placeholder"
+                  profileImageUrl={player.profileImageUrl}
+                />
+                <div className="lineup-player-main">
+                  <strong>
+                    {player.backNumber ? `${player.backNumber} ` : ''}
+                    {player.name}
+                  </strong>
+                  <span>
+                    {player.fieldPosition ?? '포지션 미정'}
+                    {player.age !== null ? ` · 만 ${player.age}세` : ''}
+                  </span>
+                </div>
+                <div className="lineup-stats">
+                  <span>타율 {formatRate(player.battingAvg)}</span>
+                  <span>
+                    <StatTerm abbr="OPS" /> {formatRate(player.ops)}
+                  </span>
+                  <span>
+                    <StatTerm abbr="WAR" /> {formatStat(player.war)}
+                  </span>
+                </div>
+              </button>
             </li>
           ))}
         </ol>
@@ -320,6 +333,9 @@ export default function GameDetailPage() {
   const gameQuery = useGameQuery(gameId);
   const meQuery = useMeQuery(token);
   const attendanceRecordsQuery = useAttendanceRecordsQuery({}, token);
+  const [selectedPlayerCheer, setSelectedPlayerCheer] =
+    useState<PlayerCheer | null>(null);
+  const [cheerError, setCheerError] = useState('');
   const game = gameQuery.data?.game ?? null;
   const attendanceRecord = useMemo(
     () =>
@@ -343,6 +359,17 @@ export default function GameDetailPage() {
       window.clearInterval(intervalId);
     };
   }, [game, gameId, queryClient]);
+
+  async function handleLineupPlayerClick(playerId: number) {
+    setCheerError('');
+
+    try {
+      const response = await fetchPlayerCheer(playerId);
+      setSelectedPlayerCheer(response.item);
+    } catch {
+      setCheerError('응원가 정보를 불러오지 못했습니다.');
+    }
+  }
 
   if (!game) {
     return (
@@ -491,15 +518,18 @@ export default function GameDetailPage() {
         <div className="lineup-grid">
           <LineupPanel
             gameStarted={hasGameStarted(game)}
+            onPlayerClick={handleLineupPlayerClick}
             players={game.lineups.away}
             team={game.awayTeam}
           />
           <LineupPanel
             gameStarted={hasGameStarted(game)}
+            onPlayerClick={handleLineupPlayerClick}
             players={game.lineups.home}
             team={game.homeTeam}
           />
         </div>
+        {cheerError ? <p className="form-error">{cheerError}</p> : null}
       </section>
 
       <section
@@ -538,6 +568,10 @@ export default function GameDetailPage() {
       </section>
 
       <StadiumPersonalNotes stadium={game.stadium} />
+      <PlayerCheerDialog
+        onClose={() => setSelectedPlayerCheer(null)}
+        player={selectedPlayerCheer}
+      />
     </main>
   );
 }
