@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useState } from 'react';
 import {
   createAdminGame,
   deleteAdminComment,
@@ -22,7 +22,7 @@ import {
   type AdminSummary,
   type AdminUser,
 } from '@/lib/admin-api';
-import { getAccessToken } from '@/lib/auth';
+import { useAuthStore } from '@/lib/auth-store';
 import { fetchMe } from '@/lib/auth-api';
 import { listTeams, type Team } from '@/lib/baseball-api';
 import { formatKoreanDateTimeShort } from '@/lib/date-format';
@@ -76,10 +76,10 @@ export default function AdminPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [editingGameId, setEditingGameId] = useState<number | null>(null);
   const [gameForm, setGameForm] = useState<GameForm>(emptyGameForm);
+  const token = useAuthStore((state) => state.token);
+  const hasHydrated = useAuthStore((state) => state.hasHydrated);
 
-  const token = useMemo(() => getAccessToken(), []);
-
-  async function loadAll(nextKeyword = keyword) {
+  const loadAll = useCallback(async (nextKeyword: string) => {
     if (!token) return;
     const [summaryResponse, usersResponse, postsResponse, commentsResponse, gamesResponse] =
       await Promise.all([
@@ -94,9 +94,13 @@ export default function AdminPage() {
     setPosts(postsResponse.items);
     setComments(commentsResponse.items);
     setGames(gamesResponse.items);
-  }
+  }, [token]);
 
   useEffect(() => {
+    if (!hasHydrated) {
+      return;
+    }
+
     if (!token) {
       setIsLoading(false);
       return;
@@ -115,8 +119,7 @@ export default function AdminPage() {
       })
       .catch(() => setIsAdmin(false))
       .finally(() => setIsLoading(false));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token]);
+  }, [hasHydrated, loadAll, token]);
 
   async function handleSearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -151,7 +154,7 @@ export default function AdminPage() {
     }
     setGameForm(emptyGameForm);
     setEditingGameId(null);
-    await loadAll();
+    await loadAll(keyword);
   }
 
   if (isLoading) {
@@ -233,7 +236,7 @@ export default function AdminPage() {
                     if (!token) return;
                     await updateAdminUserRole(user.id, event.target.value, token);
                     setMessage('사용자 역할이 변경되었습니다.');
-                    await loadAll();
+                    await loadAll(keyword);
                   }}
                   value={user.role}
                 >
@@ -250,7 +253,7 @@ export default function AdminPage() {
                       token,
                     );
                     setMessage('이메일 인증 상태가 변경되었습니다.');
-                    await loadAll();
+                    await loadAll(keyword);
                   }}
                   value={user.emailVerifiedAt ? 'verified' : 'unverified'}
                 >
@@ -268,7 +271,7 @@ export default function AdminPage() {
                     if (!ok) return;
                     await deleteAdminUser(user.id, token);
                     setMessage('사용자가 삭제되었습니다.');
-                    await loadAll();
+                    await loadAll(keyword);
                   }}
                   type="button"
                 >
@@ -295,7 +298,7 @@ export default function AdminPage() {
                   onClick={async () => {
                     if (!token || !window.confirm('게시글을 삭제할까요?')) return;
                     await deleteAdminPost(post.id, token);
-                    await loadAll();
+                    await loadAll(keyword);
                   }}
                   type="button"
                 >
@@ -322,7 +325,7 @@ export default function AdminPage() {
                   onClick={async () => {
                     if (!token || !window.confirm('댓글을 삭제할까요?')) return;
                     await deleteAdminComment(comment.id, token);
-                    await loadAll();
+                    await loadAll(keyword);
                   }}
                   type="button"
                 >

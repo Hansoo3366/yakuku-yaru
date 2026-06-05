@@ -8,9 +8,9 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useQueryClient } from '@tanstack/react-query';
 import { Suspense, useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { getAccessToken } from '@/lib/auth';
 import { fetchMe } from '@/lib/auth-api';
 import { useAuthGuard } from '@/lib/use-auth-guard';
+import { useAuthStore } from '@/lib/auth-store';
 import {
   ATTENDANCE_PHOTO_ACCEPT,
   createAttendanceRecord,
@@ -44,6 +44,8 @@ function NewAttendanceForm() {
   const router = useRouter();
   const queryClient = useQueryClient();
   useAuthGuard();
+  const token = useAuthStore((state) => state.token);
+  const hasHydrated = useAuthStore((state) => state.hasHydrated);
   const searchParams = useSearchParams();
   const gameId = Number(searchParams.get('gameId'));
   const [myTeamScore, setMyTeamScore] = useState('');
@@ -115,7 +117,10 @@ function NewAttendanceForm() {
   }
 
   useEffect(() => {
-    const token = getAccessToken();
+    if (!hasHydrated) {
+      return;
+    }
+
     if (!token || !gameId) {
       setIsLoadingGame(false);
       return;
@@ -148,7 +153,7 @@ function NewAttendanceForm() {
       .finally(() => {
         setIsLoadingGame(false);
       });
-  }, [gameId]);
+  }, [gameId, hasHydrated, token]);
 
   useEffect(() => {
     if (!game || !isNeutral || !cheeredTeamId) {
@@ -188,8 +193,6 @@ function NewAttendanceForm() {
   }
 
   async function onSubmit(values: AttendanceFormValues) {
-    const token = getAccessToken();
-
     if (!token) {
       router.replace('/');
       return;

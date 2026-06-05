@@ -7,7 +7,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { ApiError } from '@/lib/api';
-import { getAccessToken } from '@/lib/auth';
+import { useAuthStore } from '@/lib/auth-store';
 import { useAuthGuard } from '@/lib/use-auth-guard';
 import { fetchPost, updatePost } from '@/lib/post-api';
 import { Skeleton } from '@/components/Skeleton';
@@ -22,6 +22,8 @@ export default function EditPostPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
   useAuthGuard();
+  const token = useAuthStore((state) => state.token);
+  const hasHydrated = useAuthStore((state) => state.hasHydrated);
   const postId = Number(params.postId);
   const [errorMessage, setErrorMessage] = useState('');
   const [isLoaded, setIsLoaded] = useState(false);
@@ -36,7 +38,11 @@ export default function EditPostPage() {
   });
 
   useEffect(() => {
-    if (!getAccessToken()) {
+    if (!hasHydrated) {
+      return;
+    }
+
+    if (!token) {
       router.replace('/');
       return;
     }
@@ -49,11 +55,9 @@ export default function EditPostPage() {
         });
       })
       .finally(() => setIsLoaded(true));
-  }, [postId, reset, router]);
+  }, [hasHydrated, postId, reset, router, token]);
 
   async function onSubmit(values: PostFormValues) {
-    const token = getAccessToken();
-
     if (!token) {
       router.replace('/');
       return;

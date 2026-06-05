@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
-import { getAccessToken } from '@/lib/auth';
+import { useAuthStore } from '@/lib/auth-store';
 import {
   deleteAllNotifications,
   deleteNotification,
@@ -42,22 +42,21 @@ export function NotificationBell({ userId }: NotificationBellProps) {
   const [respondedRecords, setRespondedRecords] = useState<RespondedRecords>({});
   const [respondingRecordId, setRespondingRecordId] = useState<number | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const token = useAuthStore((state) => state.token);
 
   useEffect(() => {
-    if (userId === null) {
+    if (userId === null || !token) {
       setNotifications([]);
       setUnreadCount(0);
       setRespondedRecords({});
       return;
     }
-    const accessToken = getAccessToken();
-    if (!accessToken) return;
-    const token = accessToken;
 
+    const sessionToken = token;
     let cancelled = false;
     async function loadNotifications() {
       try {
-        const response = await listNotifications(token);
+        const response = await listNotifications(sessionToken);
         if (cancelled) return;
         setNotifications(response.items);
         setUnreadCount(response.unreadCount);
@@ -76,7 +75,10 @@ export function NotificationBell({ userId }: NotificationBellProps) {
         const entries = await Promise.all(
           uniqueIds.map(async (recordId) => {
             try {
-              const recordResponse = await fetchAttendanceRecord(recordId, token);
+              const recordResponse = await fetchAttendanceRecord(
+                recordId,
+                sessionToken,
+              );
               const me = recordResponse.record.companions.find(
                 (companion) => companion.userId === userId,
               );
@@ -107,7 +109,7 @@ export function NotificationBell({ userId }: NotificationBellProps) {
       cancelled = true;
       window.clearInterval(intervalId);
     };
-  }, [userId]);
+  }, [token, userId]);
 
   useEffect(() => {
     if (!open) return;
@@ -131,7 +133,6 @@ export function NotificationBell({ userId }: NotificationBellProps) {
     const next = !open;
     setOpen(next);
     if (next && unreadCount) {
-      const token = getAccessToken();
       if (!token) return;
       try {
         await markNotificationsRead(token);
@@ -153,7 +154,6 @@ export function NotificationBell({ userId }: NotificationBellProps) {
   ) {
     const recordId = notification.attendanceRecordId;
     if (!recordId) return;
-    const token = getAccessToken();
     if (!token) return;
     setRespondingRecordId(recordId);
     try {
@@ -177,7 +177,6 @@ export function NotificationBell({ userId }: NotificationBellProps) {
   }
 
   async function handleDelete(notification: AppNotification) {
-    const token = getAccessToken();
     if (!token) return;
     try {
       await deleteNotification(notification.id, token);
@@ -192,7 +191,6 @@ export function NotificationBell({ userId }: NotificationBellProps) {
 
   async function handleClearAll() {
     if (!notifications.length) return;
-    const token = getAccessToken();
     if (!token) return;
     try {
       await deleteAllNotifications(token);

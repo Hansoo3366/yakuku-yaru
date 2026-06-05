@@ -9,7 +9,6 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { ApiError } from '@/lib/api';
-import { getAccessToken } from '@/lib/auth';
 import { useAuthStore } from '@/lib/auth-store';
 import { getAuthorProfileImageSrc } from '@/lib/profile-image';
 import {
@@ -56,7 +55,6 @@ export default function PostDetailPage() {
   });
 
   async function handleDeletePost() {
-    const token = getAccessToken();
     if (!token) {
       router.replace('/');
       return;
@@ -70,7 +68,6 @@ export default function PostDetailPage() {
   }
 
   async function handleCreateComment(values: CommentFormValues) {
-    const token = getAccessToken();
     if (!token) {
       router.replace('/');
       return;
@@ -96,7 +93,6 @@ export default function PostDetailPage() {
   }
 
   async function handleDeleteComment(commentId: number) {
-    const token = getAccessToken();
     if (!token) {
       router.replace('/');
       return;

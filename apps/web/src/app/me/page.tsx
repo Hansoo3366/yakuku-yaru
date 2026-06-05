@@ -11,7 +11,6 @@ import {
   updateNickname,
   uploadProfilePhoto,
 } from '@/lib/auth-api';
-import { getAccessToken } from '@/lib/auth';
 import { useAuthStore } from '@/lib/auth-store';
 import { useAuthGuard } from '@/lib/use-auth-guard';
 import { updateFavoriteTeam } from '@/lib/baseball-api';
@@ -85,7 +84,6 @@ export default function MyPage() {
       return;
     }
 
-    const token = getAccessToken();
     if (!token) {
       router.replace('/');
       return;
@@ -106,7 +104,6 @@ export default function MyPage() {
 
   async function handleNicknameSave() {
     if (isSavingNickname) return;
-    const token = getAccessToken();
     if (!token) {
       router.replace('/');
       return;
@@ -138,7 +135,6 @@ export default function MyPage() {
   async function handleProfilePhotoChange(file: File | undefined) {
     if (!file) return;
     if (isUploadingPhoto) return;
-    const token = getAccessToken();
     if (!token) {
       router.replace('/');
       return;

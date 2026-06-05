@@ -113,6 +113,23 @@ export async function fetchKboPlayersByTeam(teamCode: KboTeamCode) {
   return players;
 }
 
+export async function fetchKboPlayersBySearchWord(searchWord: string) {
+  const response = await fetch(
+    `${KBO_PLAYER_SEARCH_URL}?searchWord=${encodeURIComponent(searchWord)}`,
+    {
+      headers: {
+        'User-Agent': 'YakukuYaru/1.0 (+https://yakuku-yaru.today; player-sync)',
+      },
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error(`KBO 선수 검색 요청 실패 (${response.status})`);
+  }
+
+  return parsePlayerSearchHtml(await response.text());
+}
+
 function buildHitterBasic2Body(input: { html: string; teamCode: KboTeamCode }) {
   const body = new URLSearchParams();
   body.set('__VIEWSTATE', extractHiddenField(input.html, '__VIEWSTATE'));

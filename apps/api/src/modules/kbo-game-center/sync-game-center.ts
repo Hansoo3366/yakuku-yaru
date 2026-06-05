@@ -3,7 +3,10 @@ import {
   fetchKboGameCenterList,
   fetchKboLineupAnalysis,
   fetchKboPitcherAnalysis,
+  type KboLineupPlayer,
 } from './kbo-game-center.client.js';
+import { fetchKboPlayersBySearchWord } from '../kbo-players/kbo-player.client.js';
+import { upsertPlayer } from '../kbo-players/player.repository.js';
 import { isGameListLineupConfirmed } from './kbo-lineup-status.js';
 import {
   findKboGameIdForGameCenterGame,
@@ -17,6 +20,19 @@ import {
 } from './game-center.repository.js';
 
 const KST_TIME_ZONE = 'Asia/Seoul';
+
+const KBO_TEAM_CODE_TO_SHORT_NAME: Record<string, string> = {
+  SS: '삼성',
+  LG: 'LG',
+  KT: 'KT',
+  HT: 'KIA',
+  HH: '한화',
+  SK: 'SSG',
+  OB: '두산',
+  NC: 'NC',
+  LT: '롯데',
+  WO: '키움',
+};
 
 export type KboGameCenterSyncMode = 'today' | 'week' | 'month';
 
@@ -77,11 +93,78 @@ function normalizePitcherName(value: string | null | undefined) {
   return name || null;
 }
 
+function getKboPlayerImageUrl(seasonYear: number, kboPlayerId: string | number) {
+  return `https://6ptotvmi5753.edge.naverncp.com/KBO_IMAGE/person/kbo/${seasonYear}/${kboPlayerId}.png`;
+}
+
+async function enrichLineupPlayersWithSearchIds(input: {
+  seasonYear: number;
+  teamCode: string;
+  players: KboLineupPlayer[];
+  searchCache: Map<string, ReturnType<typeof fetchKboPlayersBySearchWord>>;
+  teamIdsByShortName: Map<string, number>;
+}) {
+  const teamShortName = KBO_TEAM_CODE_TO_SHORT_NAME[input.teamCode];
+
+  if (!teamShortName) {
+    return input.players;
+  }
+
+  const enrichedPlayers: KboLineupPlayer[] = [];
+
+  for (const player of input.players) {
+    if (player.kboPlayerId) {
+      enrichedPlayers.push(player);
+      continue;
+    }
+
+    const cacheKey = player.name.trim();
+    const searchPromise =
+      input.searchCache.get(cacheKey) ?? fetchKboPlayersBySearchWord(cacheKey);
+
+    input.searchCache.set(cacheKey, searchPromise);
+
+    const matches = await searchPromise.catch(() => []);
+    const match = matches.find(
+      (candidate) =>
+        candidate.name === player.name &&
+        candidate.teamShortName === teamShortName,
+    );
+
+    if (!match) {
+      enrichedPlayers.push(player);
+      continue;
+    }
+
+    await upsertPlayer(match, input.teamIdsByShortName);
+
+    enrichedPlayers.push({
+      ...player,
+      kboPlayerId: Number(match.kboPlayerId),
+      profileImageUrl:
+        player.profileImageUrl ??
+        getKboPlayerImageUrl(input.seasonYear, match.kboPlayerId),
+    });
+  }
+
+  return enrichedPlayers;
+}
+
 export async function syncKboGameCenter(input?: {
   mode?: KboGameCenterSyncMode;
   dates?: string[];
 }) {
   const teamIdsByCode = await listKboTeamIdsByCode();
+  const teamIdsByShortName = new Map<string, number>();
+
+  for (const [teamCode, shortName] of Object.entries(KBO_TEAM_CODE_TO_SHORT_NAME)) {
+    const teamId = teamIdsByCode.get(teamCode);
+
+    if (teamId) {
+      teamIdsByShortName.set(shortName, teamId);
+    }
+  }
+
   const dates =
     input?.dates?.length
       ? input.dates
@@ -94,6 +177,10 @@ export async function syncKboGameCenter(input?: {
   let pitcherStatUpserts = 0;
   let lineupUpserts = 0;
   let skipped = 0;
+  const lineupPlayerSearchCache = new Map<
+    string,
+    ReturnType<typeof fetchKboPlayersBySearchWord>
+  >();
 
   syncLog(
     'kbo-game-center',
@@ -223,9 +310,24 @@ export async function syncKboGameCenter(input?: {
       const homeTeamId = teamIdsByCode.get(game.HOME_ID);
 
       if (awayTeamId && homeTeamId) {
+        const seasonYear = Number(game.G_DT.slice(0, 4));
         const lineupAnalysis = await fetchKboLineupAnalysis({
-          seasonYear: Number(game.G_DT.slice(0, 4)),
+          seasonYear,
           gameExternalId: game.G_ID,
+        });
+        const awayLineup = await enrichLineupPlayersWithSearchIds({
+          seasonYear,
+          teamCode: game.AWAY_ID,
+          players: lineupAnalysis.away,
+          searchCache: lineupPlayerSearchCache,
+          teamIdsByShortName,
+        });
+        const homeLineup = await enrichLineupPlayersWithSearchIds({
+          seasonYear,
+          teamCode: game.HOME_ID,
+          players: lineupAnalysis.home,
+          searchCache: lineupPlayerSearchCache,
+          teamIdsByShortName,
         });
 
         await updateGameLineupConfirmed({
@@ -238,12 +340,12 @@ export async function syncKboGameCenter(input?: {
         lineupUpserts += await replaceGameLineup({
           gameId,
           teamId: awayTeamId,
-          players: lineupAnalysis.away,
+          players: awayLineup,
         });
         lineupUpserts += await replaceGameLineup({
           gameId,
           teamId: homeTeamId,
-          players: lineupAnalysis.home,
+          players: homeLineup,
         });
       }
     }

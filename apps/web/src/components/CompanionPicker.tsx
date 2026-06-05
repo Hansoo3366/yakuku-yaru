@@ -1,7 +1,7 @@
 'use client';
 
 import { KeyboardEvent, useState } from 'react';
-import { getAccessToken } from '@/lib/auth';
+import { useAuthStore } from '@/lib/auth-store';
 import { searchUsers, type UserSearchResult } from '@/lib/user-api';
 import type { AttendanceCompanion } from '@/lib/attendance-api';
 
@@ -34,9 +34,9 @@ export function CompanionPicker({
   const [results, setResults] = useState<UserSearchResult[]>([]);
   const [message, setMessage] = useState('');
   const [isSearching, setIsSearching] = useState(false);
+  const token = useAuthStore((state) => state.token);
 
   async function runSearch() {
-    const token = getAccessToken();
     const trimmedKeyword = keyword.trim();
 
     if (!token) {

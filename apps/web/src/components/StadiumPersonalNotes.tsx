@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { ApiError } from '@/lib/api';
-import { getAccessToken } from '@/lib/auth';
+import { useAuthStore } from '@/lib/auth-store';
 import {
   fetchUserStadiumNote,
   saveUserStadiumNote,
@@ -32,9 +32,13 @@ export function StadiumPersonalNotes({ stadium }: Props) {
   const [isSaving, setIsSaving] = useState(false);
   const [statusMessage, setStatusMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
+  const token = useAuthStore((state) => state.token);
+  const hasHydrated = useAuthStore((state) => state.hasHydrated);
 
   useEffect(() => {
-    const token = getAccessToken();
+    if (!hasHydrated) {
+      return;
+    }
 
     if (!token) {
       setIsLoading(false);
@@ -67,11 +71,9 @@ export function StadiumPersonalNotes({ stadium }: Props) {
     return () => {
       isMounted = false;
     };
-  }, [stadium]);
+  }, [hasHydrated, stadium, token]);
 
   async function handleSave() {
-    const token = getAccessToken();
-
     if (!token) {
       return;
     }
@@ -109,8 +111,6 @@ export function StadiumPersonalNotes({ stadium }: Props) {
       setIsSaving(false);
     }
   }
-
-  const token = typeof window !== 'undefined' ? getAccessToken() : null;
 
   if (!token) {
     return (
