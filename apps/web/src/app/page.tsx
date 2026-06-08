@@ -3,7 +3,7 @@
 /* eslint-disable @next/next/no-img-element */
 
 import Link from 'next/link';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { type AttendanceRecord } from '@/lib/attendance-api';
 import { computeAttendanceStatsFromRecords } from '@/lib/attendance-stats';
 import { TeamStandingsTable } from '@/components/TeamStandingsTable';
@@ -76,6 +76,29 @@ function formatDateParts(value: string) {
 
 function isUpcoming(value: string) {
   return new Date(value).getTime() >= Date.now() - 1000 * 60 * 60 * 6;
+}
+
+function AttendanceThumbnail({ photoUrl }: { photoUrl: string | null }) {
+  const [hasError, setHasError] = useState(false);
+  const src = getAssetUrl(photoUrl);
+
+  if (!src || hasError) {
+    return <span className="badge badge-navy">사진 없음</span>;
+  }
+
+  return (
+    <img
+      alt=""
+      onError={() => setHasError(true)}
+      src={src}
+      style={{
+        borderRadius: 8,
+        height: 44,
+        objectFit: 'cover',
+        width: 60,
+      }}
+    />
+  );
 }
 
 export default function HomePage() {
@@ -378,6 +401,7 @@ export default function HomePage() {
                     className="dashboard-game-row"
                     href={`/attendance/${record.id}`}
                     key={record.id}
+                    prefetch={false}
                   >
                     <div className="dashboard-game-date">
                       <span>{parts.month}월</span>
@@ -406,20 +430,7 @@ export default function HomePage() {
                         {formatAttendanceResultLabel(record, favoriteTeam?.id)}
                       </span>
                     </div>
-                    {record.photoUrl ? (
-                      <img
-                        alt=""
-                        src={getAssetUrl(record.photoUrl)}
-                        style={{
-                          borderRadius: 8,
-                          height: 44,
-                          objectFit: 'cover',
-                          width: 60,
-                        }}
-                      />
-                    ) : (
-                      <span className="badge badge-navy">사진 없음</span>
-                    )}
+                    <AttendanceThumbnail photoUrl={record.photoUrl} />
                   </Link>
                 );
               })}
