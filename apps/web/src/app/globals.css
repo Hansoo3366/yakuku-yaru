@@ -6321,13 +6321,13 @@ img {
 .calendar-event[data-outcome='draw'] {
   background: color-mix(
     in srgb,
-    var(--color-ticket-gold) 20%,
-    var(--color-white) 80%
+    var(--color-draw) 18%,
+    var(--color-white) 82%
   );
   border-color: color-mix(
     in srgb,
-    var(--color-ticket-gold) 54%,
-    var(--color-line) 46%
+    var(--color-draw) 44%,
+    var(--color-line) 56%
   );
   box-shadow: 0 1px 2px rgba(23, 32, 51, 0.04);
 }
