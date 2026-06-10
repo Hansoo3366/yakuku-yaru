@@ -5365,9 +5365,68 @@ img {
   }
 
   .calendar-filter-dock .filter-pill {
+    background: var(--color-white);
+    border-color: color-mix(
+      in srgb,
+      var(--team-color, var(--color-field-700)) 18%,
+      var(--color-line) 82%
+    );
     font-size: 12px;
     height: 30px;
     padding: 0 10px;
+  }
+
+  .calendar-filter-dock .filter-pill.is-selected {
+    background: var(--color-night-navy);
+    border-color: var(--color-night-navy);
+    color: var(--color-white);
+  }
+
+  .calendar-filter-dock {
+    background: color-mix(
+      in srgb,
+      var(--team-color, var(--color-field-700)) 8%,
+      var(--color-white) 92%
+    );
+    border-color: color-mix(
+      in srgb,
+      var(--team-color, var(--color-field-700)) 34%,
+      var(--color-line) 66%
+    );
+    box-shadow:
+      0 18px 42px rgba(23, 32, 51, 0.22),
+      0 0 0 1px rgba(255, 255, 255, 0.78) inset;
+  }
+
+  .calendar-filter-dock__toggle {
+    background: color-mix(
+      in srgb,
+      var(--team-color, var(--color-field-700)) 10%,
+      var(--color-white) 90%
+    );
+  }
+
+  .calendar-filter-dock__label {
+    background: var(--team-color, var(--color-field-700));
+    border-radius: var(--radius-pill);
+    color: var(--color-white);
+    justify-self: start;
+    letter-spacing: 0.02em;
+    padding: 4px 9px;
+  }
+
+  .calendar-filter-dock__summary {
+    color: var(--color-night-navy);
+    font-weight: var(--weight-black);
+  }
+
+  .calendar-filter-dock__chevron {
+    color: var(--team-color, var(--color-field-700));
+    font-weight: var(--weight-black);
+  }
+
+  .calendar-filter-dock__panel {
+    background: color-mix(in srgb, var(--color-paper) 70%, var(--color-white));
   }
 
   .calendar-filter-bar {
@@ -6942,32 +7001,59 @@ img {
   background: transparent;
 }
 
-.lineup-player-button {
+.lineup-player-row {
   align-items: center;
   background: transparent;
-  border: 0;
   border-bottom: 1px solid var(--color-line);
   color: inherit;
-  cursor: pointer;
   display: grid;
   font: inherit;
   gap: var(--space-2);
-  grid-template-columns: 24px 38px minmax(0, 1fr) auto;
+  grid-template-columns: 24px 38px minmax(0, 1fr) minmax(150px, auto) auto;
   min-height: 54px;
   padding: 8px var(--space-3);
   text-align: left;
   width: 100%;
 }
 
-.lineup-list li:last-child .lineup-player-button {
+.lineup-list li:last-child .lineup-player-row {
   border-bottom: 0;
 }
 
-.lineup-player-button:hover {
+.lineup-player-row:hover {
   background: color-mix(
     in srgb,
     var(--team-color, var(--color-field-700)) 6%,
     var(--color-white) 94%
+  );
+}
+
+.lineup-cheer-button {
+  background: color-mix(
+    in srgb,
+    var(--team-color, var(--color-field-700)) 12%,
+    var(--color-white) 88%
+  );
+  border: 1px solid
+    color-mix(
+      in srgb,
+      var(--team-color, var(--color-field-700)) 24%,
+      var(--color-line) 76%
+    );
+  border-radius: var(--radius-pill);
+  color: var(--team-color, var(--color-field-700));
+  cursor: pointer;
+  font-size: var(--text-xs);
+  font-weight: var(--weight-black);
+  padding: 7px 11px;
+  white-space: nowrap;
+}
+
+.lineup-cheer-button:hover {
+  background: color-mix(
+    in srgb,
+    var(--team-color, var(--color-field-700)) 18%,
+    var(--color-white) 82%
   );
 }
 
@@ -7055,12 +7141,18 @@ img {
     grid-template-columns: 1fr;
   }
 
-  .lineup-player-button {
-    grid-template-columns: 24px 36px minmax(0, 1fr);
+  .lineup-player-row {
+    grid-template-columns: 24px 36px minmax(0, 1fr) auto;
   }
 
   .lineup-stats {
-    grid-column: 3 / 4;
+    grid-column: 3 / 5;
     justify-content: flex-start;
+  }
+
+  .lineup-cheer-button {
+    align-self: center;
+    grid-column: 4 / 5;
+    grid-row: 1 / 3;
   }
 }

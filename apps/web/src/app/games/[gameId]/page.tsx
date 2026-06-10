@@ -22,7 +22,10 @@ import {
   LINEUP_POLL_INTERVAL_MS,
   shouldPollGameLineup,
 } from '@/lib/game-outcome';
-import { canWriteAttendanceRecord, isGameCancelled } from '@/lib/attendance-game';
+import {
+  canWriteAttendanceRecord,
+  isGameCancelled,
+} from '@/lib/attendance-game';
 import { getAttendanceTicketView } from '@/lib/attendance-score';
 import { getAssetUrl } from '@/lib/api';
 import { StatTerm } from '@/components/StatGlossary';
@@ -36,10 +39,7 @@ import {
 import { queryKeys } from '@/lib/query-keys';
 import { formatKoreanDateTime } from '@/lib/date-format';
 import { PlayerCheerDialog } from '@/components/PlayerCheerDialog';
-import {
-  fetchPlayerCheer,
-  type PlayerCheer,
-} from '@/lib/player-cheer-api';
+import { fetchPlayerCheer, type PlayerCheer } from '@/lib/player-cheer-api';
 
 function formatDateTime(value: string) {
   return formatKoreanDateTime(value);
@@ -178,11 +178,7 @@ function LineupPanel({
         <ol className="lineup-list">
           {players.map((player) => (
             <li key={player.id}>
-              <button
-                className="lineup-player-button"
-                onClick={() => onPlayerClick(player.playerId)}
-                type="button"
-              >
+              <div className="lineup-player-row">
                 <span className="lineup-order">{player.battingOrder}</span>
                 <PlayerPhoto
                   className="lineup-player-photo"
@@ -208,7 +204,15 @@ function LineupPanel({
                     <StatTerm abbr="WAR" /> {formatStat(player.war)}
                   </span>
                 </div>
-              </button>
+                <button
+                  aria-label={`${player.name} 응원가 보기`}
+                  className="lineup-cheer-button"
+                  onClick={() => onPlayerClick(player.playerId)}
+                  type="button"
+                >
+                  응원가
+                </button>
+              </div>
             </li>
           ))}
         </ol>
@@ -217,8 +221,8 @@ function LineupPanel({
           <strong>라인업 정보 없음</strong>
           <p>
             {gameStarted
-              ? '동기화가 끝나면 공식 라인업이 표시됩니다. 잠시 후 새로고침해 주세요.'
-              : '데이터 동기화 후 라인업이 여기에 표시됩니다.'}
+              ? 'KBO 데이터 동기화가 끝나면 공식 라인업이 표시됩니다.'
+              : 'KBO 데이터 동기화 후 라인업이 여기에 표시됩니다.'}
           </p>
         </div>
       )}
@@ -243,13 +247,11 @@ function GameRecordPanel({
       viewerFavoriteTeamId,
     );
     const cancelled = isGameCancelled(attendanceRecord.game);
-    const watchLabel =
-      attendanceRecord.watchType === 'home' ? '집관' : '직관';
+    const watchLabel = attendanceRecord.watchType === 'home' ? '집관' : '직관';
     const outcomeLabel = cancelled
       ? '우취'
       : ticketOutcomeLabel(ticket.outcome);
-    const hasScore =
-      ticket.awayScore !== null && ticket.homeScore !== null;
+    const hasScore = ticket.awayScore !== null && ticket.homeScore !== null;
     const scoreText = hasScore
       ? `${ticket.awayScore} : ${ticket.homeScore}`
       : null;
@@ -274,15 +276,15 @@ function GameRecordPanel({
                   src={getAssetUrl(attendanceRecord.photoUrl)}
                 />
               ) : (
-                <span className="game-record-ticket-photo-empty">사진 없음</span>
+                <span className="game-record-ticket-photo-empty">
+                  사진 없음
+                </span>
               )}
             </div>
             <div className="game-record-ticket-copy">
               <span
                 className={`game-record-ticket-outcome game-record-ticket-outcome--${
-                  cancelled
-                    ? 'cancelled'
-                    : ticket.outcome ?? 'blank'
+                  cancelled ? 'cancelled' : (ticket.outcome ?? 'blank')
                 }`}
               >
                 {watchLabel} · {outcomeLabel}
