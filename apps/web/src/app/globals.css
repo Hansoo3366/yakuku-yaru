@@ -3728,6 +3728,13 @@ img {
   min-width: 0;
 }
 
+.lineup-player-name-row {
+  align-items: center;
+  display: flex;
+  gap: 6px;
+  min-width: 0;
+}
+
 .lineup-player-main strong {
   color: var(--color-ink);
   font-size: var(--text-sm);
@@ -7009,7 +7016,7 @@ img {
   display: grid;
   font: inherit;
   gap: var(--space-2);
-  grid-template-columns: 24px 38px minmax(0, 1fr) minmax(150px, auto) auto;
+  grid-template-columns: 24px 38px minmax(0, 1fr) auto;
   min-height: 54px;
   padding: 8px var(--space-3);
   text-align: left;
@@ -7029,6 +7036,7 @@ img {
 }
 
 .lineup-cheer-button {
+  align-items: center;
   background: color-mix(
     in srgb,
     var(--team-color, var(--color-field-700)) 12%,
@@ -7043,10 +7051,16 @@ img {
   border-radius: var(--radius-pill);
   color: var(--team-color, var(--color-field-700));
   cursor: pointer;
+  display: inline-flex;
+  flex: 0 0 auto;
   font-size: var(--text-xs);
   font-weight: var(--weight-black);
-  padding: 7px 11px;
+  height: 24px;
+  justify-content: center;
+  line-height: 1;
+  padding: 0;
   white-space: nowrap;
+  width: 24px;
 }
 
 .lineup-cheer-button:hover {
@@ -7142,17 +7156,11 @@ img {
   }
 
   .lineup-player-row {
-    grid-template-columns: 24px 36px minmax(0, 1fr) auto;
+    grid-template-columns: 24px 36px minmax(0, 1fr);
   }
 
   .lineup-stats {
-    grid-column: 3 / 5;
+    grid-column: 3 / 4;
     justify-content: flex-start;
-  }
-
-  .lineup-cheer-button {
-    align-self: center;
-    grid-column: 4 / 5;
-    grid-row: 1 / 3;
   }
 }

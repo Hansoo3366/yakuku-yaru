@@ -186,10 +186,21 @@ function LineupPanel({
                   profileImageUrl={player.profileImageUrl}
                 />
                 <div className="lineup-player-main">
-                  <strong>
-                    {player.backNumber ? `${player.backNumber} ` : ''}
-                    {player.name}
-                  </strong>
+                  <div className="lineup-player-name-row">
+                    <strong>
+                      {player.backNumber ? `${player.backNumber} ` : ''}
+                      {player.name}
+                    </strong>
+                    <button
+                      aria-label={`${player.name} 응원가 보기`}
+                      className="lineup-cheer-button"
+                      onClick={() => onPlayerClick(player.playerId)}
+                      title="응원가"
+                      type="button"
+                    >
+                      <span aria-hidden="true">♪</span>
+                    </button>
+                  </div>
                   <span>
                     {player.fieldPosition ?? '포지션 미정'}
                     {player.age !== null ? ` · 만 ${player.age}세` : ''}
@@ -204,14 +215,6 @@ function LineupPanel({
                     <StatTerm abbr="WAR" /> {formatStat(player.war)}
                   </span>
                 </div>
-                <button
-                  aria-label={`${player.name} 응원가 보기`}
-                  className="lineup-cheer-button"
-                  onClick={() => onPlayerClick(player.playerId)}
-                  type="button"
-                >
-                  응원가
-                </button>
               </div>
             </li>
           ))}
