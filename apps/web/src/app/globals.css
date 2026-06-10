@@ -7156,11 +7156,36 @@ img {
   }
 
   .lineup-player-row {
-    grid-template-columns: 24px 36px minmax(0, 1fr);
+    align-items: center;
+    grid-template-columns: 22px 36px minmax(0, 1fr) minmax(112px, auto);
+  }
+
+  .lineup-player-main {
+    min-width: 0;
+  }
+
+  .lineup-player-main strong {
+    max-width: 100%;
+  }
+
+  .lineup-player-main > span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .lineup-stats {
-    grid-column: 3 / 4;
-    justify-content: flex-start;
+    align-self: stretch;
+    gap: 4px;
+    grid-column: 4 / 5;
+    justify-content: center;
+    justify-items: end;
+    min-width: 112px;
+    padding: 6px 8px;
+  }
+
+  .lineup-stats span {
+    font-size: var(--text-xs);
+    line-height: 1.4;
   }
 }
