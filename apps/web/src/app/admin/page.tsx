@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { FormEvent, useCallback, useEffect, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
 import {
   createAdminGame,
   deleteAdminComment,
@@ -59,6 +59,13 @@ const emptyCheerForm = {
 
 type CheerForm = typeof emptyCheerForm;
 
+type CheerFilterInput = {
+  keyword: string;
+  page: number;
+  rosterScope: PlayerCheerRosterScope;
+  teamId: number | null;
+};
+
 function toInput(form: GameForm): AdminGameInput {
   return {
     awayScore: form.awayScore === '' ? null : Number(form.awayScore),
@@ -98,27 +105,41 @@ export default function AdminPage() {
   const [currentUserId, setCurrentUserId] = useState<number | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [isCheerSearching, setIsCheerSearching] = useState(false);
   const [editingGameId, setEditingGameId] = useState<number | null>(null);
   const [gameForm, setGameForm] = useState<GameForm>(emptyGameForm);
   const [editingCheerPlayerId, setEditingCheerPlayerId] = useState<number | null>(null);
   const [cheerForm, setCheerForm] = useState<CheerForm>(emptyCheerForm);
+  const cheerFilterRef = useRef<CheerFilterInput>({
+    keyword: '',
+    page: 1,
+    rosterScope: 'firstTeam',
+    teamId: null,
+  });
+  const loadRequestIdRef = useRef(0);
   const token = useAuthStore((state) => state.token);
   const hasHydrated = useAuthStore((state) => state.hasHydrated);
 
+  useEffect(() => {
+    cheerFilterRef.current = {
+      keyword: cheerKeyword,
+      page: cheerPage,
+      rosterScope: cheerRosterScope,
+      teamId: cheerTeamId,
+    };
+  }, [cheerKeyword, cheerPage, cheerRosterScope, cheerTeamId]);
+
   const loadAll = useCallback(async (
     nextKeyword: string,
-    cheerInput?: {
-      keyword?: string;
-      page?: number;
-      rosterScope?: PlayerCheerRosterScope;
-      teamId?: number | null;
-    },
+    cheerInput?: Partial<CheerFilterInput>,
   ) => {
     if (!token) return;
-    const nextCheerKeyword = cheerInput?.keyword ?? cheerKeyword;
-    const nextCheerRosterScope = cheerInput?.rosterScope ?? cheerRosterScope;
-    const nextCheerTeamId = cheerInput?.teamId ?? cheerTeamId;
-    const nextCheerPage = cheerInput?.page ?? cheerPage;
+    const requestId = loadRequestIdRef.current + 1;
+    loadRequestIdRef.current = requestId;
+    const nextCheerInput = {
+      ...cheerFilterRef.current,
+      ...cheerInput,
+    };
     const [
       summaryResponse,
       usersResponse,
@@ -133,13 +154,16 @@ export default function AdminPage() {
         listAdminComments(token, nextKeyword),
         listAdminGames(token),
         listAdminPlayerCheers(token, {
-          keyword: nextCheerKeyword,
-          page: nextCheerPage,
-          rosterScope: nextCheerRosterScope,
+          keyword: nextCheerInput.keyword,
+          page: nextCheerInput.page,
+          rosterScope: nextCheerInput.rosterScope,
           size: 24,
-          teamId: nextCheerTeamId,
+          teamId: nextCheerInput.teamId,
         }),
       ]);
+    if (requestId !== loadRequestIdRef.current) {
+      return;
+    }
     setSummary(summaryResponse);
     setUsers(usersResponse.items);
     setPosts(postsResponse.items);
@@ -147,7 +171,7 @@ export default function AdminPage() {
     setGames(gamesResponse.items);
     setPlayerCheers(cheersResponse.items);
     setPlayerCheerPagination(cheersResponse.pagination);
-  }, [cheerKeyword, cheerPage, cheerRosterScope, cheerTeamId, token]);
+  }, [token]);
 
   useEffect(() => {
     if (!hasHydrated) {
@@ -181,13 +205,21 @@ export default function AdminPage() {
 
   async function handleCheerSearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (isCheerSearching) {
+      return;
+    }
+    setIsCheerSearching(true);
     setCheerPage(1);
-    await loadAll(keyword, {
-      keyword: cheerKeyword,
-      page: 1,
-      rosterScope: cheerRosterScope,
-      teamId: cheerTeamId,
-    });
+    try {
+      await loadAll(keyword, {
+        keyword: cheerKeyword,
+        page: 1,
+        rosterScope: cheerRosterScope,
+        teamId: cheerTeamId,
+      });
+    } finally {
+      setIsCheerSearching(false);
+    }
   }
 
   async function updateCheerPage(nextPage: number) {
@@ -452,18 +484,12 @@ export default function AdminPage() {
             />
             <select
               aria-label="응원가 관리 팀 필터"
-              onChange={async (event) => {
+              onChange={(event) => {
                 const nextTeamId = event.target.value
                   ? Number(event.target.value)
                   : null;
                 setCheerTeamId(nextTeamId);
                 setCheerPage(1);
-                await loadAll(keyword, {
-                  keyword: cheerKeyword,
-                  page: 1,
-                  rosterScope: cheerRosterScope,
-                  teamId: nextTeamId,
-                });
               }}
               value={cheerTeamId ?? ''}
             >
@@ -476,24 +502,22 @@ export default function AdminPage() {
             </select>
             <select
               aria-label="응원가 관리 선수 범위"
-              onChange={async (event) => {
+              onChange={(event) => {
                 const nextScope = event.target.value as PlayerCheerRosterScope;
                 setCheerRosterScope(nextScope);
                 setCheerPage(1);
-                await loadAll(keyword, {
-                  keyword: cheerKeyword,
-                  page: 1,
-                  rosterScope: nextScope,
-                  teamId: cheerTeamId,
-                });
               }}
               value={cheerRosterScope}
             >
               <option value="firstTeam">1군 경기 기준</option>
               <option value="all">전체 선수</option>
             </select>
-            <button className="btn btn-secondary" type="submit">
-              검색
+            <button
+              className="btn btn-secondary"
+              disabled={isCheerSearching}
+              type="submit"
+            >
+              {isCheerSearching ? '검색 중' : '검색'}
             </button>
           </form>
           {editingCheerPlayerId ? (
