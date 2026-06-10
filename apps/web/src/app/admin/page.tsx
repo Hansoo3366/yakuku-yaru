@@ -1,7 +1,14 @@
 'use client';
 
 import Link from 'next/link';
-import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
+import {
+  FormEvent,
+  Fragment,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 import {
   createAdminGame,
   deleteAdminComment,
@@ -520,106 +527,103 @@ export default function AdminPage() {
               {isCheerSearching ? '검색 중' : '검색'}
             </button>
           </form>
-          {editingCheerPlayerId ? (
-            <form className="admin-cheer-form" onSubmit={submitCheer}>
-              <div className="admin-cheer-form-head">
-                <strong>
-                  {
-                    playerCheers.find(
-                      (player) => player.playerId === editingCheerPlayerId,
-                    )?.name
-                  }
-                </strong>
-                <button
-                  className="btn btn-ghost btn-sm"
-                  onClick={() => {
-                    setEditingCheerPlayerId(null);
-                    setCheerForm(emptyCheerForm);
-                  }}
-                  type="button"
-                >
-                  취소
-                </button>
-              </div>
-              <input
-                onChange={(event) =>
-                  setCheerForm((current) => ({
-                    ...current,
-                    title: event.target.value,
-                  }))
-                }
-                placeholder="응원가 제목"
-                value={cheerForm.title}
-              />
-              <input
-                onChange={(event) =>
-                  setCheerForm((current) => ({
-                    ...current,
-                    youtubeId: event.target.value,
-                  }))
-                }
-                placeholder="유튜브 영상 ID"
-                value={cheerForm.youtubeId}
-              />
-              <textarea
-                onChange={(event) =>
-                  setCheerForm((current) => ({
-                    ...current,
-                    lyrics: event.target.value,
-                  }))
-                }
-                placeholder="가사"
-                rows={8}
-                value={cheerForm.lyrics}
-              />
-              <button className="btn btn-primary" type="submit">
-                응원가 저장
-              </button>
-            </form>
-          ) : (
+          {!editingCheerPlayerId ? (
             <p className="muted">
               선수 행의 등록/수정 버튼을 누르면 응원가 정보를 입력할 수 있습니다.
             </p>
-          )}
+          ) : null}
 
           <div className="admin-table">
             {playerCheers.map((player) => (
-              <div className="admin-row admin-row--cheer" key={player.playerId}>
-                <strong>{player.name}</strong>
-                <span>
-                  {player.teamShortName}
-                  {player.backNumber ? ` · No.${player.backNumber}` : ''}
-                  {player.position ? ` · ${player.position}` : ''}
-                </span>
-                <span>{player.cheerId ? '등록됨' : '미등록'}</span>
-                <span>{player.cheerTitle ?? '-'}</span>
-                <button
-                  className="btn btn-ghost btn-sm"
-                  onClick={() => editCheer(player)}
-                  type="button"
-                >
-                  {player.cheerId ? '수정' : '등록'}
-                </button>
-                <button
-                  className="btn btn-ghost btn-sm"
-                  disabled={!player.cheerId}
-                  onClick={async () => {
-                    if (
-                      !token ||
-                      !player.cheerId ||
-                      !window.confirm(`${player.name} 응원가 정보를 삭제할까요?`)
-                    ) {
-                      return;
-                    }
-                    await deleteAdminPlayerCheer(player.playerId, token);
-                    setMessage('응원가 정보가 삭제되었습니다.');
-                    await loadAll(keyword);
-                  }}
-                  type="button"
-                >
-                  삭제
-                </button>
-              </div>
+              <Fragment key={player.playerId}>
+                <div className="admin-row admin-row--cheer">
+                  <strong>{player.name}</strong>
+                  <span>
+                    {player.teamShortName}
+                    {player.backNumber ? ` · No.${player.backNumber}` : ''}
+                    {player.position ? ` · ${player.position}` : ''}
+                  </span>
+                  <span>{player.cheerId ? '등록됨' : '미등록'}</span>
+                  <span>{player.cheerTitle ?? '-'}</span>
+                  <button
+                    className="btn btn-ghost btn-sm"
+                    onClick={() => editCheer(player)}
+                    type="button"
+                  >
+                    {player.cheerId ? '수정' : '등록'}
+                  </button>
+                  <button
+                    className="btn btn-ghost btn-sm"
+                    disabled={!player.cheerId}
+                    onClick={async () => {
+                      if (
+                        !token ||
+                        !player.cheerId ||
+                        !window.confirm(`${player.name} 응원가 정보를 삭제할까요?`)
+                      ) {
+                        return;
+                      }
+                      await deleteAdminPlayerCheer(player.playerId, token);
+                      setMessage('응원가 정보가 삭제되었습니다.');
+                      await loadAll(keyword);
+                    }}
+                    type="button"
+                  >
+                    삭제
+                  </button>
+                </div>
+                {editingCheerPlayerId === player.playerId ? (
+                  <form className="admin-cheer-form" onSubmit={submitCheer}>
+                    <div className="admin-cheer-form-head">
+                      <strong>{player.name}</strong>
+                      <button
+                        className="btn btn-ghost btn-sm"
+                        onClick={() => {
+                          setEditingCheerPlayerId(null);
+                          setCheerForm(emptyCheerForm);
+                        }}
+                        type="button"
+                      >
+                        취소
+                      </button>
+                    </div>
+                    <input
+                      onChange={(event) =>
+                        setCheerForm((current) => ({
+                          ...current,
+                          title: event.target.value,
+                        }))
+                      }
+                      placeholder="응원가 제목"
+                      value={cheerForm.title}
+                    />
+                    <input
+                      onChange={(event) =>
+                        setCheerForm((current) => ({
+                          ...current,
+                          youtubeId: event.target.value,
+                        }))
+                      }
+                      placeholder="유튜브 영상 ID"
+                      value={cheerForm.youtubeId}
+                    />
+                    <textarea
+                      onChange={(event) =>
+                        setCheerForm((current) => ({
+                          ...current,
+                          lyrics: event.target.value,
+                        }))
+                      }
+                      placeholder="가사"
+                      rows={8}
+                      value={cheerForm.lyrics}
+                    />
+                    <button className="btn btn-primary" type="submit">
+                      응원가 저장
+                    </button>
+                  </form>
+                ) : null}
+              </Fragment>
             ))}
           </div>
           {playerCheerPagination && playerCheerPagination.totalPages > 1 ? (
