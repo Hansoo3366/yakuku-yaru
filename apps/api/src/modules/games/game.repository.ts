@@ -333,12 +333,9 @@ function rosterPlayerLookupSql(column: string) {
     SELECT pr.${column}
     FROM players pr
     WHERE pr.team_id = gl.team_id
-      AND pr.name = p.name
       AND pr.kbo_player_id IS NOT NULL
-      AND (
-        p.kbo_player_id IS NULL
-        OR pr.kbo_player_id = p.kbo_player_id
-      )
+      AND p.kbo_player_id IS NOT NULL
+      AND pr.kbo_player_id = p.kbo_player_id
     ORDER BY
       (pr.birth_date IS NOT NULL) DESC,
       (pr.season_batting_avg IS NOT NULL) DESC,

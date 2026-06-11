@@ -319,51 +319,26 @@ export async function updatePitcherAnalysis(input: {
   );
 }
 
-type KboPlayerIdRow = RowDataPacket & {
-  kbo_player_id: string;
-};
-
 async function findPlayerIdByTeamAndName(input: {
   teamId: number;
   name: string;
+  position: string | null;
 }) {
   const [rows] = await db.query<IdRow[]>(
     `SELECT id
      FROM players
      WHERE team_id = ?
        AND name = ?
+       AND kbo_player_id IS NULL
+       AND (position <=> ?)
      ORDER BY
-       (kbo_player_id IS NOT NULL) DESC,
-       (season_batting_avg IS NOT NULL) DESC,
-       (season_ops IS NOT NULL) DESC,
        is_active DESC,
        id ASC
      LIMIT 1`,
-    [input.teamId, input.name],
+    [input.teamId, input.name, input.position],
   );
 
   return rows[0]?.id ?? null;
-}
-
-async function resolveLineupKboPlayerId(input: {
-  teamId: number;
-  player: KboLineupPlayer;
-}) {
-  if (input.player.kboPlayerId) {
-    return String(input.player.kboPlayerId);
-  }
-
-  const [rows] = await db.query<KboPlayerIdRow[]>(
-    `SELECT kbo_player_id
-     FROM players
-     WHERE team_id = ?
-       AND name = ?
-       AND kbo_player_id IS NOT NULL
-     LIMIT 1`,
-    [input.teamId, input.player.name],
-  );
-
-  return rows[0]?.kbo_player_id ?? null;
 }
 
 async function createLineupPlayerWithoutKboId(input: {
@@ -389,12 +364,10 @@ async function upsertLineupPlayer(input: {
   teamId: number;
   player: KboLineupPlayer;
 }) {
-  const kboPlayerId = await resolveLineupKboPlayerId(input);
-
-  if (kboPlayerId) {
+  if (input.player.kboPlayerId) {
     return upsertKboPlayer({
       teamId: input.teamId,
-      kboPlayerId,
+      kboPlayerId: input.player.kboPlayerId,
       name: input.player.name,
       position: input.player.fieldPosition,
       profileImageUrl: input.player.profileImageUrl,
@@ -404,21 +377,10 @@ async function upsertLineupPlayer(input: {
   const existingId = await findPlayerIdByTeamAndName({
     teamId: input.teamId,
     name: input.player.name,
+    position: input.player.fieldPosition,
   });
 
   if (existingId) {
-    const resolvedAfterLookup = await resolveLineupKboPlayerId(input);
-
-    if (resolvedAfterLookup) {
-      return upsertKboPlayer({
-        teamId: input.teamId,
-        kboPlayerId: resolvedAfterLookup,
-        name: input.player.name,
-        position: input.player.fieldPosition,
-        profileImageUrl: input.player.profileImageUrl,
-      });
-    }
-
     await db.execute(
       `UPDATE players
        SET position = COALESCE(?, position),
