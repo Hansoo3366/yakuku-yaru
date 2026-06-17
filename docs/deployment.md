@@ -321,6 +321,22 @@ docker compose -f docker-compose.prod.yml down -v
 
 위 명령은 DB와 업로드 파일 volume을 삭제합니다.
 
+업로드 이미지가 서버 디스크를 많이 차지하면 NAS/NFS/SMB를 서버에 마운트한 뒤
+`.env.production`에 호스트 경로를 지정할 수 있습니다. 지정하지 않으면 기존처럼
+`api_uploads` Docker volume을 사용합니다.
+
+```env
+UPLOADS_HOST_DIR=/mnt/yakuku-uploads
+```
+
+기존 업로드 파일을 NAS 마운트 경로로 옮긴 뒤 API를 다시 올립니다.
+
+```bash
+docker compose --env-file .env.production -f docker-compose.prod.yml stop api
+docker run --rm -v yakuku-yaru_api_uploads:/from:ro -v /mnt/yakuku-uploads:/to alpine sh -c 'cd /from && tar cf - . | tar xf - -C /to'
+docker compose --env-file .env.production -f docker-compose.prod.yml up -d api
+```
+
 ## 12. 다음 개선
 
 실서비스 수준으로 올릴 때는 아래 구성을 추가하는 것이 좋습니다.
