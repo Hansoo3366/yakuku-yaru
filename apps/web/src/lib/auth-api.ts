@@ -20,7 +20,11 @@ export type RegisterResponse = EmailVerificationMeta & {
   user: PublicUser;
 };
 
-export function login(input: { email: string; password: string }) {
+export function login(input: {
+  email: string;
+  password: string;
+  rememberMe?: boolean;
+}) {
   return request<AuthResponse>('/auth/login', {
     method: 'POST',
     body: input,

@@ -190,9 +190,10 @@ authRouter.post('/register', registerRateLimit, async (req, res, next) => {
 
 authRouter.post('/login', loginRateLimit, async (req, res, next) => {
   try {
-    const { email, password } = req.body as {
+    const { email, password, rememberMe } = req.body as {
       email?: string;
       password?: string;
+      rememberMe?: boolean;
     };
 
     if (!email || !password) {
@@ -225,7 +226,7 @@ authRouter.post('/login', loginRateLimit, async (req, res, next) => {
       email: user.email,
     });
 
-    setAuthCookie(res, accessToken);
+    setAuthCookie(res, accessToken, { rememberMe: Boolean(rememberMe) });
 
     res.json({
       user: toPublicUser(user),

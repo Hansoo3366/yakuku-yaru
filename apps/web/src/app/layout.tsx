@@ -3,6 +3,7 @@ import { AppFooter, AppHeader } from '@/components/AppChrome';
 import { AppProviders } from '@/components/AppProviders';
 import { BottomNav } from '@/components/BottomNav';
 import { ServiceWorkerRegister } from '@/components/ServiceWorkerRegister';
+import { getAbsoluteUrl, getSiteUrl } from '@/lib/site-url';
 import './globals.css';
 
 const bootScript = `
@@ -23,8 +24,67 @@ const bootScript = `
 `;
 
 export const metadata: Metadata = {
-  title: '야크크 야르~ 섹시야구',
-  description: 'KBO 직관과 집관을 캘린더와 포토 티켓으로 기록하는 야구 팬 PWA',
+  metadataBase: new URL(getSiteUrl()),
+  applicationName: '야크크 야르',
+  title: {
+    default: '야크크 야르~ 섹시야구',
+    template: '%s | 야크크 야르',
+  },
+  description:
+    'KBO 일정, 직관 사진, 스코어, 승률과 포토 티켓을 한곳에 기록하는 야구 팬 PWA',
+  keywords: [
+    '야크크 야르',
+    'KBO',
+    'KBO 일정',
+    '프로야구',
+    '야구 직관',
+    '직관 기록',
+    '야구 캘린더',
+    '포토 티켓',
+    '승률 기록',
+  ],
+  authors: [{ name: 'Yakuku Yaru' }],
+  creator: 'Yakuku Yaru',
+  publisher: 'Yakuku Yaru',
+  category: 'sports',
+  alternates: {
+    canonical: '/',
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+      'max-video-preview': -1,
+    },
+  },
+  openGraph: {
+    type: 'website',
+    locale: 'ko_KR',
+    url: '/',
+    siteName: '야크크 야르',
+    title: '야크크 야르~ 섹시야구',
+    description:
+      'KBO 일정과 직관 사진, 스코어와 승률, 포토 티켓을 함께 기록하는 야구 팬 PWA',
+    images: [
+      {
+        url: getAbsoluteUrl('/main_kv.png'),
+        width: 1200,
+        height: 630,
+        alt: '야크크 야르 KBO 직관 기록 서비스',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: '야크크 야르~ 섹시야구',
+    description:
+      'KBO 일정과 직관 사진, 스코어와 승률, 포토 티켓을 함께 기록하는 야구 팬 PWA',
+    images: [getAbsoluteUrl('/main_kv.png')],
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',

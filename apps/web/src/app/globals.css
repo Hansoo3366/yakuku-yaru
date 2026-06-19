@@ -1315,6 +1315,32 @@ img {
   text-decoration: underline;
 }
 
+.login-options {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  justify-content: space-between;
+}
+
+.checkbox-field {
+  align-items: center;
+  color: var(--color-ink);
+  cursor: pointer;
+  display: inline-flex;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
+  gap: 8px;
+  min-height: 32px;
+}
+
+.checkbox-field input {
+  accent-color: var(--color-field-700);
+  height: 18px;
+  margin: 0;
+  width: 18px;
+}
+
 .password-input-wrap {
   position: relative;
 }

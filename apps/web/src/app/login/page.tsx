@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { ApiError } from '@/lib/api';
 import { COOKIE_SESSION_TOKEN } from '@/lib/auth';
@@ -18,11 +18,15 @@ import { useAuthStore } from '@/lib/auth-store';
 import { queryKeys } from '@/lib/query-keys';
 import { PASSWORD_MAX_LENGTH } from '@/lib/user-input';
 
+const SAVED_EMAIL_STORAGE_KEY = 'yakuku.savedEmail';
+
 export default function LoginPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const setSession = useAuthStore((state) => state.setSession);
   const [errorMessage, setErrorMessage] = useState('');
+  const [rememberEmail, setRememberEmail] = useState(false);
+  const [keepSignedIn, setKeepSignedIn] = useState(false);
   const {
     formState: { errors, isSubmitting },
     handleSubmit,
@@ -34,11 +38,32 @@ export default function LoginPage() {
     resolver: zodResolver(loginSchema),
   });
 
+  useEffect(() => {
+    const savedEmail = window.localStorage.getItem(SAVED_EMAIL_STORAGE_KEY);
+
+    if (savedEmail) {
+      setValue('email', savedEmail, { shouldValidate: false });
+      setRememberEmail(true);
+    }
+  }, [setValue]);
+
   async function onSubmit(values: LoginFormValues) {
     setErrorMessage('');
 
     try {
-      const response = await login(values);
+      const email = values.email.trim();
+      const response = await login({
+        ...values,
+        email,
+        rememberMe: keepSignedIn,
+      });
+
+      if (rememberEmail) {
+        window.localStorage.setItem(SAVED_EMAIL_STORAGE_KEY, email);
+      } else {
+        window.localStorage.removeItem(SAVED_EMAIL_STORAGE_KEY);
+      }
+
       setSession({ user: response.user });
       queryClient.setQueryData(queryKeys.me(COOKIE_SESSION_TOKEN), {
         user: response.user,
@@ -108,6 +133,24 @@ export default function LoginPage() {
           {errors.password?.message ? (
             <p className="form-error">{errors.password.message}</p>
           ) : null}
+          <div className="login-options" aria-label="로그인 옵션">
+            <label className="checkbox-field">
+              <input
+                checked={rememberEmail}
+                onChange={(event) => setRememberEmail(event.target.checked)}
+                type="checkbox"
+              />
+              <span>아이디 저장</span>
+            </label>
+            <label className="checkbox-field">
+              <input
+                checked={keepSignedIn}
+                onChange={(event) => setKeepSignedIn(event.target.checked)}
+                type="checkbox"
+              />
+              <span>로그인 유지</span>
+            </label>
+          </div>
           {errorMessage ? <p className="form-error">{errorMessage}</p> : null}
           <button
             className="btn btn-primary btn-lg btn-block"

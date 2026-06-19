@@ -23,10 +23,14 @@ function getCookieMaxAgeMs() {
   return amount * multipliers[unit];
 }
 
-export function setAuthCookie(res: Response, token: string) {
+export function setAuthCookie(
+  res: Response,
+  token: string,
+  options: { rememberMe?: boolean } = {},
+) {
   res.cookie(AUTH_COOKIE_NAME, token, {
     httpOnly: true,
-    maxAge: getCookieMaxAgeMs(),
+    maxAge: options.rememberMe ? getCookieMaxAgeMs() : undefined,
     sameSite: 'lax',
     secure: env.nodeEnv === 'production',
   });
