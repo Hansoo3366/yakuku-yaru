@@ -3,6 +3,7 @@
 /* eslint-disable @next/next/no-img-element */
 
 import { type CSSProperties, FormEvent, useMemo, useState } from 'react';
+import { Search, X } from 'lucide-react';
 import { PlayerCheerDialog } from '@/components/PlayerCheerDialog';
 import type { CheerDialogItem } from '@/components/PlayerCheerDialog';
 import { PlayerPhoto } from '@/components/PlayerPhoto';
@@ -76,7 +77,7 @@ export default function CheersPage() {
     keyword: submittedKeyword,
     page,
     rosterScope,
-    size: viewMode === 'recentLineup' ? 40 : 24,
+    size: 18,
     teamId: selectedTeamId,
   });
   const teams = teamsQuery.data?.items ?? [];
@@ -100,9 +101,6 @@ export default function CheersPage() {
     () => new Map(teamStats.map((stat) => [stat.teamId, stat])),
     [teamStats],
   );
-  const selectedTeamStat = selectedTeamId
-    ? teamStatsById.get(selectedTeamId)
-    : null;
   const allTotalPlayers = teamStats.reduce(
     (sum, stat) => sum + stat.totalPlayers,
     0,
@@ -111,19 +109,9 @@ export default function CheersPage() {
     (sum, stat) => sum + stat.registeredPlayers,
     0,
   );
-  const totalPlayers = selectedTeamStat?.totalPlayers ?? allTotalPlayers;
-  const registeredPlayers =
-    selectedTeamStat?.registeredPlayers ?? allRegisteredPlayers;
   const allRegistrationRate = allTotalPlayers
     ? Math.round((allRegisteredPlayers / allTotalPlayers) * 100)
     : 0;
-  const registrationRate = selectedTeamStat
-    ? getRegistrationRate(selectedTeamStat)
-    : totalPlayers
-      ? Math.round((registeredPlayers / totalPlayers) * 100)
-      : 0;
-  const selectedTeamName =
-    teams.find((team) => team.id === selectedTeamId)?.shortName ?? '전체 팀';
 
   function resetListState() {
     setPage(1);
@@ -149,6 +137,13 @@ export default function CheersPage() {
         <form className="cheers-search" onSubmit={handleSearch}>
           <label htmlFor="cheer-player-search">선수 검색</label>
           <div className="cheers-search-row">
+            <button
+              aria-label="검색"
+              className="cheers-search-icon"
+              type="submit"
+            >
+              <Search aria-hidden="true" size={18} strokeWidth={2.4} />
+            </button>
             <input
               autoComplete="off"
               id="cheer-player-search"
@@ -158,12 +153,10 @@ export default function CheersPage() {
               spellCheck={false}
               value={keyword}
             />
-            <button className="btn btn-primary" type="submit">
-              검색
-            </button>
-            {submittedKeyword ? (
+            {keyword || submittedKeyword ? (
               <button
-                className="btn btn-ghost"
+                aria-label="검색어 지우기"
+                className="cheers-search-clear"
                 onClick={() => {
                   setKeyword('');
                   setSubmittedKeyword('');
@@ -171,7 +164,7 @@ export default function CheersPage() {
                 }}
                 type="button"
               >
-                해제
+                <X aria-hidden="true" size={17} strokeWidth={2.5} />
               </button>
             ) : null}
           </div>
@@ -201,23 +194,6 @@ export default function CheersPage() {
             전체 선수
           </button>
         </div>
-
-        <div className="cheers-summary" aria-label="응원가 등록 현황">
-          <div>
-            <span>선택</span>
-            <strong>{selectedTeamName}</strong>
-          </div>
-          <div>
-            <span>등록율</span>
-            <strong>{registrationRate}%</strong>
-          </div>
-          <div>
-            <span>등록</span>
-            <strong>
-              {registeredPlayers} / {totalPlayers}
-            </strong>
-          </div>
-        </div>
       </section>
 
       {submittedKeyword ? (
@@ -226,75 +202,75 @@ export default function CheersPage() {
         </p>
       ) : null}
 
-      <section className="cheers-team-board" aria-label="팀 선택 및 팀 응원가">
-        <article
-          className={`cheers-team-card${selectedTeamId === null ? ' active' : ''}`}
+      <section className="cheers-team-tabs" aria-label="팀 선택 및 팀 응원가">
+        <button
+          aria-pressed={selectedTeamId === null}
+          className={`cheers-all-team-tab${
+            selectedTeamId === null ? ' active' : ''
+          }`}
+          onClick={() => {
+            setSelectedTeamId(null);
+            resetListState();
+          }}
+          type="button"
         >
-          <button
-            aria-pressed={selectedTeamId === null}
-            className="cheers-team-select"
-            onClick={() => {
-              setSelectedTeamId(null);
-              resetListState();
-            }}
-            type="button"
-          >
-            <span className="cheers-team-logo">ALL</span>
-            <span>
-              <strong>전체 팀</strong>
-              <em>{allRegistrationRate}% 등록</em>
-            </span>
-          </button>
-        </article>
-        {teams.map((team) => {
-          const stat = teamStatsById.get(team.id);
-          const teamCheer = teamCheersById.get(team.id);
-          const hasTeamCheer = Boolean(teamCheer?.cheerId);
+          <span>
+            <strong>전체 팀</strong>
+            <em>{allRegistrationRate}% 등록</em>
+          </span>
+        </button>
 
-          return (
-            <article
-              className={`cheers-team-card${
-                selectedTeamId === team.id ? ' active' : ''
-              }`}
-              key={team.id}
-              style={
-                team.primaryColor
-                  ? ({ '--team-tab-color': team.primaryColor } as CSSProperties)
-                  : undefined
-              }
-            >
-              <button
-                aria-pressed={selectedTeamId === team.id}
-                className="cheers-team-select"
-                onClick={() => {
-                  setSelectedTeamId(team.id);
-                  resetListState();
-                }}
-                type="button"
-              >
-                <img alt="" src={getTeamLogoSrc(team)} />
-                <span>
-                  <strong>{team.shortName}</strong>
-                  <em>{getRegistrationRate(stat)}% 등록</em>
-                </span>
-              </button>
-              <button
-                className="cheers-team-song"
-                disabled={!teamCheer || !hasTeamCheer}
-                onClick={() => {
-                  if (!teamCheer || !hasTeamCheer) return;
+        <div className="cheers-team-board">
+          {teams.map((team) => {
+            const stat = teamStatsById.get(team.id);
+            const teamCheer = teamCheersById.get(team.id);
+            const hasTeamCheer = Boolean(teamCheer?.cheerId);
 
-                  setSelectedTeamCheer(
-                    teamCheerToDialogItem(teamCheer, getTeamLogoSrc(team)),
-                  );
-                }}
-                type="button"
+            return (
+              <article
+                className={`cheers-team-card${
+                  selectedTeamId === team.id ? ' active' : ''
+                }`}
+                key={team.id}
+                style={
+                  team.primaryColor
+                    ? ({ '--team-tab-color': team.primaryColor } as CSSProperties)
+                    : undefined
+                }
               >
-                {hasTeamCheer ? '팀 응원가' : '미등록'}
-              </button>
-            </article>
-          );
-        })}
+                <button
+                  aria-pressed={selectedTeamId === team.id}
+                  className="cheers-team-select"
+                  onClick={() => {
+                    setSelectedTeamId(team.id);
+                    resetListState();
+                  }}
+                  type="button"
+                >
+                  <img alt="" src={getTeamLogoSrc(team)} />
+                  <span>
+                    <strong>{team.shortName}</strong>
+                    <em>{getRegistrationRate(stat)}% 등록</em>
+                  </span>
+                </button>
+                <button
+                  className="cheers-team-song"
+                  disabled={!teamCheer || !hasTeamCheer}
+                  onClick={() => {
+                    if (!teamCheer || !hasTeamCheer) return;
+
+                    setSelectedTeamCheer(
+                      teamCheerToDialogItem(teamCheer, getTeamLogoSrc(team)),
+                    );
+                  }}
+                  type="button"
+                >
+                  {hasTeamCheer ? '팀 응원가' : '미등록'}
+                </button>
+              </article>
+            );
+          })}
+        </div>
       </section>
 
       {cheersQuery.isLoading ? (

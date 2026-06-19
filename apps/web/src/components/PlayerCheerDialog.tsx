@@ -128,7 +128,7 @@ export function PlayerCheerDialog({ cheer, player, onClose }: Props) {
             {item.imageMode === 'raw' && item.imageUrl ? (
               <img
                 alt=""
-                className="player-cheer-dialog-photo"
+                className="player-cheer-dialog-photo player-cheer-dialog-photo--logo"
                 src={item.imageUrl}
               />
             ) : (

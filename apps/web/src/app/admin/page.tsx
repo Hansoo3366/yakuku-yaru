@@ -79,6 +79,10 @@ type CheerFilterInput = {
   teamId: number | null;
 };
 
+type EditingCheerTarget =
+  | { kind: 'team'; id: number; label: string }
+  | { kind: 'player'; id: number; label: string };
+
 function toInput(form: GameForm): AdminGameInput {
   return {
     awayScore: form.awayScore === '' ? null : Number(form.awayScore),
@@ -100,11 +104,9 @@ function formatDate(value: string) {
 function CheerFormFields({
   cheerForm,
   setCheerForm,
-  submitLabel,
 }: {
   cheerForm: CheerForm;
   setCheerForm: Dispatch<SetStateAction<CheerForm>>;
-  submitLabel: string;
 }) {
   return (
     <>
@@ -155,9 +157,6 @@ function CheerFormFields({
           value={cheerForm.lyrics}
         />
       </label>
-      <button className="btn btn-primary" type="submit">
-        {submitLabel}
-      </button>
     </>
   );
 }
@@ -187,8 +186,8 @@ export default function AdminPage() {
   const [isCheerSearching, setIsCheerSearching] = useState(false);
   const [editingGameId, setEditingGameId] = useState<number | null>(null);
   const [gameForm, setGameForm] = useState<GameForm>(emptyGameForm);
-  const [editingTeamCheerId, setEditingTeamCheerId] = useState<number | null>(null);
-  const [editingCheerPlayerId, setEditingCheerPlayerId] = useState<number | null>(null);
+  const [editingCheerTarget, setEditingCheerTarget] =
+    useState<EditingCheerTarget | null>(null);
   const [cheerForm, setCheerForm] = useState<CheerForm>(emptyCheerForm);
   const cheerFilterRef = useRef<CheerFilterInput>({
     keyword: '',
@@ -331,8 +330,11 @@ export default function AdminPage() {
   }
 
   function editCheer(player: PlayerCheer) {
-    setEditingTeamCheerId(null);
-    setEditingCheerPlayerId(player.playerId);
+    setEditingCheerTarget({
+      kind: 'player',
+      id: player.playerId,
+      label: player.name,
+    });
     setCheerForm({
       lyrics: player.lyrics ?? '',
       title: player.cheerTitle ?? '',
@@ -341,13 +343,21 @@ export default function AdminPage() {
   }
 
   function editTeamCheer(cheer: TeamCheer) {
-    setEditingCheerPlayerId(null);
-    setEditingTeamCheerId(cheer.teamId);
+    setEditingCheerTarget({
+      kind: 'team',
+      id: cheer.teamId,
+      label: `${cheer.teamShortName} 팀 응원가`,
+    });
     setCheerForm({
       lyrics: cheer.lyrics ?? '',
       title: cheer.cheerTitle ?? '',
       youtubeId: cheer.youtubeId ?? '',
     });
+  }
+
+  function closeCheerEditor() {
+    setEditingCheerTarget(null);
+    setCheerForm(emptyCheerForm);
   }
 
   async function submitGame(event: FormEvent<HTMLFormElement>) {
@@ -368,41 +378,24 @@ export default function AdminPage() {
 
   async function submitCheer(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!token || !editingCheerPlayerId) return;
+    if (!token || !editingCheerTarget) return;
 
-    await saveAdminPlayerCheer(
-      editingCheerPlayerId,
-      {
-        lyrics: cheerForm.lyrics.trim() || null,
-        title: cheerForm.title.trim() || null,
-        youtubeId: cheerForm.youtubeId.trim() || null,
-        youtubeUrl: null,
-      },
-      token,
-    );
-    setMessage('응원가 정보가 저장되었습니다.');
-    setEditingCheerPlayerId(null);
-    setCheerForm(emptyCheerForm);
-    await loadAll(keyword);
-  }
+    const input = {
+      lyrics: cheerForm.lyrics.trim() || null,
+      title: cheerForm.title.trim() || null,
+      youtubeId: cheerForm.youtubeId.trim() || null,
+      youtubeUrl: null,
+    };
 
-  async function submitTeamCheer(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!token || !editingTeamCheerId) return;
+    if (editingCheerTarget.kind === 'team') {
+      await saveAdminTeamCheer(editingCheerTarget.id, input, token);
+      setMessage('팀 응원가 정보가 저장되었습니다.');
+    } else {
+      await saveAdminPlayerCheer(editingCheerTarget.id, input, token);
+      setMessage('선수 응원가 정보가 저장되었습니다.');
+    }
 
-    await saveAdminTeamCheer(
-      editingTeamCheerId,
-      {
-        lyrics: cheerForm.lyrics.trim() || null,
-        title: cheerForm.title.trim() || null,
-        youtubeId: cheerForm.youtubeId.trim() || null,
-        youtubeUrl: null,
-      },
-      token,
-    );
-    setMessage('팀 응원가 정보가 저장되었습니다.');
-    setEditingTeamCheerId(null);
-    setCheerForm(emptyCheerForm);
+    closeCheerEditor();
     await loadAll(keyword);
   }
 
@@ -639,31 +632,6 @@ export default function AdminPage() {
                     삭제
                   </button>
                 </div>
-                {editingTeamCheerId === teamCheer.teamId ? (
-                  <form
-                    className="admin-cheer-form admin-cheer-form--panel"
-                    onSubmit={submitTeamCheer}
-                  >
-                    <div className="admin-cheer-form-head">
-                      <strong>{teamCheer.teamShortName} 팀 응원가</strong>
-                      <button
-                        className="btn btn-ghost btn-sm"
-                        onClick={() => {
-                          setEditingTeamCheerId(null);
-                          setCheerForm(emptyCheerForm);
-                        }}
-                        type="button"
-                      >
-                        취소
-                      </button>
-                    </div>
-                    <CheerFormFields
-                      cheerForm={cheerForm}
-                      setCheerForm={setCheerForm}
-                      submitLabel="팀 응원가 저장"
-                    />
-                  </form>
-                ) : null}
               </article>
             ))}
           </div>
@@ -730,11 +698,9 @@ export default function AdminPage() {
               {isCheerSearching ? '검색 중' : '검색'}
             </button>
           </form>
-          {!editingCheerPlayerId ? (
-            <p className="muted">
-              선수 행의 등록/수정 버튼을 누르면 응원가 정보를 입력할 수 있습니다.
-            </p>
-          ) : null}
+          <p className="muted">
+            선수 행의 등록/수정 버튼을 누르면 팝업에서 응원가 정보를 입력합니다.
+          </p>
 
           <div className="admin-table">
             {playerCheers.map((player) => (
@@ -775,31 +741,6 @@ export default function AdminPage() {
                     삭제
                   </button>
                 </div>
-                {editingCheerPlayerId === player.playerId ? (
-                  <form
-                    className="admin-cheer-form admin-cheer-form--panel"
-                    onSubmit={submitCheer}
-                  >
-                    <div className="admin-cheer-form-head">
-                      <strong>{player.name}</strong>
-                      <button
-                        className="btn btn-ghost btn-sm"
-                        onClick={() => {
-                          setEditingCheerPlayerId(null);
-                          setCheerForm(emptyCheerForm);
-                        }}
-                        type="button"
-                      >
-                        취소
-                      </button>
-                    </div>
-                    <CheerFormFields
-                      cheerForm={cheerForm}
-                      setCheerForm={setCheerForm}
-                      submitLabel="선수 응원가 저장"
-                    />
-                  </form>
-                ) : null}
               </Fragment>
             ))}
           </div>
@@ -955,6 +896,61 @@ export default function AdminPage() {
             ))}
           </div>
         </section>
+      ) : null}
+
+      {editingCheerTarget ? (
+        <div
+          aria-labelledby="admin-cheer-dialog-title"
+          aria-modal="true"
+          className="admin-cheer-dialog-backdrop"
+          onClick={closeCheerEditor}
+          role="dialog"
+        >
+          <form
+            className="admin-cheer-dialog"
+            onClick={(event) => event.stopPropagation()}
+            onSubmit={submitCheer}
+          >
+            <div className="admin-cheer-dialog-head">
+              <div>
+                <span>
+                  {editingCheerTarget.kind === 'team'
+                    ? '팀 전체 응원가'
+                    : '선수 응원가'}
+                </span>
+                <h2 id="admin-cheer-dialog-title">
+                  {editingCheerTarget.label}
+                </h2>
+              </div>
+              <button
+                aria-label="응원가 등록 팝업 닫기"
+                className="icon-button"
+                onClick={closeCheerEditor}
+                type="button"
+              >
+                ×
+              </button>
+            </div>
+            <div className="admin-cheer-dialog-body">
+              <CheerFormFields
+                cheerForm={cheerForm}
+                setCheerForm={setCheerForm}
+              />
+            </div>
+            <div className="admin-cheer-dialog-actions">
+              <button
+                className="btn btn-ghost"
+                onClick={closeCheerEditor}
+                type="button"
+              >
+                취소
+              </button>
+              <button className="btn btn-primary" type="submit">
+                응원가 저장
+              </button>
+            </div>
+          </form>
+        </div>
       ) : null}
     </main>
   );
