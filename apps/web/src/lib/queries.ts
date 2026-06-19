@@ -16,6 +16,7 @@ import { fetchPost, listComments, listPosts } from '@/lib/post-api';
 import {
   fetchPlayerCheer,
   listPlayerCheers,
+  listTeamCheers,
 } from '@/lib/player-cheer-api';
 import { queryKeys } from '@/lib/query-keys';
 
@@ -68,7 +69,7 @@ export function usePlayerCheersQuery(input: {
   teamId?: number | null;
   onlyWithCheer?: boolean;
   page?: number;
-  rosterScope?: 'firstTeam' | 'all';
+  rosterScope?: 'firstTeam' | 'recentLineup' | 'all';
   size?: number;
 }) {
   return useQuery({
@@ -88,6 +89,14 @@ export function usePlayerCheerQuery(
       Number.isInteger(playerId) &&
       playerId > 0 &&
       (options?.enabled ?? true),
+  });
+}
+
+export function useTeamCheersQuery() {
+  return useQuery({
+    queryKey: queryKeys.teamCheers(),
+    queryFn: listTeamCheers,
+    staleTime: 1000 * 60 * 5,
   });
 }
 

@@ -17,6 +17,22 @@ export type PlayerCheer = {
   youtubeUrl: string | null;
   lyrics: string | null;
   cheerUpdatedAt: string | null;
+  recentGameDate: string | null;
+  recentBattingOrder: number | null;
+  recentLineupRole: 'lineup' | 'pitcher' | 'pitcher-lineup' | null;
+};
+
+export type TeamCheer = {
+  teamId: number;
+  teamName: string;
+  teamShortName: string;
+  teamPrimaryColor: string | null;
+  cheerId: number | null;
+  cheerTitle: string | null;
+  youtubeId: string | null;
+  youtubeUrl: string | null;
+  lyrics: string | null;
+  cheerUpdatedAt: string | null;
 };
 
 export type PlayerCheerInput = {
@@ -36,9 +52,21 @@ export type PlayerCheerPagination = {
 export type PlayerCheerListResponse = {
   items: PlayerCheer[];
   pagination: PlayerCheerPagination;
+  stats: {
+    teams: PlayerCheerTeamStat[];
+  };
 };
 
-export type PlayerCheerRosterScope = 'firstTeam' | 'all';
+export type PlayerCheerRosterScope = 'firstTeam' | 'recentLineup' | 'all';
+
+export type PlayerCheerTeamStat = {
+  teamId: number;
+  teamName: string;
+  teamShortName: string;
+  teamPrimaryColor: string | null;
+  totalPlayers: number;
+  registeredPlayers: number;
+};
 
 export function listPlayerCheers(input: {
   keyword?: string;
@@ -84,6 +112,14 @@ export function fetchPlayerCheer(playerId: number) {
   return request<{ item: PlayerCheer }>(`/player-cheers/${playerId}`);
 }
 
+export function listTeamCheers() {
+  return request<{ items: TeamCheer[] }>('/player-cheers/teams');
+}
+
+export function fetchTeamCheer(teamId: number) {
+  return request<{ item: TeamCheer }>(`/player-cheers/teams/${teamId}`);
+}
+
 export function listAdminPlayerCheers(
   token: string,
   input: {
@@ -123,6 +159,10 @@ export function listAdminPlayerCheers(
   );
 }
 
+export function listAdminTeamCheers(token: string) {
+  return request<{ items: TeamCheer[] }>('/admin/team-cheers', { token });
+}
+
 export function saveAdminPlayerCheer(
   playerId: number,
   input: PlayerCheerInput,
@@ -135,8 +175,27 @@ export function saveAdminPlayerCheer(
   });
 }
 
+export function saveAdminTeamCheer(
+  teamId: number,
+  input: PlayerCheerInput,
+  token: string,
+) {
+  return request<{ item: TeamCheer }>(`/admin/team-cheers/${teamId}`, {
+    method: 'PUT',
+    body: input,
+    token,
+  });
+}
+
 export function deleteAdminPlayerCheer(playerId: number, token: string) {
   return request<void>(`/admin/player-cheers/${playerId}`, {
+    method: 'DELETE',
+    token,
+  });
+}
+
+export function deleteAdminTeamCheer(teamId: number, token: string) {
+  return request<void>(`/admin/team-cheers/${teamId}`, {
     method: 'DELETE',
     token,
   });

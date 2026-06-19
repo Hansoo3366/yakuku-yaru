@@ -2,8 +2,10 @@
 
 import Link from 'next/link';
 import {
+  type Dispatch,
   FormEvent,
   Fragment,
+  type SetStateAction,
   useCallback,
   useEffect,
   useRef,
@@ -35,11 +37,15 @@ import { listTeams, type Team } from '@/lib/baseball-api';
 import { formatKoreanDateTimeShort } from '@/lib/date-format';
 import {
   deleteAdminPlayerCheer,
+  deleteAdminTeamCheer,
+  listAdminTeamCheers,
   listAdminPlayerCheers,
+  saveAdminTeamCheer,
   saveAdminPlayerCheer,
   type PlayerCheer,
   type PlayerCheerPagination,
   type PlayerCheerRosterScope,
+  type TeamCheer,
 } from '@/lib/player-cheer-api';
 
 type AdminTab = 'users' | 'posts' | 'comments' | 'games' | 'cheers';
@@ -91,6 +97,71 @@ function formatDate(value: string) {
   return formatKoreanDateTimeShort(value);
 }
 
+function CheerFormFields({
+  cheerForm,
+  setCheerForm,
+  submitLabel,
+}: {
+  cheerForm: CheerForm;
+  setCheerForm: Dispatch<SetStateAction<CheerForm>>;
+  submitLabel: string;
+}) {
+  return (
+    <>
+      <label className="admin-cheer-field">
+        <span>제목</span>
+        <input
+          autoComplete="off"
+          name="cheerTitle"
+          onChange={(event) =>
+            setCheerForm((current) => ({
+              ...current,
+              title: event.target.value,
+            }))
+          }
+          placeholder="응원가 제목…"
+          value={cheerForm.title}
+        />
+      </label>
+      <label className="admin-cheer-field">
+        <span>유튜브 영상 ID</span>
+        <input
+          autoComplete="off"
+          name="youtubeId"
+          onChange={(event) =>
+            setCheerForm((current) => ({
+              ...current,
+              youtubeId: event.target.value,
+            }))
+          }
+          placeholder="예: dQw4w9WgXcQ…"
+          spellCheck={false}
+          value={cheerForm.youtubeId}
+        />
+      </label>
+      <label className="admin-cheer-field">
+        <span>가사</span>
+        <textarea
+          autoComplete="off"
+          name="lyrics"
+          onChange={(event) =>
+            setCheerForm((current) => ({
+              ...current,
+              lyrics: event.target.value,
+            }))
+          }
+          placeholder="가사 입력…"
+          rows={8}
+          value={cheerForm.lyrics}
+        />
+      </label>
+      <button className="btn btn-primary" type="submit">
+        {submitLabel}
+      </button>
+    </>
+  );
+}
+
 export default function AdminPage() {
   const [tab, setTab] = useState<AdminTab>('users');
   const [summary, setSummary] = useState<AdminSummary | null>(null);
@@ -99,6 +170,7 @@ export default function AdminPage() {
   const [comments, setComments] = useState<AdminComment[]>([]);
   const [games, setGames] = useState<AdminGame[]>([]);
   const [playerCheers, setPlayerCheers] = useState<PlayerCheer[]>([]);
+  const [teamCheers, setTeamCheers] = useState<TeamCheer[]>([]);
   const [playerCheerPagination, setPlayerCheerPagination] =
     useState<PlayerCheerPagination | null>(null);
   const [teams, setTeams] = useState<Team[]>([]);
@@ -115,6 +187,7 @@ export default function AdminPage() {
   const [isCheerSearching, setIsCheerSearching] = useState(false);
   const [editingGameId, setEditingGameId] = useState<number | null>(null);
   const [gameForm, setGameForm] = useState<GameForm>(emptyGameForm);
+  const [editingTeamCheerId, setEditingTeamCheerId] = useState<number | null>(null);
   const [editingCheerPlayerId, setEditingCheerPlayerId] = useState<number | null>(null);
   const [cheerForm, setCheerForm] = useState<CheerForm>(emptyCheerForm);
   const cheerFilterRef = useRef<CheerFilterInput>({
@@ -153,6 +226,7 @@ export default function AdminPage() {
       postsResponse,
       commentsResponse,
       gamesResponse,
+      teamCheersResponse,
       cheersResponse,
     ] = await Promise.all([
         fetchAdminSummary(token),
@@ -160,6 +234,7 @@ export default function AdminPage() {
         listAdminPosts(token, nextKeyword),
         listAdminComments(token, nextKeyword),
         listAdminGames(token),
+        listAdminTeamCheers(token),
         listAdminPlayerCheers(token, {
           keyword: nextCheerInput.keyword,
           page: nextCheerInput.page,
@@ -176,6 +251,7 @@ export default function AdminPage() {
     setPosts(postsResponse.items);
     setComments(commentsResponse.items);
     setGames(gamesResponse.items);
+    setTeamCheers(teamCheersResponse.items);
     setPlayerCheers(cheersResponse.items);
     setPlayerCheerPagination(cheersResponse.pagination);
   }, [token]);
@@ -255,11 +331,22 @@ export default function AdminPage() {
   }
 
   function editCheer(player: PlayerCheer) {
+    setEditingTeamCheerId(null);
     setEditingCheerPlayerId(player.playerId);
     setCheerForm({
       lyrics: player.lyrics ?? '',
       title: player.cheerTitle ?? '',
       youtubeId: player.youtubeId ?? '',
+    });
+  }
+
+  function editTeamCheer(cheer: TeamCheer) {
+    setEditingCheerPlayerId(null);
+    setEditingTeamCheerId(cheer.teamId);
+    setCheerForm({
+      lyrics: cheer.lyrics ?? '',
+      title: cheer.cheerTitle ?? '',
+      youtubeId: cheer.youtubeId ?? '',
     });
   }
 
@@ -295,6 +382,26 @@ export default function AdminPage() {
     );
     setMessage('응원가 정보가 저장되었습니다.');
     setEditingCheerPlayerId(null);
+    setCheerForm(emptyCheerForm);
+    await loadAll(keyword);
+  }
+
+  async function submitTeamCheer(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!token || !editingTeamCheerId) return;
+
+    await saveAdminTeamCheer(
+      editingTeamCheerId,
+      {
+        lyrics: cheerForm.lyrics.trim() || null,
+        title: cheerForm.title.trim() || null,
+        youtubeId: cheerForm.youtubeId.trim() || null,
+        youtubeUrl: null,
+      },
+      token,
+    );
+    setMessage('팀 응원가 정보가 저장되었습니다.');
+    setEditingTeamCheerId(null);
     setCheerForm(emptyCheerForm);
     await loadAll(keyword);
   }
@@ -481,44 +588,140 @@ export default function AdminPage() {
 
       {tab === 'cheers' ? (
         <section className="admin-table-card">
-          <h2>선수 응원가 관리</h2>
+          <h2>응원가 관리</h2>
+          <div className="admin-cheer-section-head">
+            <div>
+              <strong>팀 전체 응원가</strong>
+              <p>라인업과 응원가 페이지에서 팀명 옆 버튼으로 노출됩니다.</p>
+            </div>
+          </div>
+          <div className="admin-cheer-team-grid">
+            {teamCheers.map((teamCheer) => (
+              <article className="admin-team-cheer-card" key={teamCheer.teamId}>
+                <div className="admin-team-cheer-card-main">
+                  <span
+                    className={`cheer-player-badge${
+                      teamCheer.cheerId ? ' is-registered' : ''
+                    }`}
+                  >
+                    {teamCheer.cheerId ? '등록됨' : '미등록'}
+                  </span>
+                  <strong>{teamCheer.teamShortName}</strong>
+                  <p>{teamCheer.cheerTitle ?? '팀 전체 응원가 제목 없음'}</p>
+                </div>
+                <div className="admin-team-cheer-actions">
+                  <button
+                    className="btn btn-ghost btn-sm"
+                    onClick={() => editTeamCheer(teamCheer)}
+                    type="button"
+                  >
+                    {teamCheer.cheerId ? '수정' : '등록'}
+                  </button>
+                  <button
+                    className="btn btn-ghost btn-sm"
+                    disabled={!teamCheer.cheerId}
+                    onClick={async () => {
+                      if (
+                        !token ||
+                        !teamCheer.cheerId ||
+                        !window.confirm(
+                          `${teamCheer.teamShortName} 팀 응원가 정보를 삭제할까요?`,
+                        )
+                      ) {
+                        return;
+                      }
+                      await deleteAdminTeamCheer(teamCheer.teamId, token);
+                      setMessage('팀 응원가 정보가 삭제되었습니다.');
+                      await loadAll(keyword);
+                    }}
+                    type="button"
+                  >
+                    삭제
+                  </button>
+                </div>
+                {editingTeamCheerId === teamCheer.teamId ? (
+                  <form
+                    className="admin-cheer-form admin-cheer-form--panel"
+                    onSubmit={submitTeamCheer}
+                  >
+                    <div className="admin-cheer-form-head">
+                      <strong>{teamCheer.teamShortName} 팀 응원가</strong>
+                      <button
+                        className="btn btn-ghost btn-sm"
+                        onClick={() => {
+                          setEditingTeamCheerId(null);
+                          setCheerForm(emptyCheerForm);
+                        }}
+                        type="button"
+                      >
+                        취소
+                      </button>
+                    </div>
+                    <CheerFormFields
+                      cheerForm={cheerForm}
+                      setCheerForm={setCheerForm}
+                      submitLabel="팀 응원가 저장"
+                    />
+                  </form>
+                ) : null}
+              </article>
+            ))}
+          </div>
+
+          <div className="admin-cheer-section-head">
+            <div>
+              <strong>선수 응원가</strong>
+              <p>선수를 검색하거나 팀/범위로 좁혀 개별 응원가를 등록합니다.</p>
+            </div>
+          </div>
           <form className="admin-cheer-filter" onSubmit={handleCheerSearch}>
-            <input
-              aria-label="응원가 관리 선수 검색"
-              onChange={(event) => setCheerKeyword(event.target.value)}
-              placeholder="선수명 또는 팀명 검색"
-              value={cheerKeyword}
-            />
-            <select
-              aria-label="응원가 관리 팀 필터"
-              onChange={(event) => {
-                const nextTeamId = event.target.value
-                  ? Number(event.target.value)
-                  : null;
-                setCheerTeamId(nextTeamId);
-                setCheerPage(1);
-              }}
-              value={cheerTeamId ?? ''}
-            >
-              <option value="">전체 팀</option>
-              {teams.map((team) => (
-                <option key={team.id} value={team.id}>
-                  {team.shortName}
-                </option>
-              ))}
-            </select>
-            <select
-              aria-label="응원가 관리 선수 범위"
-              onChange={(event) => {
-                const nextScope = event.target.value as PlayerCheerRosterScope;
-                setCheerRosterScope(nextScope);
-                setCheerPage(1);
-              }}
-              value={cheerRosterScope}
-            >
-              <option value="firstTeam">1군 경기 기준</option>
-              <option value="all">전체 선수</option>
-            </select>
+            <label>
+              <span>선수 검색</span>
+              <input
+                autoComplete="off"
+                name="adminCheerKeyword"
+                onChange={(event) => setCheerKeyword(event.target.value)}
+                placeholder="선수명 또는 팀명 검색…"
+                spellCheck={false}
+                value={cheerKeyword}
+              />
+            </label>
+            <label>
+              <span>팀</span>
+              <select
+                name="adminCheerTeam"
+                onChange={(event) => {
+                  const nextTeamId = event.target.value
+                    ? Number(event.target.value)
+                    : null;
+                  setCheerTeamId(nextTeamId);
+                  setCheerPage(1);
+                }}
+                value={cheerTeamId ?? ''}
+              >
+                <option value="">전체 팀</option>
+                {teams.map((team) => (
+                  <option key={team.id} value={team.id}>
+                    {team.shortName}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              <span>범위</span>
+              <select
+                name="adminCheerScope"
+                onChange={(event) => {
+                  const nextScope = event.target.value as PlayerCheerRosterScope;
+                  setCheerRosterScope(nextScope);
+                  setCheerPage(1);
+                }}
+                value={cheerRosterScope}
+              >
+                <option value="firstTeam">1군 경기 기준</option>
+                <option value="all">전체 선수</option>
+              </select>
+            </label>
             <button
               className="btn btn-secondary"
               disabled={isCheerSearching}
@@ -573,7 +776,10 @@ export default function AdminPage() {
                   </button>
                 </div>
                 {editingCheerPlayerId === player.playerId ? (
-                  <form className="admin-cheer-form" onSubmit={submitCheer}>
+                  <form
+                    className="admin-cheer-form admin-cheer-form--panel"
+                    onSubmit={submitCheer}
+                  >
                     <div className="admin-cheer-form-head">
                       <strong>{player.name}</strong>
                       <button
@@ -587,40 +793,11 @@ export default function AdminPage() {
                         취소
                       </button>
                     </div>
-                    <input
-                      onChange={(event) =>
-                        setCheerForm((current) => ({
-                          ...current,
-                          title: event.target.value,
-                        }))
-                      }
-                      placeholder="응원가 제목"
-                      value={cheerForm.title}
+                    <CheerFormFields
+                      cheerForm={cheerForm}
+                      setCheerForm={setCheerForm}
+                      submitLabel="선수 응원가 저장"
                     />
-                    <input
-                      onChange={(event) =>
-                        setCheerForm((current) => ({
-                          ...current,
-                          youtubeId: event.target.value,
-                        }))
-                      }
-                      placeholder="유튜브 영상 ID"
-                      value={cheerForm.youtubeId}
-                    />
-                    <textarea
-                      onChange={(event) =>
-                        setCheerForm((current) => ({
-                          ...current,
-                          lyrics: event.target.value,
-                        }))
-                      }
-                      placeholder="가사"
-                      rows={8}
-                      value={cheerForm.lyrics}
-                    />
-                    <button className="btn btn-primary" type="submit">
-                      응원가 저장
-                    </button>
                   </form>
                 ) : null}
               </Fragment>

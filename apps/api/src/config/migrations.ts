@@ -386,6 +386,24 @@ export async function runMigrations() {
     )`,
   );
 
+  await db.execute(
+    `CREATE TABLE IF NOT EXISTS team_cheers (
+      id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+      team_id BIGINT UNSIGNED NOT NULL,
+      title VARCHAR(100) NULL,
+      youtube_id VARCHAR(32) NULL,
+      youtube_url VARCHAR(500) NULL,
+      lyrics TEXT NULL,
+      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      PRIMARY KEY (id),
+      UNIQUE KEY uq_team_cheers_team_id (team_id),
+      CONSTRAINT fk_team_cheers_team
+        FOREIGN KEY (team_id) REFERENCES teams(id)
+        ON DELETE CASCADE
+    )`,
+  );
+
   const hasPlayerCheerYoutubeId = await columnExists('player_cheers', 'youtube_id');
 
   if (!hasPlayerCheerYoutubeId) {

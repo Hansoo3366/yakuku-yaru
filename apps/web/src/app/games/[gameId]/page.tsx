@@ -8,6 +8,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useState } from 'react';
 import { type Game } from '@/lib/baseball-api';
 import { type AttendanceRecord } from '@/lib/attendance-api';
+import type { CheerDialogItem } from '@/components/PlayerCheerDialog';
 import { PlayerPhoto } from '@/components/PlayerPhoto';
 import { getTeamLogoSrc } from '@/lib/team-logo';
 import { Skeleton } from '@/components/Skeleton';
@@ -35,11 +36,16 @@ import {
   useAttendanceRecordsQuery,
   useGameQuery,
   useMeQuery,
+  useTeamCheersQuery,
 } from '@/lib/queries';
 import { queryKeys } from '@/lib/query-keys';
 import { formatKoreanDateTime } from '@/lib/date-format';
 import { PlayerCheerDialog } from '@/components/PlayerCheerDialog';
-import { fetchPlayerCheer, type PlayerCheer } from '@/lib/player-cheer-api';
+import {
+  fetchPlayerCheer,
+  type PlayerCheer,
+  type TeamCheer,
+} from '@/lib/player-cheer-api';
 
 function formatDateTime(value: string) {
   return formatKoreanDateTime(value);
@@ -78,6 +84,24 @@ function ticketOutcomeLabel(outcome: string | null) {
 
 type Pitcher = NonNullable<Game['probablePitchers']['home']>;
 type LineupPlayer = Game['lineups']['home'][number];
+
+function teamCheerToDialogItem(
+  cheer: TeamCheer,
+  imageUrl: string | null,
+): CheerDialogItem {
+  return {
+    cheerId: cheer.cheerId,
+    imageUrl,
+    imageMode: 'raw',
+    lyrics: cheer.lyrics,
+    meta: '팀 전체 응원가',
+    subtitle: cheer.teamShortName,
+    title: cheer.teamName,
+    cheerTitle: cheer.cheerTitle,
+    youtubeId: cheer.youtubeId,
+    youtubeUrl: cheer.youtubeUrl,
+  };
+}
 
 function StarterPitcherCard({
   label,
@@ -160,19 +184,39 @@ function StarterPitcherCard({
 function LineupPanel({
   gameStarted,
   onPlayerClick,
+  onTeamCheerClick,
   players,
   team,
+  teamCheer,
 }: {
   gameStarted: boolean;
   onPlayerClick: (playerId: number) => void;
+  onTeamCheerClick: (cheer: TeamCheer, imageUrl: string | null) => void;
   players: LineupPlayer[];
   team: Game['homeTeam'];
+  teamCheer: TeamCheer | null;
 }) {
+  const hasTeamCheer = Boolean(teamCheer?.cheerId);
+
   return (
     <div className="lineup-panel">
       <div className="lineup-team-title">
         <img alt="" src={getTeamLogoSrc(team)} />
         <strong>{team.shortName}</strong>
+        <button
+          aria-label={`${team.shortName} 팀 응원가 보기`}
+          className="lineup-team-cheer-button"
+          disabled={!teamCheer || !hasTeamCheer}
+          onClick={() => {
+            if (!teamCheer || !hasTeamCheer) return;
+
+            onTeamCheerClick(teamCheer, getTeamLogoSrc(team));
+          }}
+          title="팀 응원가"
+          type="button"
+        >
+          ♪
+        </button>
       </div>
       {players.length > 0 ? (
         <ol className="lineup-list">
@@ -338,8 +382,11 @@ export default function GameDetailPage() {
   const gameQuery = useGameQuery(gameId);
   const meQuery = useMeQuery(token);
   const attendanceRecordsQuery = useAttendanceRecordsQuery({}, token);
+  const teamCheersQuery = useTeamCheersQuery();
   const [selectedPlayerCheer, setSelectedPlayerCheer] =
     useState<PlayerCheer | null>(null);
+  const [selectedTeamCheer, setSelectedTeamCheer] =
+    useState<CheerDialogItem | null>(null);
   const [cheerError, setCheerError] = useState('');
   const game = gameQuery.data?.game ?? null;
   const attendanceRecord = useMemo(
@@ -350,6 +397,16 @@ export default function GameDetailPage() {
     [attendanceRecordsQuery.data?.items, gameId],
   );
   const viewerFavoriteTeamId = meQuery.data?.user.favoriteTeamId ?? null;
+  const teamCheersById = useMemo(
+    () =>
+      new Map(
+        (teamCheersQuery.data?.items ?? []).map((cheer) => [
+          cheer.teamId,
+          cheer,
+        ]),
+      ),
+    [teamCheersQuery.data?.items],
+  );
 
   useEffect(() => {
     if (!game || !shouldPollGameLineup(game)) {
@@ -374,6 +431,10 @@ export default function GameDetailPage() {
     } catch {
       setCheerError('응원가 정보를 불러오지 못했습니다.');
     }
+  }
+
+  function handleTeamCheerClick(cheer: TeamCheer, imageUrl: string | null) {
+    setSelectedTeamCheer(teamCheerToDialogItem(cheer, imageUrl));
   }
 
   if (!game) {
@@ -524,14 +585,18 @@ export default function GameDetailPage() {
           <LineupPanel
             gameStarted={hasGameStarted(game)}
             onPlayerClick={handleLineupPlayerClick}
+            onTeamCheerClick={handleTeamCheerClick}
             players={game.lineups.away}
             team={game.awayTeam}
+            teamCheer={teamCheersById.get(game.awayTeam.id) ?? null}
           />
           <LineupPanel
             gameStarted={hasGameStarted(game)}
             onPlayerClick={handleLineupPlayerClick}
+            onTeamCheerClick={handleTeamCheerClick}
             players={game.lineups.home}
             team={game.homeTeam}
+            teamCheer={teamCheersById.get(game.homeTeam.id) ?? null}
           />
         </div>
         {cheerError ? <p className="form-error">{cheerError}</p> : null}
@@ -576,6 +641,10 @@ export default function GameDetailPage() {
       <PlayerCheerDialog
         onClose={() => setSelectedPlayerCheer(null)}
         player={selectedPlayerCheer}
+      />
+      <PlayerCheerDialog
+        cheer={selectedTeamCheer}
+        onClose={() => setSelectedTeamCheer(null)}
       />
     </main>
   );

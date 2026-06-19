@@ -2,7 +2,9 @@ import { Router } from 'express';
 import { HttpError } from '../../utils/http-error.js';
 import {
   findPlayerCheerByPlayerId,
+  findTeamCheerByTeamId,
   listPlayerCheers,
+  listTeamCheers,
 } from './player-cheer.repository.js';
 
 export const playerCheerRouter = Router();
@@ -44,6 +46,10 @@ function optionalPositiveInteger(
 }
 
 function rosterScope(value: unknown) {
+  if (value === 'recentLineup') {
+    return 'recentLineup' as const;
+  }
+
   if (value === 'all') {
     return 'all' as const;
   }
@@ -63,6 +69,34 @@ playerCheerRouter.get('/', async (req, res, next) => {
     });
 
     res.json(result);
+  } catch (error) {
+    next(error);
+  }
+});
+
+playerCheerRouter.get('/teams', async (_req, res, next) => {
+  try {
+    res.json({ items: await listTeamCheers() });
+  } catch (error) {
+    next(error);
+  }
+});
+
+playerCheerRouter.get('/teams/:teamId', async (req, res, next) => {
+  try {
+    const teamId = Number(req.params.teamId);
+
+    if (!Number.isInteger(teamId) || teamId < 1) {
+      throw new HttpError(400, 'INVALID_INPUT', '올바른 팀 ID가 필요합니다.');
+    }
+
+    const item = await findTeamCheerByTeamId(teamId);
+
+    if (!item) {
+      throw new HttpError(404, 'TEAM_NOT_FOUND', '팀을 찾을 수 없습니다.');
+    }
+
+    res.json({ item });
   } catch (error) {
     next(error);
   }

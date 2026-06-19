@@ -19,6 +19,7 @@ const primaryLinks: Array<{
 }> = [
   { href: '/', label: '홈', exact: true },
   { href: '/calendar', label: '캘린더' },
+  { href: '/cheers', label: '응원가' },
   { href: '/posts', label: '게시판' },
   { href: '/me', label: '마이페이지' },
 ];
@@ -165,6 +166,7 @@ export function AppFooter() {
         <nav aria-label="하단 링크">
           <Link href="/">홈</Link>
           <Link href="/calendar">캘린더</Link>
+          <Link href="/cheers">응원가</Link>
           <Link href="/posts">게시판</Link>
           <Link href="/me">마이페이지</Link>
           <a href="https://yakuku-yaru.today/api-docs">Swagger</a>

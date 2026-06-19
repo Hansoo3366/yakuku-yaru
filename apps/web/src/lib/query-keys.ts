@@ -13,7 +13,7 @@ export const queryKeys = {
     teamId?: number | null;
     onlyWithCheer?: boolean;
     page?: number;
-    rosterScope?: 'firstTeam' | 'all';
+    rosterScope?: 'firstTeam' | 'recentLineup' | 'all';
     size?: number;
   }) =>
     [
@@ -26,6 +26,7 @@ export const queryKeys = {
       input.size ?? 24,
     ] as const,
   playerCheer: (playerId: number) => ['player-cheer', playerId] as const,
+  teamCheers: () => ['team-cheers'] as const,
   attendanceRecords: (
     input: { from?: string; to?: string },
     token: string | null | undefined,
