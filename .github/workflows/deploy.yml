@@ -111,6 +111,9 @@ jobs:
             export API_IMAGE="${{ env.API_IMAGE }}"
             export WEB_IMAGE="${{ env.WEB_IMAGE }}"
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+            docker container prune -f
+            docker image prune -af
+            docker builder prune -af
             docker compose -f docker-compose.prod.yml --env-file .env.production pull api web
             docker compose -f docker-compose.prod.yml --env-file .env.production up -d --no-build
             docker image prune -f
