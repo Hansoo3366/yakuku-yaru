@@ -6,7 +6,8 @@ const staticRoutes: Array<{
   changeFrequency: MetadataRoute.Sitemap[number]['changeFrequency'];
   priority: number;
 }> = [
-  { path: '/', changeFrequency: 'weekly', priority: 1 },
+  { path: '/', changeFrequency: 'daily', priority: 1 },
+  { path: '/calendar', changeFrequency: 'daily', priority: 0.9 },
   { path: '/posts', changeFrequency: 'daily', priority: 0.8 },
   { path: '/cheers', changeFrequency: 'weekly', priority: 0.7 },
 ];

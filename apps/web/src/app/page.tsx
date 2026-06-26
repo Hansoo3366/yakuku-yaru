@@ -15,6 +15,10 @@ import { getGameStatusLabel, getGameStatusTone } from '@/lib/game-status';
 import { isGameCancelled } from '@/lib/attendance-game';
 import { resolveAttendanceOutcome } from '@/lib/attendance-score';
 import { getCancellationLabel } from '@/lib/game-cancellation';
+import {
+  calculatePlayoffProbabilityProjection,
+  type PlayoffProbabilityProjection,
+} from '@/lib/playoff-probability';
 import { useAuthStore } from '@/lib/auth-store';
 import {
   useAttendanceRecordsQuery,
@@ -48,8 +52,8 @@ function formatAttendanceResultLabel(
 const features = [
   {
     icon: '◇',
-    title: '내 팀 캘린더',
-    description: 'KBO 일정과 직관 기록을 한 화면에서 모아 봅니다.',
+    title: 'KBO 야구 캘린더',
+    description: '오늘 야구 일정과 프로야구 일정표, 직관 기록을 한 화면에서 봅니다.',
   },
   {
     icon: '⌖',
@@ -101,6 +105,100 @@ function AttendanceThumbnail({ photoUrl }: { photoUrl: string | null }) {
   );
 }
 
+function formatPlayoffProbability(value: number) {
+  const percentage = value * 100;
+
+  if (percentage >= 99.95) return '100%';
+  if (percentage <= 0.05) return '0%';
+
+  return `${percentage.toFixed(1)}%`;
+}
+
+function PlayoffProbabilityTable({
+  projection,
+  highlightTeamId,
+}: {
+  projection: PlayoffProbabilityProjection | null;
+  highlightTeamId?: number | null;
+}) {
+  if (!projection) {
+    return null;
+  }
+
+  return (
+    <section className="card stack">
+      <div className="section-heading">
+        <div>
+          <h2>KBO 가을야구 진출 확률</h2>
+          <p>
+            프로야구 순위와 피타고리안 승률 기반 몬테카를로{' '}
+            {projection.simulations.toLocaleString('ko-KR')}회 시뮬레이션
+          </p>
+        </div>
+      </div>
+      <div className="playoff-probability-table-wrap">
+        <table className="playoff-probability-table">
+          <thead>
+            <tr>
+              <th scope="col">팀</th>
+              <th scope="col">진출 확률</th>
+              <th scope="col">평균 순위</th>
+              <th scope="col">예상 승수</th>
+            </tr>
+          </thead>
+          <tbody>
+            {projection.rows.map((row) => {
+              const isHighlighted = highlightTeamId === row.teamId;
+              const probabilityLabel = formatPlayoffProbability(
+                row.playoffProbability,
+              );
+
+              return (
+                <tr
+                  className={isHighlighted ? 'is-highlighted' : undefined}
+                  key={row.teamId}
+                >
+                  <td>
+                    <span className="standings-team-cell">
+                      <img
+                        alt=""
+                        src={getTeamLogoSrc({ shortName: row.teamShortName })}
+                      />
+                      <span>
+                        <strong>{row.teamShortName}</strong>
+                        <em>{row.currentRank}위</em>
+                      </span>
+                    </span>
+                  </td>
+                  <td>
+                    <span className="playoff-probability-cell">
+                      <strong>{probabilityLabel}</strong>
+                      <span className="playoff-probability-track">
+                        <span
+                          style={{
+                            width: `${Math.round(row.playoffProbability * 100)}%`,
+                          }}
+                        />
+                      </span>
+                    </span>
+                  </td>
+                  <td>{row.averageRank.toFixed(1)}위</td>
+                  <td>{row.averageWins.toFixed(1)}승</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+      <p className="playoff-probability-note">
+        모든 팀이 {projection.minGames}경기 이상 치른 뒤 노출됩니다. 남은 일정{' '}
+        {projection.remainingGames}경기를 홈 어드밴티지와 무승부 확률까지 반영해
+        계산합니다.
+      </p>
+    </section>
+  );
+}
+
 export default function HomePage() {
   const token = useAuthStore((state) => state.token);
   const hasHydrated = useAuthStore((state) => state.hasHydrated);
@@ -110,6 +208,13 @@ export default function HomePage() {
   const user = meQuery.data?.user ?? storedUser;
   const teamsQuery = useTeamsQuery();
   const teamStandingsQuery = useTeamStandingsQuery(seasonYear);
+  const seasonRange = useMemo(
+    () => ({
+      from: `${seasonYear}-03-01`,
+      to: `${seasonYear}-12-31`,
+    }),
+    [seasonYear],
+  );
   const scheduleRange = useMemo(() => {
     const today = new Date();
     const monthLater = new Date(today);
@@ -127,6 +232,9 @@ export default function HomePage() {
     },
     { enabled: Boolean(token && user) },
   );
+  const seasonGamesQuery = useGamesQuery(seasonRange, {
+    enabled: Boolean(teamStandingsQuery.data?.items.length),
+  });
   const recordsQuery = useAttendanceRecordsQuery({}, token, {
     enabled: Boolean(token && user),
   });
@@ -173,16 +281,24 @@ export default function HomePage() {
         : null,
     [attendanceRecords, user],
   );
+  const playoffProjection = useMemo(
+    () =>
+      calculatePlayoffProbabilityProjection(
+        teamStandings,
+        seasonGamesQuery.data?.items ?? [],
+      ),
+    [seasonGamesQuery.data?.items, teamStandings],
+  );
 
   if (authState === 'guest') {
     return (
       <main className="page-shell">
         <section className="home-hero">
           <span className="eyebrow">야크크 야르~ 섹시야구</span>
-          <h1>오늘의 직관, 캘린더에 새기다</h1>
+          <h1>KBO 일정과 가을야구 확률을 한눈에</h1>
           <p>
-            경기 일정과 직관 사진, 스코어와 승률, <br />
-            그리고 같이 간 친구의 기록까지 기록할 수 있는 야구 앱입니다.
+            프로야구 일정표와 야구 캘린더, 팀 순위와 가을야구 진출 확률, <br />
+            직관 사진과 같이 간 친구의 기록까지 남기는 야구 앱입니다.
           </p>
           <div className="actions">
             <Link className="btn btn-primary btn-lg" href="/register">
@@ -212,13 +328,14 @@ export default function HomePage() {
 
         <section className="card stack" style={{ marginTop: 'var(--space-5)' }}>
           <div className="section-heading">
-            <div>
-              <h2>KBO 팀 순위</h2>
-              <p>공식 기록실 일자별 순위를 매일 반영해요.</p>
-            </div>
+          <div>
+            <h2>KBO 팀 순위와 프로야구 일정</h2>
+            <p>공식 기록실 순위와 야구 일정 데이터를 매일 반영해요.</p>
+          </div>
           </div>
           <TeamStandingsTable standings={teamStandings} />
         </section>
+        <PlayoffProbabilityTable projection={playoffProjection} />
       </main>
     );
   }
@@ -235,8 +352,8 @@ export default function HomePage() {
             </h2>
             <p>
               {favoriteTeam
-                ? `${favoriteTeam.name}의 다가오는 일정을 정리했어요.`
-                : '마이페이지에서 응원 팀을 설정하면 일정이 더 정확해져요.'}
+                ? `${favoriteTeam.name}의 다가오는 KBO 일정과 직관 캘린더를 정리했어요.`
+                : '마이페이지에서 응원 팀을 설정하면 야구 일정과 캘린더가 더 정확해져요.'}
             </p>
           </div>
           <Link className="btn btn-primary" href="/calendar">
@@ -459,6 +576,10 @@ export default function HomePage() {
           standings={teamStandings}
         />
       </section>
+      <PlayoffProbabilityTable
+        highlightTeamId={favoriteTeam?.id}
+        projection={playoffProjection}
+      />
     </main>
   );
 }

@@ -9,6 +9,7 @@ export type ParsedKboPlayer = {
   weightKg: number | null;
   school: string | null;
   profileUrl: string | null;
+  isRetired: boolean;
 };
 
 function decodeHtml(value: string) {
@@ -66,6 +67,7 @@ export function parsePlayerSearchHtml(html: string): ParsedKboPlayer[] {
     }
 
     const playerLinkMatch = cells[1].match(/href=['"]([^'"]*playerId=(\d+)[^'"]*)['"][^>]*>([\s\S]*?)<\/a>/i);
+    const profileUrl = playerLinkMatch?.[1] ?? null;
     const kboPlayerId = playerLinkMatch?.[2] ?? null;
     const name = stripHtml(playerLinkMatch?.[3] ?? cells[1]);
 
@@ -85,7 +87,8 @@ export function parsePlayerSearchHtml(html: string): ParsedKboPlayer[] {
       heightCm: body.heightCm,
       weightKg: body.weightKg,
       school: stripHtml(cells[6]) || null,
-      profileUrl: playerLinkMatch?.[1] ?? null,
+      profileUrl,
+      isRetired: Boolean(profileUrl?.includes('/Record/Retire/')),
     });
   }
 

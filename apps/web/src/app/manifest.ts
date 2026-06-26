@@ -4,7 +4,8 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: '야크크 야르~ 섹시야구',
     short_name: '야크크 야르',
-    description: 'KBO 직관과 집관을 캘린더와 포토 티켓으로 기록하는 야구 팬 PWA',
+    description:
+      'KBO 일정, 야구 캘린더, 가을야구 확률, 직관과 집관 기록을 함께 확인하세요.',
     start_url: '/calendar',
     scope: '/',
     display: 'standalone',

@@ -13,7 +13,7 @@ export function ServiceWorkerRegister() {
     }
 
     navigator.serviceWorker.register('/sw.js').catch(() => {
-      // PWA should never block the app when registration fails.
+      // Registration failure should never block the page.
     });
   }, []);
 

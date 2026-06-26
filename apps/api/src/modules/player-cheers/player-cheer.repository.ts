@@ -214,6 +214,7 @@ function buildPlayerCheerFilters(input: PlayerCheerListInput) {
   const keyword = normalizeKeyword(input.keyword);
   const params: Array<number | string | null> = [keyword, keyword, keyword];
   const filters = [
+    'p.is_active = TRUE',
     `(? IS NULL OR p.name LIKE ? OR t.short_name LIKE ?)`,
   ];
 
@@ -343,6 +344,7 @@ export async function findPlayerCheerByPlayerId(playerId: number) {
   const [rows] = await db.query<PlayerCheerRow[]>(
     `${playerCheerSelectSql()}
      WHERE p.id = ?
+       AND p.is_active = TRUE
      LIMIT 1`,
     [playerId],
   );

@@ -29,6 +29,7 @@ type Props = {
   watchTypeFilter: WatchTypeFilter;
   onWatchTypeFilterChange: (filter: WatchTypeFilter) => void;
   favoriteTeamId?: number | null;
+  publicScheduleOnly?: boolean;
 };
 
 export function CalendarFilterBar({
@@ -40,10 +41,13 @@ export function CalendarFilterBar({
   watchTypeFilter,
   onWatchTypeFilterChange,
   favoriteTeamId,
+  publicScheduleOnly = false,
 }: Props) {
   const [expanded, setExpanded] = useState(false);
 
-  const summary = `${viewMode === 'month' ? '월간' : '주간'} · ${SCHEDULE_LABELS[scheduleFilter]} · ${WATCH_LABELS[watchTypeFilter]}`;
+  const summary = publicScheduleOnly
+    ? `${viewMode === 'month' ? '월간' : '주간'} · 리그 전체`
+    : `${viewMode === 'month' ? '월간' : '주간'} · ${SCHEDULE_LABELS[scheduleFilter]} · ${WATCH_LABELS[watchTypeFilter]}`;
 
   function collapseIfMobile() {
     if (layout === 'mobile') {
@@ -83,60 +87,77 @@ export function CalendarFilterBar({
           주간
         </button>
       </div>
-      <div className="filter-group">
-        <span className="filter-group-label">경기</span>
-        <button
-          className={`filter-pill ${scheduleFilter === 'all' ? 'is-selected' : ''}`}
-          onClick={() => {
-            onScheduleFilterChange('all');
-            collapseIfMobile();
-          }}
-          title="KBO 전체 팀 일정"
-          type="button"
-        >
-          리그 전체
-        </button>
-        <button
-          className={`filter-pill ${scheduleFilter === 'favorite' ? 'is-selected' : ''}`}
-          disabled={!favoriteTeamId}
-          onClick={() => {
-            onScheduleFilterChange('favorite');
-            collapseIfMobile();
-          }}
-          title="응원 팀 경기 전체 (홈·원정)"
-          type="button"
-        >
-          응원팀
-        </button>
-        <button
-          className={`filter-pill ${scheduleFilter === 'favorite-home' ? 'is-selected' : ''}`}
-          disabled={!favoriteTeamId}
-          onClick={() => {
-            onScheduleFilterChange('favorite-home');
-            collapseIfMobile();
-          }}
-          title="우리 팀이 홈팀인 경기만"
-          type="button"
-        >
-          홈구장
-        </button>
-      </div>
-      <div className="filter-group">
-        <span className="filter-group-label">기록</span>
-        {(['all', 'stadium', 'home'] as const).map((type) => (
+      {publicScheduleOnly ? null : (
+        <div className="filter-group">
+          <span className="filter-group-label">경기</span>
           <button
-            className={`filter-pill ${watchTypeFilter === type ? 'is-selected' : ''}`}
-            key={type}
+            className={`filter-pill ${scheduleFilter === 'all' ? 'is-selected' : ''}`}
             onClick={() => {
-              onWatchTypeFilterChange(type);
+              onScheduleFilterChange('all');
               collapseIfMobile();
             }}
+            title="KBO 전체 팀 일정"
             type="button"
           >
-            {WATCH_LABELS[type]}
+            리그 전체
           </button>
-        ))}
-      </div>
+          <button
+            className={`filter-pill ${scheduleFilter === 'favorite' ? 'is-selected' : ''}`}
+            disabled={!favoriteTeamId}
+            onClick={() => {
+              onScheduleFilterChange('favorite');
+              collapseIfMobile();
+            }}
+            title="응원 팀 경기 전체 (홈·원정)"
+            type="button"
+          >
+            응원팀
+          </button>
+          <button
+            className={`filter-pill ${scheduleFilter === 'favorite-home' ? 'is-selected' : ''}`}
+            disabled={!favoriteTeamId}
+            onClick={() => {
+              onScheduleFilterChange('favorite-home');
+              collapseIfMobile();
+            }}
+            title="우리 팀이 홈팀인 경기만"
+            type="button"
+          >
+            홈구장
+          </button>
+        </div>
+      )}
+      {publicScheduleOnly ? (
+        <div className="filter-group">
+          <span className="filter-group-label">경기</span>
+          <button
+            className="filter-pill is-selected"
+            disabled
+            title="KBO 전체 팀 일정"
+            type="button"
+          >
+            리그 전체
+          </button>
+        </div>
+      ) : null}
+      {publicScheduleOnly ? null : (
+        <div className="filter-group">
+          <span className="filter-group-label">기록</span>
+          {(['all', 'stadium', 'home'] as const).map((type) => (
+            <button
+              className={`filter-pill ${watchTypeFilter === type ? 'is-selected' : ''}`}
+              key={type}
+              onClick={() => {
+                onWatchTypeFilterChange(type);
+                collapseIfMobile();
+              }}
+              type="button"
+            >
+              {WATCH_LABELS[type]}
+            </button>
+          ))}
+        </div>
+      )}
     </>
   );
 

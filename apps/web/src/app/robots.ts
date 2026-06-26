@@ -9,7 +9,6 @@ export default function robots(): MetadataRoute.Robots {
       disallow: [
         '/admin',
         '/attendance',
-        '/calendar',
         '/forgot-password',
         '/login',
         '/me',

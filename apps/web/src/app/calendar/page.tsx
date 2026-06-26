@@ -2,9 +2,7 @@
 
 import './calendar.css';
 
-import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
-import { useAuthGuard } from '@/lib/use-auth-guard';
 import { type Game } from '@/lib/baseball-api';
 import { type AttendanceRecord } from '@/lib/attendance-api';
 import { CalendarAgendaView } from '@/components/CalendarAgendaView';
@@ -144,8 +142,6 @@ function getStreakKind(value: string | null | undefined) {
 }
 
 export default function CalendarPage() {
-  const router = useRouter();
-  useAuthGuard();
   const viewMode = useCalendarUiStore((state) => state.viewMode);
   const setViewMode = useCalendarUiStore((state) => state.setViewMode);
   const scheduleFilter = useCalendarUiStore((state) => state.scheduleFilter);
@@ -176,6 +172,14 @@ export default function CalendarPage() {
   const meQuery = useMeQuery(token);
   const user = meQuery.data?.user ?? storedUser;
   const favoriteTeamId = user?.favoriteTeamId ?? null;
+  const isAuthed = Boolean(token && user && !meQuery.isError);
+  const effectiveScheduleFilter: CalendarScheduleFilter = isAuthed
+    ? scheduleFilter
+    : 'all';
+  const effectiveWatchTypeFilter: CalendarWatchTypeFilter = isAuthed
+    ? watchTypeFilter
+    : 'all';
+  const effectiveFavoriteTeamId = isAuthed ? favoriteTeamId : null;
 
   const monthStart = useMemo(() => getMonthStart(anchorDate), [anchorDate]);
   const weekStart = useMemo(() => getWeekStart(anchorDate), [anchorDate]);
@@ -192,12 +196,11 @@ export default function CalendarPage() {
   useEffect(() => {
     if (meQuery.isError) {
       clearSession();
-      router.replace('/');
     }
-  }, [clearSession, meQuery.isError, router]);
+  }, [clearSession, meQuery.isError]);
 
   useEffect(() => {
-    if (!meQuery.data?.user || hasAppliedDefaultScheduleFilter) {
+    if (!isAuthed || !meQuery.data?.user || hasAppliedDefaultScheduleFilter) {
       return;
     }
 
@@ -205,30 +208,33 @@ export default function CalendarPage() {
     markDefaultScheduleFilterApplied();
   }, [
     hasAppliedDefaultScheduleFilter,
+    isAuthed,
     markDefaultScheduleFilterApplied,
     meQuery.data?.user,
     setScheduleFilter,
   ]);
 
   const activeTeamId =
-    scheduleFilter !== 'all' ? (favoriteTeamId ?? undefined) : undefined;
+    effectiveScheduleFilter !== 'all'
+      ? (effectiveFavoriteTeamId ?? undefined)
+      : undefined;
   const teamsQuery = useTeamsQuery();
   const gamesQuery = useGamesQuery(
     { ...range, teamId: activeTeamId },
-    { enabled: Boolean(token && user) },
+    { enabled: true },
   );
   const attendanceRecordsQuery = useAttendanceRecordsQuery(range, token, {
-    enabled: Boolean(token && user),
+    enabled: isAuthed,
   });
   const yearAttendanceRecordsQuery = useAttendanceRecordsQuery(
     yearRange,
     token,
-    { enabled: Boolean(token && user) },
+    { enabled: isAuthed },
   );
   const teamStandingsQuery = useTeamStandingsQuery(statsYear);
   const yearSeasonGamesQuery = useGamesQuery(
-    { ...yearRange, teamId: favoriteTeamId ?? undefined },
-    { enabled: Boolean(token && favoriteTeamId) },
+    { ...yearRange, teamId: effectiveFavoriteTeamId ?? undefined },
+    { enabled: Boolean(isAuthed && effectiveFavoriteTeamId) },
   );
   const teams = teamsQuery.data?.items ?? [];
   const rawGames = useMemo(
@@ -238,9 +244,13 @@ export default function CalendarPage() {
   const games = useMemo(
     () =>
       rawGames.filter((game) =>
-        isGameInScheduleFilter(game, scheduleFilter, favoriteTeamId),
+        isGameInScheduleFilter(
+          game,
+          effectiveScheduleFilter,
+          effectiveFavoriteTeamId,
+        ),
       ),
-    [rawGames, scheduleFilter, favoriteTeamId],
+    [rawGames, effectiveScheduleFilter, effectiveFavoriteTeamId],
   );
   const attendanceRecords = useMemo(
     () => attendanceRecordsQuery.data?.items ?? [],
@@ -256,20 +266,20 @@ export default function CalendarPage() {
     [yearSeasonGamesQuery.data?.items],
   );
   const isLoading =
-    meQuery.isLoading ||
+    (Boolean(token) && meQuery.isLoading) ||
     teamsQuery.isLoading ||
     gamesQuery.isLoading ||
-    attendanceRecordsQuery.isLoading;
+    (isAuthed && attendanceRecordsQuery.isLoading);
 
   const filteredAttendanceRecords = useMemo(() => {
-    if (watchTypeFilter === 'all') {
+    if (effectiveWatchTypeFilter === 'all') {
       return attendanceRecords;
     }
 
     return attendanceRecords.filter(
-      (record) => record.watchType === watchTypeFilter,
+      (record) => record.watchType === effectiveWatchTypeFilter,
     );
-  }, [attendanceRecords, watchTypeFilter]);
+  }, [attendanceRecords, effectiveWatchTypeFilter]);
 
   const scheduleScopedAttendanceRecords = useMemo(
     () =>
@@ -277,11 +287,15 @@ export default function CalendarPage() {
         (record) =>
           isGameInScheduleFilter(
             record.game,
-            scheduleFilter,
-            user?.favoriteTeamId,
-          ) || isNeutralAttendance(record.game, user?.favoriteTeamId),
+            effectiveScheduleFilter,
+            effectiveFavoriteTeamId,
+          ) || isNeutralAttendance(record.game, effectiveFavoriteTeamId),
       ),
-    [filteredAttendanceRecords, scheduleFilter, user?.favoriteTeamId],
+    [
+      filteredAttendanceRecords,
+      effectiveScheduleFilter,
+      effectiveFavoriteTeamId,
+    ],
   );
 
   const periodRecords = useMemo(() => {
@@ -310,55 +324,55 @@ export default function CalendarPage() {
     }
 
     return [...byId.values()].filter((record) =>
-      countsTowardWinRate(record.game, user?.favoriteTeamId),
+      countsTowardWinRate(record.game, effectiveFavoriteTeamId),
     );
   }, [
     yearAttendanceRecords,
     attendanceRecords,
     statsYear,
-    user?.favoriteTeamId,
+    effectiveFavoriteTeamId,
   ]);
 
   const yearStadiumWinRate = useMemo(
     () =>
-      getStadiumAttendanceWinRate(statsAttendanceRecords, user?.favoriteTeamId),
-    [statsAttendanceRecords, user?.favoriteTeamId],
+      getStadiumAttendanceWinRate(statsAttendanceRecords, effectiveFavoriteTeamId),
+    [statsAttendanceRecords, effectiveFavoriteTeamId],
   );
   const yearHomeWinRate = useMemo(
     () =>
-      getHomeAttendanceWinRate(statsAttendanceRecords, user?.favoriteTeamId),
-    [statsAttendanceRecords, user?.favoriteTeamId],
+      getHomeAttendanceWinRate(statsAttendanceRecords, effectiveFavoriteTeamId),
+    [statsAttendanceRecords, effectiveFavoriteTeamId],
   );
   const yearTeamWinRate = useMemo(
-    () => getKboFavoriteTeamSeasonWinRate(teamStandings, user?.favoriteTeamId),
-    [teamStandings, user?.favoriteTeamId],
+    () => getKboFavoriteTeamSeasonWinRate(teamStandings, effectiveFavoriteTeamId),
+    [teamStandings, effectiveFavoriteTeamId],
   );
   const opponentInsights = useMemo(() => {
     const kbo = getKboOpponentWinRateInsights(
       yearSeasonGames,
-      user?.favoriteTeamId,
+      effectiveFavoriteTeamId,
     );
     const stadium = getStadiumAttendanceOpponentInsights(
       statsAttendanceRecords,
-      user?.favoriteTeamId,
+      effectiveFavoriteTeamId,
     );
 
     return {
       teamWinRateHigh: kbo.high,
       stadiumWinRateHigh: stadium.high,
     };
-  }, [yearSeasonGames, statsAttendanceRecords, user?.favoriteTeamId]);
+  }, [yearSeasonGames, statsAttendanceRecords, effectiveFavoriteTeamId]);
 
   const favoriteTeamStanding = useMemo(() => {
-    if (!user?.favoriteTeamId || !teamStandings?.items.length) {
+    if (!effectiveFavoriteTeamId || !teamStandings?.items.length) {
       return null;
     }
 
     return (
-      teamStandings.items.find((item) => item.teamId === user.favoriteTeamId) ??
+      teamStandings.items.find((item) => item.teamId === effectiveFavoriteTeamId) ??
       null
     );
-  }, [teamStandings, user?.favoriteTeamId]);
+  }, [teamStandings, effectiveFavoriteTeamId]);
 
   const gamesByDate = useMemo(
     () =>
@@ -376,7 +390,7 @@ export default function CalendarPage() {
   );
 
   const displayGamesByDate = useMemo(() => {
-    if (watchTypeFilter === 'all') {
+    if (effectiveWatchTypeFilter === 'all') {
       return gamesByDate;
     }
 
@@ -394,14 +408,14 @@ export default function CalendarPage() {
 
     return result;
   }, [
-    watchTypeFilter,
+    effectiveWatchTypeFilter,
     gamesByDate,
     scheduleScopedAttendanceRecords,
     gamesById,
   ]);
 
   const displayGameCount = useMemo(() => {
-    if (watchTypeFilter === 'all') {
+    if (effectiveWatchTypeFilter === 'all') {
       return games.length;
     }
 
@@ -409,7 +423,7 @@ export default function CalendarPage() {
       (total, dayGames) => total + dayGames.length,
       0,
     );
-  }, [watchTypeFilter, games.length, displayGamesByDate]);
+  }, [effectiveWatchTypeFilter, games.length, displayGamesByDate]);
 
   const attendanceByGameId = scheduleScopedAttendanceRecords.reduce<
     Record<number, AttendanceRecord>
@@ -431,9 +445,13 @@ export default function CalendarPage() {
       ? getCalendarMonthDays(monthStart)
       : getWeekDays(weekStart);
 
-  const favoriteTeam = teams.find((team) => team.id === user?.favoriteTeamId);
+  const favoriteTeam = teams.find((team) => team.id === effectiveFavoriteTeamId);
 
   function handleScheduleFilterChange(filter: CalendarScheduleFilter) {
+    if (!isAuthed) {
+      return;
+    }
+
     setScheduleFilter(filter);
     if (filter === 'all') {
       setWatchTypeFilter('all');
@@ -441,6 +459,10 @@ export default function CalendarPage() {
   }
 
   function handleWatchTypeFilterChange(filter: CalendarWatchTypeFilter) {
+    if (!isAuthed) {
+      return;
+    }
+
     setWatchTypeFilter(filter);
   }
 
@@ -489,7 +511,7 @@ export default function CalendarPage() {
               <CalendarEventCard
                 attendance={attendance}
                 dense={options.dense}
-                favoriteTeamId={user?.favoriteTeamId}
+                favoriteTeamId={effectiveFavoriteTeamId}
                 game={game}
                 href={href}
                 key={game.id}
@@ -500,7 +522,7 @@ export default function CalendarPage() {
             <CalendarEventCard
               attendance={record}
               dense={options.dense}
-              favoriteTeamId={user?.favoriteTeamId}
+              favoriteTeamId={effectiveFavoriteTeamId}
               game={{
                 id: record.gameId,
                 gameDate: record.game.gameDate,
@@ -605,7 +627,7 @@ export default function CalendarPage() {
   ]);
 
   const periodLabel = viewMode === 'month' ? '이번 달' : '이번 주';
-  const showTeamWinRate = Boolean(user?.favoriteTeamId);
+  const showTeamWinRate = Boolean(effectiveFavoriteTeamId);
   const teamRateLabel = favoriteTeam
     ? `우리팀(${favoriteTeam.shortName}) 승률`
     : null;
@@ -630,12 +652,12 @@ export default function CalendarPage() {
         <h1>
           {favoriteTeam
             ? `${favoriteTeam.shortName} 직관 캘린더`
-            : '직관 캘린더'}
+            : 'KBO 야구 일정 캘린더'}
         </h1>
         <p>
-          {user?.nickname
+          {isAuthed && user?.nickname
             ? `${user.nickname}님의 ${viewMode === 'month' ? '월간' : '주간'} 일정과 기록`
-            : '경기 일정과 기록을 한 번에 확인하세요.'}
+            : '로그인 없이 KBO 전체 팀 경기 일정과 프로야구 캘린더를 확인하세요.'}
         </p>
       </header>
 
@@ -688,7 +710,7 @@ export default function CalendarPage() {
         {!isMobile ? (
           <aside aria-label="캘린더 필터" className="calendar-filter-rail">
             <CalendarFilterBar
-              favoriteTeamId={user?.favoriteTeamId}
+              favoriteTeamId={effectiveFavoriteTeamId}
               layout="rail"
               onScheduleFilterChange={handleScheduleFilterChange}
               onViewModeChange={(mode) => {
@@ -696,9 +718,10 @@ export default function CalendarPage() {
                 setAnchorDate(getCalendarViewAnchorDate(mode, anchorDate));
               }}
               onWatchTypeFilterChange={handleWatchTypeFilterChange}
-              scheduleFilter={scheduleFilter}
+              publicScheduleOnly={!isAuthed}
+              scheduleFilter={effectiveScheduleFilter}
               viewMode={viewMode}
-              watchTypeFilter={watchTypeFilter}
+              watchTypeFilter={effectiveWatchTypeFilter}
             />
           </aside>
         ) : null}
@@ -757,14 +780,14 @@ export default function CalendarPage() {
                 attendanceByDate={attendanceByDate}
                 attendanceByGameId={attendanceByGameId}
                 days={days}
-                favoriteTeamId={user?.favoriteTeamId}
+                favoriteTeamId={effectiveFavoriteTeamId}
                 focusDateKey={agendaFocusDateKey}
                 gamesByDate={displayGamesByDate}
                 referenceMonth={viewMode === 'month' ? monthStart : undefined}
                 showOutsideDays={viewMode === 'week'}
               />
               <CalendarFilterBar
-                favoriteTeamId={user?.favoriteTeamId}
+                favoriteTeamId={effectiveFavoriteTeamId}
                 layout="mobile"
                 onScheduleFilterChange={handleScheduleFilterChange}
                 onViewModeChange={(mode) => {
@@ -772,9 +795,10 @@ export default function CalendarPage() {
                   setAnchorDate(getCalendarViewAnchorDate(mode, anchorDate));
                 }}
                 onWatchTypeFilterChange={handleWatchTypeFilterChange}
-                scheduleFilter={scheduleFilter}
+                publicScheduleOnly={!isAuthed}
+                scheduleFilter={effectiveScheduleFilter}
                 viewMode={viewMode}
-                watchTypeFilter={watchTypeFilter}
+                watchTypeFilter={effectiveWatchTypeFilter}
               />
             </>
           ) : (
@@ -804,21 +828,21 @@ export default function CalendarPage() {
             <EmptyState
               icon="◌"
               title={
-                watchTypeFilter === 'all'
-                  ? scheduleFilter === 'favorite-home'
+                effectiveWatchTypeFilter === 'all'
+                  ? effectiveScheduleFilter === 'favorite-home'
                     ? viewMode === 'month'
                       ? '이번 달엔 홈구장 경기가 없어요'
                       : '이번 주엔 홈구장 경기가 없어요'
                     : viewMode === 'month'
                       ? '이번 달엔 경기 일정이 없어요'
                       : '이번 주엔 경기 일정이 없어요'
-                  : watchTypeFilter === 'stadium'
+                  : effectiveWatchTypeFilter === 'stadium'
                     ? '이번 기간에 직관 기록이 없어요'
                     : '이번 기간에 집관 기록이 없어요'
               }
               description={
-                watchTypeFilter === 'all'
-                  ? scheduleFilter === 'favorite-home'
+                effectiveWatchTypeFilter === 'all'
+                  ? effectiveScheduleFilter === 'favorite-home'
                     ? '원정 경기는 「응원팀」으로 확인해보세요.'
                     : '다른 기간으로 이동해보세요.'
                   : '직관 기록을 남기거나 다른 기간을 확인해보세요.'

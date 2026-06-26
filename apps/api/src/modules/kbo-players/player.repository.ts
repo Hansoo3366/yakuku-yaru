@@ -34,6 +34,17 @@ export async function upsertPlayer(
   player: ParsedKboPlayer,
   teamIds: Map<string, number>,
 ) {
+  if (player.isRetired) {
+    await db.execute(
+      `UPDATE players
+       SET is_active = FALSE
+       WHERE kbo_player_id = ?`,
+      [player.kboPlayerId],
+    );
+
+    return 'skipped' as const;
+  }
+
   const teamId = teamIds.get(player.teamShortName);
 
   if (!teamId) {

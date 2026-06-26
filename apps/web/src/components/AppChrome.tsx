@@ -161,7 +161,7 @@ export function AppFooter() {
       <div className="site-footer-inner">
         <div>
           <strong>야크크 야르~ 섹시야구</strong>
-          <p>야구장 직관과 집관을 캘린더에 남기는 KBO 팬 기록 웹앱입니다.</p>
+          <p>KBO 일정과 야구장 직관·집관 기록을 캘린더에 남기는 공간입니다.</p>
         </div>
         <nav aria-label="하단 링크">
           <Link href="/">홈</Link>
