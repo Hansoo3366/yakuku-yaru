@@ -39,10 +39,12 @@ export function createApp() {
   app.use(express.json());
   app.use('/uploads', express.static(env.uploadDir));
 
-  app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(openApiDocument));
-  app.get('/api-docs.json', (_req, res) => {
-    res.json(openApiDocument);
-  });
+  if (env.nodeEnv !== 'production') {
+    app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(openApiDocument));
+    app.get('/api-docs.json', (_req, res) => {
+      res.json(openApiDocument);
+    });
+  }
 
   app.use('/api/auth', authRouter);
   app.use('/api/admin', adminRouter);

@@ -1,6 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 
 import type { TeamStandingsResponse } from '@/lib/baseball-api';
+import { formatKboChampionshipLabel } from '@/lib/kbo-championship-history';
 import { getTeamLogoSrc } from '@/lib/team-logo';
 
 type Props = {
@@ -99,7 +100,12 @@ export function TeamStandingsTable({ standings, highlightTeamId }: Props) {
                       alt=""
                       src={getTeamLogoSrc({ shortName: item.teamShortName })}
                     />
-                    {item.teamShortName}
+                    <span>
+                      <strong>{item.teamShortName}</strong>
+                      <em>
+                        {formatKboChampionshipLabel(item.championshipHistory)}
+                      </em>
+                    </span>
                   </span>
                 </td>
                 <td>{item.games}</td>

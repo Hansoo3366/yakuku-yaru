@@ -2636,6 +2636,25 @@ img {
   width: 22px;
 }
 
+.standings-team-cell span {
+  display: grid;
+  gap: 2px;
+}
+
+.standings-team-cell strong {
+  color: var(--color-night-navy);
+  font-weight: var(--weight-black);
+  line-height: 1.15;
+}
+
+.standings-team-cell em {
+  color: var(--color-muted);
+  font-size: 11px;
+  font-style: normal;
+  font-weight: var(--weight-bold);
+  line-height: 1.2;
+}
+
 .standings-streak-badge {
   border: 1px solid var(--color-line);
   border-radius: var(--radius-pill);
@@ -2705,23 +2724,6 @@ img {
     var(--team-color, var(--color-field-700)) 12%,
     transparent
   );
-  font-weight: var(--weight-bold);
-}
-
-.playoff-probability-table .standings-team-cell span {
-  display: grid;
-  gap: 2px;
-}
-
-.playoff-probability-table .standings-team-cell strong {
-  color: var(--color-night-navy);
-  font-weight: var(--weight-black);
-}
-
-.playoff-probability-table .standings-team-cell em {
-  color: var(--color-muted);
-  font-size: 11px;
-  font-style: normal;
   font-weight: var(--weight-bold);
 }
 

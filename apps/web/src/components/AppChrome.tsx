@@ -169,7 +169,6 @@ export function AppFooter() {
           <Link href="/cheers">응원가</Link>
           <Link href="/posts">게시판</Link>
           <Link href="/me">마이페이지</Link>
-          <a href="https://yakuku-yaru.today/api-docs">Swagger</a>
         </nav>
       </div>
     </footer>

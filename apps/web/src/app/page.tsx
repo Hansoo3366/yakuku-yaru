@@ -19,6 +19,7 @@ import {
   calculatePlayoffProbabilityProjection,
   type PlayoffProbabilityProjection,
 } from '@/lib/playoff-probability';
+import { formatKboChampionshipLabel } from '@/lib/kbo-championship-history';
 import { useAuthStore } from '@/lib/auth-store';
 import {
   useAttendanceRecordsQuery,
@@ -53,7 +54,8 @@ const features = [
   {
     icon: '◇',
     title: 'KBO 야구 캘린더',
-    description: '오늘 야구 일정과 프로야구 일정표, 직관 기록을 한 화면에서 봅니다.',
+    description:
+      '오늘 야구 일정과 프로야구 일정표, 직관 기록을 한 화면에서 봅니다.',
   },
   {
     icon: '⌖',
@@ -166,7 +168,10 @@ function PlayoffProbabilityTable({
                       />
                       <span>
                         <strong>{row.teamShortName}</strong>
-                        <em>{row.currentRank}위</em>
+                        <em>
+                          {row.currentRank}위 ·{' '}
+                          {formatKboChampionshipLabel(row.championshipHistory)}
+                        </em>
                       </span>
                     </span>
                   </td>
@@ -191,9 +196,7 @@ function PlayoffProbabilityTable({
         </table>
       </div>
       <p className="playoff-probability-note">
-        모든 팀이 {projection.minGames}경기 이상 치른 뒤 노출됩니다. 남은 일정{' '}
-        {projection.remainingGames}경기를 홈 어드밴티지와 무승부 확률까지 반영해
-        계산합니다.
+        모든 팀이 {projection.minGames}경기 이상 치른 뒤 노출됩니다.
       </p>
     </section>
   );
@@ -328,10 +331,10 @@ export default function HomePage() {
 
         <section className="card stack" style={{ marginTop: 'var(--space-5)' }}>
           <div className="section-heading">
-          <div>
-            <h2>KBO 팀 순위와 프로야구 일정</h2>
-            <p>공식 기록실 순위와 야구 일정 데이터를 매일 반영해요.</p>
-          </div>
+            <div>
+              <h2>KBO 팀 순위와 프로야구 일정</h2>
+              <p>공식 기록실 순위와 야구 일정 데이터를 매일 반영해요.</p>
+            </div>
           </div>
           <TeamStandingsTable standings={teamStandings} />
         </section>

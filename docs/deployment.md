@@ -17,7 +17,6 @@ Cloud Server
 ```txt
 http://SERVER_IP:3000       Web
 http://SERVER_IP:4000/api   API
-http://SERVER_IP:4000/api-docs Swagger
 ```
 
 현재 제출용 배포는 도메인과 HTTPS를 기준으로 합니다.
@@ -25,7 +24,6 @@ http://SERVER_IP:4000/api-docs Swagger
 ```txt
 https://yakuku-yaru.today          Web
 https://yakuku-yaru.today/api      API
-https://yakuku-yaru.today/api-docs Swagger
 ```
 
 ## 1. 서버 준비
@@ -58,6 +56,7 @@ cp .env.production.example .env.production
 NEXT_PUBLIC_API_URL=http://YOUR_SERVER_IP:4000/api
 APP_DOMAIN=YOUR_DOMAIN
 JWT_SECRET=replace-with-a-long-random-secret
+JWT_REMEMBER_EXPIRES_IN=30d
 MYSQL_PASSWORD=replace-with-strong-password
 MYSQL_ROOT_PASSWORD=replace-with-strong-root-password
 ```
@@ -94,7 +93,6 @@ docker compose --env-file .env.production -f docker-compose.prod.yml logs -f mys
 ```txt
 http://SERVER_IP:3000
 http://SERVER_IP:4000/api/health
-http://SERVER_IP:4000/api-docs
 ```
 
 도메인 연결 후에는 아래 주소를 확인합니다.
@@ -102,7 +100,6 @@ http://SERVER_IP:4000/api-docs
 ```txt
 https://yakuku-yaru.today
 https://yakuku-yaru.today/api/health
-https://yakuku-yaru.today/api-docs
 https://yakuku-yaru.today/uploads/<uploaded-file-name>
 ```
 
@@ -285,6 +282,7 @@ NEXT_PUBLIC_API_URL=https://yakuku-yaru.today/api
 
 JWT_SECRET=replace-with-long-random-secret
 JWT_EXPIRES_IN=1d
+JWT_REMEMBER_EXPIRES_IN=30d
 
 SMTP_HOST=smtp.gmail.com
 SMTP_PORT=465

@@ -1,5 +1,9 @@
 import type { RowDataPacket } from 'mysql2';
 import { db } from '../../config/database.js';
+import {
+  getTeamChampionshipHistory,
+  type TeamChampionshipHistory,
+} from '../teams/championship-history.js';
 import type { ParsedKboTeamStanding } from './parse-team-rank.js';
 
 export type TeamStandingRow = {
@@ -15,6 +19,7 @@ export type TeamStandingRow = {
   gamesBehind: number;
   recentTen: string;
   streak: string;
+  championshipHistory: TeamChampionshipHistory;
 };
 
 type StandingMetaRow = RowDataPacket & {
@@ -185,6 +190,7 @@ export async function listTeamStandings(seasonYear: number, seriesId = '0') {
       gamesBehind: Number(row.games_behind),
       recentTen: row.recent_ten ?? '-',
       streak: row.streak ?? '-',
+      championshipHistory: getTeamChampionshipHistory(row.team_short_name),
     })) satisfies TeamStandingRow[],
   };
 }

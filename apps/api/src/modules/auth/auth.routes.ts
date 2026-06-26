@@ -224,6 +224,8 @@ authRouter.post('/login', loginRateLimit, async (req, res, next) => {
     const accessToken = signAccessToken({
       userId: user.id,
       email: user.email,
+    }, {
+      rememberMe: Boolean(rememberMe),
     });
 
     setAuthCookie(res, accessToken, { rememberMe: Boolean(rememberMe) });

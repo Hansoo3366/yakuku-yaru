@@ -5,16 +5,23 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 const apiRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
+const nodeEnv = process.env.NODE_ENV ?? 'development';
+const jwtSecret = process.env.JWT_SECRET?.trim() || 'change-me-in-local-env';
+
+if (nodeEnv === 'production' && jwtSecret === 'change-me-in-local-env') {
+  throw new Error('JWT_SECRET must be set in production');
+}
 
 export const env = {
-  nodeEnv: process.env.NODE_ENV ?? 'development',
+  nodeEnv,
   apiPort: Number(process.env.API_PORT ?? 4000),
   appUrl:
     process.env.APP_URL ??
     (process.env.APP_DOMAIN ? `https://${process.env.APP_DOMAIN}` : 'http://localhost:3000'),
   jwt: {
-    secret: process.env.JWT_SECRET ?? 'change-me-in-local-env',
+    secret: jwtSecret,
     expiresIn: process.env.JWT_EXPIRES_IN ?? '1d',
+    rememberExpiresIn: process.env.JWT_REMEMBER_EXPIRES_IN ?? '30d',
   },
   uploadDir: path.resolve(apiRoot, process.env.UPLOAD_DIR ?? 'uploads'),
   smtp: {

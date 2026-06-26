@@ -1,5 +1,9 @@
 import type { RowDataPacket } from 'mysql2';
 import { db } from '../../config/database.js';
+import {
+  getTeamChampionshipHistory,
+  type TeamChampionshipHistory,
+} from './championship-history.js';
 
 export type TeamRow = RowDataPacket & {
   id: number;
@@ -16,6 +20,7 @@ export type Team = {
   shortName: string;
   primaryColor: string | null;
   ticketUrl: string | null;
+  championshipHistory: TeamChampionshipHistory;
 };
 
 export function toTeam(row: TeamRow): Team {
@@ -25,6 +30,7 @@ export function toTeam(row: TeamRow): Team {
     shortName: row.short_name,
     primaryColor: row.primary_color,
     ticketUrl: row.ticket_url,
+    championshipHistory: getTeamChampionshipHistory(row.short_name),
   };
 }
 

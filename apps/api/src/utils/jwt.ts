@@ -7,13 +7,18 @@ export type AccessTokenPayload = {
   email: string;
 };
 
-export function signAccessToken(payload: AccessTokenPayload) {
-  const options: SignOptions = {
-    expiresIn: env.jwt.expiresIn as SignOptions['expiresIn'],
+export function signAccessToken(
+  payload: AccessTokenPayload,
+  options: { rememberMe?: boolean } = {},
+) {
+  const signOptions: SignOptions = {
+    expiresIn: (options.rememberMe
+      ? env.jwt.rememberExpiresIn
+      : env.jwt.expiresIn) as SignOptions['expiresIn'],
   };
 
   return jwt.sign(payload, env.jwt.secret, {
-    ...options,
+    ...signOptions,
   });
 }
 

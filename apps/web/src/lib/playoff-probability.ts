@@ -1,4 +1,8 @@
-import type { Game, TeamStandingsResponse } from '@/lib/baseball-api';
+import type {
+  Game,
+  TeamChampionshipHistory,
+  TeamStandingsResponse,
+} from '@/lib/baseball-api';
 
 const KBO_REGULAR_SEASON_GAMES = 144;
 const MIN_GAMES_FOR_PROJECTION = 40;
@@ -31,6 +35,7 @@ export type PlayoffProbabilityRow = {
   averageRank: number;
   averageWins: number;
   currentRank: number;
+  championshipHistory: TeamChampionshipHistory;
 };
 
 export type PlayoffProbabilityProjection = {
@@ -315,6 +320,9 @@ export function calculatePlayoffProbabilityProjection(
   const currentRankByTeamId = new Map(
     standings.items.map((item) => [item.teamId, item.rank]),
   );
+  const championshipHistoryByTeamId = new Map(
+    standings.items.map((item) => [item.teamId, item.championshipHistory]),
+  );
 
   return {
     rows: teams
@@ -329,6 +337,13 @@ export function calculatePlayoffProbabilityProjection(
           (winSums.get(team.id) ?? 0) / simulations,
         ),
         currentRank: currentRankByTeamId.get(team.id) ?? 0,
+        championshipHistory:
+          championshipHistoryByTeamId.get(team.id) ??
+          ({
+            currentTitles: 0,
+            targetTitle: 1,
+            lastTitleYear: null,
+          } satisfies TeamChampionshipHistory),
       }))
       .sort((a, b) => {
         if (b.playoffProbability !== a.playoffProbability) {

@@ -3,9 +3,9 @@ import { env } from '../../config/env.js';
 
 export const AUTH_COOKIE_NAME = 'yakuku_session';
 
-function getCookieMaxAgeMs() {
-  const value = env.jwt.expiresIn.trim();
-  const match = value.match(/^(\d+)([smhd])$/i);
+function getCookieMaxAgeMs(value: string) {
+  const normalizedValue = value.trim();
+  const match = normalizedValue.match(/^(\d+)([smhd])$/i);
 
   if (!match) {
     return 24 * 60 * 60 * 1000;
@@ -30,7 +30,9 @@ export function setAuthCookie(
 ) {
   res.cookie(AUTH_COOKIE_NAME, token, {
     httpOnly: true,
-    maxAge: options.rememberMe ? getCookieMaxAgeMs() : undefined,
+    maxAge: options.rememberMe
+      ? getCookieMaxAgeMs(env.jwt.rememberExpiresIn)
+      : undefined,
     sameSite: 'lax',
     secure: env.nodeEnv === 'production',
   });

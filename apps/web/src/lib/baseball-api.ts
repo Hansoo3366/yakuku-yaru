@@ -7,6 +7,13 @@ export type Team = {
   shortName: string;
   primaryColor: string | null;
   ticketUrl: string | null;
+  championshipHistory?: TeamChampionshipHistory;
+};
+
+export type TeamChampionshipHistory = {
+  currentTitles: number;
+  targetTitle: number;
+  lastTitleYear: number | null;
 };
 
 export type Game = {
@@ -101,6 +108,7 @@ export type TeamStanding = {
   gamesBehind: number;
   recentTen: string;
   streak: string;
+  championshipHistory?: TeamChampionshipHistory;
 };
 
 export type TeamStandingsResponse = {
