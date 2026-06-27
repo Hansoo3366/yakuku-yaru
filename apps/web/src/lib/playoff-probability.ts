@@ -6,7 +6,7 @@ import type {
 
 const KBO_REGULAR_SEASON_GAMES = 144;
 const MIN_GAMES_FOR_PROJECTION = 40;
-const DEFAULT_SIMULATIONS = 10000;
+const DEFAULT_SIMULATIONS = 100000;
 const PYTHAGOREAN_GAMMA = 1.83;
 const TIE_RATE = 0.02;
 const HOME_ADVANTAGE_LOGIT = 0.1;
@@ -34,6 +34,12 @@ export type PlayoffProbabilityRow = {
   playoffProbability: number;
   averageRank: number;
   averageWins: number;
+  averageDraws: number;
+  averageLosses: number;
+  expectedWinRate: number;
+  currentWinRate: number;
+  pythagoreanWinRate: number;
+  scheduleAdjustedWinRate: number;
   currentRank: number;
   championshipHistory: TeamChampionshipHistory;
 };
@@ -192,6 +198,48 @@ function buildRemainingGames(games: Game[]) {
     );
 }
 
+function buildScheduleAdjustedWinRates(
+  remainingGames: RemainingGame[],
+  teams: TeamInput[],
+  pythagoreanByTeamId: Map<number, number>,
+) {
+  const scheduleSums = new Map(
+    teams.map((team) => [team.id, { probabilitySum: 0, games: 0 }]),
+  );
+
+  for (const game of remainingGames) {
+    const awayPyth = pythagoreanByTeamId.get(game.awayTeamId) ?? 0.5;
+    const homePyth = pythagoreanByTeamId.get(game.homeTeamId) ?? 0.5;
+    const awayWinProbability = applyHomeAdvantage(log5(awayPyth, homePyth));
+    const homeWinProbability = 1 - awayWinProbability;
+    const awaySchedule = scheduleSums.get(game.awayTeamId);
+    const homeSchedule = scheduleSums.get(game.homeTeamId);
+
+    if (awaySchedule) {
+      awaySchedule.probabilitySum += awayWinProbability;
+      awaySchedule.games += 1;
+    }
+
+    if (homeSchedule) {
+      homeSchedule.probabilitySum += homeWinProbability;
+      homeSchedule.games += 1;
+    }
+  }
+
+  return new Map(
+    teams.map((team) => {
+      const schedule = scheduleSums.get(team.id);
+
+      return [
+        team.id,
+        schedule?.games
+          ? schedule.probabilitySum / schedule.games
+          : (pythagoreanByTeamId.get(team.id) ?? 0.5),
+      ];
+    }),
+  );
+}
+
 function rankTeams(
   records: Map<number, { wins: number; losses: number; draws: number }>,
   teams: TeamInput[],
@@ -247,6 +295,11 @@ export function calculatePlayoffProbabilityProjection(
     ]),
   );
   const remainingGames = buildRemainingGames(games);
+  const scheduleAdjustedByTeamId = buildScheduleAdjustedWinRates(
+    remainingGames,
+    teams,
+    pythagoreanByTeamId,
+  );
   const seed = hashSeed(
     `${standings.rankDate ?? ''}:${standings.items
       .map((item) => `${item.teamId}-${item.wins}-${item.losses}-${item.draws}`)
@@ -256,6 +309,8 @@ export function calculatePlayoffProbabilityProjection(
   const playoffCounts = new Map(teams.map((team) => [team.id, 0]));
   const rankSums = new Map(teams.map((team) => [team.id, 0]));
   const winSums = new Map(teams.map((team) => [team.id, 0]));
+  const drawSums = new Map(teams.map((team) => [team.id, 0]));
+  const lossSums = new Map(teams.map((team) => [team.id, 0]));
 
   for (let simulation = 0; simulation < simulations; simulation += 1) {
     const records = new Map(
@@ -310,6 +365,11 @@ export function calculatePlayoffProbabilityProjection(
 
       rankSums.set(team.id, (rankSums.get(team.id) ?? 0) + rank);
       winSums.set(team.id, (winSums.get(team.id) ?? 0) + (record?.wins ?? 0));
+      drawSums.set(team.id, (drawSums.get(team.id) ?? 0) + (record?.draws ?? 0));
+      lossSums.set(
+        team.id,
+        (lossSums.get(team.id) ?? 0) + (record?.losses ?? 0),
+      );
 
       if (rank <= 5) {
         playoffCounts.set(team.id, (playoffCounts.get(team.id) ?? 0) + 1);
@@ -320,31 +380,55 @@ export function calculatePlayoffProbabilityProjection(
   const currentRankByTeamId = new Map(
     standings.items.map((item) => [item.teamId, item.rank]),
   );
+  const currentWinRateByTeamId = new Map(
+    standings.items.map((item) => [item.teamId, item.winRate]),
+  );
   const championshipHistoryByTeamId = new Map(
     standings.items.map((item) => [item.teamId, item.championshipHistory]),
   );
 
   return {
     rows: teams
-      .map((team) => ({
-        teamId: team.id,
-        teamShortName: team.shortName,
-        teamName: team.name,
-        playoffProbability: (playoffCounts.get(team.id) ?? 0) / simulations,
-        averageRank: (rankSums.get(team.id) ?? 0) / simulations,
-        averageWins: Math.min(
+      .map((team) => {
+        const averageWins = Math.min(
           KBO_REGULAR_SEASON_GAMES,
           (winSums.get(team.id) ?? 0) / simulations,
-        ),
-        currentRank: currentRankByTeamId.get(team.id) ?? 0,
-        championshipHistory:
-          championshipHistoryByTeamId.get(team.id) ??
-          ({
-            currentTitles: 0,
-            targetTitle: 1,
-            lastTitleYear: null,
-          } satisfies TeamChampionshipHistory),
-      }))
+        );
+        const averageDraws = Math.min(
+          KBO_REGULAR_SEASON_GAMES,
+          (drawSums.get(team.id) ?? 0) / simulations,
+        );
+        const averageLosses = Math.min(
+          KBO_REGULAR_SEASON_GAMES,
+          (lossSums.get(team.id) ?? 0) / simulations,
+        );
+
+        return {
+          teamId: team.id,
+          teamShortName: team.shortName,
+          teamName: team.name,
+          playoffProbability: (playoffCounts.get(team.id) ?? 0) / simulations,
+          averageRank: (rankSums.get(team.id) ?? 0) / simulations,
+          averageWins,
+          averageDraws,
+          averageLosses,
+          expectedWinRate: kboWinPct(averageWins, averageLosses),
+          currentWinRate: currentWinRateByTeamId.get(team.id) ?? 0,
+          pythagoreanWinRate: pythagoreanByTeamId.get(team.id) ?? 0.5,
+          scheduleAdjustedWinRate:
+            scheduleAdjustedByTeamId.get(team.id) ??
+            pythagoreanByTeamId.get(team.id) ??
+            0.5,
+          currentRank: currentRankByTeamId.get(team.id) ?? 0,
+          championshipHistory:
+            championshipHistoryByTeamId.get(team.id) ??
+            ({
+              currentTitles: 0,
+              targetTitle: 1,
+              lastTitleYear: null,
+            } satisfies TeamChampionshipHistory),
+        };
+      })
       .sort((a, b) => {
         if (b.playoffProbability !== a.playoffProbability) {
           return b.playoffProbability - a.playoffProbability;

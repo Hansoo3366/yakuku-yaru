@@ -111,9 +111,19 @@ function formatPlayoffProbability(value: number) {
   const percentage = value * 100;
 
   if (percentage >= 99.95) return '100%';
-  if (percentage <= 0.05) return '0%';
+  if (percentage < 0.1) return '<0.1%';
 
   return `${percentage.toFixed(1)}%`;
+}
+
+function formatWinRate(value: number) {
+  return value.toFixed(3);
+}
+
+function formatExpectedRecord(row: PlayoffProbabilityProjection['rows'][number]) {
+  return `${Math.round(row.averageWins)} - ${Math.round(
+    row.averageDraws,
+  )} - ${Math.round(row.averageLosses)}`;
 }
 
 function PlayoffProbabilityTable({
@@ -133,7 +143,9 @@ function PlayoffProbabilityTable({
         <div>
           <h2>KBO 가을야구 진출 확률</h2>
           <p>
-            프로야구 순위와 피타고리안 승률 기반 몬테카를로{' '}
+            {projection.rankDate
+              ? `${projection.rankDate}까지의 성적과 남은 대진 기반`
+              : '현재 성적과 남은 대진 기반'}{' '}
             {projection.simulations.toLocaleString('ko-KR')}회 시뮬레이션
           </p>
         </div>
@@ -143,9 +155,12 @@ function PlayoffProbabilityTable({
           <thead>
             <tr>
               <th scope="col">팀</th>
-              <th scope="col">진출 확률</th>
-              <th scope="col">평균 순위</th>
-              <th scope="col">예상 승수</th>
+              <th scope="col">현재 승률</th>
+              <th scope="col">예상 W-T-L</th>
+              <th scope="col">예상승률</th>
+              <th scope="col">PS odds</th>
+              <th scope="col">pWin%</th>
+              <th scope="col">SOS W%</th>
             </tr>
           </thead>
           <tbody>
@@ -175,6 +190,9 @@ function PlayoffProbabilityTable({
                       </span>
                     </span>
                   </td>
+                  <td>{formatWinRate(row.currentWinRate)}</td>
+                  <td>{formatExpectedRecord(row)}</td>
+                  <td>{formatWinRate(row.expectedWinRate)}</td>
                   <td>
                     <span className="playoff-probability-cell">
                       <strong>{probabilityLabel}</strong>
@@ -187,8 +205,8 @@ function PlayoffProbabilityTable({
                       </span>
                     </span>
                   </td>
-                  <td>{row.averageRank.toFixed(1)}위</td>
-                  <td>{row.averageWins.toFixed(1)}승</td>
+                  <td>{formatWinRate(row.pythagoreanWinRate)}</td>
+                  <td>{formatWinRate(row.scheduleAdjustedWinRate)}</td>
                 </tr>
               );
             })}
@@ -196,7 +214,8 @@ function PlayoffProbabilityTable({
         </table>
       </div>
       <p className="playoff-probability-note">
-        모든 팀이 {projection.minGames}경기 이상 치른 뒤 노출됩니다.
+        모든 팀이 {projection.minGames}경기 이상 치른 뒤 노출됩니다. 예상
+        W-T-L은 반올림에 따라 총 경기 수와 다르게 보일 수 있습니다.
       </p>
     </section>
   );
