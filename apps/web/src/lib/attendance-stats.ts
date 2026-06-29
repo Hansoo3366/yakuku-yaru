@@ -3,7 +3,134 @@ import { countsTowardWinRateForRecord } from '@/lib/attendance-game';
 import {
   resolveAttendanceOutcome,
   resolveAttendanceTitle,
+  resolveAttendanceTitles,
 } from '@/lib/attendance-score';
+
+function getStadiumTitleName(stadium: string) {
+  if (stadium.includes('잠실')) return '잠실';
+  if (stadium.includes('고척')) return '고척돔';
+  if (stadium.includes('광주') || stadium.includes('챔피언스')) return '챔필';
+  if (stadium.includes('대구')) return '라팍';
+  if (stadium.includes('대전')) return '대전';
+  if (stadium.includes('사직')) return '사직';
+  if (stadium.includes('창원')) return '창원NC파크';
+  if (stadium.includes('수원')) return '수원';
+  if (stadium.includes('문학') || stadium.includes('랜더스')) return '문학';
+  return stadium.replace(/야구장|구장|스타디움/g, '').trim() || stadium;
+}
+
+function getAttendanceTitleMetrics(
+  records: AttendanceRecord[],
+  favoriteTeamId: number | null | undefined,
+) {
+  const stadiumRecords = records.filter((record) => record.watchType === 'stadium');
+  const stadiumCounts = new Map<string, number>();
+  let domeStadiumCount = 0;
+  let cancelledCount = 0;
+  let oneRunGameCount = 0;
+  let kennedyScoreCount = 0;
+  let pitcherDuelCount = 0;
+  let doubleDigitLossCount = 0;
+  let homeStadiumCount = 0;
+  let awayStadiumCount = 0;
+  let summerDayGameCount = 0;
+  let currentLosingStreak = 0;
+  let maxLosingStreak = 0;
+
+  for (const record of stadiumRecords) {
+    const stadium = record.game.stadium;
+    stadiumCounts.set(stadium, (stadiumCounts.get(stadium) ?? 0) + 1);
+
+    if (stadium.includes('고척') || stadium.includes('스카이돔')) {
+      domeStadiumCount += 1;
+    }
+
+    if (record.game.status === 'cancelled') {
+      cancelledCount += 1;
+    }
+
+    const gameDate = new Date(record.game.gameDate);
+    const month = gameDate.getMonth() + 1;
+    const hour = gameDate.getHours();
+
+    if ((month === 7 || month === 8) && hour === 14) {
+      summerDayGameCount += 1;
+    }
+
+    if (favoriteTeamId && record.game.homeTeam.id === favoriteTeamId) {
+      homeStadiumCount += 1;
+    } else if (favoriteTeamId && record.game.awayTeam.id === favoriteTeamId) {
+      awayStadiumCount += 1;
+    }
+
+    const homeScore = record.game.homeScore;
+    const awayScore = record.game.awayScore;
+
+    if (homeScore === null || awayScore === null) {
+      continue;
+    }
+
+    const scoreDiff = Math.abs(homeScore - awayScore);
+
+    if (scoreDiff === 1) {
+      oneRunGameCount += 1;
+    }
+
+    if (
+      (homeScore === 8 && awayScore === 7) ||
+      (homeScore === 7 && awayScore === 8)
+    ) {
+      kennedyScoreCount += 1;
+    }
+
+    if (
+      (homeScore === 1 && awayScore === 0) ||
+      (homeScore === 0 && awayScore === 1) ||
+      (homeScore === 0 && awayScore === 0)
+    ) {
+      pitcherDuelCount += 1;
+    }
+
+    const outcome = resolveAttendanceOutcome(record, favoriteTeamId);
+
+    if (outcome === 'lose' && scoreDiff >= 10) {
+      doubleDigitLossCount += 1;
+    }
+  }
+
+  for (const record of [...stadiumRecords].sort(
+    (a, b) =>
+      new Date(a.game.gameDate).getTime() - new Date(b.game.gameDate).getTime(),
+  )) {
+    const outcome = resolveAttendanceOutcome(record, favoriteTeamId);
+
+    if (outcome === 'lose') {
+      currentLosingStreak += 1;
+      maxLosingStreak = Math.max(maxLosingStreak, currentLosingStreak);
+    } else if (outcome === 'win' || outcome === 'draw') {
+      currentLosingStreak = 0;
+    }
+  }
+
+  const dominant = [...stadiumCounts.entries()].sort((a, b) => b[1] - a[1])[0];
+
+  return {
+    awayStadiumCount,
+    homeStadiumCount,
+    cancelledCount,
+    domeStadiumCount,
+    distinctStadiumCount: stadiumCounts.size,
+    dominantStadiumName: dominant ? getStadiumTitleName(dominant[0]) : null,
+    dominantStadiumRatio:
+      dominant && stadiumRecords.length ? dominant[1] / stadiumRecords.length : 0,
+    oneRunGameCount,
+    kennedyScoreCount,
+    pitcherDuelCount,
+    doubleDigitLossCount,
+    maxLosingStreak,
+    summerDayGameCount,
+  };
+}
 
 /** 메인 등 클라이언트 표시용 — 중립 제외, 동행(내 팀 경기) 포함 */
 export function computeAttendanceStatsFromRecords(
@@ -78,6 +205,18 @@ export function computeAttendanceStatsFromRecords(
     ? Math.round((homeWinCount / countableHome) * 1000) / 10
     : 0;
 
+  const titleMetrics = getAttendanceTitleMetrics(records, favoriteTeamId);
+  const titles = resolveAttendanceTitles({
+    totalCount: owned.length,
+    stadiumCount,
+    homeCount,
+    winCount,
+    loseCount,
+    drawCount,
+    winRate,
+    ...titleMetrics,
+  });
+
   return {
     totalCount: owned.length,
     stadiumCount,
@@ -88,6 +227,7 @@ export function computeAttendanceStatsFromRecords(
     winRate,
     stadiumWinRate,
     homeWinRate,
-    title: resolveAttendanceTitle(decidedCountable, winRate),
+    title: titles[0]?.label ?? resolveAttendanceTitle(decidedCountable, winRate),
+    titles,
   };
 }

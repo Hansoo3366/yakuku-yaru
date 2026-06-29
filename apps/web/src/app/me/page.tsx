@@ -264,13 +264,20 @@ export default function MyPage() {
             <span>직관 승률</span>
             <strong>{stats.winRate}%</strong>
           </div>
-          {stats.title ? (
-            <span
-              className="profile-title-pill"
-              data-kind={stats.title === '패배요정' ? 'lose' : 'win'}
-            >
-              {stats.title}
-            </span>
+          {stats.titles?.length ? (
+            <div className="profile-title-list">
+              {stats.titles.map((title) => (
+                <span
+                  className="profile-title-pill"
+                  data-description={title.description}
+                  data-kind={title.kind}
+                  key={title.key}
+                  tabIndex={0}
+                >
+                  {title.label}
+                </span>
+              ))}
+            </div>
           ) : (
             <span
               className="muted"

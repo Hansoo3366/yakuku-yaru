@@ -64,9 +64,9 @@ const features = [
   },
   {
     icon: '★',
-    title: '승리요정 · 패배요정',
+    title: 'KBO 팬 명예타이틀',
     description:
-      '승률에 따라 마이페이지에 승리요정 또는 패배요정 타이틀이 붙어요.',
+      '승률과 기록 패턴에 따라 여러 명예타이틀이 마이페이지에 붙어요.',
   },
 ];
 
@@ -479,13 +479,20 @@ export default function HomePage() {
                         / {stats.totalCount}경기
                       </span>
                     </div>
-                    {stats.title ? (
-                      <span
-                        className="profile-title-pill home-title-pill"
-                        data-kind={stats.title === '패배요정' ? 'lose' : 'win'}
-                      >
-                        {stats.title}
-                      </span>
+                    {stats.titles?.length ? (
+                      <div className="profile-title-list profile-title-list--home">
+                        {stats.titles.map((title) => (
+                          <span
+                            className="profile-title-pill home-title-pill"
+                            data-description={title.description}
+                            data-kind={title.kind}
+                            key={title.key}
+                            tabIndex={0}
+                          >
+                            {title.label}
+                          </span>
+                        ))}
+                      </div>
                     ) : null}
                   </div>
                   {stats.totalCount > 0 ? (
@@ -502,9 +509,9 @@ export default function HomePage() {
                       marginTop: 6,
                     }}
                   >
-                    {stats.title
-                      ? `${stats.title} 타이틀 보유 중`
-                      : '직관 기록을 남기면 승리요정·패배요정이 붙어요'}
+                    {stats.titles?.length
+                      ? `명예타이틀 ${stats.titles.length}개 보유 중`
+                      : '직관 기록을 남기면 명예타이틀이 붙어요'}
                   </p>
                 </>
               ) : (

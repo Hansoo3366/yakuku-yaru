@@ -128,7 +128,7 @@ export function countsTowardWinRate(
   return isTeamInGame(game, favoriteTeamId);
 }
 
-/** 기록 단위 집계 대상 여부 (응원팀 변경/중립 직관 cheeredTeam 반영) */
+/** 기록 단위 승률 집계 대상 여부: 내 응원팀이 실제로 뛴 경기만 포함 */
 export function countsTowardWinRateForRecord(input: {
   game: GameTeamsLike;
   favoriteTeamId: number | null | undefined;
@@ -141,16 +141,7 @@ export function countsTowardWinRateForRecord(input: {
     return false;
   }
 
-  return (
-    resolveOutcomeTeamId({
-      game: input.game,
-      favoriteTeamId: input.favoriteTeamId,
-      cheeredTeamId: input.cheeredTeamId,
-      viewerCheeredTeamId: input.viewerCheeredTeamId,
-      viewerRelation: input.viewerRelation,
-      ownerFavoriteTeamId: input.ownerFavoriteTeamId,
-    }) !== null
-  );
+  return isTeamInGame(input.game, input.favoriteTeamId);
 }
 
 export function requiresCheeredTeamPick(

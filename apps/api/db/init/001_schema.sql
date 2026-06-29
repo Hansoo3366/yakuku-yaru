@@ -239,22 +239,39 @@ CREATE TABLE IF NOT EXISTS attendance_companions (
   attendance_record_id BIGINT UNSIGNED NOT NULL,
   user_id BIGINT UNSIGNED NOT NULL,
   status VARCHAR(20) NOT NULL DEFAULT 'pending',
-  cheered_team_id BIGINT UNSIGNED NULL,
   responded_at DATETIME NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
   UNIQUE KEY uq_attendance_companions_record_user (attendance_record_id, user_id),
   KEY idx_attendance_companions_user_id (user_id),
-  KEY idx_attendance_companions_cheered_team_id (cheered_team_id),
   CONSTRAINT fk_attendance_companions_record
     FOREIGN KEY (attendance_record_id) REFERENCES attendance_records(id)
     ON DELETE CASCADE,
   CONSTRAINT fk_attendance_companions_user
     FOREIGN KEY (user_id) REFERENCES users(id)
+    ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS attendance_viewer_preferences (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  user_id BIGINT UNSIGNED NOT NULL,
+  game_id BIGINT UNSIGNED NOT NULL,
+  cheered_team_id BIGINT UNSIGNED NOT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_attendance_viewer_preferences_user_game (user_id, game_id),
+  KEY idx_attendance_viewer_preferences_game_id (game_id),
+  KEY idx_attendance_viewer_preferences_cheered_team_id (cheered_team_id),
+  CONSTRAINT fk_attendance_viewer_preferences_user
+    FOREIGN KEY (user_id) REFERENCES users(id)
     ON DELETE CASCADE,
-  CONSTRAINT fk_attendance_companions_cheered_team
+  CONSTRAINT fk_attendance_viewer_preferences_game
+    FOREIGN KEY (game_id) REFERENCES games(id)
+    ON DELETE CASCADE,
+  CONSTRAINT fk_attendance_viewer_preferences_cheered_team
     FOREIGN KEY (cheered_team_id) REFERENCES teams(id)
-    ON DELETE SET NULL
+    ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS notifications (

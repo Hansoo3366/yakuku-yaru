@@ -9,8 +9,6 @@ export type AttendanceCompanion = {
   nickname: string;
   email: string;
   status: CompanionStatus;
-  cheeredTeamId: number | null;
-  cheeredTeamShortName: string | null;
   respondedAt: Date | null;
   createdAt: Date;
 };
@@ -22,8 +20,6 @@ type CompanionRow = RowDataPacket & {
   nickname: string;
   email: string;
   status: string;
-  cheered_team_id: number | null;
-  cheered_team_short_name: string | null;
   responded_at: Date | null;
   created_at: Date;
 };
@@ -57,15 +53,12 @@ export async function listCompanionsByRecordIds(recordIds: number[]) {
        ac.attendance_record_id,
        ac.user_id,
        ac.status,
-       ac.cheered_team_id,
-       t.short_name AS cheered_team_short_name,
        ac.responded_at,
        ac.created_at,
        u.nickname,
        u.email
      FROM attendance_companions ac
      JOIN users u ON u.id = ac.user_id
-     LEFT JOIN teams t ON t.id = ac.cheered_team_id
      WHERE ac.attendance_record_id IN (?)
      ORDER BY ac.created_at ASC`,
     [recordIds],
@@ -79,8 +72,6 @@ export async function listCompanionsByRecordIds(recordIds: number[]) {
       nickname: row.nickname,
       email: row.email,
       status: toCompanionStatus(row.status),
-      cheeredTeamId: row.cheered_team_id,
-      cheeredTeamShortName: row.cheered_team_short_name,
       respondedAt: row.responded_at,
       createdAt: row.created_at,
     });
@@ -99,15 +90,12 @@ export async function findCompanionForUser(input: {
        ac.attendance_record_id,
        ac.user_id,
        ac.status,
-       ac.cheered_team_id,
-       t.short_name AS cheered_team_short_name,
        ac.responded_at,
        ac.created_at,
        u.nickname,
        u.email
      FROM attendance_companions ac
      JOIN users u ON u.id = ac.user_id
-     LEFT JOIN teams t ON t.id = ac.cheered_team_id
      WHERE ac.attendance_record_id = ?
        AND ac.user_id = ?
      LIMIT 1`,
@@ -125,8 +113,6 @@ export async function findCompanionForUser(input: {
     nickname: row.nickname,
     email: row.email,
     status: toCompanionStatus(row.status),
-    cheeredTeamId: row.cheered_team_id,
-    cheeredTeamShortName: row.cheered_team_short_name,
     respondedAt: row.responded_at,
     createdAt: row.created_at,
   } satisfies AttendanceCompanion;
@@ -136,38 +122,14 @@ export async function updateCompanionStatus(input: {
   recordId: number;
   userId: number;
   status: 'accepted' | 'rejected';
-  cheeredTeamId?: number | null;
 }) {
   const [result] = await db.execute<ResultSetHeader>(
     `UPDATE attendance_companions
      SET status = ?,
-         cheered_team_id = ?,
          responded_at = CURRENT_TIMESTAMP
      WHERE attendance_record_id = ?
        AND user_id = ?`,
-    [
-      input.status,
-      input.status === 'accepted' ? (input.cheeredTeamId ?? null) : null,
-      input.recordId,
-      input.userId,
-    ],
-  );
-
-  return result.affectedRows > 0;
-}
-
-export async function updateCompanionCheeredTeam(input: {
-  recordId: number;
-  userId: number;
-  cheeredTeamId: number | null;
-}) {
-  const [result] = await db.execute<ResultSetHeader>(
-    `UPDATE attendance_companions
-     SET cheered_team_id = ?
-     WHERE attendance_record_id = ?
-       AND user_id = ?
-       AND status = 'accepted'`,
-    [input.cheeredTeamId, input.recordId, input.userId],
+    [input.status, input.recordId, input.userId],
   );
 
   return result.affectedRows > 0;

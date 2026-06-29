@@ -12,6 +12,7 @@ import {
   resolveAttendanceOutcome,
   resolveAttendanceScoresFromGame,
   resolveAttendanceTitle,
+  resolveAttendanceTitles,
 } from './attendance-score.js';
 import {
   listCompanionsByRecordIds,
@@ -198,6 +199,132 @@ async function attachCompanions(records: AttendanceRecord[]) {
   }));
 }
 
+function getStadiumTitleName(stadium: string) {
+  if (stadium.includes('잠실')) return '잠실';
+  if (stadium.includes('고척')) return '고척돔';
+  if (stadium.includes('광주') || stadium.includes('챔피언스')) return '챔필';
+  if (stadium.includes('대구')) return '라팍';
+  if (stadium.includes('대전')) return '대전';
+  if (stadium.includes('사직')) return '사직';
+  if (stadium.includes('창원')) return '창원NC파크';
+  if (stadium.includes('수원')) return '수원';
+  if (stadium.includes('문학') || stadium.includes('랜더스')) return '문학';
+  return stadium.replace(/야구장|구장|스타디움/g, '').trim() || stadium;
+}
+
+function getAttendanceTitleMetrics(
+  records: AttendanceRecord[],
+  favoriteTeamId: number | null,
+) {
+  const stadiumRecords = records.filter((record) => record.watchType === 'stadium');
+  const stadiumCounts = new Map<string, number>();
+  let domeStadiumCount = 0;
+  let cancelledCount = 0;
+  let oneRunGameCount = 0;
+  let kennedyScoreCount = 0;
+  let pitcherDuelCount = 0;
+  let doubleDigitLossCount = 0;
+  let homeStadiumCount = 0;
+  let awayStadiumCount = 0;
+  let summerDayGameCount = 0;
+  let currentLosingStreak = 0;
+  let maxLosingStreak = 0;
+
+  for (const record of stadiumRecords) {
+    const stadium = record.game.stadium;
+    stadiumCounts.set(stadium, (stadiumCounts.get(stadium) ?? 0) + 1);
+
+    if (stadium.includes('고척') || stadium.includes('스카이돔')) {
+      domeStadiumCount += 1;
+    }
+
+    if (record.game.status === 'cancelled') {
+      cancelledCount += 1;
+    }
+
+    const gameDate = new Date(record.game.gameDate);
+    const month = gameDate.getMonth() + 1;
+    const hour = gameDate.getHours();
+
+    if ((month === 7 || month === 8) && hour === 14) {
+      summerDayGameCount += 1;
+    }
+
+    if (favoriteTeamId && record.game.homeTeam.id === favoriteTeamId) {
+      homeStadiumCount += 1;
+    } else if (favoriteTeamId && record.game.awayTeam.id === favoriteTeamId) {
+      awayStadiumCount += 1;
+    }
+
+    const homeScore = record.game.homeScore;
+    const awayScore = record.game.awayScore;
+
+    if (homeScore === null || awayScore === null) {
+      continue;
+    }
+
+    const scoreDiff = Math.abs(homeScore - awayScore);
+
+    if (scoreDiff === 1) {
+      oneRunGameCount += 1;
+    }
+
+    if (
+      (homeScore === 8 && awayScore === 7) ||
+      (homeScore === 7 && awayScore === 8)
+    ) {
+      kennedyScoreCount += 1;
+    }
+
+    if (
+      (homeScore === 1 && awayScore === 0) ||
+      (homeScore === 0 && awayScore === 1) ||
+      (homeScore === 0 && awayScore === 0)
+    ) {
+      pitcherDuelCount += 1;
+    }
+
+    const outcome = resolveAttendanceOutcome(record, favoriteTeamId);
+
+    if (outcome === 'lose' && scoreDiff >= 10) {
+      doubleDigitLossCount += 1;
+    }
+  }
+
+  for (const record of [...stadiumRecords].sort(
+    (a, b) =>
+      new Date(a.game.gameDate).getTime() - new Date(b.game.gameDate).getTime(),
+  )) {
+    const outcome = resolveAttendanceOutcome(record, favoriteTeamId);
+
+    if (outcome === 'lose') {
+      currentLosingStreak += 1;
+      maxLosingStreak = Math.max(maxLosingStreak, currentLosingStreak);
+    } else if (outcome === 'win' || outcome === 'draw') {
+      currentLosingStreak = 0;
+    }
+  }
+
+  const dominant = [...stadiumCounts.entries()].sort((a, b) => b[1] - a[1])[0];
+
+  return {
+    awayStadiumCount,
+    homeStadiumCount,
+    cancelledCount,
+    domeStadiumCount,
+    distinctStadiumCount: stadiumCounts.size,
+    dominantStadiumName: dominant ? getStadiumTitleName(dominant[0]) : null,
+    dominantStadiumRatio:
+      dominant && stadiumRecords.length ? dominant[1] / stadiumRecords.length : 0,
+    oneRunGameCount,
+    kennedyScoreCount,
+    pitcherDuelCount,
+    doubleDigitLossCount,
+    maxLosingStreak,
+    summerDayGameCount,
+  };
+}
+
 export async function createAttendanceRecord(input: {
   userId: number;
   gameId: number;
@@ -258,18 +385,21 @@ export async function listAttendanceRecords(input: {
   const [rows] = await db.query<AttendanceRecordRow[]>(
     `${attendanceSelectSql(
       `,
-      viewer_ac.cheered_team_id AS viewer_cheered_team_id,
+      avp.cheered_team_id AS viewer_cheered_team_id,
       viewer_ct.short_name AS viewer_cheered_team_short_name`,
     )}
      LEFT JOIN attendance_companions viewer_ac
        ON viewer_ac.attendance_record_id = ar.id
       AND viewer_ac.user_id = ?
       AND viewer_ac.status = 'accepted'
-     LEFT JOIN teams viewer_ct ON viewer_ct.id = viewer_ac.cheered_team_id
+     LEFT JOIN attendance_viewer_preferences avp
+       ON avp.user_id = ?
+      AND avp.game_id = ar.game_id
+     LEFT JOIN teams viewer_ct ON viewer_ct.id = avp.cheered_team_id
      WHERE (ar.user_id = ? OR viewer_ac.user_id IS NOT NULL)
        ${dateFilter}
      ORDER BY g.game_date ASC`,
-    params,
+    [input.userId, ...params],
   );
 
   return attachCompanions(
@@ -573,6 +703,18 @@ export async function getAttendanceStats(userId: number) {
     ? Math.round((homeWinCount / countableHome) * 1000) / 10
     : 0;
 
+  const titleMetrics = getAttendanceTitleMetrics(statsRecords, favoriteTeamId);
+  const titles = resolveAttendanceTitles({
+    totalCount: statsRecords.length,
+    stadiumCount,
+    homeCount,
+    winCount,
+    loseCount,
+    drawCount,
+    winRate,
+    ...titleMetrics,
+  });
+
   return {
     totalCount: statsRecords.length,
     stadiumCount,
@@ -583,6 +725,7 @@ export async function getAttendanceStats(userId: number) {
     winRate,
     stadiumWinRate,
     homeWinRate,
-    title: resolveAttendanceTitle(decidedCountable, winRate),
+    title: titles[0]?.label ?? resolveAttendanceTitle(decidedCountable, winRate),
+    titles,
   };
 }

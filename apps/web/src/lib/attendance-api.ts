@@ -1,5 +1,6 @@
 import { request } from './api';
 import { shouldSendAuthorizationHeader } from './auth';
+import type { AttendanceHonorTitle } from './attendance-score';
 
 export type AttendanceRecord = {
   id: number;
@@ -82,6 +83,7 @@ export type AttendanceStats = {
   stadiumWinRate: number;
   homeWinRate: number;
   title: string | null;
+  titles?: AttendanceHonorTitle[];
 };
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api';
@@ -159,14 +161,32 @@ export function respondAttendanceCompanion(
   recordId: number,
   status: 'accepted' | 'rejected',
   token: string,
-  input?: { cheeredTeamId?: number | null },
 ) {
   return request<{
     companion: AttendanceCompanion;
     record: AttendanceRecord | null;
   }>(`/attendance-records/${recordId}/companions/me`, {
     method: 'PATCH',
-    body: { status, cheeredTeamId: input?.cheeredTeamId },
+    body: { status },
+    token,
+  });
+}
+
+export function updateAttendanceViewerPreference(
+  gameId: number,
+  input: { cheeredTeamId: number },
+  token: string,
+) {
+  return request<{
+    preference: {
+      userId: number;
+      gameId: number;
+      cheeredTeamId: number | null;
+      cheeredTeamShortName: string | null;
+    } | null;
+  }>(`/attendance-records/games/${gameId}/viewer-preference`, {
+    method: 'PATCH',
+    body: input,
     token,
   });
 }

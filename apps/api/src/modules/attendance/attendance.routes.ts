@@ -21,6 +21,10 @@ import {
   replaceAttendanceCompanions,
   updateCompanionStatus,
 } from './companion.repository.js';
+import {
+  getAttendanceViewerPreference,
+  upsertAttendanceViewerPreference,
+} from './viewer-preference.repository.js';
 import { createNotification } from '../notifications/notification.repository.js';
 import { attendancePhotoUpload } from './upload.js';
 import {
@@ -301,8 +305,13 @@ attendanceRouter.get('/:recordId', authenticate, async (req, res, next) => {
       }
 
       record.viewerRelation = 'companion';
-      record.viewerCheeredTeamId = companion.cheeredTeamId;
-      record.viewerCheeredTeamShortName = companion.cheeredTeamShortName;
+      const preference = await getAttendanceViewerPreference({
+        userId,
+        gameId: record.gameId,
+      });
+      record.viewerCheeredTeamId = preference?.cheeredTeamId ?? null;
+      record.viewerCheeredTeamShortName =
+        preference?.cheeredTeamShortName ?? null;
       record.canEdit = companion.status === 'accepted';
     } else {
       record.canEdit = true;
@@ -462,10 +471,7 @@ attendanceRouter.patch(
     try {
       const recordId = Number(req.params.recordId);
       const userId = req.user?.id ?? 0;
-      const { status } = req.body as {
-        status?: unknown;
-        cheeredTeamId?: unknown;
-      };
+      const { status } = req.body as { status?: unknown };
 
       if (status !== 'accepted' && status !== 'rejected') {
         throw new HttpError(
@@ -481,34 +487,6 @@ attendanceRouter.patch(
         throw new HttpError(404, 'ATTENDANCE_NOT_FOUND', '직관 기록을 찾을 수 없습니다.');
       }
 
-      const game = await findGameById(record.gameId);
-      const me = await findUserById(userId);
-      const favoriteTeamId = getFavoriteTeamIdFromUser(me);
-      const favoriteTeamShortName = getFavoriteTeamShortNameFromUser(me);
-      const isNeutralForViewer = !resolveFavoriteTeamIdInGame(
-        game ?? record.game,
-        favoriteTeamId,
-        favoriteTeamShortName,
-      );
-      let cheeredTeamId: number | null = null;
-
-      if (status === 'accepted' && isNeutralForViewer) {
-        const rawCheeredTeamId = Number(req.body.cheeredTeamId);
-
-        if (
-          !Number.isInteger(rawCheeredTeamId) ||
-          !resolveFavoriteTeamIdInGame(game ?? record.game, rawCheeredTeamId, null)
-        ) {
-          throw new HttpError(
-            400,
-            'CHEERED_TEAM_REQUIRED',
-            '중립 경기 동행은 응원한 팀을 선택해주세요.',
-          );
-        }
-
-        cheeredTeamId = rawCheeredTeamId;
-      }
-
       const companion = await findCompanionForUser({ recordId, userId });
 
       if (!companion) {
@@ -519,13 +497,8 @@ attendanceRouter.patch(
         );
       }
 
-      if (
-        companion.status === status &&
-        companion.cheeredTeamId === cheeredTeamId
-      ) {
+      if (companion.status === status) {
         record.viewerRelation = 'companion';
-        record.viewerCheeredTeamId = companion.cheeredTeamId;
-        record.viewerCheeredTeamShortName = companion.cheeredTeamShortName;
         res.json({
           companion: { ...companion },
           record,
@@ -537,7 +510,6 @@ attendanceRouter.patch(
         recordId,
         userId,
         status,
-        cheeredTeamId,
       });
 
       if (!updated) {
@@ -552,40 +524,71 @@ attendanceRouter.patch(
 
       if (updatedRecord) {
         updatedRecord.viewerRelation = 'companion';
-        updatedRecord.viewerCheeredTeamId = cheeredTeamId;
-        updatedRecord.viewerCheeredTeamShortName =
-          cheeredTeamId === updatedRecord.game.homeTeam.id
-            ? updatedRecord.game.homeTeam.shortName
-            : cheeredTeamId === updatedRecord.game.awayTeam.id
-              ? updatedRecord.game.awayTeam.shortName
-              : null;
-        if (companion.status !== status) {
-          const responderLabel = me?.nickname ?? '동행자';
-          const message =
-            status === 'accepted'
-              ? `${responderLabel}님이 동행 태그를 수락했어요.`
-              : `${responderLabel}님이 동행 태그를 거절했어요.`;
+        const responder = await findUserById(userId);
+        const responderLabel = responder?.nickname ?? '동행자';
+        const message =
+          status === 'accepted'
+            ? `${responderLabel}님이 동행 태그를 수락했어요.`
+            : `${responderLabel}님이 동행 태그를 거절했어요.`;
 
-          await createNotification({
-            userId: updatedRecord.userId,
-            actorUserId: userId,
-            attendanceRecordId: recordId,
-            type:
-              status === 'accepted' ? 'companion_accepted' : 'companion_rejected',
-            message,
-          });
-        }
+        await createNotification({
+          userId: updatedRecord.userId,
+          actorUserId: userId,
+          attendanceRecordId: recordId,
+          type:
+            status === 'accepted' ? 'companion_accepted' : 'companion_rejected',
+          message,
+        });
       }
 
       res.json({
         companion: {
           ...companion,
           status,
-          cheeredTeamId,
-          cheeredTeamShortName: updatedRecord?.viewerCheeredTeamShortName ?? null,
           respondedAt: new Date(),
         },
         record: updatedRecord,
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+attendanceRouter.patch(
+  '/games/:gameId/viewer-preference',
+  authenticate,
+  async (req, res, next) => {
+    try {
+      const gameId = Number(req.params.gameId);
+      const userId = req.user?.id ?? 0;
+      const cheeredTeamId = Number(req.body.cheeredTeamId);
+
+      const game = await findGameById(gameId);
+
+      if (!game) {
+        throw new HttpError(404, 'GAME_NOT_FOUND', '경기를 찾을 수 없습니다.');
+      }
+
+      if (
+        !Number.isInteger(cheeredTeamId) ||
+        !resolveFavoriteTeamIdInGame(game, cheeredTeamId, null)
+      ) {
+        throw new HttpError(
+          400,
+          'INVALID_INPUT',
+          '경기에 참여한 팀 중 하나를 선택해주세요.',
+        );
+      }
+
+      const preference = await upsertAttendanceViewerPreference({
+        userId,
+        gameId,
+        cheeredTeamId,
+      });
+
+      res.json({
+        preference,
       });
     } catch (error) {
       next(error);

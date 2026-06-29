@@ -81,8 +81,8 @@ assert.equal(
 
 assert.equal(resolveAttendanceTitle(0, 80), null);
 assert.equal(resolveAttendanceTitle(5, 60), '승리요정');
-assert.equal(resolveAttendanceTitle(5, 50), '패배요정');
-assert.equal(resolveAttendanceTitle(5, 20), '패배요정');
+assert.equal(resolveAttendanceTitle(5, 50), null);
+assert.equal(resolveAttendanceTitle(5, 20), '파괴신');
 
 const cancelledGame = {
   ...baseGame,
