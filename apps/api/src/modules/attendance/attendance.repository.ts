@@ -248,6 +248,12 @@ function dedupeAttendanceRecordsByGame(records: AttendanceRecord[]) {
   );
 }
 
+function calculateStatsWinRate(winCount: number, loseCount: number, drawCount: number) {
+  const total = winCount + loseCount + drawCount;
+
+  return total ? Math.round((winCount / total) * 1000) / 10 : 0;
+}
+
 function getAttendanceTitleMetrics(
   records: AttendanceRecord[],
   favoriteTeamId: number | null,
@@ -706,10 +712,19 @@ export async function getAttendanceStats(
   let overallWinCount = 0;
   let overallLoseCount = 0;
   let overallDrawCount = 0;
+  let overallStadiumWinCount = 0;
+  let overallStadiumLoseCount = 0;
+  let overallStadiumDrawCount = 0;
+  let overallHomeWinCount = 0;
+  let overallHomeLoseCount = 0;
+  let overallHomeDrawCount = 0;
   let favoriteTeamStadiumCount = 0;
   let favoriteTeamWinCount = 0;
   let favoriteTeamLoseCount = 0;
   let favoriteTeamDrawCount = 0;
+  let favoriteTeamStadiumWinCount = 0;
+  let favoriteTeamStadiumLoseCount = 0;
+  let favoriteTeamStadiumDrawCount = 0;
   let stadiumWinCount = 0;
   let homeWinCount = 0;
   let countableStadium = 0;
@@ -732,10 +747,39 @@ export async function getAttendanceStats(
 
     if (overallOutcome === 'win') {
       overallWinCount += 1;
+      if (record.watchType === 'stadium') {
+        overallStadiumWinCount += 1;
+      } else if (record.watchType === 'home') {
+        overallHomeWinCount += 1;
+      }
     } else if (overallOutcome === 'lose') {
       overallLoseCount += 1;
+      if (record.watchType === 'stadium') {
+        overallStadiumLoseCount += 1;
+      } else if (record.watchType === 'home') {
+        overallHomeLoseCount += 1;
+      }
     } else if (overallOutcome === 'draw') {
       overallDrawCount += 1;
+      if (record.watchType === 'stadium') {
+        overallStadiumDrawCount += 1;
+      } else if (record.watchType === 'home') {
+        overallHomeDrawCount += 1;
+      }
+    }
+
+    if (
+      favoriteTeamId &&
+      isTeamInGame(record.game, favoriteTeamId) &&
+      record.watchType === 'stadium'
+    ) {
+      if (overallOutcome === 'win') {
+        favoriteTeamStadiumWinCount += 1;
+      } else if (overallOutcome === 'lose') {
+        favoriteTeamStadiumLoseCount += 1;
+      } else if (overallOutcome === 'draw') {
+        favoriteTeamStadiumDrawCount += 1;
+      }
     }
   }
 
@@ -770,15 +814,33 @@ export async function getAttendanceStats(
   }
 
   const decidedCountable = winCount + loseCount + drawCount;
-  const winRate = decidedCountable
-    ? Math.round((winCount / decidedCountable) * 1000) / 10
-    : 0;
+  const winRate = calculateStatsWinRate(winCount, loseCount, drawCount);
   const stadiumWinRate = countableStadium
     ? Math.round((stadiumWinCount / countableStadium) * 1000) / 10
     : 0;
   const homeWinRate = countableHome
     ? Math.round((homeWinCount / countableHome) * 1000) / 10
     : 0;
+  const overallWinRate = calculateStatsWinRate(
+    overallWinCount,
+    overallLoseCount,
+    overallDrawCount,
+  );
+  const overallStadiumWinRate = calculateStatsWinRate(
+    overallStadiumWinCount,
+    overallStadiumLoseCount,
+    overallStadiumDrawCount,
+  );
+  const overallHomeWinRate = calculateStatsWinRate(
+    overallHomeWinCount,
+    overallHomeLoseCount,
+    overallHomeDrawCount,
+  );
+  const favoriteTeamStadiumWinRate = calculateStatsWinRate(
+    favoriteTeamStadiumWinCount,
+    favoriteTeamStadiumLoseCount,
+    favoriteTeamStadiumDrawCount,
+  );
 
   const titleMetrics = getAttendanceTitleMetrics(
     uniqueStatsRecords,
@@ -805,10 +867,23 @@ export async function getAttendanceStats(
     overallWinCount,
     overallLoseCount,
     overallDrawCount,
+    overallWinRate,
+    overallStadiumWinCount,
+    overallStadiumLoseCount,
+    overallStadiumDrawCount,
+    overallStadiumWinRate,
+    overallHomeWinCount,
+    overallHomeLoseCount,
+    overallHomeDrawCount,
+    overallHomeWinRate,
     favoriteTeamStadiumCount,
     favoriteTeamWinCount,
     favoriteTeamLoseCount,
     favoriteTeamDrawCount,
+    favoriteTeamStadiumWinCount,
+    favoriteTeamStadiumLoseCount,
+    favoriteTeamStadiumDrawCount,
+    favoriteTeamStadiumWinRate,
     winRate,
     stadiumWinRate,
     homeWinRate,

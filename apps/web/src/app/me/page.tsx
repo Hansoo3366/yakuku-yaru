@@ -4,7 +4,13 @@
 
 import { useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
-import { useEffect, useRef, useState } from 'react';
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+} from 'react';
 import { ApiError } from '@/lib/api';
 import {
   PROFILE_PHOTO_ACCEPT,
@@ -25,6 +31,23 @@ import {
   useTeamsQuery,
 } from '@/lib/queries';
 import { queryKeys } from '@/lib/query-keys';
+
+type StatFilterKey = 'overall' | 'stadium' | 'home' | 'favoriteStadium';
+
+type StatView = {
+  key: StatFilterKey;
+  label: string;
+  description: string;
+  total: number;
+  win: number;
+  lose: number;
+  draw: number;
+  rate: number;
+};
+
+function getStatViewTotal(view: Pick<StatView, 'win' | 'lose' | 'draw'>) {
+  return view.win + view.lose + view.draw;
+}
 
 export default function MyPage() {
   const router = useRouter();
@@ -52,6 +75,8 @@ export default function MyPage() {
   const [nicknameDraft, setNicknameDraft] = useState('');
   const [isSavingNickname, setIsSavingNickname] = useState(false);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+  const [activeStatFilter, setActiveStatFilter] =
+    useState<StatFilterKey>('overall');
 
   useEffect(() => {
     if (meQuery.data?.user) {
@@ -72,6 +97,71 @@ export default function MyPage() {
 
   const profileImageSrc = getProfileImageSrc(user, favoriteTeam);
   const hasCustomProfilePhoto = Boolean(user?.profileImageUrl);
+  const statViews = useMemo<StatView[]>(
+    () =>
+      stats
+        ? [
+            {
+              key: 'overall',
+              label: '전체',
+              description: '직관과 집관을 모두 합산한 전체 관람 결과',
+              total: stats.totalCount,
+              win: stats.overallWinCount ?? stats.winCount,
+              lose: stats.overallLoseCount ?? stats.loseCount,
+              draw: stats.overallDrawCount ?? stats.drawCount,
+              rate: stats.overallWinRate ?? stats.winRate,
+            },
+            {
+              key: 'stadium',
+              label: '직관',
+              description: '야구장에서 직접 본 경기 결과',
+              total: stats.stadiumCount,
+              win: stats.overallStadiumWinCount ?? stats.winCount,
+              lose: stats.overallStadiumLoseCount ?? stats.loseCount,
+              draw: stats.overallStadiumDrawCount ?? stats.drawCount,
+              rate: stats.overallStadiumWinRate ?? stats.stadiumWinRate,
+            },
+            {
+              key: 'home',
+              label: '집관',
+              description: '집에서 기록한 경기 결과',
+              total: stats.homeCount,
+              win: stats.overallHomeWinCount ?? 0,
+              lose: stats.overallHomeLoseCount ?? 0,
+              draw: stats.overallHomeDrawCount ?? 0,
+              rate: stats.overallHomeWinRate ?? stats.homeWinRate,
+            },
+            {
+              key: 'favoriteStadium',
+              label: '내팀 직관',
+              description: favoriteTeam
+                ? `${favoriteTeam.shortName} 경기를 야구장에서 본 결과`
+                : '내 응원팀 경기를 야구장에서 본 결과',
+              total: stats.favoriteTeamStadiumCount ?? 0,
+              win: stats.favoriteTeamStadiumWinCount ?? 0,
+              lose: stats.favoriteTeamStadiumLoseCount ?? 0,
+              draw: stats.favoriteTeamStadiumDrawCount ?? 0,
+              rate: stats.favoriteTeamStadiumWinRate ?? stats.stadiumWinRate,
+            },
+          ]
+        : [],
+    [favoriteTeam, stats],
+  );
+  const selectedStatView =
+    statViews.find((view) => view.key === activeStatFilter) ?? statViews[0];
+  const selectedStatTotal = selectedStatView
+    ? getStatViewTotal(selectedStatView)
+    : 0;
+  const statWinAngle = selectedStatTotal
+    ? (selectedStatView.win / selectedStatTotal) * 360
+    : 0;
+  const statLoseAngle = selectedStatTotal
+    ? statWinAngle + (selectedStatView.lose / selectedStatTotal) * 360
+    : 0;
+  const statDonutStyle = {
+    '--stat-win-angle': `${statWinAngle}deg`,
+    '--stat-lose-angle': `${statLoseAngle}deg`,
+  } as CSSProperties;
 
   if (meQuery.isLoading || statsQuery.isLoading || teamsQuery.isLoading || !stats) {
     return (
@@ -294,66 +384,87 @@ export default function MyPage() {
         </div>
       </section>
 
-      <section className="stat-grid" aria-label="직관 통계">
-        <div className="stat-card" data-tone="total">
+      <section className="profile-stat-summary" aria-label="기록 요약">
+        <div className="profile-stat-summary-card">
           <span>전체 기록</span>
           <strong>{stats.totalCount}</strong>
         </div>
-        <div className="stat-card" data-tone="stadium">
+        <div className="profile-stat-summary-card">
           <span>전체 직관</span>
           <strong>{stats.stadiumCount}</strong>
         </div>
-        <div className="stat-card" data-tone="home">
+        <div className="profile-stat-summary-card">
           <span>전체 집관</span>
           <strong>{stats.homeCount}</strong>
         </div>
-        <div className="stat-card" data-tone="win">
-          <span>전체 승</span>
-          <strong>{stats.overallWinCount ?? stats.winCount}</strong>
-        </div>
-        <div className="stat-card" data-tone="lose">
-          <span>전체 패</span>
-          <strong>{stats.overallLoseCount ?? stats.loseCount}</strong>
-        </div>
-        <div className="stat-card" data-tone="draw">
-          <span>전체 무</span>
-          <strong>{stats.overallDrawCount ?? stats.drawCount}</strong>
-        </div>
-        <div className="stat-card" data-tone="stadium">
-          <span>내팀 직관</span>
-          <strong>{stats.favoriteTeamStadiumCount ?? stats.stadiumCount}</strong>
-        </div>
-        <div className="stat-card" data-tone="win">
-          <span>내팀 승</span>
-          <strong>{stats.favoriteTeamWinCount ?? stats.winCount}</strong>
-        </div>
-        <div className="stat-card" data-tone="lose">
-          <span>내팀 패</span>
-          <strong>{stats.favoriteTeamLoseCount ?? stats.loseCount}</strong>
-        </div>
       </section>
 
-      <section className="card">
-        <div className="section-heading">
+      <section className="card profile-stat-explorer">
+        <div className="section-heading profile-stat-explorer-head">
           <div>
-            <h2>승률 상세</h2>
-            <p>관람 유형별 승률을 비교합니다.</p>
+            <h2>승패 분석</h2>
+            <p>기준을 바꿔가며 승률과 승패 흐름을 봅니다.</p>
+          </div>
+          <div className="profile-stat-tabs" role="tablist" aria-label="통계 기준">
+            {statViews.map((view) => (
+              <button
+                aria-selected={activeStatFilter === view.key}
+                className="profile-stat-tab"
+                key={view.key}
+                onClick={() => setActiveStatFilter(view.key)}
+                role="tab"
+                type="button"
+              >
+                {view.label}
+              </button>
+            ))}
           </div>
         </div>
-        <div className="stat-grid">
-          <div className="stat-card" data-tone="total">
-            <span>전체</span>
-            <strong>{stats.winRate}%</strong>
+
+        {selectedStatView ? (
+          <div className="profile-stat-panel">
+            <div className="profile-stat-chart-wrap">
+              <div
+                aria-label={`${selectedStatView.label} 승률 ${selectedStatView.rate}%`}
+                className="profile-stat-donut"
+                role="img"
+                style={statDonutStyle}
+              >
+                <div className="profile-stat-donut-core">
+                  <span>승률</span>
+                  <strong>{selectedStatView.rate}%</strong>
+                </div>
+              </div>
+              <div className="profile-stat-legend" aria-label="승패 범례">
+                <span data-kind="win">승</span>
+                <span data-kind="lose">패</span>
+                <span data-kind="draw">무</span>
+              </div>
+            </div>
+
+            <div className="profile-stat-detail">
+              <div>
+                <span>{selectedStatView.label}</span>
+                <strong>{selectedStatView.total}경기</strong>
+                <p>{selectedStatView.description}</p>
+              </div>
+              <div className="profile-stat-result-grid">
+                <div className="profile-stat-result" data-kind="win">
+                  <span>승</span>
+                  <strong>{selectedStatView.win}</strong>
+                </div>
+                <div className="profile-stat-result" data-kind="lose">
+                  <span>패</span>
+                  <strong>{selectedStatView.lose}</strong>
+                </div>
+                <div className="profile-stat-result" data-kind="draw">
+                  <span>무</span>
+                  <strong>{selectedStatView.draw}</strong>
+                </div>
+              </div>
+            </div>
           </div>
-          <div className="stat-card" data-tone="stadium">
-            <span>직관</span>
-            <strong>{stats.stadiumWinRate}%</strong>
-          </div>
-          <div className="stat-card" data-tone="home">
-            <span>집관</span>
-            <strong>{stats.homeWinRate}%</strong>
-          </div>
-        </div>
+        ) : null}
       </section>
 
       <section className="card stack-sm" aria-label="알림">
