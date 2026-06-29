@@ -96,6 +96,16 @@ function gameFromAttendanceRecord(
   };
 }
 
+function groupAttendanceRecordsByGame(records: AttendanceRecord[]) {
+  const groups = new Map<number, AttendanceRecord[]>();
+
+  for (const record of records) {
+    groups.set(record.gameId, [...(groups.get(record.gameId) ?? []), record]);
+  }
+
+  return [...groups.values()];
+}
+
 function shiftAnchor(date: Date, viewMode: CalendarViewMode, amount: number) {
   if (viewMode === 'month') {
     return new Date(date.getFullYear(), date.getMonth() + amount, 1);
@@ -425,10 +435,10 @@ export default function CalendarPage() {
     );
   }, [effectiveWatchTypeFilter, games.length, displayGamesByDate]);
 
-  const attendanceByGameId = scheduleScopedAttendanceRecords.reduce<
-    Record<number, AttendanceRecord>
+  const attendanceRecordsByGameId = scheduleScopedAttendanceRecords.reduce<
+    Record<number, AttendanceRecord[]>
   >((acc, record) => {
-    acc[record.gameId] = record;
+    acc[record.gameId] = [...(acc[record.gameId] ?? []), record];
     return acc;
   }, {});
 
@@ -473,10 +483,9 @@ export default function CalendarPage() {
     const key = formatDateInput(date);
     const dayGames = displayGamesByDate[key] ?? [];
     const dayRecords = attendanceByDate[key] ?? [];
-
     const visibleGameIds = new Set(dayGames.map((game) => game.id));
-    const extraRecords = dayRecords.filter(
-      (record) => !visibleGameIds.has(record.gameId),
+    const extraRecordGroups = groupAttendanceRecordsByGame(
+      dayRecords.filter((record) => !visibleGameIds.has(record.gameId)),
     );
     const isOutside = !options.inMonth;
     const isToday = isSameDay(date, new Date());
@@ -504,12 +513,15 @@ export default function CalendarPage() {
         <span className="calendar-day-number">{date.getDate()}</span>
         <div className="calendar-events">
           {dayGames.map((game) => {
-            const attendance = attendanceByGameId[game.id];
+            const gameAttendanceRecords =
+              attendanceRecordsByGameId[game.id] ?? [];
+            const attendance = gameAttendanceRecords[0] ?? null;
             const href = `/games/${game.id}`;
 
             return (
               <CalendarEventCard
                 attendance={attendance}
+                attendanceRecords={gameAttendanceRecords}
                 dense={options.dense}
                 favoriteTeamId={effectiveFavoriteTeamId}
                 game={game}
@@ -518,27 +530,36 @@ export default function CalendarPage() {
               />
             );
           })}
-          {extraRecords.map((record) => (
-            <CalendarEventCard
-              attendance={record}
-              dense={options.dense}
-              favoriteTeamId={effectiveFavoriteTeamId}
-              game={{
-                id: record.gameId,
-                gameDate: record.game.gameDate,
-                stadium: record.game.stadium,
-                homeTeam: record.game.homeTeam,
-                awayTeam: record.game.awayTeam,
-                homeScore: record.game.homeScore,
-                awayScore: record.game.awayScore,
-                status: record.game.status,
-                cancellationReason: null,
-                probablePitchers: { home: null, away: null },
-              }}
-              href={`/games/${record.gameId}`}
-              key={`record-${record.id}`}
-            />
-          ))}
+          {extraRecordGroups.map((records) => {
+            const record = records[0];
+
+            if (!record) {
+              return null;
+            }
+
+            return (
+              <CalendarEventCard
+                attendance={record}
+                attendanceRecords={records}
+                dense={options.dense}
+                favoriteTeamId={effectiveFavoriteTeamId}
+                game={{
+                  id: record.gameId,
+                  gameDate: record.game.gameDate,
+                  stadium: record.game.stadium,
+                  homeTeam: record.game.homeTeam,
+                  awayTeam: record.game.awayTeam,
+                  homeScore: record.game.homeScore,
+                  awayScore: record.game.awayScore,
+                  status: record.game.status,
+                  cancellationReason: null,
+                  probablePitchers: { home: null, away: null },
+                }}
+                href={`/games/${record.gameId}`}
+                key={`record-group-${record.gameId}`}
+              />
+            );
+          })}
         </div>
       </div>
     );
@@ -778,7 +799,7 @@ export default function CalendarPage() {
             <>
               <CalendarAgendaView
                 attendanceByDate={attendanceByDate}
-                attendanceByGameId={attendanceByGameId}
+                attendanceRecordsByGameId={attendanceRecordsByGameId}
                 days={days}
                 favoriteTeamId={effectiveFavoriteTeamId}
                 focusDateKey={agendaFocusDateKey}

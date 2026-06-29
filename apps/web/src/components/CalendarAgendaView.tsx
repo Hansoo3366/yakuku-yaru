@@ -14,7 +14,7 @@ const weekdayLabels = ['일', '월', '화', '수', '목', '금', '토'];
 type Props = {
   days: Date[];
   gamesByDate: Record<string, Game[]>;
-  attendanceByGameId: Record<number, AttendanceRecord>;
+  attendanceRecordsByGameId: Record<number, AttendanceRecord[]>;
   attendanceByDate: Record<string, AttendanceRecord[]>;
   favoriteTeamId: number | null | undefined;
   showOutsideDays?: boolean;
@@ -25,7 +25,7 @@ type Props = {
 export function CalendarAgendaView({
   days,
   gamesByDate,
-  attendanceByGameId,
+  attendanceRecordsByGameId,
   attendanceByDate,
   favoriteTeamId,
   showOutsideDays = false,
@@ -33,6 +33,16 @@ export function CalendarAgendaView({
   focusDateKey = null,
 }: Props) {
   const today = new Date();
+
+  function groupAttendanceRecordsByGame(records: AttendanceRecord[]) {
+    const groups = new Map<number, AttendanceRecord[]>();
+
+    for (const record of records) {
+      groups.set(record.gameId, [...(groups.get(record.gameId) ?? []), record]);
+    }
+
+    return [...groups.values()];
+  }
 
   const visibleDays = days.filter((date) => {
     if (
@@ -67,14 +77,14 @@ export function CalendarAgendaView({
         const dayGames = gamesByDate[key] ?? [];
         const dayRecords = attendanceByDate[key] ?? [];
         const visibleGameIds = new Set(dayGames.map((game) => game.id));
-        const extraRecords = dayRecords.filter(
-          (record) => !visibleGameIds.has(record.gameId),
+        const extraRecordGroups = groupAttendanceRecordsByGame(
+          dayRecords.filter((record) => !visibleGameIds.has(record.gameId)),
         );
         const isOutside =
           referenceMonth && date.getMonth() !== referenceMonth.getMonth();
         const isToday = isSameDay(date, today);
         const isFocused = key === focusDateKey;
-        const hasEvents = dayGames.length > 0 || extraRecords.length > 0;
+        const hasEvents = dayGames.length > 0 || extraRecordGroups.length > 0;
 
         return (
           <article
@@ -105,12 +115,15 @@ export function CalendarAgendaView({
                 </p>
               ) : null}
               {dayGames.map((game) => {
-                const attendance = attendanceByGameId[game.id];
+                const gameAttendanceRecords =
+                  attendanceRecordsByGameId[game.id] ?? [];
+                const attendance = gameAttendanceRecords[0] ?? null;
                 const href = `/games/${game.id}`;
 
                 return (
                   <CalendarEventCard
                     attendance={attendance}
+                    attendanceRecords={gameAttendanceRecords}
                     dense={false}
                     favoriteTeamId={favoriteTeamId}
                     game={game}
@@ -119,25 +132,34 @@ export function CalendarAgendaView({
                   />
                 );
               })}
-              {extraRecords.map((record) => (
-                <CalendarEventCard
-                  attendance={record}
-                  dense={false}
-                  favoriteTeamId={favoriteTeamId}
-                  game={{
-                    id: record.gameId,
-                    gameDate: record.game.gameDate,
-                    stadium: record.game.stadium,
-                    homeTeam: record.game.homeTeam,
-                    awayTeam: record.game.awayTeam,
-                    homeScore: record.game.homeScore,
-                    awayScore: record.game.awayScore,
-                    status: record.game.status,
-                  }}
-                  href={`/games/${record.gameId}`}
-                  key={`record-${record.id}`}
-                />
-              ))}
+              {extraRecordGroups.map((records) => {
+                const record = records[0];
+
+                if (!record) {
+                  return null;
+                }
+
+                return (
+                  <CalendarEventCard
+                    attendance={record}
+                    attendanceRecords={records}
+                    dense={false}
+                    favoriteTeamId={favoriteTeamId}
+                    game={{
+                      id: record.gameId,
+                      gameDate: record.game.gameDate,
+                      stadium: record.game.stadium,
+                      homeTeam: record.game.homeTeam,
+                      awayTeam: record.game.awayTeam,
+                      homeScore: record.game.homeScore,
+                      awayScore: record.game.awayScore,
+                      status: record.game.status,
+                    }}
+                    href={`/games/${record.gameId}`}
+                    key={`record-group-${record.gameId}`}
+                  />
+                );
+              })}
             </div>
           </article>
         );

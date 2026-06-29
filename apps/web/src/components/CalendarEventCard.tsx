@@ -43,6 +43,7 @@ type Props = {
   href: string;
   favoriteTeamId: number | null | undefined;
   attendance?: AttendanceRecord | null;
+  attendanceRecords?: AttendanceRecord[];
   dense?: boolean;
 };
 
@@ -73,8 +74,10 @@ export function CalendarEventCard({
   href,
   favoriteTeamId,
   attendance,
+  attendanceRecords = attendance ? [attendance] : [],
   dense = false,
 }: Props) {
+  const ticketCount = attendanceRecords.length;
   const outcome: GameOutcome =
     game.status === 'cancelled'
       ? 'cancelled'
@@ -154,6 +157,11 @@ export function CalendarEventCard({
                     ? `중립·${attendance.cheeredTeamShortName}`
                     : '중립'
                   : '직관'}
+          </span>
+        ) : null}
+        {ticketCount > 1 ? (
+          <span className="calendar-event-ticket-count">
+            티켓 {ticketCount}개
           </span>
         ) : null}
         {attendance?.photoUrl ? (

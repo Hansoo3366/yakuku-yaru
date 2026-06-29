@@ -2545,6 +2545,23 @@ img {
   color: var(--color-night-navy);
 }
 
+.calendar-event-ticket-count {
+  align-items: center;
+  background: color-mix(in srgb, var(--color-field-700) 12%, var(--color-white));
+  border: 1px solid
+    color-mix(in srgb, var(--color-field-700) 20%, var(--color-line));
+  border-radius: 4px;
+  color: var(--color-field-900);
+  display: inline-flex;
+  font-size: 10px;
+  font-weight: var(--weight-black);
+  height: 16px;
+  justify-self: start;
+  margin-top: 2px;
+  padding: 0 5px;
+  width: fit-content;
+}
+
 .calendar-summary-row {
   display: grid;
   gap: var(--space-2);
@@ -3313,6 +3330,11 @@ img {
   display: grid;
   gap: var(--space-3);
   text-decoration: none;
+}
+
+.game-record-ticket-list {
+  display: grid;
+  gap: var(--space-3);
 }
 
 .game-record-ticket-preview {

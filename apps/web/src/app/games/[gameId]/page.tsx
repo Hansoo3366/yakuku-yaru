@@ -279,73 +279,91 @@ function LineupPanel({
 
 function GameRecordPanel({
   game,
-  attendanceRecord,
+  attendanceRecords,
   canWriteAttendance,
   viewerFavoriteTeamId,
 }: {
   game: Game;
-  attendanceRecord: AttendanceRecord | null;
+  attendanceRecords: AttendanceRecord[];
   canWriteAttendance: boolean;
   viewerFavoriteTeamId: number | null;
 }) {
-  if (attendanceRecord) {
-    const ticket = getAttendanceTicketView(
-      attendanceRecord,
-      viewerFavoriteTeamId,
-    );
-    const cancelled = isGameCancelled(attendanceRecord.game);
-    const watchLabel = attendanceRecord.watchType === 'home' ? '집관' : '직관';
-    const outcomeLabel = cancelled
-      ? '우취'
-      : ticketOutcomeLabel(ticket.outcome);
-    const hasScore = ticket.awayScore !== null && ticket.homeScore !== null;
-    const scoreText = hasScore
-      ? `${ticket.awayScore} : ${ticket.homeScore}`
-      : null;
-
+  if (attendanceRecords.length) {
     return (
-      <section aria-label="내 직관 기록" className="card game-record-panel">
+      <section
+        aria-label="이 경기의 내 티켓"
+        className="card game-record-panel"
+      >
         <div className="section-heading">
           <div>
-            <h2>내 직관 기록</h2>
-            <p>이 경기에 남긴 포토 티켓</p>
+            <h2>이 경기의 내 티켓</h2>
+            <p>
+              직접 남겼거나 태깅된 포토 티켓 {attendanceRecords.length}개
+            </p>
           </div>
         </div>
-        <Link
-          className="game-record-ticket-link"
-          href={`/attendance/${attendanceRecord.id}`}
-        >
-          <div className="game-record-ticket-preview">
-            <div className="game-record-ticket-photo">
-              {attendanceRecord.photoUrl ? (
-                <img
-                  alt="직관 사진"
-                  src={getAssetUrl(attendanceRecord.photoUrl)}
-                />
-              ) : (
-                <span className="game-record-ticket-photo-empty">
-                  사진 없음
-                </span>
-              )}
-            </div>
-            <div className="game-record-ticket-copy">
-              <span
-                className={`game-record-ticket-outcome game-record-ticket-outcome--${
-                  cancelled ? 'cancelled' : (ticket.outcome ?? 'blank')
-                }`}
+        <div className="game-record-ticket-list">
+          {attendanceRecords.map((attendanceRecord) => {
+            const ticket = getAttendanceTicketView(
+              attendanceRecord,
+              viewerFavoriteTeamId,
+            );
+            const cancelled = isGameCancelled(attendanceRecord.game);
+            const watchLabel =
+              attendanceRecord.watchType === 'home' ? '집관' : '직관';
+            const outcomeLabel = cancelled
+              ? '우취'
+              : ticketOutcomeLabel(ticket.outcome);
+            const hasScore =
+              ticket.awayScore !== null && ticket.homeScore !== null;
+            const scoreText = hasScore
+              ? `${ticket.awayScore} : ${ticket.homeScore}`
+              : null;
+            const relationLabel =
+              attendanceRecord.viewerRelation === 'owner'
+                ? '내가 작성'
+                : `${attendanceRecord.ownerNickname}님 티켓`;
+
+            return (
+              <Link
+                className="game-record-ticket-link"
+                href={`/attendance/${attendanceRecord.id}`}
+                key={attendanceRecord.id}
               >
-                {watchLabel} · {outcomeLabel}
-              </span>
-              <strong>
-                {game.awayTeam.shortName} vs {game.homeTeam.shortName}
-              </strong>
-              <p>
-                {scoreText ?? '스코어 미확정'} · {game.stadium}
-              </p>
-            </div>
-          </div>
-          <span className="btn btn-ghost">티켓 전체 보기</span>
-        </Link>
+                <div className="game-record-ticket-preview">
+                  <div className="game-record-ticket-photo">
+                    {attendanceRecord.photoUrl ? (
+                      <img
+                        alt="직관 사진"
+                        src={getAssetUrl(attendanceRecord.photoUrl)}
+                      />
+                    ) : (
+                      <span className="game-record-ticket-photo-empty">
+                        사진 없음
+                      </span>
+                    )}
+                  </div>
+                  <div className="game-record-ticket-copy">
+                    <span
+                      className={`game-record-ticket-outcome game-record-ticket-outcome--${
+                        cancelled ? 'cancelled' : (ticket.outcome ?? 'blank')
+                      }`}
+                    >
+                      {watchLabel} · {outcomeLabel} · {relationLabel}
+                    </span>
+                    <strong>
+                      {game.awayTeam.shortName} vs {game.homeTeam.shortName}
+                    </strong>
+                    <p>
+                      {scoreText ?? '스코어 미확정'} · {game.stadium}
+                    </p>
+                  </div>
+                </div>
+                <span className="btn btn-ghost">티켓 보기</span>
+              </Link>
+            );
+          })}
+        </div>
       </section>
     );
   }
@@ -389,11 +407,11 @@ export default function GameDetailPage() {
     useState<CheerDialogItem | null>(null);
   const [cheerError, setCheerError] = useState('');
   const game = gameQuery.data?.game ?? null;
-  const attendanceRecord = useMemo(
+  const attendanceRecords = useMemo(
     () =>
-      attendanceRecordsQuery.data?.items.find(
+      attendanceRecordsQuery.data?.items.filter(
         (record) => record.gameId === gameId,
-      ) ?? null,
+      ) ?? [],
     [attendanceRecordsQuery.data?.items, gameId],
   );
   const viewerFavoriteTeamId = meQuery.data?.user.favoriteTeamId ?? null;
@@ -533,7 +551,7 @@ export default function GameDetailPage() {
       </section>
 
       <GameRecordPanel
-        attendanceRecord={attendanceRecord}
+        attendanceRecords={attendanceRecords}
         canWriteAttendance={canWriteAttendance}
         game={game}
         viewerFavoriteTeamId={viewerFavoriteTeamId}
