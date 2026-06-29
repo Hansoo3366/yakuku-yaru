@@ -6,6 +6,7 @@ import {
 } from '../users/user.repository.js';
 import {
   countsTowardWinRateForRecord,
+  isTeamInGame,
   resolveStorageOutcomeTeamId,
 } from './attendance-game.js';
 import {
@@ -210,6 +211,41 @@ function getStadiumTitleName(stadium: string) {
   if (stadium.includes('수원')) return '수원';
   if (stadium.includes('문학') || stadium.includes('랜더스')) return '문학';
   return stadium.replace(/야구장|구장|스타디움/g, '').trim() || stadium;
+}
+
+function getAttendanceRecordStatsPriority(record: AttendanceRecord) {
+  let priority = 0;
+
+  if (record.watchType === 'stadium') {
+    priority += 4;
+  }
+
+  if (record.viewerRelation === 'owner') {
+    priority += 2;
+  }
+
+  return priority;
+}
+
+function dedupeAttendanceRecordsByGame(records: AttendanceRecord[]) {
+  const byGame = new Map<number, AttendanceRecord>();
+
+  for (const record of records) {
+    const previous = byGame.get(record.gameId);
+
+    if (
+      !previous ||
+      getAttendanceRecordStatsPriority(record) >
+        getAttendanceRecordStatsPriority(previous)
+    ) {
+      byGame.set(record.gameId, record);
+    }
+  }
+
+  return [...byGame.values()].sort(
+    (a, b) =>
+      new Date(a.game.gameDate).getTime() - new Date(b.game.gameDate).getTime(),
+  );
 }
 
 function getAttendanceTitleMetrics(
@@ -624,19 +660,34 @@ export async function reconcileAttendanceRecordById(recordId: number) {
   return refreshed;
 }
 
-export async function getAttendanceStats(userId: number) {
+function getCurrentYearAttendanceRange() {
+  const year = new Date().getFullYear();
+
+  return {
+    from: `${year}-01-01`,
+    to: `${year + 1}-01-01`,
+  };
+}
+
+export async function getAttendanceStats(
+  userId: number,
+  input?: { from?: string; to?: string },
+) {
   const user = await findUserById(userId);
   const favoriteTeamId = getFavoriteTeamIdFromUser(user);
+  const range =
+    input?.from && input.to ? { from: input.from, to: input.to } : getCurrentYearAttendanceRange();
 
   await reconcileAttendanceScoresForUser(userId);
 
-  const records = await listAttendanceRecords({ userId });
+  const records = await listAttendanceRecords({ userId, ...range });
   const statsRecords = records.filter(
     (record) =>
       record.viewerRelation === 'owner' ||
       record.viewerRelation === 'companion',
   );
-  const countable = statsRecords.filter((record) =>
+  const uniqueStatsRecords = dedupeAttendanceRecordsByGame(statsRecords);
+  const countable = uniqueStatsRecords.filter((record) =>
     countsTowardWinRateForRecord({
       game: record.game,
       favoriteTeamId,
@@ -652,16 +703,39 @@ export async function getAttendanceStats(userId: number) {
   let winCount = 0;
   let loseCount = 0;
   let drawCount = 0;
+  let overallWinCount = 0;
+  let overallLoseCount = 0;
+  let overallDrawCount = 0;
+  let favoriteTeamStadiumCount = 0;
+  let favoriteTeamWinCount = 0;
+  let favoriteTeamLoseCount = 0;
+  let favoriteTeamDrawCount = 0;
   let stadiumWinCount = 0;
   let homeWinCount = 0;
   let countableStadium = 0;
   let countableHome = 0;
 
-  for (const record of statsRecords) {
+  for (const record of uniqueStatsRecords) {
     if (record.watchType === 'stadium') {
       stadiumCount += 1;
     } else if (record.watchType === 'home') {
       homeCount += 1;
+    }
+
+    if (favoriteTeamId && isTeamInGame(record.game, favoriteTeamId)) {
+      if (record.watchType === 'stadium') {
+        favoriteTeamStadiumCount += 1;
+      }
+    }
+
+    const overallOutcome = resolveAttendanceOutcome(record, favoriteTeamId);
+
+    if (overallOutcome === 'win') {
+      overallWinCount += 1;
+    } else if (overallOutcome === 'lose') {
+      overallLoseCount += 1;
+    } else if (overallOutcome === 'draw') {
+      overallDrawCount += 1;
     }
   }
 
@@ -680,6 +754,7 @@ export async function getAttendanceStats(userId: number) {
 
     if (outcome === 'win') {
       winCount += 1;
+      favoriteTeamWinCount += 1;
       if (record.watchType === 'stadium') {
         stadiumWinCount += 1;
       } else if (record.watchType === 'home') {
@@ -687,8 +762,10 @@ export async function getAttendanceStats(userId: number) {
       }
     } else if (outcome === 'lose') {
       loseCount += 1;
+      favoriteTeamLoseCount += 1;
     } else {
       drawCount += 1;
+      favoriteTeamDrawCount += 1;
     }
   }
 
@@ -703,9 +780,12 @@ export async function getAttendanceStats(userId: number) {
     ? Math.round((homeWinCount / countableHome) * 1000) / 10
     : 0;
 
-  const titleMetrics = getAttendanceTitleMetrics(statsRecords, favoriteTeamId);
+  const titleMetrics = getAttendanceTitleMetrics(
+    uniqueStatsRecords,
+    favoriteTeamId,
+  );
   const titles = resolveAttendanceTitles({
-    totalCount: statsRecords.length,
+    totalCount: uniqueStatsRecords.length,
     stadiumCount,
     homeCount,
     winCount,
@@ -716,12 +796,19 @@ export async function getAttendanceStats(userId: number) {
   });
 
   return {
-    totalCount: statsRecords.length,
+    totalCount: uniqueStatsRecords.length,
     stadiumCount,
     homeCount,
     winCount,
     loseCount,
     drawCount,
+    overallWinCount,
+    overallLoseCount,
+    overallDrawCount,
+    favoriteTeamStadiumCount,
+    favoriteTeamWinCount,
+    favoriteTeamLoseCount,
+    favoriteTeamDrawCount,
     winRate,
     stadiumWinRate,
     homeWinRate,

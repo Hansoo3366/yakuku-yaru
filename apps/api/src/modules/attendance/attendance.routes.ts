@@ -176,7 +176,9 @@ attendanceRouter.get('/', authenticate, async (req, res, next) => {
 
 attendanceRouter.get('/stats/me', authenticate, async (req, res, next) => {
   try {
-    const stats = await getAttendanceStats(req.user?.id ?? 0);
+    const from = typeof req.query.from === 'string' ? req.query.from : undefined;
+    const to = typeof req.query.to === 'string' ? req.query.to : undefined;
+    const stats = await getAttendanceStats(req.user?.id ?? 0, { from, to });
 
     res.json(stats);
   } catch (error) {

@@ -32,11 +32,16 @@ export default function MyPage() {
   useAuthGuard();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const token = useAuthStore((state) => state.token);
+  const statsYear = new Date().getFullYear();
+  const statsRange = {
+    from: `${statsYear}-01-01`,
+    to: `${statsYear + 1}-01-01`,
+  };
   const storedUser = useAuthStore((state) => state.user);
   const setStoredUser = useAuthStore((state) => state.setUser);
   const clearSession = useAuthStore((state) => state.clearSession);
   const meQuery = useMeQuery(token);
-  const statsQuery = useAttendanceStatsQuery(token);
+  const statsQuery = useAttendanceStatsQuery(token, statsRange);
   const teamsQuery = useTeamsQuery();
   const user = meQuery.data?.user ?? storedUser;
   const stats = statsQuery.data ?? null;
@@ -295,24 +300,36 @@ export default function MyPage() {
           <strong>{stats.totalCount}</strong>
         </div>
         <div className="stat-card" data-tone="stadium">
-          <span>직관</span>
+          <span>전체 직관</span>
           <strong>{stats.stadiumCount}</strong>
         </div>
         <div className="stat-card" data-tone="home">
-          <span>집관</span>
+          <span>전체 집관</span>
           <strong>{stats.homeCount}</strong>
         </div>
         <div className="stat-card" data-tone="win">
-          <span>승</span>
-          <strong>{stats.winCount}</strong>
+          <span>전체 승</span>
+          <strong>{stats.overallWinCount ?? stats.winCount}</strong>
         </div>
         <div className="stat-card" data-tone="lose">
-          <span>패</span>
-          <strong>{stats.loseCount}</strong>
+          <span>전체 패</span>
+          <strong>{stats.overallLoseCount ?? stats.loseCount}</strong>
         </div>
         <div className="stat-card" data-tone="draw">
-          <span>무</span>
-          <strong>{stats.drawCount}</strong>
+          <span>전체 무</span>
+          <strong>{stats.overallDrawCount ?? stats.drawCount}</strong>
+        </div>
+        <div className="stat-card" data-tone="stadium">
+          <span>내팀 직관</span>
+          <strong>{stats.favoriteTeamStadiumCount ?? stats.stadiumCount}</strong>
+        </div>
+        <div className="stat-card" data-tone="win">
+          <span>내팀 승</span>
+          <strong>{stats.favoriteTeamWinCount ?? stats.winCount}</strong>
+        </div>
+        <div className="stat-card" data-tone="lose">
+          <span>내팀 패</span>
+          <strong>{stats.favoriteTeamLoseCount ?? stats.loseCount}</strong>
         </div>
       </section>
 

@@ -4714,9 +4714,10 @@ img {
 
 .profile-title-pill {
   align-items: center;
-  background: var(--color-ticket-gold);
+  background: #facc15;
   border-radius: var(--radius-pill);
-  color: var(--color-night-navy);
+  border: 1px solid rgba(23, 32, 51, 0.2);
+  color: #172033;
   cursor: help;
   display: inline-flex;
   font-size: var(--text-xs);
@@ -4805,43 +4806,51 @@ img {
 }
 
 .profile-title-pill[data-kind='lose'] {
-  background: color-mix(in srgb, var(--color-lose) 22%, var(--color-white));
-  color: var(--color-night-navy);
+  background: #7f1d1d;
+  border-color: rgba(255, 255, 255, 0.18);
+  color: #fff7ed;
 }
 
 .profile-title-pill[data-kind='stadium'] {
-  background: color-mix(in srgb, var(--color-field-700) 18%, var(--color-white));
-  color: var(--color-field-900);
+  background: #14532d;
+  border-color: rgba(255, 255, 255, 0.18);
+  color: #ecfdf5;
 }
 
 .profile-title-pill[data-kind='home'] {
-  background: color-mix(in srgb, var(--color-night-navy) 14%, var(--color-white));
-  color: var(--color-night-navy);
+  background: #1e3a8a;
+  border-color: rgba(255, 255, 255, 0.18);
+  color: #eff6ff;
 }
 
 .profile-title-pill[data-kind='draw'] {
-  background: color-mix(in srgb, var(--color-muted) 22%, var(--color-white));
-  color: var(--color-night-navy);
+  background: #374151;
+  border-color: rgba(255, 255, 255, 0.18);
+  color: #f9fafb;
 }
 
 .profile-title-pill[data-kind='record'] {
-  background: color-mix(in srgb, var(--color-ticket-gold) 70%, var(--color-white));
-  color: var(--color-night-navy);
+  background: #854d0e;
+  border-color: rgba(255, 255, 255, 0.18);
+  color: #fefce8;
 }
 
 .profile-title-pill[data-kind='weather'] {
-  background: color-mix(in srgb, #7dd3fc 42%, var(--color-white));
-  color: var(--color-night-navy);
+  background: #075985;
+  border-color: rgba(255, 255, 255, 0.18);
+  color: #f0f9ff;
 }
 
 .profile-title-pill[data-kind='special'] {
-  background: color-mix(in srgb, #f0abfc 34%, var(--color-white));
-  color: var(--color-night-navy);
+  background: #6b21a8;
+  border-color: rgba(255, 255, 255, 0.18);
+  color: #faf5ff;
 }
 
 .profile-title-pill[data-kind='anger'] {
-  background: color-mix(in srgb, #fb923c 34%, var(--color-white));
-  color: var(--color-night-navy);
+  background: #9a3412;
+  border-color: rgba(255, 255, 255, 0.18);
+  color: #fff7ed;
 }
 
 .stat-grid {

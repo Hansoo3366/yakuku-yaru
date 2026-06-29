@@ -31,8 +31,10 @@ export const queryKeys = {
     input: { from?: string; to?: string },
     token: string | null | undefined,
   ) => ['attendance-records', token, input.from ?? null, input.to ?? null] as const,
-  attendanceStats: (token: string | null | undefined) =>
-    ['attendance-stats', token] as const,
+  attendanceStats: (
+    token: string | null | undefined,
+    input: { from?: string; to?: string } = {},
+  ) => ['attendance-stats', token, input.from ?? null, input.to ?? null] as const,
   posts: (input: { page: number; keyword?: string }) =>
     ['posts', input.page, input.keyword ?? ''] as const,
   post: (postId: number) => ['post', postId] as const,

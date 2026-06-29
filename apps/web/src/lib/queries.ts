@@ -112,10 +112,13 @@ export function useAttendanceRecordsQuery(
   });
 }
 
-export function useAttendanceStatsQuery(token: string | null | undefined) {
+export function useAttendanceStatsQuery(
+  token: string | null | undefined,
+  input: { from?: string; to?: string } = {},
+) {
   return useQuery({
-    queryKey: queryKeys.attendanceStats(token),
-    queryFn: () => fetchAttendanceStats(token ?? ''),
+    queryKey: queryKeys.attendanceStats(token, input),
+    queryFn: () => fetchAttendanceStats(token ?? '', input),
     enabled: Boolean(token),
   });
 }

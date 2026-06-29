@@ -237,6 +237,13 @@ export default function HomePage() {
     }),
     [seasonYear],
   );
+  const attendanceStatsRange = useMemo(
+    () => ({
+      from: `${seasonYear}-01-01`,
+      to: `${seasonYear + 1}-01-01`,
+    }),
+    [seasonYear],
+  );
   const scheduleRange = useMemo(() => {
     const today = new Date();
     const monthLater = new Date(today);
@@ -257,7 +264,7 @@ export default function HomePage() {
   const seasonGamesQuery = useGamesQuery(seasonRange, {
     enabled: Boolean(teamStandingsQuery.data?.items.length),
   });
-  const recordsQuery = useAttendanceRecordsQuery({}, token, {
+  const recordsQuery = useAttendanceRecordsQuery(attendanceStatsRange, token, {
     enabled: Boolean(token && user),
   });
   const authState: 'checking' | 'guest' | 'authed' = !hasHydrated

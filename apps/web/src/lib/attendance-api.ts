@@ -79,6 +79,13 @@ export type AttendanceStats = {
   winCount: number;
   loseCount: number;
   drawCount: number;
+  overallWinCount?: number;
+  overallLoseCount?: number;
+  overallDrawCount?: number;
+  favoriteTeamStadiumCount?: number;
+  favoriteTeamWinCount?: number;
+  favoriteTeamLoseCount?: number;
+  favoriteTeamDrawCount?: number;
   winRate: number;
   stadiumWinRate: number;
   homeWinRate: number;
@@ -191,8 +198,23 @@ export function updateAttendanceViewerPreference(
   });
 }
 
-export function fetchAttendanceStats(token: string) {
-  return request<AttendanceStats>('/attendance-records/stats/me', {
+export function fetchAttendanceStats(
+  token: string,
+  input: { from?: string; to?: string } = {},
+) {
+  const params = new URLSearchParams();
+
+  if (input.from) {
+    params.set('from', input.from);
+  }
+
+  if (input.to) {
+    params.set('to', input.to);
+  }
+
+  const query = params.toString();
+
+  return request<AttendanceStats>(`/attendance-records/stats/me${query ? `?${query}` : ''}`, {
     token,
   });
 }

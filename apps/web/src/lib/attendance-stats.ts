@@ -1,5 +1,8 @@
 import type { AttendanceRecord, AttendanceStats } from '@/lib/attendance-api';
-import { countsTowardWinRateForRecord } from '@/lib/attendance-game';
+import {
+  countsTowardWinRateForRecord,
+  isTeamInGame,
+} from '@/lib/attendance-game';
 import {
   resolveAttendanceOutcome,
   resolveAttendanceTitle,
@@ -17,6 +20,41 @@ function getStadiumTitleName(stadium: string) {
   if (stadium.includes('수원')) return '수원';
   if (stadium.includes('문학') || stadium.includes('랜더스')) return '문학';
   return stadium.replace(/야구장|구장|스타디움/g, '').trim() || stadium;
+}
+
+function getAttendanceRecordStatsPriority(record: AttendanceRecord) {
+  let priority = 0;
+
+  if (record.watchType === 'stadium') {
+    priority += 4;
+  }
+
+  if (record.viewerRelation === 'owner') {
+    priority += 2;
+  }
+
+  return priority;
+}
+
+function dedupeAttendanceRecordsByGame(records: AttendanceRecord[]) {
+  const byGame = new Map<number, AttendanceRecord>();
+
+  for (const record of records) {
+    const previous = byGame.get(record.gameId);
+
+    if (
+      !previous ||
+      getAttendanceRecordStatsPriority(record) >
+        getAttendanceRecordStatsPriority(previous)
+    ) {
+      byGame.set(record.gameId, record);
+    }
+  }
+
+  return [...byGame.values()].sort(
+    (a, b) =>
+      new Date(a.game.gameDate).getTime() - new Date(b.game.gameDate).getTime(),
+  );
 }
 
 function getAttendanceTitleMetrics(
@@ -137,8 +175,14 @@ export function computeAttendanceStatsFromRecords(
   records: AttendanceRecord[],
   favoriteTeamId: number | null | undefined,
 ): AttendanceStats {
-  const owned = records.filter((record) => record.viewerRelation === 'owner');
-  const countable = records.filter((record) =>
+  const statsRecords = dedupeAttendanceRecordsByGame(
+    records.filter(
+      (record) =>
+        record.viewerRelation === 'owner' ||
+        record.viewerRelation === 'companion',
+    ),
+  );
+  const countable = statsRecords.filter((record) =>
     countsTowardWinRateForRecord({
       game: record.game,
       favoriteTeamId,
@@ -154,16 +198,39 @@ export function computeAttendanceStatsFromRecords(
   let winCount = 0;
   let loseCount = 0;
   let drawCount = 0;
+  let overallWinCount = 0;
+  let overallLoseCount = 0;
+  let overallDrawCount = 0;
+  let favoriteTeamStadiumCount = 0;
+  let favoriteTeamWinCount = 0;
+  let favoriteTeamLoseCount = 0;
+  let favoriteTeamDrawCount = 0;
   let stadiumWinCount = 0;
   let homeWinCount = 0;
   let countableStadium = 0;
   let countableHome = 0;
 
-  for (const record of owned) {
+  for (const record of statsRecords) {
     if (record.watchType === 'stadium') {
       stadiumCount += 1;
     } else if (record.watchType === 'home') {
       homeCount += 1;
+    }
+
+    if (favoriteTeamId && isTeamInGame(record.game, favoriteTeamId)) {
+      if (record.watchType === 'stadium') {
+        favoriteTeamStadiumCount += 1;
+      }
+    }
+
+    const overallOutcome = resolveAttendanceOutcome(record, favoriteTeamId);
+
+    if (overallOutcome === 'win') {
+      overallWinCount += 1;
+    } else if (overallOutcome === 'lose') {
+      overallLoseCount += 1;
+    } else if (overallOutcome === 'draw') {
+      overallDrawCount += 1;
     }
   }
 
@@ -182,6 +249,7 @@ export function computeAttendanceStatsFromRecords(
 
     if (outcome === 'win') {
       winCount += 1;
+      favoriteTeamWinCount += 1;
       if (record.watchType === 'stadium') {
         stadiumWinCount += 1;
       } else if (record.watchType === 'home') {
@@ -189,8 +257,10 @@ export function computeAttendanceStatsFromRecords(
       }
     } else if (outcome === 'lose') {
       loseCount += 1;
+      favoriteTeamLoseCount += 1;
     } else {
       drawCount += 1;
+      favoriteTeamDrawCount += 1;
     }
   }
 
@@ -205,9 +275,9 @@ export function computeAttendanceStatsFromRecords(
     ? Math.round((homeWinCount / countableHome) * 1000) / 10
     : 0;
 
-  const titleMetrics = getAttendanceTitleMetrics(records, favoriteTeamId);
+  const titleMetrics = getAttendanceTitleMetrics(statsRecords, favoriteTeamId);
   const titles = resolveAttendanceTitles({
-    totalCount: owned.length,
+    totalCount: statsRecords.length,
     stadiumCount,
     homeCount,
     winCount,
@@ -218,12 +288,19 @@ export function computeAttendanceStatsFromRecords(
   });
 
   return {
-    totalCount: owned.length,
+    totalCount: statsRecords.length,
     stadiumCount,
     homeCount,
     winCount,
     loseCount,
     drawCount,
+    overallWinCount,
+    overallLoseCount,
+    overallDrawCount,
+    favoriteTeamStadiumCount,
+    favoriteTeamWinCount,
+    favoriteTeamLoseCount,
+    favoriteTeamDrawCount,
     winRate,
     stadiumWinRate,
     homeWinRate,
