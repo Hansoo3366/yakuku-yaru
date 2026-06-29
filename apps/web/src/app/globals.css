@@ -3325,27 +3325,29 @@ img {
   width: 100%;
 }
 
-.game-record-ticket-link {
+.game-record-ticket-card {
+  background: var(--color-paper);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-sm);
   color: inherit;
   display: grid;
-  gap: var(--space-3);
+  gap: var(--space-2);
+  padding: var(--space-3);
   text-decoration: none;
 }
 
 .game-record-ticket-list {
   display: grid;
   gap: var(--space-3);
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
 }
 
 .game-record-ticket-preview {
   align-items: center;
-  background: var(--color-paper);
-  border: 1px solid var(--color-line);
-  border-radius: var(--radius-sm);
   display: grid;
-  gap: var(--space-3);
-  grid-template-columns: 96px 1fr;
-  padding: var(--space-3);
+  gap: var(--space-2);
+  grid-template-columns: 76px 1fr;
+  min-width: 0;
 }
 
 .game-record-ticket-photo {
@@ -3412,6 +3414,63 @@ img {
   color: var(--color-muted);
   font-size: var(--text-sm);
   font-weight: var(--weight-bold);
+}
+
+.game-record-cheer-picker {
+  border-top: 1px solid var(--color-line);
+  display: grid;
+  gap: var(--space-2);
+  padding-top: var(--space-2);
+}
+
+.game-record-cheer-picker > span {
+  color: var(--color-muted);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-black);
+}
+
+.game-record-cheer-picker > div {
+  display: grid;
+  gap: var(--space-2);
+  grid-template-columns: 1fr 1fr;
+}
+
+.game-record-cheer-button {
+  align-items: center;
+  background: var(--color-white);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-xs);
+  color: var(--color-night-navy);
+  cursor: pointer;
+  display: inline-flex;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-black);
+  gap: 6px;
+  justify-content: center;
+  min-height: 38px;
+}
+
+.game-record-cheer-button[data-selected='true'] {
+  background: color-mix(in srgb, var(--color-field-700) 12%, var(--color-white));
+  border-color: var(--color-field-700);
+  color: var(--color-field-900);
+}
+
+.game-record-cheer-button:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+
+.game-record-cheer-button img {
+  height: 18px;
+  object-fit: contain;
+  width: 18px;
+}
+
+.game-record-ticket-action {
+  justify-content: center;
+  min-height: 38px;
+  width: 100%;
 }
 
 .game-extras-stack {

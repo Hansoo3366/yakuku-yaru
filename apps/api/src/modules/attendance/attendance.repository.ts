@@ -49,6 +49,8 @@ export type AttendanceRecordRow = RowDataPacket & {
   owner_nickname: string;
   owner_favorite_team_id: number | null;
   last_modified_by_nickname: string | null;
+  viewer_cheered_team_id?: number | null;
+  viewer_cheered_team_short_name?: string | null;
   viewer_relation?: 'owner' | 'companion';
   can_edit?: boolean;
 };
@@ -70,6 +72,8 @@ export type AttendanceRecord = {
   updatedAt: Date;
   ownerNickname: string;
   ownerFavoriteTeamId: number | null;
+  viewerCheeredTeamId: number | null;
+  viewerCheeredTeamShortName: string | null;
   lastModifiedByUserId: number | null;
   lastModifiedByNickname: string | null;
   viewerRelation: 'owner' | 'companion';
@@ -95,7 +99,7 @@ export type AttendanceRecord = {
   };
 };
 
-function attendanceSelectSql() {
+function attendanceSelectSql(extraSelect = '') {
   return `SELECT
       ar.id,
       ar.user_id,
@@ -127,6 +131,7 @@ function attendanceSelectSql() {
       u.nickname AS owner_nickname,
       u.favorite_team_id AS owner_favorite_team_id,
       lmu.nickname AS last_modified_by_nickname
+      ${extraSelect}
     FROM attendance_records ar
     JOIN users u ON u.id = ar.user_id
     LEFT JOIN users lmu ON lmu.id = ar.last_modified_by_user_id
@@ -154,6 +159,8 @@ export function toAttendanceRecord(row: AttendanceRecordRow): AttendanceRecord {
     updatedAt: row.updated_at,
     ownerNickname: row.owner_nickname,
     ownerFavoriteTeamId: row.owner_favorite_team_id,
+    viewerCheeredTeamId: row.viewer_cheered_team_id ?? null,
+    viewerCheeredTeamShortName: row.viewer_cheered_team_short_name ?? null,
     lastModifiedByUserId: row.last_modified_by_user_id,
     lastModifiedByNickname: row.last_modified_by_nickname,
     viewerRelation: row.viewer_relation ?? 'owner',
@@ -249,11 +256,16 @@ export async function listAttendanceRecords(input: {
   }
 
   const [rows] = await db.query<AttendanceRecordRow[]>(
-    `${attendanceSelectSql()}
+    `${attendanceSelectSql(
+      `,
+      viewer_ac.cheered_team_id AS viewer_cheered_team_id,
+      viewer_ct.short_name AS viewer_cheered_team_short_name`,
+    )}
      LEFT JOIN attendance_companions viewer_ac
        ON viewer_ac.attendance_record_id = ar.id
       AND viewer_ac.user_id = ?
       AND viewer_ac.status = 'accepted'
+     LEFT JOIN teams viewer_ct ON viewer_ct.id = viewer_ac.cheered_team_id
      WHERE (ar.user_id = ? OR viewer_ac.user_id IS NOT NULL)
        ${dateFilter}
      ORDER BY g.game_date ASC`,
@@ -266,6 +278,12 @@ export async function listAttendanceRecords(input: {
         ...row,
         viewer_relation:
           row.user_id === input.userId ? 'owner' : 'companion',
+        viewer_cheered_team_id:
+          row.user_id === input.userId ? null : row.viewer_cheered_team_id,
+        viewer_cheered_team_short_name:
+          row.user_id === input.userId
+            ? null
+            : row.viewer_cheered_team_short_name,
         can_edit: true,
       }),
     ),
@@ -493,6 +511,7 @@ export async function getAttendanceStats(userId: number) {
       game: record.game,
       favoriteTeamId,
       cheeredTeamId: record.cheeredTeamId ?? null,
+      viewerCheeredTeamId: record.viewerCheeredTeamId ?? null,
       viewerRelation: record.viewerRelation,
       ownerFavoriteTeamId: record.ownerFavoriteTeamId ?? null,
     }),

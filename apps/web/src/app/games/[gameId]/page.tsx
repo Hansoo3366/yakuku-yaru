@@ -7,7 +7,10 @@ import { useParams } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useState } from 'react';
 import { type Game } from '@/lib/baseball-api';
-import { type AttendanceRecord } from '@/lib/attendance-api';
+import {
+  respondAttendanceCompanion,
+  type AttendanceRecord,
+} from '@/lib/attendance-api';
 import type { CheerDialogItem } from '@/components/PlayerCheerDialog';
 import { PlayerPhoto } from '@/components/PlayerPhoto';
 import { getTeamLogoSrc } from '@/lib/team-logo';
@@ -26,6 +29,7 @@ import {
 import {
   canWriteAttendanceRecord,
   isGameCancelled,
+  isTeamInGame,
 } from '@/lib/attendance-game';
 import { getAttendanceTicketView } from '@/lib/attendance-score';
 import { getAssetUrl } from '@/lib/api';
@@ -281,11 +285,15 @@ function GameRecordPanel({
   game,
   attendanceRecords,
   canWriteAttendance,
+  onCheeredTeamSelect,
+  savingCheeredTeamRecordId,
   viewerFavoriteTeamId,
 }: {
   game: Game;
   attendanceRecords: AttendanceRecord[];
   canWriteAttendance: boolean;
+  onCheeredTeamSelect: (recordId: number, teamId: number) => void;
+  savingCheeredTeamRecordId: number | null;
   viewerFavoriteTeamId: number | null;
 }) {
   if (attendanceRecords.length) {
@@ -323,11 +331,16 @@ function GameRecordPanel({
               attendanceRecord.viewerRelation === 'owner'
                 ? '내가 작성'
                 : `${attendanceRecord.ownerNickname}님 티켓`;
+            const needsViewerCheeredTeam =
+              attendanceRecord.viewerRelation === 'companion' &&
+              !isTeamInGame(attendanceRecord.game, viewerFavoriteTeamId) &&
+              !isGameCancelled(attendanceRecord.game);
+            const selectedViewerCheeredTeamId =
+              attendanceRecord.viewerCheeredTeamId ?? null;
 
             return (
-              <Link
-                className="game-record-ticket-link"
-                href={`/attendance/${attendanceRecord.id}`}
+              <article
+                className="game-record-ticket-card"
                 key={attendanceRecord.id}
               >
                 <div className="game-record-ticket-preview">
@@ -359,8 +372,35 @@ function GameRecordPanel({
                     </p>
                   </div>
                 </div>
-                <span className="btn btn-ghost">티켓 보기</span>
-              </Link>
+                {needsViewerCheeredTeam ? (
+                  <div className="game-record-cheer-picker">
+                    <span>내 기준 응원팀</span>
+                    <div>
+                      {[game.awayTeam, game.homeTeam].map((team) => (
+                        <button
+                          className="game-record-cheer-button"
+                          data-selected={selectedViewerCheeredTeamId === team.id}
+                          disabled={savingCheeredTeamRecordId === attendanceRecord.id}
+                          key={team.id}
+                          onClick={() =>
+                            onCheeredTeamSelect(attendanceRecord.id, team.id)
+                          }
+                          type="button"
+                        >
+                          <img alt="" src={getTeamLogoSrc(team)} />
+                          {team.shortName}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+                <Link
+                  className="btn btn-ghost game-record-ticket-action"
+                  href={`/attendance/${attendanceRecord.id}`}
+                >
+                  티켓 보기
+                </Link>
+              </article>
             );
           })}
         </div>
@@ -406,6 +446,8 @@ export default function GameDetailPage() {
   const [selectedTeamCheer, setSelectedTeamCheer] =
     useState<CheerDialogItem | null>(null);
   const [cheerError, setCheerError] = useState('');
+  const [savingCheeredTeamRecordId, setSavingCheeredTeamRecordId] =
+    useState<number | null>(null);
   const game = gameQuery.data?.game ?? null;
   const attendanceRecords = useMemo(
     () =>
@@ -453,6 +495,31 @@ export default function GameDetailPage() {
 
   function handleTeamCheerClick(cheer: TeamCheer, imageUrl: string | null) {
     setSelectedTeamCheer(teamCheerToDialogItem(cheer, imageUrl));
+  }
+
+  async function handleCompanionCheeredTeamSelect(
+    recordId: number,
+    teamId: number,
+  ) {
+    if (!token) {
+      return;
+    }
+
+    setSavingCheeredTeamRecordId(recordId);
+
+    try {
+      await respondAttendanceCompanion(recordId, 'accepted', token, {
+        cheeredTeamId: teamId,
+      });
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.attendanceRecords({}, token),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.attendanceStats(token),
+      });
+    } finally {
+      setSavingCheeredTeamRecordId(null);
+    }
   }
 
   if (!game) {
@@ -554,6 +621,8 @@ export default function GameDetailPage() {
         attendanceRecords={attendanceRecords}
         canWriteAttendance={canWriteAttendance}
         game={game}
+        onCheeredTeamSelect={handleCompanionCheeredTeamSelect}
+        savingCheeredTeamRecordId={savingCheeredTeamRecordId}
         viewerFavoriteTeamId={viewerFavoriteTeamId}
       />
 

@@ -301,6 +301,8 @@ attendanceRouter.get('/:recordId', authenticate, async (req, res, next) => {
       }
 
       record.viewerRelation = 'companion';
+      record.viewerCheeredTeamId = companion.cheeredTeamId;
+      record.viewerCheeredTeamShortName = companion.cheeredTeamShortName;
       record.canEdit = companion.status === 'accepted';
     } else {
       record.canEdit = true;
@@ -460,7 +462,10 @@ attendanceRouter.patch(
     try {
       const recordId = Number(req.params.recordId);
       const userId = req.user?.id ?? 0;
-      const { status } = req.body as { status?: unknown };
+      const { status } = req.body as {
+        status?: unknown;
+        cheeredTeamId?: unknown;
+      };
 
       if (status !== 'accepted' && status !== 'rejected') {
         throw new HttpError(
@@ -468,6 +473,40 @@ attendanceRouter.patch(
           'INVALID_INPUT',
           '수락 또는 거절 중 하나를 선택해주세요.',
         );
+      }
+
+      const record = await findAttendanceRecordById(recordId);
+
+      if (!record) {
+        throw new HttpError(404, 'ATTENDANCE_NOT_FOUND', '직관 기록을 찾을 수 없습니다.');
+      }
+
+      const game = await findGameById(record.gameId);
+      const me = await findUserById(userId);
+      const favoriteTeamId = getFavoriteTeamIdFromUser(me);
+      const favoriteTeamShortName = getFavoriteTeamShortNameFromUser(me);
+      const isNeutralForViewer = !resolveFavoriteTeamIdInGame(
+        game ?? record.game,
+        favoriteTeamId,
+        favoriteTeamShortName,
+      );
+      let cheeredTeamId: number | null = null;
+
+      if (status === 'accepted' && isNeutralForViewer) {
+        const rawCheeredTeamId = Number(req.body.cheeredTeamId);
+
+        if (
+          !Number.isInteger(rawCheeredTeamId) ||
+          !resolveFavoriteTeamIdInGame(game ?? record.game, rawCheeredTeamId, null)
+        ) {
+          throw new HttpError(
+            400,
+            'CHEERED_TEAM_REQUIRED',
+            '중립 경기 동행은 응원한 팀을 선택해주세요.',
+          );
+        }
+
+        cheeredTeamId = rawCheeredTeamId;
       }
 
       const companion = await findCompanionForUser({ recordId, userId });
@@ -480,8 +519,13 @@ attendanceRouter.patch(
         );
       }
 
-      if (companion.status === status) {
-        const record = await findAttendanceRecordById(recordId);
+      if (
+        companion.status === status &&
+        companion.cheeredTeamId === cheeredTeamId
+      ) {
+        record.viewerRelation = 'companion';
+        record.viewerCheeredTeamId = companion.cheeredTeamId;
+        record.viewerCheeredTeamShortName = companion.cheeredTeamShortName;
         res.json({
           companion: { ...companion },
           record,
@@ -493,6 +537,7 @@ attendanceRouter.patch(
         recordId,
         userId,
         status,
+        cheeredTeamId,
       });
 
       if (!updated) {
@@ -503,29 +548,44 @@ attendanceRouter.patch(
         );
       }
 
-      const record = await findAttendanceRecordById(recordId);
+      const updatedRecord = await findAttendanceRecordById(recordId);
 
-      if (record) {
-        const responder = await findUserById(userId);
-        const responderLabel = responder?.nickname ?? '동행자';
-        const message =
-          status === 'accepted'
-            ? `${responderLabel}님이 동행 태그를 수락했어요.`
-            : `${responderLabel}님이 동행 태그를 거절했어요.`;
+      if (updatedRecord) {
+        updatedRecord.viewerRelation = 'companion';
+        updatedRecord.viewerCheeredTeamId = cheeredTeamId;
+        updatedRecord.viewerCheeredTeamShortName =
+          cheeredTeamId === updatedRecord.game.homeTeam.id
+            ? updatedRecord.game.homeTeam.shortName
+            : cheeredTeamId === updatedRecord.game.awayTeam.id
+              ? updatedRecord.game.awayTeam.shortName
+              : null;
+        if (companion.status !== status) {
+          const responderLabel = me?.nickname ?? '동행자';
+          const message =
+            status === 'accepted'
+              ? `${responderLabel}님이 동행 태그를 수락했어요.`
+              : `${responderLabel}님이 동행 태그를 거절했어요.`;
 
-        await createNotification({
-          userId: record.userId,
-          actorUserId: userId,
-          attendanceRecordId: recordId,
-          type:
-            status === 'accepted' ? 'companion_accepted' : 'companion_rejected',
-          message,
-        });
+          await createNotification({
+            userId: updatedRecord.userId,
+            actorUserId: userId,
+            attendanceRecordId: recordId,
+            type:
+              status === 'accepted' ? 'companion_accepted' : 'companion_rejected',
+            message,
+          });
+        }
       }
 
       res.json({
-        companion: { ...companion, status, respondedAt: new Date() },
-        record,
+        companion: {
+          ...companion,
+          status,
+          cheeredTeamId,
+          cheeredTeamShortName: updatedRecord?.viewerCheeredTeamShortName ?? null,
+          respondedAt: new Date(),
+        },
+        record: updatedRecord,
       });
     } catch (error) {
       next(error);

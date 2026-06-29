@@ -16,6 +16,7 @@ export function computeAttendanceStatsFromRecords(
       game: record.game,
       favoriteTeamId,
       cheeredTeamId: record.cheeredTeamId ?? null,
+      viewerCheeredTeamId: record.viewerCheeredTeamId ?? null,
       viewerRelation: record.viewerRelation,
       ownerFavoriteTeamId: record.ownerFavoriteTeamId ?? null,
     }),

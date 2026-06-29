@@ -18,6 +18,8 @@ export type AttendanceRecord = {
   updatedAt: string;
   ownerNickname: string;
   ownerFavoriteTeamId?: number | null;
+  viewerCheeredTeamId?: number | null;
+  viewerCheeredTeamShortName?: string | null;
   lastModifiedByUserId: number | null;
   lastModifiedByNickname: string | null;
   viewerRelation: 'owner' | 'companion';
@@ -51,6 +53,8 @@ export type AttendanceCompanion = {
   nickname: string;
   email: string;
   status: CompanionStatus;
+  cheeredTeamId?: number | null;
+  cheeredTeamShortName?: string | null;
   respondedAt: string | null;
   createdAt: string;
 };
@@ -155,13 +159,14 @@ export function respondAttendanceCompanion(
   recordId: number,
   status: 'accepted' | 'rejected',
   token: string,
+  input?: { cheeredTeamId?: number | null },
 ) {
   return request<{
     companion: AttendanceCompanion;
     record: AttendanceRecord | null;
   }>(`/attendance-records/${recordId}/companions/me`, {
     method: 'PATCH',
-    body: { status },
+    body: { status, cheeredTeamId: input?.cheeredTeamId },
     token,
   });
 }

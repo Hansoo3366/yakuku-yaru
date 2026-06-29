@@ -111,6 +111,7 @@ export type AttendanceRecordForOutcome = {
   result: string | null;
   game: GameForAttendanceScore;
   cheeredTeamId?: number | null;
+  viewerCheeredTeamId?: number | null;
   viewerRelation?: 'owner' | 'companion';
   ownerFavoriteTeamId?: number | null;
 };
@@ -128,6 +129,7 @@ export function resolveAttendanceOutcome(
     game: record.game,
     favoriteTeamId,
     cheeredTeamId: record.cheeredTeamId,
+    viewerCheeredTeamId: record.viewerCheeredTeamId,
     viewerRelation: record.viewerRelation,
     ownerFavoriteTeamId: record.ownerFavoriteTeamId,
   });

@@ -419,17 +419,22 @@ export async function runMigrations() {
       attendance_record_id BIGINT UNSIGNED NOT NULL,
       user_id BIGINT UNSIGNED NOT NULL,
       status VARCHAR(20) NOT NULL DEFAULT 'pending',
+      cheered_team_id BIGINT UNSIGNED NULL,
       responded_at DATETIME NULL,
       created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
       PRIMARY KEY (id),
       UNIQUE KEY uq_attendance_companions_record_user (attendance_record_id, user_id),
       KEY idx_attendance_companions_user_id (user_id),
+      KEY idx_attendance_companions_cheered_team_id (cheered_team_id),
       CONSTRAINT fk_attendance_companions_record
         FOREIGN KEY (attendance_record_id) REFERENCES attendance_records(id)
         ON DELETE CASCADE,
       CONSTRAINT fk_attendance_companions_user
         FOREIGN KEY (user_id) REFERENCES users(id)
-        ON DELETE CASCADE
+        ON DELETE CASCADE,
+      CONSTRAINT fk_attendance_companions_cheered_team
+        FOREIGN KEY (cheered_team_id) REFERENCES teams(id)
+        ON DELETE SET NULL
     )`,
   );
 
@@ -442,6 +447,22 @@ export async function runMigrations() {
     await db.execute(
       `ALTER TABLE attendance_companions
        ADD COLUMN responded_at DATETIME NULL AFTER status`,
+    );
+  }
+
+  const hasCompanionCheeredTeamId = await columnExists(
+    'attendance_companions',
+    'cheered_team_id',
+  );
+
+  if (!hasCompanionCheeredTeamId) {
+    await db.execute(
+      `ALTER TABLE attendance_companions
+       ADD COLUMN cheered_team_id BIGINT UNSIGNED NULL AFTER status,
+       ADD KEY idx_attendance_companions_cheered_team_id (cheered_team_id),
+       ADD CONSTRAINT fk_attendance_companions_cheered_team
+         FOREIGN KEY (cheered_team_id) REFERENCES teams(id)
+         ON DELETE SET NULL`,
     );
   }
 

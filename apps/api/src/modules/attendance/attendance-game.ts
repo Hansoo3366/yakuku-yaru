@@ -125,6 +125,7 @@ export function countsTowardWinRateForRecord(input: {
   game: GameTeamsLike;
   favoriteTeamId: number | null | undefined;
   cheeredTeamId?: number | null;
+  viewerCheeredTeamId?: number | null;
   viewerRelation?: 'owner' | 'companion';
   ownerFavoriteTeamId?: number | null;
 }) {
@@ -137,6 +138,7 @@ export function countsTowardWinRateForRecord(input: {
       game: input.game,
       favoriteTeamId: input.favoriteTeamId,
       cheeredTeamId: input.cheeredTeamId,
+      viewerCheeredTeamId: input.viewerCheeredTeamId,
       viewerRelation: input.viewerRelation,
       ownerFavoriteTeamId: input.ownerFavoriteTeamId,
     }) !== null
@@ -169,12 +171,23 @@ export function resolveOutcomeTeamId(input: {
   game: GameTeamsLike;
   favoriteTeamId: number | null | undefined;
   cheeredTeamId?: number | null;
+  viewerCheeredTeamId?: number | null;
   viewerRelation?: 'owner' | 'companion';
   ownerFavoriteTeamId?: number | null;
   ownerFavoriteTeamShortName?: string | null;
 }) {
   if (input.viewerRelation === 'companion') {
-    return input.favoriteTeamId ?? null;
+    const viewerTeamInGame = resolveFavoriteTeamIdInGame(
+      input.game,
+      input.favoriteTeamId,
+      null,
+    );
+
+    if (viewerTeamInGame != null) {
+      return viewerTeamInGame;
+    }
+
+    return resolveCheeredTeamId(input.game, input.viewerCheeredTeamId);
   }
 
   const ownerTeamInGame = resolveFavoriteTeamIdInGame(

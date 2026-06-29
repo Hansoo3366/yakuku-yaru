@@ -81,6 +81,7 @@ export type AttendanceRecordForOutcome = {
   result: string | null;
   game: GameForAttendanceScore;
   cheeredTeamId?: number | null;
+  viewerCheeredTeamId?: number | null;
   viewerRelation?: 'owner' | 'companion';
   ownerFavoriteTeamId?: number | null;
 };
@@ -98,6 +99,7 @@ export function resolveAttendanceOutcome(
     game: record.game,
     favoriteTeamId,
     cheeredTeamId: record.cheeredTeamId,
+    viewerCheeredTeamId: record.viewerCheeredTeamId,
     viewerRelation: record.viewerRelation,
     ownerFavoriteTeamId: record.ownerFavoriteTeamId,
   });
@@ -128,6 +130,7 @@ export function resolveOutcomeFavoriteTeamId(
     viewerRelation?: 'owner' | 'companion';
     ownerFavoriteTeamId?: number | null;
     cheeredTeamId?: number | null;
+    viewerCheeredTeamId?: number | null;
   },
   viewerFavoriteTeamId: number | null | undefined,
 ) {
@@ -135,6 +138,7 @@ export function resolveOutcomeFavoriteTeamId(
     game: record.game,
     favoriteTeamId: viewerFavoriteTeamId,
     cheeredTeamId: record.cheeredTeamId,
+    viewerCheeredTeamId: record.viewerCheeredTeamId,
     viewerRelation: record.viewerRelation,
     ownerFavoriteTeamId: record.ownerFavoriteTeamId,
   });
@@ -151,6 +155,7 @@ export function getAttendanceTicketView(
   record: AttendanceRecordForOutcome & {
     ownerFavoriteTeamId?: number | null;
     cheeredTeamId?: number | null;
+    viewerCheeredTeamId?: number | null;
     viewerRelation?: 'owner' | 'companion';
   },
   viewerFavoriteTeamId: number | null | undefined,
