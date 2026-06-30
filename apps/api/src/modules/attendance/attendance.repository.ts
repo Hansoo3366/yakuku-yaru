@@ -725,6 +725,10 @@ export async function getAttendanceStats(
   let favoriteTeamStadiumWinCount = 0;
   let favoriteTeamStadiumLoseCount = 0;
   let favoriteTeamStadiumDrawCount = 0;
+  let overallCancelledCount = 0;
+  let overallStadiumCancelledCount = 0;
+  let overallHomeCancelledCount = 0;
+  let favoriteTeamStadiumCancelledCount = 0;
   let stadiumWinCount = 0;
   let homeWinCount = 0;
   let countableStadium = 0;
@@ -737,9 +741,26 @@ export async function getAttendanceStats(
       homeCount += 1;
     }
 
+    const isFavoriteTeamStadium =
+      Boolean(favoriteTeamId) &&
+      isTeamInGame(record.game, favoriteTeamId) &&
+      record.watchType === 'stadium';
+
     if (favoriteTeamId && isTeamInGame(record.game, favoriteTeamId)) {
       if (record.watchType === 'stadium') {
         favoriteTeamStadiumCount += 1;
+      }
+    }
+
+    if (record.game.status === 'cancelled') {
+      overallCancelledCount += 1;
+      if (record.watchType === 'stadium') {
+        overallStadiumCancelledCount += 1;
+      } else if (record.watchType === 'home') {
+        overallHomeCancelledCount += 1;
+      }
+      if (isFavoriteTeamStadium) {
+        favoriteTeamStadiumCancelledCount += 1;
       }
     }
 
@@ -884,6 +905,10 @@ export async function getAttendanceStats(
     favoriteTeamStadiumLoseCount,
     favoriteTeamStadiumDrawCount,
     favoriteTeamStadiumWinRate,
+    overallCancelledCount,
+    overallStadiumCancelledCount,
+    overallHomeCancelledCount,
+    favoriteTeamStadiumCancelledCount,
     winRate,
     stadiumWinRate,
     homeWinRate,

@@ -202,6 +202,8 @@ function buildScheduleAdjustedWinRates(
   remainingGames: RemainingGame[],
   teams: TeamInput[],
   pythagoreanByTeamId: Map<number, number>,
+  fillerGamesByTeamId: Map<number, number>,
+  fillerWinProbByTeamId: Map<number, number>,
 ) {
   const scheduleSums = new Map(
     teams.map((team) => [team.id, { probabilitySum: 0, games: 0 }]),
@@ -223,6 +225,24 @@ function buildScheduleAdjustedWinRates(
     if (homeSchedule) {
       homeSchedule.probabilitySum += homeWinProbability;
       homeSchedule.games += 1;
+    }
+  }
+
+  // 일정 데이터에 없는 잔여 경기(우천취소 보류분 등)는 리그 평균 상대로
+  // 보정해 각 팀의 일정을 144경기 기준으로 맞춘다.
+  for (const team of teams) {
+    const filler = fillerGamesByTeamId.get(team.id) ?? 0;
+
+    if (filler <= 0) {
+      continue;
+    }
+
+    const schedule = scheduleSums.get(team.id);
+    const winProbability = fillerWinProbByTeamId.get(team.id) ?? 0.5;
+
+    if (schedule) {
+      schedule.probabilitySum += winProbability * filler;
+      schedule.games += filler;
     }
   }
 
@@ -295,10 +315,51 @@ export function calculatePlayoffProbabilityProjection(
     ]),
   );
   const remainingGames = buildRemainingGames(games);
+  const leagueAveragePyth =
+    teams.reduce(
+      (sum, team) => sum + (pythagoreanByTeamId.get(team.id) ?? 0.5),
+      0,
+    ) / teams.length;
+  const scheduledRemainingByTeamId = new Map(
+    teams.map((team) => [team.id, 0]),
+  );
+
+  for (const game of remainingGames) {
+    scheduledRemainingByTeamId.set(
+      game.awayTeamId,
+      (scheduledRemainingByTeamId.get(game.awayTeamId) ?? 0) + 1,
+    );
+    scheduledRemainingByTeamId.set(
+      game.homeTeamId,
+      (scheduledRemainingByTeamId.get(game.homeTeamId) ?? 0) + 1,
+    );
+  }
+
+  // KBO는 팀당 144경기. 일정 데이터가 불완전하면(보류·미편성 경기) 잔여
+  // 경기가 모자라 예상 W-T-L 합이 144에 못 미치고, 그만큼 불확실성이 줄어
+  // 상위팀 PS odds는 과대·버블팀은 과소 추정된다. 부족분을 리그 평균 상대
+  // 경기로 채워 144경기 기준으로 정규화한다.
+  const fillerGamesByTeamId = new Map(
+    teams.map((team) => {
+      const played = team.wins + team.losses + team.draws;
+      const scheduledRemaining = scheduledRemainingByTeamId.get(team.id) ?? 0;
+      const filler = KBO_REGULAR_SEASON_GAMES - played - scheduledRemaining;
+
+      return [team.id, Math.max(0, filler)];
+    }),
+  );
+  const fillerWinProbByTeamId = new Map(
+    teams.map((team) => [
+      team.id,
+      log5(pythagoreanByTeamId.get(team.id) ?? 0.5, leagueAveragePyth),
+    ]),
+  );
   const scheduleAdjustedByTeamId = buildScheduleAdjustedWinRates(
     remainingGames,
     teams,
     pythagoreanByTeamId,
+    fillerGamesByTeamId,
+    fillerWinProbByTeamId,
   );
   const seed = hashSeed(
     `${standings.rankDate ?? ''}:${standings.items
@@ -354,6 +415,37 @@ export function calculatePlayoffProbabilityProjection(
       } else {
         awayRecord.draws += 1;
         homeRecord.draws += 1;
+      }
+    }
+
+    // 일정 데이터에 없는 부족 경기를 리그 평균 상대로 채워 144경기 기준으로 맞춘다.
+    for (const team of teams) {
+      const filler = fillerGamesByTeamId.get(team.id) ?? 0;
+
+      if (filler <= 0) {
+        continue;
+      }
+
+      const record = records.get(team.id);
+
+      if (!record) {
+        continue;
+      }
+
+      const winProbability = fillerWinProbByTeamId.get(team.id) ?? 0.5;
+      const winWithDraw = winProbability * (1 - TIE_RATE);
+      const lossWithDraw = (1 - winProbability) * (1 - TIE_RATE);
+
+      for (let game = 0; game < filler; game += 1) {
+        const roll = random();
+
+        if (roll < winWithDraw) {
+          record.wins += 1;
+        } else if (roll < winWithDraw + lossWithDraw) {
+          record.losses += 1;
+        } else {
+          record.draws += 1;
+        }
       }
     }
 

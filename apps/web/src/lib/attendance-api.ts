@@ -99,6 +99,10 @@ export type AttendanceStats = {
   favoriteTeamStadiumLoseCount?: number;
   favoriteTeamStadiumDrawCount?: number;
   favoriteTeamStadiumWinRate?: number;
+  overallCancelledCount?: number;
+  overallStadiumCancelledCount?: number;
+  overallHomeCancelledCount?: number;
+  favoriteTeamStadiumCancelledCount?: number;
   winRate: number;
   stadiumWinRate: number;
   homeWinRate: number;

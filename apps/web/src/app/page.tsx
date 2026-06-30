@@ -129,10 +129,31 @@ function formatExpectedRecord(row: PlayoffProbabilityProjection['rows'][number])
 function PlayoffProbabilityTable({
   projection,
   highlightTeamId,
+  loading,
 }: {
   projection: PlayoffProbabilityProjection | null;
   highlightTeamId?: number | null;
+  loading?: boolean;
 }) {
+  if (loading) {
+    return (
+      <section aria-busy="true" className="card stack">
+        <div className="section-heading">
+          <div>
+            <h2>KBO 가을야구 진출 확률</h2>
+            <p>남은 대진을 반영해 시뮬레이션하고 있어요…</p>
+          </div>
+        </div>
+        <div className="playoff-probability-skeleton">
+          <Skeleton height={28} />
+          {Array.from({ length: 10 }).map((_, index) => (
+            <Skeleton height={40} key={index} />
+          ))}
+        </div>
+      </section>
+    );
+  }
+
   if (!projection) {
     return null;
   }
@@ -318,13 +339,20 @@ export default function HomePage() {
       ),
     [seasonGamesQuery.data?.items, teamStandings],
   );
+  const playoffLoading =
+    Boolean(teamStandingsQuery.data?.items.length) &&
+    seasonGamesQuery.isLoading;
 
   if (authState === 'guest') {
     return (
       <main className="page-shell">
         <section className="home-hero">
           <span className="eyebrow">야크크 야르~ 섹시야구</span>
-          <h1>KBO 일정과 가을야구 확률을 한눈에</h1>
+          <h1>
+            KBO 일정과 가을야구
+            <br />
+            확률을 한눈에
+          </h1>
           <p>
             프로야구 일정표와 야구 캘린더, 팀 순위와 가을야구 진출 확률, <br />
             직관 사진과 같이 간 친구의 기록까지 남기는 야구 앱입니다.
@@ -364,7 +392,10 @@ export default function HomePage() {
           </div>
           <TeamStandingsTable standings={teamStandings} />
         </section>
-        <PlayoffProbabilityTable projection={playoffProjection} />
+        <PlayoffProbabilityTable
+          loading={playoffLoading}
+          projection={playoffProjection}
+        />
       </main>
     );
   }
@@ -391,7 +422,7 @@ export default function HomePage() {
         </div>
 
         <div className="dashboard-section-grid">
-          <section className="card stack">
+          <section className="card stack home-product-card">
             <div className="section-heading">
               <div>
                 <h2>다가오는 경기</h2>
@@ -461,7 +492,7 @@ export default function HomePage() {
           </section>
 
           <section className="stack">
-            <div className="card-dark home-win-rate-card">
+            <div className="card home-win-rate-card home-product-card">
               <span className="eyebrow">Win Rate</span>
               {stats ? (
                 <>
@@ -477,12 +508,11 @@ export default function HomePage() {
                       <strong
                         style={{
                           fontSize: 'var(--text-3xl)',
-                          color: 'var(--color-white)',
                         }}
                       >
                         {stats.winRate}%
                       </strong>
-                      <span style={{ color: 'rgba(255,255,255,0.7)' }}>
+                      <span>
                         / {stats.totalCount}경기
                       </span>
                     </div>
@@ -511,7 +541,6 @@ export default function HomePage() {
                   ) : null}
                   <p
                     style={{
-                      color: 'rgba(255,255,255,0.78)',
                       fontSize: 'var(--text-sm)',
                       marginTop: 6,
                     }}
@@ -536,7 +565,7 @@ export default function HomePage() {
         </div>
 
         {recentRecords.length ? (
-          <section className="card stack">
+          <section className="card stack home-product-card">
             <div className="section-heading">
               <div>
                 <h2>최근 직관 기록</h2>
@@ -592,7 +621,7 @@ export default function HomePage() {
         ) : null}
       </section>
 
-      <section className="card stack">
+      <section className="card stack home-leaderboard-card">
         <div className="section-heading">
           <div>
             <h2>KBO 팀 순위</h2>
@@ -609,11 +638,13 @@ export default function HomePage() {
         </div>
         <TeamStandingsTable
           highlightTeamId={favoriteTeam?.id}
+          variant="leaderboard"
           standings={teamStandings}
         />
       </section>
       <PlayoffProbabilityTable
         highlightTeamId={favoriteTeam?.id}
+        loading={playoffLoading}
         projection={playoffProjection}
       />
     </main>

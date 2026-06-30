@@ -42,6 +42,7 @@ type StatView = {
   win: number;
   lose: number;
   draw: number;
+  cancelled: number;
   rate: number;
 };
 
@@ -109,6 +110,7 @@ export default function MyPage() {
               win: stats.overallWinCount ?? stats.winCount,
               lose: stats.overallLoseCount ?? stats.loseCount,
               draw: stats.overallDrawCount ?? stats.drawCount,
+              cancelled: stats.overallCancelledCount ?? 0,
               rate: stats.overallWinRate ?? stats.winRate,
             },
             {
@@ -119,6 +121,7 @@ export default function MyPage() {
               win: stats.overallStadiumWinCount ?? stats.winCount,
               lose: stats.overallStadiumLoseCount ?? stats.loseCount,
               draw: stats.overallStadiumDrawCount ?? stats.drawCount,
+              cancelled: stats.overallStadiumCancelledCount ?? 0,
               rate: stats.overallStadiumWinRate ?? stats.stadiumWinRate,
             },
             {
@@ -129,6 +132,7 @@ export default function MyPage() {
               win: stats.overallHomeWinCount ?? 0,
               lose: stats.overallHomeLoseCount ?? 0,
               draw: stats.overallHomeDrawCount ?? 0,
+              cancelled: stats.overallHomeCancelledCount ?? 0,
               rate: stats.overallHomeWinRate ?? stats.homeWinRate,
             },
             {
@@ -141,6 +145,7 @@ export default function MyPage() {
               win: stats.favoriteTeamStadiumWinCount ?? 0,
               lose: stats.favoriteTeamStadiumLoseCount ?? 0,
               draw: stats.favoriteTeamStadiumDrawCount ?? 0,
+              cancelled: stats.favoriteTeamStadiumCancelledCount ?? 0,
               rate: stats.favoriteTeamStadiumWinRate ?? stats.stadiumWinRate,
             },
           ]
@@ -354,50 +359,50 @@ export default function MyPage() {
             <span className="badge badge-gold">팀 미설정</span>
           )}
         </div>
-        <div className="profile-hero-stats">
-          <div className="profile-rate">
+        <div className="profile-hero-metrics">
+          <div className="profile-metric profile-metric--primary">
             <span>직관 승률</span>
             <strong>{stats.winRate}%</strong>
           </div>
-          {stats.titles?.length ? (
-            <div className="profile-title-list">
-              {stats.titles.map((title) => (
-                <span
-                  className="profile-title-pill"
-                  data-description={title.description}
-                  data-kind={title.kind}
-                  key={title.key}
-                  tabIndex={0}
-                >
-                  {title.label}
-                </span>
-              ))}
-            </div>
-          ) : (
-            <span
-              className="muted"
-              style={{ fontSize: 'var(--text-xs)', justifySelf: 'end' }}
-            >
-              기록을 남기면 승리요정·패배요정이 붙어요
-            </span>
-          )}
+          <div className="profile-metric">
+            <span>전체 기록</span>
+            <strong>{stats.totalCount}</strong>
+          </div>
+          <div className="profile-metric">
+            <span>직관</span>
+            <strong>{stats.stadiumCount}</strong>
+          </div>
+          <div className="profile-metric">
+            <span>집관</span>
+            <strong>{stats.homeCount}</strong>
+          </div>
         </div>
+        {stats.titles?.length ? (
+          <div className="profile-title-list profile-hero-titles">
+            {stats.titles.map((title) => (
+              <span
+                className="profile-title-pill"
+                data-description={title.description}
+                data-kind={title.kind}
+                key={title.key}
+                tabIndex={0}
+              >
+                {title.label}
+              </span>
+            ))}
+          </div>
+        ) : (
+          <span className="profile-hero-hint">
+            기록을 남기면 승리요정·패배요정이 붙어요
+          </span>
+        )}
       </section>
 
-      <section className="profile-stat-summary" aria-label="기록 요약">
-        <div className="profile-stat-summary-card">
-          <span>전체 기록</span>
-          <strong>{stats.totalCount}</strong>
-        </div>
-        <div className="profile-stat-summary-card">
-          <span>전체 직관</span>
-          <strong>{stats.stadiumCount}</strong>
-        </div>
-        <div className="profile-stat-summary-card">
-          <span>전체 집관</span>
-          <strong>{stats.homeCount}</strong>
-        </div>
-      </section>
+      {statusMessage ? (
+        <p className="profile-status-banner" role="status">
+          {statusMessage}
+        </p>
+      ) : null}
 
       <section className="card profile-stat-explorer">
         <div className="section-heading profile-stat-explorer-head">
@@ -461,34 +466,19 @@ export default function MyPage() {
                   <span>무</span>
                   <strong>{selectedStatView.draw}</strong>
                 </div>
+                {selectedStatView.cancelled > 0 ? (
+                  <div className="profile-stat-result" data-kind="cancelled">
+                    <span>취소</span>
+                    <strong>{selectedStatView.cancelled}</strong>
+                  </div>
+                ) : null}
               </div>
             </div>
           </div>
         ) : null}
       </section>
 
-      <section className="card stack-sm" aria-label="알림">
-        <div className="section-heading" style={{ marginBottom: 0 }}>
-          <div>
-            <h2>알림</h2>
-            <p>프로필과 설정 변경 내역을 확인해요.</p>
-          </div>
-        </div>
-        {statusMessage ? (
-          <p
-            className="muted"
-            style={{ fontSize: 'var(--text-sm)' }}
-            role="status"
-          >
-            {statusMessage}
-          </p>
-        ) : (
-          <p className="muted" style={{ fontSize: 'var(--text-sm)' }}>
-            새로운 알림이 없어요.
-          </p>
-        )}
-      </section>
-
+      <div className="profile-settings-grid">
       <section className="card">
         <div className="section-heading">
           <div>
@@ -574,6 +564,7 @@ export default function MyPage() {
           로그아웃
         </button>
       </section>
+      </div>
     </main>
   );
 }
