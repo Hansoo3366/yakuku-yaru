@@ -25,7 +25,11 @@ export function HonorTitleSwiper({ titles }: Props) {
       spaceBetween={6}
     >
       {titles.map((title) => (
-        <SwiperSlide className="home-title-swiper-slide" key={title.key}>
+        <SwiperSlide
+          className="home-title-swiper-slide"
+          key={title.key}
+          style={{ width: 'auto' }}
+        >
           <span
             className="profile-title-pill home-title-pill"
             data-description={title.description}

@@ -6169,8 +6169,8 @@ img {
 .home-win-rate-titles {
   display: grid;
   gap: var(--space-2);
-  grid-template-rows: auto 30px;
   min-height: calc(30px + var(--space-2) + 1em);
+  overflow: visible;
 }
 
 .home-win-rate-titles-label {
@@ -6181,9 +6181,10 @@ img {
 }
 
 .home-title-swiper {
-  height: 30px;
   margin: 0;
+  min-height: 30px;
   overflow: hidden;
+  padding: 2px 0;
   width: 100%;
 }
 
@@ -6191,13 +6192,16 @@ img {
   align-items: center;
 }
 
-.home-title-swiper-slide {
+.home-title-swiper .swiper-slide {
+  flex-shrink: 0;
   height: auto;
   width: auto;
 }
 
 .home-title-swiper-slide .profile-title-pill {
   display: inline-flex;
+  margin-top: 0;
+  max-width: none;
 }
 
 .home-win-rate-titles-empty {
