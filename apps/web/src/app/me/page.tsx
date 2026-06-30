@@ -168,7 +168,12 @@ export default function MyPage() {
     '--stat-lose-angle': `${statLoseAngle}deg`,
   } as CSSProperties;
 
-  if (meQuery.isLoading || statsQuery.isLoading || teamsQuery.isLoading || !stats) {
+  if (
+    meQuery.isLoading ||
+    statsQuery.isLoading ||
+    teamsQuery.isLoading ||
+    !stats
+  ) {
     return (
       <main className="app-shell">
         <Skeleton height={200} radius={10} />
@@ -410,7 +415,11 @@ export default function MyPage() {
             <h2>승패 분석</h2>
             <p>기준을 바꿔가며 승률과 승패 흐름을 봅니다.</p>
           </div>
-          <div className="profile-stat-tabs" role="tablist" aria-label="통계 기준">
+          <div
+            className="profile-stat-tabs"
+            role="tablist"
+            aria-label="통계 기준"
+          >
             {statViews.map((view) => (
               <button
                 aria-selected={activeStatFilter === view.key}
@@ -479,91 +488,92 @@ export default function MyPage() {
       </section>
 
       <div className="profile-settings-grid">
-      <section className="card">
-        <div className="section-heading">
-          <div>
-            <h2>응원 팀</h2>
-            <p>경기 일정과 캘린더 필터에 사용되는 응원 팀이에요.</p>
+        <section className="card">
+          <div className="section-heading">
+            <div>
+              <h2>응원 팀</h2>
+              <p>경기 일정과 캘린더 필터에 사용되는 응원 팀이에요.</p>
+            </div>
+            <button
+              className="btn btn-ghost btn-sm"
+              onClick={() => setShowTeamPicker((current) => !current)}
+              type="button"
+            >
+              {showTeamPicker ? '닫기' : '변경하기'}
+            </button>
+          </div>
+          {!showTeamPicker ? (
+            <div
+              style={{
+                alignItems: 'center',
+                display: 'flex',
+                gap: 'var(--space-3)',
+              }}
+            >
+              {favoriteTeam ? (
+                <>
+                  <img
+                    alt=""
+                    src={getTeamLogoSrc(favoriteTeam)}
+                    style={{ height: 44, width: 44 }}
+                  />
+                  <div>
+                    <strong
+                      style={{ display: 'block', fontSize: 'var(--text-md)' }}
+                    >
+                      {favoriteTeam.name}
+                    </strong>
+                    <span
+                      className="muted"
+                      style={{ fontSize: 'var(--text-xs)' }}
+                    >
+                      {favoriteTeam.shortName}
+                    </span>
+                  </div>
+                </>
+              ) : (
+                <p className="muted" style={{ fontSize: 'var(--text-sm)' }}>
+                  아직 응원 팀을 선택하지 않았어요. `변경하기`를 눌러
+                  설정하세요.
+                </p>
+              )}
+            </div>
+          ) : (
+            <div className="team-grid">
+              {teams.map((team) => {
+                const isSelected = user?.favoriteTeamId === team.id;
+                return (
+                  <button
+                    aria-pressed={isSelected}
+                    className={`team-grid-card ${isSelected ? 'is-selected' : ''}`}
+                    key={team.id}
+                    onClick={() => handleFavoriteTeamChange(team.id)}
+                    type="button"
+                  >
+                    <img alt="" src={getTeamLogoSrc(team)} />
+                    <span>{team.shortName}</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </section>
+
+        <section className="card stack-sm" aria-label="계정">
+          <div className="section-heading" style={{ marginBottom: 0 }}>
+            <h2>계정</h2>
           </div>
           <button
-            className="btn btn-ghost btn-sm"
-            onClick={() => setShowTeamPicker((current) => !current)}
+            className="btn btn-ghost"
+            onClick={() => {
+              clearSession();
+              router.replace('/');
+            }}
             type="button"
           >
-            {showTeamPicker ? '닫기' : '변경하기'}
+            로그아웃
           </button>
-        </div>
-        {!showTeamPicker ? (
-          <div
-            style={{
-              alignItems: 'center',
-              display: 'flex',
-              gap: 'var(--space-3)',
-            }}
-          >
-            {favoriteTeam ? (
-              <>
-                <img
-                  alt=""
-                  src={getTeamLogoSrc(favoriteTeam)}
-                  style={{ height: 44, width: 44 }}
-                />
-                <div>
-                  <strong
-                    style={{ display: 'block', fontSize: 'var(--text-md)' }}
-                  >
-                    {favoriteTeam.name}
-                  </strong>
-                  <span
-                    className="muted"
-                    style={{ fontSize: 'var(--text-xs)' }}
-                  >
-                    {favoriteTeam.shortName}
-                  </span>
-                </div>
-              </>
-            ) : (
-              <p className="muted" style={{ fontSize: 'var(--text-sm)' }}>
-                아직 응원 팀을 선택하지 않았어요. `변경하기`를 눌러 설정하세요.
-              </p>
-            )}
-          </div>
-        ) : (
-          <div className="team-grid">
-            {teams.map((team) => {
-              const isSelected = user?.favoriteTeamId === team.id;
-              return (
-                <button
-                  aria-pressed={isSelected}
-                  className={`team-grid-card ${isSelected ? 'is-selected' : ''}`}
-                  key={team.id}
-                  onClick={() => handleFavoriteTeamChange(team.id)}
-                  type="button"
-                >
-                  <img alt="" src={getTeamLogoSrc(team)} />
-                  <span>{team.shortName}</span>
-                </button>
-              );
-            })}
-          </div>
-        )}
-      </section>
-
-      <section className="card stack-sm" aria-label="계정">
-        <div className="section-heading" style={{ marginBottom: 0 }}>
-          <h2>계정</h2>
-        </div>
-        <button
-          className="btn btn-ghost"
-          onClick={() => {
-            clearSession();
-            router.replace('/');
-          }}
-          type="button"
-        >
-          로그아웃
-        </button>
-      </section>
+        </section>
       </div>
     </main>
   );
