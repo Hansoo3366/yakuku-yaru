@@ -10,6 +10,7 @@ import { TeamStandingsTable } from '@/components/TeamStandingsTable';
 import { getTeamLogoSrc } from '@/lib/team-logo';
 import { Skeleton, SkeletonCard } from '@/components/Skeleton';
 import { EmptyState } from '@/components/EmptyState';
+import { HonorTitleSwiper } from '@/components/HonorTitleSwiper';
 import { getGameStatusLabel, getGameStatusTone } from '@/lib/game-status';
 import { isGameCancelled } from '@/lib/attendance-game';
 import { resolveAttendanceOutcome } from '@/lib/attendance-score';
@@ -546,6 +547,18 @@ export default function HomePage() {
                         직관 기록을 남기면 승률과 승패 흐름이 여기에 모여요.
                       </p>
                     )}
+                    <div className="home-win-rate-titles">
+                      <span className="home-win-rate-titles-label">
+                        명예타이틀
+                      </span>
+                      {stats.titles?.length ? (
+                        <HonorTitleSwiper titles={stats.titles} />
+                      ) : (
+                        <p className="home-win-rate-titles-empty">
+                          타이틀 미보유
+                        </p>
+                      )}
+                    </div>
                   </>
                 ) : null}
               </div>
