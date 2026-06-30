@@ -6171,6 +6171,8 @@ img {
   gap: var(--space-2);
   min-height: calc(30px + var(--space-2) + 1em);
   overflow: visible;
+  position: relative;
+  z-index: 1;
 }
 
 .home-win-rate-titles-label {
@@ -6183,9 +6185,13 @@ img {
 .home-title-swiper {
   margin: 0;
   min-height: 30px;
-  overflow: hidden;
+  overflow: visible;
   padding: 2px 0;
   width: 100%;
+}
+
+.home-title-swiper.swiper {
+  overflow: visible;
 }
 
 .home-title-swiper .swiper-wrapper {
@@ -6199,9 +6205,19 @@ img {
 }
 
 .home-title-swiper-slide .profile-title-pill {
+  cursor: help;
   display: inline-flex;
   margin-top: 0;
   max-width: none;
+}
+
+.home-title-swiper .profile-title-pill[data-description]::after {
+  box-shadow: none;
+  z-index: 30;
+}
+
+.home-title-swiper .profile-title-pill[data-description]::before {
+  z-index: 31;
 }
 
 .home-win-rate-titles-empty {
