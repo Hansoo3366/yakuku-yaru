@@ -87,22 +87,24 @@ export function AppHeader() {
         </Link>
 
         <nav className="site-nav" aria-label="상단 메뉴">
-          {primaryLinks.map((item) => (
-            <Link
-              aria-current={
-                isActivePath(pathname, item.href, item.exact)
-                  ? 'page'
-                  : undefined
-              }
-              className={
-                isActivePath(pathname, item.href, item.exact) ? 'active' : ''
-              }
-              href={item.href}
-              key={item.href}
-            >
-              {item.label}
-            </Link>
-          ))}
+          {primaryLinks
+            .filter((item) => token || item.href !== '/me')
+            .map((item) => (
+              <Link
+                aria-current={
+                  isActivePath(pathname, item.href, item.exact)
+                    ? 'page'
+                    : undefined
+                }
+                className={
+                  isActivePath(pathname, item.href, item.exact) ? 'active' : ''
+                }
+                href={item.href}
+                key={item.href}
+              >
+                {item.label}
+              </Link>
+            ))}
           {user?.role === 'admin' ? (
             <Link
               aria-current={
@@ -153,6 +155,7 @@ export function AppHeader() {
 
 export function AppFooter() {
   const pathname = usePathname();
+  const token = useAuthStore((state) => state.token);
   const isWideLayout =
     pathname === '/calendar' || pathname.startsWith('/calendar/');
 
@@ -168,7 +171,7 @@ export function AppFooter() {
           <Link href="/calendar">캘린더</Link>
           <Link href="/cheers">응원가</Link>
           <Link href="/posts">게시판</Link>
-          <Link href="/me">마이페이지</Link>
+          {token ? <Link href="/me">마이페이지</Link> : null}
         </nav>
       </div>
     </footer>

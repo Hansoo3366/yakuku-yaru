@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useAuthStore } from '@/lib/auth-store';
 import {
   CalendarDays,
   Home,
@@ -26,10 +27,14 @@ const navItems: Array<{
 
 export function BottomNav() {
   const pathname = usePathname();
+  const token = useAuthStore((state) => state.token);
+  const visibleNavItems = token
+    ? navItems
+    : navItems.filter((item) => item.href !== '/me');
 
   return (
     <nav className="bottom-nav" aria-label="주요 메뉴">
-      {navItems.map((item) => {
+      {visibleNavItems.map((item) => {
         const Icon = item.icon;
         const isActive =
           'exact' in item && item.exact

@@ -285,6 +285,7 @@ function GameRecordPanel({
   game,
   attendanceRecords,
   canWriteAttendance,
+  isLoggedIn,
   onCheeredTeamSelect,
   savingCheeredTeam,
   viewerFavoriteTeamId,
@@ -292,6 +293,7 @@ function GameRecordPanel({
   game: Game;
   attendanceRecords: AttendanceRecord[];
   canWriteAttendance: boolean;
+  isLoggedIn: boolean;
   onCheeredTeamSelect: (teamId: number) => void;
   savingCheeredTeam: boolean;
   viewerFavoriteTeamId: number | null;
@@ -418,7 +420,12 @@ function GameRecordPanel({
           <p>경기 후 포토 티켓으로 남겨보세요</p>
         </div>
       </div>
-      {canWriteAttendance ? (
+      {!isLoggedIn ? (
+        <p className="score-input-hint">
+          직관 기록을 남기려면{' '}
+          <Link href="/login">로그인</Link>이 필요해요.
+        </p>
+      ) : canWriteAttendance ? (
         <Link
           className="btn btn-primary btn-lg game-record-cta"
           href={`/attendance/new?gameId=${game.id}`}
@@ -617,6 +624,7 @@ export default function GameDetailPage() {
         attendanceRecords={attendanceRecords}
         canWriteAttendance={canWriteAttendance}
         game={game}
+        isLoggedIn={Boolean(token)}
         onCheeredTeamSelect={handleCompanionCheeredTeamSelect}
         savingCheeredTeam={savingCheeredTeam}
         viewerFavoriteTeamId={viewerFavoriteTeamId}
