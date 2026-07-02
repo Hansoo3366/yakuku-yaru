@@ -1,13 +1,16 @@
-import type {
-  Game,
-  TeamChampionshipHistory,
-  TeamStandingsResponse,
-} from '@/lib/baseball-api';
+import type { Game } from '../games/game.repository.js';
+import type { TeamChampionshipHistory } from '../teams/championship-history.js';
+import type { TeamStandingRow } from '../kbo-team-rank/team-rank.repository.js';
 
-const KBO_REGULAR_SEASON_GAMES = 144;
-const MIN_GAMES_FOR_PROJECTION = 40;
-const DEFAULT_SIMULATIONS = 100000;
+export const KBO_REGULAR_SEASON_GAMES = 144;
+export const MIN_GAMES_FOR_PROJECTION = 40;
+export const DEFAULT_PROJECTION_SIMULATIONS = 100000;
+export const SEASON_PROJECTION_MODEL_VERSION =
+  'season-rank-current60-pyth40-144-v1';
+
 const PYTHAGOREAN_GAMMA = 1.83;
+const CURRENT_WIN_RATE_WEIGHT = 0.6;
+const PYTHAGOREAN_WIN_RATE_WEIGHT = 0.4;
 const TIE_RATE = 0.02;
 const HOME_ADVANTAGE_LOGIT = 0.1;
 
@@ -27,15 +30,22 @@ type RemainingGame = {
   homeTeamId: number;
 };
 
-export type PlayoffProbabilityRow = {
+export type SeasonProjectionInput = {
+  seasonYear: number;
+  rankDate: string | null;
+  seriesId: string;
+  items: TeamStandingRow[];
+};
+
+export type SeasonProjectionRow = {
   teamId: number;
   teamShortName: string;
   teamName: string;
-  playoffProbability: number;
   averageRank: number;
   averageWins: number;
   averageDraws: number;
   averageLosses: number;
+  projectedGames: number;
   expectedWinRate: number;
   currentWinRate: number;
   pythagoreanWinRate: number;
@@ -44,12 +54,17 @@ export type PlayoffProbabilityRow = {
   championshipHistory: TeamChampionshipHistory;
 };
 
-export type PlayoffProbabilityProjection = {
-  rows: PlayoffProbabilityRow[];
+export type SeasonProjection = {
+  seasonYear: number;
+  rankDate: string;
+  seriesId: string;
+  modelVersion: string;
+  generatedAt: string;
+  rows: SeasonProjectionRow[];
   simulations: number;
   minGames: number;
   remainingGames: number;
-  rankDate: string | null;
+  projectedGames: number;
 };
 
 function clamp(value: number, min = 0.01, max = 0.99) {
@@ -101,6 +116,13 @@ function kboWinPct(wins: number, losses: number) {
   return wins / decisions;
 }
 
+function projectedTeamWinPct(currentWinRate: number, pythagoreanWinRate: number) {
+  return (
+    CURRENT_WIN_RATE_WEIGHT * currentWinRate +
+    PYTHAGOREAN_WIN_RATE_WEIGHT * pythagoreanWinRate
+  );
+}
+
 function hashSeed(value: string) {
   let hash = 2166136261;
 
@@ -129,7 +151,11 @@ function hasFinalScore(game: Game) {
   return typeof game.homeScore === 'number' && typeof game.awayScore === 'number';
 }
 
-function buildTeamInputs(standings: TeamStandingsResponse, games: Game[]) {
+function isUnplayedRegularSeasonGame(game: Game) {
+  return game.status !== 'finished' && !hasFinalScore(game);
+}
+
+function buildTeamInputs(standings: SeasonProjectionInput, games: Game[]) {
   const runTotals = new Map<
     number,
     { runsFor: number; runsAgainst: number; scoredGames: number }
@@ -144,7 +170,7 @@ function buildTeamInputs(standings: TeamStandingsResponse, games: Game[]) {
   }
 
   for (const game of games) {
-    if (!hasFinalScore(game)) {
+    if (game.status !== 'finished' || !hasFinalScore(game)) {
       continue;
     }
 
@@ -189,7 +215,7 @@ function buildTeamInputs(standings: TeamStandingsResponse, games: Game[]) {
 
 function buildRemainingGames(games: Game[]) {
   return games
-    .filter((game) => !hasFinalScore(game))
+    .filter(isUnplayedRegularSeasonGame)
     .map(
       (game): RemainingGame => ({
         awayTeamId: game.awayTeam.id,
@@ -201,7 +227,7 @@ function buildRemainingGames(games: Game[]) {
 function buildScheduleAdjustedWinRates(
   remainingGames: RemainingGame[],
   teams: TeamInput[],
-  pythagoreanByTeamId: Map<number, number>,
+  projectedWinRateByTeamId: Map<number, number>,
   fillerGamesByTeamId: Map<number, number>,
   fillerWinProbByTeamId: Map<number, number>,
 ) {
@@ -210,9 +236,11 @@ function buildScheduleAdjustedWinRates(
   );
 
   for (const game of remainingGames) {
-    const awayPyth = pythagoreanByTeamId.get(game.awayTeamId) ?? 0.5;
-    const homePyth = pythagoreanByTeamId.get(game.homeTeamId) ?? 0.5;
-    const awayWinProbability = applyHomeAdvantage(log5(awayPyth, homePyth));
+    const awayProjected = projectedWinRateByTeamId.get(game.awayTeamId) ?? 0.5;
+    const homeProjected = projectedWinRateByTeamId.get(game.homeTeamId) ?? 0.5;
+    const awayWinProbability = applyHomeAdvantage(
+      log5(awayProjected, homeProjected),
+    );
     const homeWinProbability = 1 - awayWinProbability;
     const awaySchedule = scheduleSums.get(game.awayTeamId);
     const homeSchedule = scheduleSums.get(game.homeTeamId);
@@ -228,8 +256,6 @@ function buildScheduleAdjustedWinRates(
     }
   }
 
-  // 일정 데이터에 없는 잔여 경기(우천취소 보류분 등)는 리그 평균 상대로
-  // 보정해 각 팀의 일정을 144경기 기준으로 맞춘다.
   for (const team of teams) {
     const filler = fillerGamesByTeamId.get(team.id) ?? 0;
 
@@ -254,8 +280,35 @@ function buildScheduleAdjustedWinRates(
         team.id,
         schedule?.games
           ? schedule.probabilitySum / schedule.games
-          : (pythagoreanByTeamId.get(team.id) ?? 0.5),
+          : (projectedWinRateByTeamId.get(team.id) ?? 0.5),
       ];
+    }),
+  );
+}
+
+function inferProjectionGamesByTeamId(
+  teams: TeamInput[],
+  remainingGames: RemainingGame[],
+) {
+  const remainingByTeamId = new Map(teams.map((team) => [team.id, 0]));
+
+  for (const game of remainingGames) {
+    remainingByTeamId.set(
+      game.awayTeamId,
+      (remainingByTeamId.get(game.awayTeamId) ?? 0) + 1,
+    );
+    remainingByTeamId.set(
+      game.homeTeamId,
+      (remainingByTeamId.get(game.homeTeamId) ?? 0) + 1,
+    );
+  }
+
+  return new Map(
+    teams.map((team) => {
+      const played = team.wins + team.losses + team.draws;
+      const remaining = remainingByTeamId.get(team.id) ?? 0;
+
+      return [team.id, played + remaining];
     }),
   );
 }
@@ -263,7 +316,7 @@ function buildScheduleAdjustedWinRates(
 function rankTeams(
   records: Map<number, { wins: number; losses: number; draws: number }>,
   teams: TeamInput[],
-  pythagoreanByTeamId: Map<number, number>,
+  projectedWinRateByTeamId: Map<number, number>,
 ) {
   return [...teams].sort((a, b) => {
     const recordA = records.get(a.id);
@@ -279,21 +332,25 @@ function rankTeams(
     if (pctB !== pctA) return pctB - pctA;
     if (recordB.wins !== recordA.wins) return recordB.wins - recordA.wins;
 
-    const pythA = pythagoreanByTeamId.get(a.id) ?? 0.5;
-    const pythB = pythagoreanByTeamId.get(b.id) ?? 0.5;
+    const projectedA = projectedWinRateByTeamId.get(a.id) ?? 0.5;
+    const projectedB = projectedWinRateByTeamId.get(b.id) ?? 0.5;
 
-    if (pythB !== pythA) return pythB - pythA;
+    if (projectedB !== projectedA) return projectedB - projectedA;
 
     return a.shortName.localeCompare(b.shortName, 'ko');
   });
 }
 
-export function calculatePlayoffProbabilityProjection(
-  standings: TeamStandingsResponse | null,
+export function calculateSeasonProjection(
+  standings: SeasonProjectionInput | null,
   games: Game[],
-  simulations = DEFAULT_SIMULATIONS,
-): PlayoffProbabilityProjection | null {
+  simulations = DEFAULT_PROJECTION_SIMULATIONS,
+): SeasonProjection | null {
   if (!standings?.items.length || standings.items.length < 10) {
+    return null;
+  }
+
+  if (!standings.rankDate) {
     return null;
   }
 
@@ -314,36 +371,29 @@ export function calculatePlayoffProbabilityProjection(
       pythagoreanWinPct(team.runsFor, team.runsAgainst),
     ]),
   );
+  const projectedWinRateByTeamId = new Map(
+    teams.map((team) => {
+      const currentWinRate = kboWinPct(team.wins, team.losses);
+      const pythagoreanWinRate = pythagoreanByTeamId.get(team.id) ?? 0.5;
+
+      return [
+        team.id,
+        projectedTeamWinPct(currentWinRate, pythagoreanWinRate),
+      ];
+    }),
+  );
   const remainingGames = buildRemainingGames(games);
-  const leagueAveragePyth =
+  const knownGamesByTeamId = inferProjectionGamesByTeamId(teams, remainingGames);
+  const projectedGames = KBO_REGULAR_SEASON_GAMES;
+  const leagueAverageProjectedWinRate =
     teams.reduce(
-      (sum, team) => sum + (pythagoreanByTeamId.get(team.id) ?? 0.5),
+      (sum, team) => sum + (projectedWinRateByTeamId.get(team.id) ?? 0.5),
       0,
     ) / teams.length;
-  const scheduledRemainingByTeamId = new Map(
-    teams.map((team) => [team.id, 0]),
-  );
-
-  for (const game of remainingGames) {
-    scheduledRemainingByTeamId.set(
-      game.awayTeamId,
-      (scheduledRemainingByTeamId.get(game.awayTeamId) ?? 0) + 1,
-    );
-    scheduledRemainingByTeamId.set(
-      game.homeTeamId,
-      (scheduledRemainingByTeamId.get(game.homeTeamId) ?? 0) + 1,
-    );
-  }
-
-  // KBO는 팀당 144경기. 일정 데이터가 불완전하면(보류·미편성 경기) 잔여
-  // 경기가 모자라 예상 W-T-L 합이 144에 못 미치고, 그만큼 불확실성이 줄어
-  // 상위팀 PS odds는 과대·버블팀은 과소 추정된다. 부족분을 리그 평균 상대
-  // 경기로 채워 144경기 기준으로 정규화한다.
   const fillerGamesByTeamId = new Map(
     teams.map((team) => {
-      const played = team.wins + team.losses + team.draws;
-      const scheduledRemaining = scheduledRemainingByTeamId.get(team.id) ?? 0;
-      const filler = KBO_REGULAR_SEASON_GAMES - played - scheduledRemaining;
+      const knownGames = knownGamesByTeamId.get(team.id) ?? 0;
+      const filler = projectedGames - knownGames;
 
       return [team.id, Math.max(0, filler)];
     }),
@@ -351,23 +401,25 @@ export function calculatePlayoffProbabilityProjection(
   const fillerWinProbByTeamId = new Map(
     teams.map((team) => [
       team.id,
-      log5(pythagoreanByTeamId.get(team.id) ?? 0.5, leagueAveragePyth),
+      log5(
+        projectedWinRateByTeamId.get(team.id) ?? 0.5,
+        leagueAverageProjectedWinRate,
+      ),
     ]),
   );
   const scheduleAdjustedByTeamId = buildScheduleAdjustedWinRates(
     remainingGames,
     teams,
-    pythagoreanByTeamId,
+    projectedWinRateByTeamId,
     fillerGamesByTeamId,
     fillerWinProbByTeamId,
   );
   const seed = hashSeed(
-    `${standings.rankDate ?? ''}:${standings.items
+    `${standings.rankDate}:${standings.items
       .map((item) => `${item.teamId}-${item.wins}-${item.losses}-${item.draws}`)
       .join('|')}`,
   );
   const random = createRandom(seed);
-  const playoffCounts = new Map(teams.map((team) => [team.id, 0]));
   const rankSums = new Map(teams.map((team) => [team.id, 0]));
   const winSums = new Map(teams.map((team) => [team.id, 0]));
   const drawSums = new Map(teams.map((team) => [team.id, 0]));
@@ -393,9 +445,11 @@ export function calculatePlayoffProbabilityProjection(
         continue;
       }
 
-      const awayPyth = pythagoreanByTeamId.get(away.id) ?? 0.5;
-      const homePyth = pythagoreanByTeamId.get(home.id) ?? 0.5;
-      const awayWinProbability = applyHomeAdvantage(log5(awayPyth, homePyth));
+      const awayProjected = projectedWinRateByTeamId.get(away.id) ?? 0.5;
+      const homeProjected = projectedWinRateByTeamId.get(home.id) ?? 0.5;
+      const awayWinProbability = applyHomeAdvantage(
+        log5(awayProjected, homeProjected),
+      );
       const awayWinWithDraw = awayWinProbability * (1 - TIE_RATE);
       const homeWinWithDraw = (1 - awayWinProbability) * (1 - TIE_RATE);
       const roll = random();
@@ -418,7 +472,6 @@ export function calculatePlayoffProbabilityProjection(
       }
     }
 
-    // 일정 데이터에 없는 부족 경기를 리그 평균 상대로 채워 144경기 기준으로 맞춘다.
     for (const team of teams) {
       const filler = fillerGamesByTeamId.get(team.id) ?? 0;
 
@@ -449,7 +502,7 @@ export function calculatePlayoffProbabilityProjection(
       }
     }
 
-    const ranked = rankTeams(records, teams, pythagoreanByTeamId);
+    const ranked = rankTeams(records, teams, projectedWinRateByTeamId);
 
     ranked.forEach((team, index) => {
       const rank = index + 1;
@@ -462,58 +515,54 @@ export function calculatePlayoffProbabilityProjection(
         team.id,
         (lossSums.get(team.id) ?? 0) + (record?.losses ?? 0),
       );
-
-      if (rank <= 5) {
-        playoffCounts.set(team.id, (playoffCounts.get(team.id) ?? 0) + 1);
-      }
     });
   }
 
-  const currentRankByTeamId = new Map(
-    standings.items.map((item) => [item.teamId, item.rank]),
-  );
-  const currentWinRateByTeamId = new Map(
-    standings.items.map((item) => [item.teamId, item.winRate]),
-  );
-  const championshipHistoryByTeamId = new Map(
-    standings.items.map((item) => [item.teamId, item.championshipHistory]),
+  const standingByTeamId = new Map(
+    standings.items.map((item) => [item.teamId, item]),
   );
 
   return {
+    seasonYear: standings.seasonYear,
+    rankDate: standings.rankDate,
+    seriesId: standings.seriesId,
+    modelVersion: SEASON_PROJECTION_MODEL_VERSION,
+    generatedAt: new Date().toISOString(),
     rows: teams
       .map((team) => {
         const averageWins = Math.min(
-          KBO_REGULAR_SEASON_GAMES,
+          projectedGames,
           (winSums.get(team.id) ?? 0) / simulations,
         );
         const averageDraws = Math.min(
-          KBO_REGULAR_SEASON_GAMES,
+          projectedGames,
           (drawSums.get(team.id) ?? 0) / simulations,
         );
         const averageLosses = Math.min(
-          KBO_REGULAR_SEASON_GAMES,
+          projectedGames,
           (lossSums.get(team.id) ?? 0) / simulations,
         );
+        const standing = standingByTeamId.get(team.id);
 
         return {
           teamId: team.id,
           teamShortName: team.shortName,
           teamName: team.name,
-          playoffProbability: (playoffCounts.get(team.id) ?? 0) / simulations,
           averageRank: (rankSums.get(team.id) ?? 0) / simulations,
           averageWins,
           averageDraws,
           averageLosses,
+          projectedGames,
           expectedWinRate: kboWinPct(averageWins, averageLosses),
-          currentWinRate: currentWinRateByTeamId.get(team.id) ?? 0,
+          currentWinRate: standing?.winRate ?? 0,
           pythagoreanWinRate: pythagoreanByTeamId.get(team.id) ?? 0.5,
           scheduleAdjustedWinRate:
             scheduleAdjustedByTeamId.get(team.id) ??
-            pythagoreanByTeamId.get(team.id) ??
+            projectedWinRateByTeamId.get(team.id) ??
             0.5,
-          currentRank: currentRankByTeamId.get(team.id) ?? 0,
+          currentRank: standing?.rank ?? 0,
           championshipHistory:
-            championshipHistoryByTeamId.get(team.id) ??
+            standing?.championshipHistory ??
             ({
               currentTitles: 0,
               targetTitle: 1,
@@ -522,15 +571,15 @@ export function calculatePlayoffProbabilityProjection(
         };
       })
       .sort((a, b) => {
-        if (b.playoffProbability !== a.playoffProbability) {
-          return b.playoffProbability - a.playoffProbability;
+        if (a.averageRank !== b.averageRank) {
+          return a.averageRank - b.averageRank;
         }
 
-        return a.averageRank - b.averageRank;
+        return b.expectedWinRate - a.expectedWinRate;
       }),
     simulations,
     minGames: MIN_GAMES_FOR_PROJECTION,
     remainingGames: remainingGames.length,
-    rankDate: standings.rankDate,
+    projectedGames,
   };
 }

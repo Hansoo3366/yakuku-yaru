@@ -3,7 +3,9 @@
 /* eslint-disable @next/next/no-img-element */
 
 import Link from 'next/link';
-import { useMemo } from 'react';
+import { Info, X } from 'lucide-react';
+import { useEffect, useId, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { type AttendanceRecord } from '@/lib/attendance-api';
 import { computeAttendanceStatsFromRecords } from '@/lib/attendance-stats';
 import { TeamStandingsTable } from '@/components/TeamStandingsTable';
@@ -15,14 +17,14 @@ import { getGameStatusLabel, getGameStatusTone } from '@/lib/game-status';
 import { isGameCancelled } from '@/lib/attendance-game';
 import { resolveAttendanceOutcome } from '@/lib/attendance-score';
 import { getCancellationLabel } from '@/lib/game-cancellation';
-import { type PlayoffProbabilityProjection } from '@/lib/playoff-probability';
-import { usePlayoffProjection } from '@/lib/use-playoff-projection';
+import { type SeasonProjectionResponse } from '@/lib/baseball-api';
 import { formatKboChampionshipLabel } from '@/lib/kbo-championship-history';
 import { useAuthStore } from '@/lib/auth-store';
 import {
   useAttendanceRecordsQuery,
   useGamesQuery,
   useMeQuery,
+  useSeasonProjectionQuery,
   useTeamsQuery,
   useTeamStandingsQuery,
 } from '@/lib/queries';
@@ -82,46 +84,191 @@ function isUpcoming(value: string) {
   return new Date(value).getTime() >= Date.now() - 1000 * 60 * 60 * 6;
 }
 
-function formatPlayoffProbability(value: number) {
-  const percentage = value * 100;
-
-  if (percentage >= 99.95) return '100%';
-  if (percentage < 0.1) return '<0.1%';
-
-  return `${percentage.toFixed(1)}%`;
-}
-
 function formatWinRate(value: number) {
   return value.toFixed(3);
 }
 
-function formatExpectedRecord(
-  row: PlayoffProbabilityProjection['rows'][number],
-) {
-  return `${Math.round(row.averageWins)} - ${Math.round(
-    row.averageDraws,
-  )} - ${Math.round(row.averageLosses)}`;
+function formatExpectedRank(value: number) {
+  return `${value.toFixed(1)}위`;
 }
 
-function PlayoffProbabilityTable({
+function formatExpectedRecord(row: SeasonProjectionResponse['rows'][number]) {
+  const targetTotal = Math.round(row.projectedGames);
+  const values = [
+    { key: 'wins', value: row.averageWins },
+    { key: 'draws', value: row.averageDraws },
+    { key: 'losses', value: row.averageLosses },
+  ] as const;
+  const rounded = values.map((entry) => ({
+    ...entry,
+    count: Math.floor(entry.value),
+    remainder: entry.value - Math.floor(entry.value),
+  }));
+  const missing =
+    targetTotal - rounded.reduce((sum, entry) => sum + entry.count, 0);
+
+  rounded
+    .sort((a, b) => b.remainder - a.remainder)
+    .slice(0, Math.max(0, missing))
+    .forEach((entry) => {
+      entry.count += 1;
+    });
+
+  const byKey = new Map(rounded.map((entry) => [entry.key, entry.count]));
+
+  return `${byKey.get('wins') ?? 0} - ${byKey.get('draws') ?? 0} - ${
+    byKey.get('losses') ?? 0
+  }`;
+}
+
+function SeasonProjectionFormulaDialog({ onClose }: { onClose: () => void }) {
+  const titleId = useId();
+
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        onClose();
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [onClose]);
+
+  return createPortal(
+    <div className="season-projection-modal">
+      <button
+        aria-label="닫기"
+        className="season-projection-modal__backdrop"
+        onClick={onClose}
+        type="button"
+      />
+      <section
+        aria-labelledby={titleId}
+        aria-modal="true"
+        className="season-projection-modal__panel"
+        role="dialog"
+      >
+        <div className="season-projection-modal__head">
+          <div>
+            <span className="eyebrow">Formula</span>
+            <h3 id={titleId}>예상 순위 계산식</h3>
+          </div>
+          <button
+            aria-label="닫기"
+            className="icon-button"
+            onClick={onClose}
+            type="button"
+          >
+            <X aria-hidden="true" size={18} />
+          </button>
+        </div>
+        <div className="season-projection-modal__body">
+          <div className="season-projection-formula">
+            <div className="season-projection-formula__row">
+              <span>1</span>
+              <div>
+                <strong>현재 승률</strong>
+                <code>승 / (승 + 패)</code>
+                <p>무승부는 KBO 승률처럼 분모에서 제외합니다.</p>
+              </div>
+            </div>
+            <div className="season-projection-formula__row">
+              <span>2</span>
+              <div>
+                <strong>피타고리안 승률</strong>
+                <code>득점^1.83 / (득점^1.83 + 실점^1.83)</code>
+                <p>득실점은 전력 보정용으로만 40% 반영합니다.</p>
+              </div>
+            </div>
+            <div className="season-projection-formula__row">
+              <span>3</span>
+              <div>
+                <strong>팀 전력 승률</strong>
+                <code>현재 승률 * 0.60 + 피타고리안 승률 * 0.40</code>
+                <p>
+                  대승 한두 경기 영향이 과해지지 않도록 보수적으로 섞습니다.
+                </p>
+              </div>
+            </div>
+            <div className="season-projection-formula__row">
+              <span>4</span>
+              <div>
+                <strong>잔여 경기 승률</strong>
+                <code>A(1-B) / (A(1-B) + B(1-A))</code>
+                <p>
+                  Log5로 상대 전력을 반영하고 홈 보정과 무승부 2%를 적용합니다.
+                </p>
+              </div>
+            </div>
+            <div className="season-projection-formula__row">
+              <span>5</span>
+              <div>
+                <strong>예상 순위</strong>
+                <code>144경기까지 100,000회 몬테카를로 평균 저장</code>
+                <p>
+                  서버가 계산하고, 일정에 없는 재편성분은 리그 평균 상대 경기로
+                  채웁니다.
+                </p>
+              </div>
+            </div>
+          </div>
+          <p className="season-projection-formula__note">
+            예상 W-T-L과 예상승률은 시뮬레이션 평균값이고, pWin%는 2번의
+            피타고리안 승률 원값입니다.
+          </p>
+        </div>
+      </section>
+    </div>,
+    document.body,
+  );
+}
+
+function SeasonProjectionTable({
   projection,
   highlightTeamId,
   loading,
 }: {
-  projection: PlayoffProbabilityProjection | null;
+  projection: SeasonProjectionResponse | null;
   highlightTeamId?: number | null;
   loading?: boolean;
 }) {
+  const [formulaOpen, setFormulaOpen] = useState(false);
+  const formulaButton = (
+    <button
+      aria-label="예상 순위 계산식 보기"
+      className="icon-button season-projection-info-button"
+      onClick={() => setFormulaOpen(true)}
+      title="예상 순위 계산식 보기"
+      type="button"
+    >
+      <Info aria-hidden="true" size={18} />
+    </button>
+  );
+
   if (loading) {
     return (
       <section aria-busy="true" className="card stack">
-        <div className="section-heading">
+        <div className="section-heading season-projection-heading">
           <div>
-            <h2>KBO 가을야구 진출 확률</h2>
-            <p>남은 대진을 반영해 시뮬레이션하고 있어요…</p>
+            <h2>2026 KBO 시즌 예상 순위</h2>
+            <p>DB에 저장된 144경기 기준 예상 순위를 불러오고 있어요…</p>
           </div>
+          {formulaButton}
         </div>
-        <div className="playoff-probability-skeleton">
+        {formulaOpen ? (
+          <SeasonProjectionFormulaDialog
+            onClose={() => setFormulaOpen(false)}
+          />
+        ) : null}
+        <div className="season-projection-skeleton">
           <Skeleton height={28} />
           {Array.from({ length: 10 }).map((_, index) => (
             <Skeleton height={40} key={index} />
@@ -131,42 +278,42 @@ function PlayoffProbabilityTable({
     );
   }
 
-  if (!projection) {
+  if (!projection?.rows.length) {
     return null;
   }
 
   return (
     <section className="card stack">
-      <div className="section-heading">
+      <div className="section-heading season-projection-heading">
         <div>
-          <h2>KBO 가을야구 진출 확률</h2>
+          <h2>2026 KBO 시즌 예상 순위</h2>
           <p>
             {projection.rankDate
               ? `${projection.rankDate}까지의 성적과 남은 대진 기반`
-              : '현재 성적과 남은 대진 기반'}{' '}
-            {projection.simulations.toLocaleString('ko-KR')}회 시뮬레이션
+              : '저장된 성적과 남은 대진 기반'}
           </p>
         </div>
+        {formulaButton}
       </div>
-      <div className="playoff-probability-table-wrap">
-        <table className="playoff-probability-table">
+      {formulaOpen ? (
+        <SeasonProjectionFormulaDialog onClose={() => setFormulaOpen(false)} />
+      ) : null}
+      <div className="season-projection-table-wrap">
+        <table className="season-projection-table">
           <thead>
             <tr>
               <th scope="col">팀</th>
+              <th scope="col">예상순위</th>
               <th scope="col">현재 승률</th>
               <th scope="col">예상 W-T-L</th>
               <th scope="col">예상승률</th>
-              <th scope="col">PS odds</th>
               <th scope="col">pWin%</th>
-              <th scope="col">SOS W%</th>
+              <th scope="col">잔여승률</th>
             </tr>
           </thead>
           <tbody>
             {projection.rows.map((row) => {
               const isHighlighted = highlightTeamId === row.teamId;
-              const probabilityLabel = formatPlayoffProbability(
-                row.playoffProbability,
-              );
 
               return (
                 <tr
@@ -188,21 +335,10 @@ function PlayoffProbabilityTable({
                       </span>
                     </span>
                   </td>
+                  <td>{formatExpectedRank(row.averageRank)}</td>
                   <td>{formatWinRate(row.currentWinRate)}</td>
                   <td>{formatExpectedRecord(row)}</td>
                   <td>{formatWinRate(row.expectedWinRate)}</td>
-                  <td>
-                    <span className="playoff-probability-cell">
-                      <strong>{probabilityLabel}</strong>
-                      <span className="playoff-probability-track">
-                        <span
-                          style={{
-                            width: `${Math.round(row.playoffProbability * 100)}%`,
-                          }}
-                        />
-                      </span>
-                    </span>
-                  </td>
                   <td>{formatWinRate(row.pythagoreanWinRate)}</td>
                   <td>{formatWinRate(row.scheduleAdjustedWinRate)}</td>
                 </tr>
@@ -211,10 +347,6 @@ function PlayoffProbabilityTable({
           </tbody>
         </table>
       </div>
-      <p className="playoff-probability-note">
-        모든 팀이 {projection.minGames}경기 이상 치른 뒤 노출됩니다. 예상
-        W-T-L은 반올림에 따라 총 경기 수와 다르게 보일 수 있습니다.
-      </p>
     </section>
   );
 }
@@ -228,13 +360,7 @@ export default function HomePage() {
   const user = meQuery.data?.user ?? storedUser;
   const teamsQuery = useTeamsQuery();
   const teamStandingsQuery = useTeamStandingsQuery(seasonYear);
-  const seasonRange = useMemo(
-    () => ({
-      from: `${seasonYear}-03-01`,
-      to: `${seasonYear}-12-31`,
-    }),
-    [seasonYear],
-  );
+  const seasonProjectionQuery = useSeasonProjectionQuery(seasonYear);
   const attendanceStatsRange = useMemo(
     () => ({
       from: `${seasonYear}-01-01`,
@@ -259,9 +385,6 @@ export default function HomePage() {
     },
     { enabled: Boolean(token && user) },
   );
-  const seasonGamesQuery = useGamesQuery(seasonRange, {
-    enabled: Boolean(teamStandingsQuery.data?.items.length),
-  });
   const recordsQuery = useAttendanceRecordsQuery(attendanceStatsRange, token, {
     enabled: Boolean(token && user),
   });
@@ -308,11 +431,8 @@ export default function HomePage() {
         : null,
     [attendanceRecords, user],
   );
-  const { projection: playoffProjection, isComputing: playoffComputing } =
-    usePlayoffProjection(teamStandings, seasonGamesQuery.data?.items);
-  const playoffLoading =
-    Boolean(teamStandingsQuery.data?.items.length) &&
-    (seasonGamesQuery.isLoading || playoffComputing);
+  const seasonProjection = seasonProjectionQuery.data ?? null;
+  const seasonProjectionLoading = seasonProjectionQuery.isLoading;
 
   if (authState === 'guest') {
     return (
@@ -320,12 +440,12 @@ export default function HomePage() {
         <section className="home-hero">
           <span className="eyebrow">야크크 야르~ 섹시야구</span>
           <h1>
-            KBO 일정과 가을야구
+            KBO 일정과 시즌 예상
             <br />
-            확률을 한눈에
+            순위를 한눈에
           </h1>
           <p>
-            프로야구 일정표와 야구 캘린더, 팀 순위와 가을야구 진출 확률, <br />
+            프로야구 일정표와 야구 캘린더, 팀 순위와 2026 시즌 예상 순위, <br />
             직관 사진과 같이 간 친구의 기록까지 남기는 야구 앱입니다.
           </p>
           <div className="actions">
@@ -363,9 +483,9 @@ export default function HomePage() {
           </div>
           <TeamStandingsTable standings={teamStandings} />
         </section>
-        <PlayoffProbabilityTable
-          loading={playoffLoading}
-          projection={playoffProjection}
+        <SeasonProjectionTable
+          loading={seasonProjectionLoading}
+          projection={seasonProjection}
         />
       </main>
     );
@@ -611,7 +731,7 @@ export default function HomePage() {
       <section className="dashboard-league-zone stack">
         <header className="dashboard-zone-header">
           <h2>리그 현황</h2>
-          <p>팀 순위와 가을야구 진출 확률</p>
+          <p>팀 순위와 2026 시즌 예상 순위</p>
         </header>
 
         <section className="card stack home-leaderboard-card">
@@ -634,10 +754,10 @@ export default function HomePage() {
             standings={teamStandings}
           />
         </section>
-        <PlayoffProbabilityTable
+        <SeasonProjectionTable
           highlightTeamId={favoriteTeam?.id}
-          loading={playoffLoading}
-          projection={playoffProjection}
+          loading={seasonProjectionLoading}
+          projection={seasonProjection}
         />
       </section>
     </main>

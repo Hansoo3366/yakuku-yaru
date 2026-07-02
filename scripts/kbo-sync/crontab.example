@@ -36,6 +36,9 @@ TZ=Asia/Seoul
 # 자정 직후 — 막판 경기 반영 순위
 5 0 * * * cd PROJECT_DIR && ./scripts/kbo-sync/standings.sh
 
+# 새벽 1시대 — 저장된 일정/순위 DB 기준 시즌 예상 순위 저장
+30 1 * * * cd PROJECT_DIR && ./scripts/kbo-sync/projection.sh
+
 # 매주 월요일 07:10 KST — 선수 마스터(타율·OPS·생년월일)
 10 7 * * 1 cd PROJECT_DIR && ./scripts/kbo-sync/weekly.sh
 

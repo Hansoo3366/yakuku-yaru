@@ -13,6 +13,7 @@ GitHub Actions 스케줄 대신 **프로덕션 서버 호스트 crontab**에서 
 | `game-center.sh` | `sync:kbo-game-center --mode=${GC_MODE:-today}` (선발·라인업·공식 여부) |
 | `live.sh` | `today.sh` + `game-center.sh`에 해당하는 수동 편의 실행 |
 | `standings.sh` | `sync:kbo-standings` 만 |
+| `projection.sh` | 저장된 일정/순위 DB 기준 `sync:kbo-season-projection` |
 | `weekly.sh` | `sync:kbo-players` |
 | `season.sh` | `sync:kbo-schedule --mode=season` |
 | `month.sh` | `sync:kbo-schedule --mode=month` |
@@ -62,6 +63,7 @@ GCP VM이 UTC여도 `TZ=Asia/Seoul` 이라 주석의 KST 시각 그대로 동작
 | 13:05~23:35 매 30분 | `game-center.sh` (선발·라인업) |
 | 16:10~23:40 매 30분 | `standings.sh` |
 | 00:05 | `standings.sh` (막판 경기) |
+| 01:30 | `projection.sh` (시즌 예상 순위 DB 저장) |
 | 월 07:10 | `weekly.sh` |
 | 매월 1일 06:30 | `month.sh` |
 | 3/1 06:50 | `season.sh` |
@@ -77,6 +79,7 @@ GCP VM이 UTC여도 `TZ=Asia/Seoul` 이라 주석의 KST 시각 그대로 동작
 ./scripts/kbo-sync/today.sh
 ./scripts/kbo-sync/game-center.sh
 ./scripts/kbo-sync/live.sh
+./scripts/kbo-sync/projection.sh
 GC_MODE=week ./scripts/kbo-sync/game-center.sh
 ```
 

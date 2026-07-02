@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { fetchMe } from '@/lib/auth-api';
 import {
   fetchGame,
+  getSeasonProjection,
   listGames,
   listTeamStandings,
   listTeams,
@@ -40,6 +41,14 @@ export function useTeamStandingsQuery(seasonYear?: number) {
   return useQuery({
     queryKey: queryKeys.teamStandings(seasonYear),
     queryFn: () => listTeamStandings(seasonYear),
+    staleTime: 1000 * 60 * 10,
+  });
+}
+
+export function useSeasonProjectionQuery(seasonYear?: number) {
+  return useQuery({
+    queryKey: queryKeys.seasonProjection(seasonYear),
+    queryFn: () => getSeasonProjection(seasonYear),
     staleTime: 1000 * 60 * 10,
   });
 }

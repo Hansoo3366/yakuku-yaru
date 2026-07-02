@@ -580,6 +580,60 @@ export async function runMigrations() {
     );
   }
 
+  const hasSeasonProjectionSnapshots = await tableExists(
+    'season_projection_snapshots',
+  );
+
+  if (!hasSeasonProjectionSnapshots) {
+    await db.execute(
+      `CREATE TABLE season_projection_snapshots (
+         id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+         season_year INT NOT NULL,
+         rank_date DATE NOT NULL,
+         series_id VARCHAR(20) NOT NULL DEFAULT '0',
+         model_version VARCHAR(80) NOT NULL,
+         simulations INT NOT NULL,
+         min_games INT NOT NULL,
+         remaining_games INT NOT NULL,
+         projected_games INT NOT NULL,
+         generated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+         PRIMARY KEY (id),
+         UNIQUE KEY uq_season_projection_snapshot (season_year, rank_date, series_id, model_version),
+         KEY idx_season_projection_lookup (season_year, series_id, model_version, rank_date, generated_at)
+       )`,
+    );
+  }
+
+  const hasSeasonProjectionRows = await tableExists('season_projection_rows');
+
+  if (!hasSeasonProjectionRows) {
+    await db.execute(
+      `CREATE TABLE season_projection_rows (
+         id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+         snapshot_id BIGINT UNSIGNED NOT NULL,
+         team_id BIGINT UNSIGNED NOT NULL,
+         average_rank DECIMAL(8, 4) NOT NULL,
+         average_wins DECIMAL(8, 4) NOT NULL,
+         average_draws DECIMAL(8, 4) NOT NULL,
+         average_losses DECIMAL(8, 4) NOT NULL,
+         expected_win_rate DECIMAL(7, 4) NOT NULL,
+         current_win_rate DECIMAL(7, 4) NOT NULL,
+         pythagorean_win_rate DECIMAL(7, 4) NOT NULL,
+         schedule_adjusted_win_rate DECIMAL(7, 4) NOT NULL,
+         current_rank INT NOT NULL,
+         PRIMARY KEY (id),
+         UNIQUE KEY uq_season_projection_row (snapshot_id, team_id),
+         KEY idx_season_projection_rows_team (team_id),
+         CONSTRAINT fk_season_projection_rows_snapshot
+           FOREIGN KEY (snapshot_id) REFERENCES season_projection_snapshots(id)
+           ON DELETE CASCADE,
+         CONSTRAINT fk_season_projection_rows_team
+           FOREIGN KEY (team_id) REFERENCES teams(id)
+           ON DELETE CASCADE
+       )`,
+    );
+  }
+
   await db.execute(
     `INSERT INTO games (
       game_date,

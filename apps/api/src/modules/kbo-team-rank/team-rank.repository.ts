@@ -24,7 +24,7 @@ export type TeamStandingRow = {
 
 type StandingMetaRow = RowDataPacket & {
   season_year: number;
-  rank_date: Date;
+  rank_date: string;
   series_id: string;
   synced_at: Date;
 };
@@ -98,7 +98,11 @@ export async function getLatestTeamStandingsMeta(
   seriesId = '0',
 ) {
   const [rows] = await db.query<StandingMetaRow[]>(
-    `SELECT season_year, rank_date, series_id, synced_at
+    `SELECT
+       season_year,
+       DATE_FORMAT(rank_date, '%Y-%m-%d') AS rank_date,
+       series_id,
+       synced_at
      FROM team_standings
      WHERE season_year = ?
        AND series_id = ?
@@ -139,7 +143,7 @@ export async function listTeamStandings(seasonYear: number, seriesId = '0') {
       games_behind: number;
       recent_ten: string | null;
       streak: string | null;
-      rank_date: Date | string;
+      rank_date: string;
     })[]
   >(
     `SELECT
@@ -155,7 +159,7 @@ export async function listTeamStandings(seasonYear: number, seriesId = '0') {
        ts.games_behind,
        ts.recent_ten,
        ts.streak,
-       ts.rank_date
+       DATE_FORMAT(ts.rank_date, '%Y-%m-%d') AS rank_date
      FROM team_standings ts
      INNER JOIN teams t ON t.id = ts.team_id
      WHERE ts.season_year = ?

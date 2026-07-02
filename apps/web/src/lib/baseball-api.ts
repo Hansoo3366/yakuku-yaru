@@ -119,6 +119,36 @@ export type TeamStandingsResponse = {
   items: TeamStanding[];
 };
 
+export type SeasonProjectionRow = {
+  teamId: number;
+  teamShortName: string;
+  teamName: string;
+  averageRank: number;
+  averageWins: number;
+  averageDraws: number;
+  averageLosses: number;
+  projectedGames: number;
+  expectedWinRate: number;
+  currentWinRate: number;
+  pythagoreanWinRate: number;
+  scheduleAdjustedWinRate: number;
+  currentRank: number;
+  championshipHistory: TeamChampionshipHistory;
+};
+
+export type SeasonProjectionResponse = {
+  seasonYear: number;
+  rankDate: string | null;
+  seriesId: string;
+  modelVersion: string;
+  generatedAt: string | null;
+  rows: SeasonProjectionRow[];
+  simulations: number;
+  minGames: number;
+  remainingGames: number;
+  projectedGames: number;
+};
+
 export function listTeams() {
   return request<{ items: Team[] }>('/teams');
 }
@@ -134,6 +164,22 @@ export function listTeamStandings(seasonYear?: number) {
 
   return request<TeamStandingsResponse>(
     query ? `/teams/standings?${query}` : '/teams/standings',
+  );
+}
+
+export function getSeasonProjection(seasonYear?: number) {
+  const params = new URLSearchParams();
+
+  if (seasonYear) {
+    params.set('seasonYear', String(seasonYear));
+  }
+
+  const query = params.toString();
+
+  return request<SeasonProjectionResponse>(
+    query
+      ? `/teams/season-projection?${query}`
+      : '/teams/season-projection',
   );
 }
 
