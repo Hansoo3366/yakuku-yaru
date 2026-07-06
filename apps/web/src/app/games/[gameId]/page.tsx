@@ -42,6 +42,28 @@ function buildGameDescription(game: Game) {
   return `${formatKoreanDateTime(game.gameDate)} ${game.stadium}에서 열리는 ${matchup} 경기 정보입니다. ${score}선발 투수, 라인업, 예매 정보와 구장 정보를 확인하세요.`;
 }
 
+function buildGameKeywords(game: Game) {
+  return [
+    `${game.awayTeam.shortName} ${game.homeTeam.shortName}`,
+    `${game.awayTeam.shortName} vs ${game.homeTeam.shortName}`,
+    `${game.awayTeam.name} ${game.homeTeam.name}`,
+    `${game.awayTeam.shortName} 경기`,
+    `${game.homeTeam.shortName} 경기`,
+    `${game.homeTeam.shortName} 홈경기`,
+    `${game.stadium} 야구`,
+    'KBO 경기',
+    'KBO 경기 일정',
+    '오늘 야구 경기',
+    '프로야구 경기',
+    '프로야구 스코어',
+    'KBO 스코어',
+    'KBO 선발투수',
+    'KBO 라인업',
+    '야구 예매',
+    '야구장 정보',
+  ];
+}
+
 export async function generateMetadata({
   params,
 }: GamePageProps): Promise<Metadata> {
@@ -53,6 +75,14 @@ export async function generateMetadata({
     return {
       title: 'KBO 경기 정보',
       description: 'KBO 경기 일정, 스코어, 선발 투수와 라인업을 확인하세요.',
+      keywords: [
+        'KBO 경기',
+        'KBO 경기 일정',
+        '프로야구 경기',
+        '오늘 야구 경기',
+        'KBO 선발투수',
+        'KBO 라인업',
+      ],
       alternates: {
         canonical,
       },
@@ -65,6 +95,14 @@ export async function generateMetadata({
     return {
       title: 'KBO 경기 정보',
       description: 'KBO 경기 일정, 스코어, 선발 투수와 라인업을 확인하세요.',
+      keywords: [
+        'KBO 경기',
+        'KBO 경기 일정',
+        '프로야구 경기',
+        '오늘 야구 경기',
+        'KBO 선발투수',
+        'KBO 라인업',
+      ],
       alternates: {
         canonical,
       },
@@ -77,6 +115,7 @@ export async function generateMetadata({
   return {
     title,
     description,
+    keywords: buildGameKeywords(game),
     alternates: {
       canonical,
     },

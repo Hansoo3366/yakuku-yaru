@@ -92,6 +92,20 @@ function formatExpectedRank(value: number) {
   return `${value.toFixed(1)}위`;
 }
 
+function formatProbability(value: number) {
+  if (!Number.isFinite(value)) {
+    return '0.0%';
+  }
+
+  const percentage = value * 100;
+
+  if (percentage > 0 && percentage < 0.1) {
+    return '<0.1%';
+  }
+
+  return `${percentage.toFixed(1)}%`;
+}
+
 function formatExpectedRecord(row: SeasonProjectionResponse['rows'][number]) {
   const targetTotal = Math.round(row.projectedGames);
   const values = [
@@ -211,7 +225,7 @@ function SeasonProjectionFormulaDialog({ onClose }: { onClose: () => void }) {
             <div className="season-projection-formula__row">
               <span>5</span>
               <div>
-                <strong>예상 순위</strong>
+                <strong>정규시즌 예상 순위</strong>
                 <code>144경기까지 100,000회 몬테카를로 평균 저장</code>
                 <p>
                   서버가 계산하고, 일정에 없는 재편성분은 리그 평균 상대 경기로
@@ -219,10 +233,33 @@ function SeasonProjectionFormulaDialog({ onClose }: { onClose: () => void }) {
                 </p>
               </div>
             </div>
+            <div className="season-projection-formula__row">
+              <span>6</span>
+              <div>
+                <strong>가을야구 확률</strong>
+                <code>시뮬레이션 최종 순위 5위 이내 횟수 / 100,000</code>
+                <p>
+                  정규시즌이 진행 중일 때만 표에 표시하는 포스트시즌 진출
+                  확률입니다.
+                </p>
+              </div>
+            </div>
+            <div className="season-projection-formula__row">
+              <span>7</span>
+              <div>
+                <strong>포스트시즌 최종 예측</strong>
+                <code>144경기 완료 후 1~5위 seed로 별도 시뮬레이션</code>
+                <p>
+                  와일드카드 4위 어드밴티지, 준플레이오프, 플레이오프,
+                  한국시리즈를 순서대로 반영합니다.
+                </p>
+              </div>
+            </div>
           </div>
           <p className="season-projection-formula__note">
-            예상 W-T-L과 예상승률은 시뮬레이션 평균값이고, pWin%는 2번의
-            피타고리안 승률 원값입니다.
+            예상 W-T-L과 예상승률은 시뮬레이션 평균값이고, pWin%는 피타고리안
+            승률 원값입니다. 정규시즌 144경기가 끝나면 표는 포스트시즌 최종
+            예측으로 바뀝니다.
           </p>
         </div>
       </section>
@@ -258,8 +295,8 @@ function SeasonProjectionTable({
       <section aria-busy="true" className="card stack">
         <div className="section-heading season-projection-heading">
           <div>
-            <h2>2026 KBO 시즌 예상 순위</h2>
-            <p>DB에 저장된 144경기 기준 예상 순위를 불러오고 있어요…</p>
+            <h2>2026 KBO 예상 순위</h2>
+            <p>DB에 저장된 시즌 예측 값을 불러오고 있어요…</p>
           </div>
           {formulaButton}
         </div>
@@ -278,8 +315,89 @@ function SeasonProjectionTable({
     );
   }
 
-  if (!projection?.rows.length) {
+  if (
+    !projection ||
+    (!projection.rows.length && !projection.postseasonRows.length)
+  ) {
     return null;
+  }
+
+  if (projection.status === 'postseason' && projection.postseasonRows.length) {
+    return (
+      <section className="card stack">
+        <div className="section-heading season-projection-heading">
+          <div>
+            <h2>2026 KBO 포스트시즌 최종 예측</h2>
+            <p>
+              {projection.rankDate
+                ? `${projection.rankDate} 정규시즌 최종 순위 기반`
+                : '정규시즌 최종 순위 기반'}
+            </p>
+          </div>
+          {formulaButton}
+        </div>
+        {formulaOpen ? (
+          <SeasonProjectionFormulaDialog
+            onClose={() => setFormulaOpen(false)}
+          />
+        ) : null}
+        <div className="season-projection-table-wrap">
+          <table className="season-projection-table">
+            <thead>
+              <tr>
+                <th scope="col">팀</th>
+                <th scope="col">정규순위</th>
+                <th scope="col">예상최종순위</th>
+                <th scope="col">우승확률</th>
+                <th scope="col">KS 진출</th>
+                <th scope="col">전력승률</th>
+              </tr>
+            </thead>
+            <tbody>
+              {projection.postseasonRows.map((row) => {
+                const isHighlighted = highlightTeamId === row.teamId;
+
+                return (
+                  <tr
+                    className={isHighlighted ? 'is-highlighted' : undefined}
+                    key={row.teamId}
+                  >
+                    <td>
+                      <span className="standings-team-cell">
+                        <img
+                          alt=""
+                          src={getTeamLogoSrc({
+                            shortName: row.teamShortName,
+                          })}
+                        />
+                        <span>
+                          <strong>{row.teamShortName}</strong>
+                          <em>
+                            정규 {row.seed}위 ·{' '}
+                            {formatKboChampionshipLabel(
+                              row.championshipHistory,
+                            )}
+                          </em>
+                        </span>
+                      </span>
+                    </td>
+                    <td>{row.seed}위</td>
+                    <td>{formatExpectedRank(row.averageFinalRank)}</td>
+                    <td>{formatProbability(row.championshipProbability)}</td>
+                    <td>{formatProbability(row.koreanSeriesProbability)}</td>
+                    <td>{formatWinRate(row.projectedWinRate)}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+        <p className="season-projection-note">
+          정규시즌 144경기 완료 후 저장된 1~5위 seed로 와일드카드,
+          준플레이오프, 플레이오프, 한국시리즈를 다시 시뮬레이션합니다.
+        </p>
+      </section>
+    );
   }
 
   return (
@@ -304,6 +422,7 @@ function SeasonProjectionTable({
             <tr>
               <th scope="col">팀</th>
               <th scope="col">예상순위</th>
+              <th scope="col">가을야구</th>
               <th scope="col">현재 승률</th>
               <th scope="col">예상 W-T-L</th>
               <th scope="col">예상승률</th>
@@ -336,6 +455,7 @@ function SeasonProjectionTable({
                     </span>
                   </td>
                   <td>{formatExpectedRank(row.averageRank)}</td>
+                  <td>{formatProbability(row.playoffProbability)}</td>
                   <td>{formatWinRate(row.currentWinRate)}</td>
                   <td>{formatExpectedRecord(row)}</td>
                   <td>{formatWinRate(row.expectedWinRate)}</td>
@@ -347,6 +467,9 @@ function SeasonProjectionTable({
           </tbody>
         </table>
       </div>
+      <p className="season-projection-note">
+        가을야구 확률은 144경기 시뮬레이션에서 최종 5위 이내에 든 비율입니다.
+      </p>
     </section>
   );
 }

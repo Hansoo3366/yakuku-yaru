@@ -6,7 +6,7 @@ export const KBO_REGULAR_SEASON_GAMES = 144;
 export const MIN_GAMES_FOR_PROJECTION = 40;
 export const DEFAULT_PROJECTION_SIMULATIONS = 100000;
 export const SEASON_PROJECTION_MODEL_VERSION =
-  'season-rank-current60-pyth40-144-v1';
+  'season-rank-current60-pyth40-144-postseason-v2';
 
 const PYTHAGOREAN_GAMMA = 1.83;
 const CURRENT_WIN_RATE_WEIGHT = 0.6;
@@ -41,6 +41,7 @@ export type SeasonProjectionRow = {
   teamId: number;
   teamShortName: string;
   teamName: string;
+  playoffProbability: number;
   averageRank: number;
   averageWins: number;
   averageDraws: number;
@@ -54,13 +55,28 @@ export type SeasonProjectionRow = {
   championshipHistory: TeamChampionshipHistory;
 };
 
+export type PostseasonProjectionRow = {
+  teamId: number;
+  teamShortName: string;
+  teamName: string;
+  seed: number;
+  averageFinalRank: number;
+  koreanSeriesProbability: number;
+  championshipProbability: number;
+  pythagoreanWinRate: number;
+  projectedWinRate: number;
+  championshipHistory: TeamChampionshipHistory;
+};
+
 export type SeasonProjection = {
   seasonYear: number;
   rankDate: string;
   seriesId: string;
   modelVersion: string;
   generatedAt: string;
+  status: 'regularSeason' | 'postseason';
   rows: SeasonProjectionRow[];
+  postseasonRows: PostseasonProjectionRow[];
   simulations: number;
   minGames: number;
   remainingGames: number;
@@ -104,6 +120,20 @@ function sigmoid(value: number) {
 
 function applyHomeAdvantage(awayWinProbability: number) {
   return sigmoid(logit(awayWinProbability) - HOME_ADVANTAGE_LOGIT);
+}
+
+function headToHeadWinProbability(
+  teamAWinRate: number,
+  teamBWinRate: number,
+  teamAHome: boolean,
+) {
+  const teamAAwayWinProbability = applyHomeAdvantage(
+    log5(teamAWinRate, teamBWinRate),
+  );
+
+  return teamAHome
+    ? 1 - applyHomeAdvantage(log5(teamBWinRate, teamAWinRate))
+    : teamAAwayWinProbability;
 }
 
 function kboWinPct(wins: number, losses: number) {
@@ -341,6 +371,233 @@ function rankTeams(
   });
 }
 
+function isRegularSeasonComplete(standings: SeasonProjectionInput) {
+  return standings.items.every(
+    (item) => item.wins + item.losses + item.draws >= KBO_REGULAR_SEASON_GAMES,
+  );
+}
+
+function simulateWinner(
+  teamA: TeamInput,
+  teamB: TeamInput,
+  teamAHome: boolean,
+  projectedWinRateByTeamId: Map<number, number>,
+  random: () => number,
+) {
+  const teamAWinProbability = headToHeadWinProbability(
+    projectedWinRateByTeamId.get(teamA.id) ?? 0.5,
+    projectedWinRateByTeamId.get(teamB.id) ?? 0.5,
+    teamAHome,
+  );
+
+  return random() < teamAWinProbability ? teamA : teamB;
+}
+
+function simulateWildCardSeries(
+  fourthSeed: TeamInput,
+  fifthSeed: TeamInput,
+  projectedWinRateByTeamId: Map<number, number>,
+  random: () => number,
+) {
+  const fourthWinProbability = headToHeadWinProbability(
+    projectedWinRateByTeamId.get(fourthSeed.id) ?? 0.5,
+    projectedWinRateByTeamId.get(fifthSeed.id) ?? 0.5,
+    true,
+  );
+
+  for (let game = 0; game < 2; game += 1) {
+    const roll = random();
+    const fourthWinWithDraw = fourthWinProbability * (1 - TIE_RATE);
+    const fifthWinWithDraw = (1 - fourthWinProbability) * (1 - TIE_RATE);
+
+    if (
+      roll < fourthWinWithDraw ||
+      roll >= fourthWinWithDraw + fifthWinWithDraw
+    ) {
+      return fourthSeed;
+    }
+  }
+
+  return fifthSeed;
+}
+
+function simulateBestOfSeries(input: {
+  favorite: TeamInput;
+  challenger: TeamInput;
+  winsNeeded: number;
+  homePattern: boolean[];
+  projectedWinRateByTeamId: Map<number, number>;
+  random: () => number;
+}) {
+  let favoriteWins = 0;
+  let challengerWins = 0;
+
+  for (const favoriteHome of input.homePattern) {
+    const winner = simulateWinner(
+      input.favorite,
+      input.challenger,
+      favoriteHome,
+      input.projectedWinRateByTeamId,
+      input.random,
+    );
+
+    if (winner.id === input.favorite.id) {
+      favoriteWins += 1;
+    } else {
+      challengerWins += 1;
+    }
+
+    if (favoriteWins >= input.winsNeeded) {
+      return input.favorite;
+    }
+
+    if (challengerWins >= input.winsNeeded) {
+      return input.challenger;
+    }
+  }
+
+  return favoriteWins >= challengerWins ? input.favorite : input.challenger;
+}
+
+function calculatePostseasonProjection(
+  standings: SeasonProjectionInput,
+  teams: TeamInput[],
+  projectedWinRateByTeamId: Map<number, number>,
+  pythagoreanByTeamId: Map<number, number>,
+  simulations: number,
+) {
+  if (!isRegularSeasonComplete(standings)) {
+    return [];
+  }
+
+  const teamById = new Map(teams.map((team) => [team.id, team]));
+  const seeds = standings.items
+    .slice()
+    .sort((a, b) => a.rank - b.rank)
+    .slice(0, 5)
+    .map((standing) => teamById.get(standing.teamId))
+    .filter((team): team is TeamInput => Boolean(team));
+
+  if (seeds.length < 5) {
+    return [];
+  }
+
+  const seedByTeamId = new Map(seeds.map((team, index) => [team.id, index + 1]));
+  const standingByTeamId = new Map(
+    standings.items.map((item) => [item.teamId, item]),
+  );
+  const random = createRandom(
+    hashSeed(
+      `postseason:${standings.rankDate}:${standings.items
+        .map(
+          (item) =>
+            `${item.teamId}-${item.rank}-${item.wins}-${item.losses}-${item.draws}`,
+        )
+        .join('|')}`,
+    ),
+  );
+  const finalRankSums = new Map(seeds.map((team) => [team.id, 0]));
+  const koreanSeriesCounts = new Map(seeds.map((team) => [team.id, 0]));
+  const championshipCounts = new Map(seeds.map((team) => [team.id, 0]));
+
+  for (let simulation = 0; simulation < simulations; simulation += 1) {
+    const wildCardWinner = simulateWildCardSeries(
+      seeds[3],
+      seeds[4],
+      projectedWinRateByTeamId,
+      random,
+    );
+    const wildCardLoser =
+      wildCardWinner.id === seeds[3].id ? seeds[4] : seeds[3];
+    const semiPlayoffWinner = simulateBestOfSeries({
+      favorite: seeds[2],
+      challenger: wildCardWinner,
+      winsNeeded: 3,
+      homePattern: [true, true, false, false, true],
+      projectedWinRateByTeamId,
+      random,
+    });
+    const semiPlayoffLoser =
+      semiPlayoffWinner.id === seeds[2].id ? wildCardWinner : seeds[2];
+    const playoffWinner = simulateBestOfSeries({
+      favorite: seeds[1],
+      challenger: semiPlayoffWinner,
+      winsNeeded: 3,
+      homePattern: [true, true, false, false, true],
+      projectedWinRateByTeamId,
+      random,
+    });
+    const playoffLoser =
+      playoffWinner.id === seeds[1].id ? semiPlayoffWinner : seeds[1];
+    const koreanSeriesWinner = simulateBestOfSeries({
+      favorite: seeds[0],
+      challenger: playoffWinner,
+      winsNeeded: 4,
+      homePattern: [true, true, false, false, false, true, true],
+      projectedWinRateByTeamId,
+      random,
+    });
+    const koreanSeriesLoser =
+      koreanSeriesWinner.id === seeds[0].id ? playoffWinner : seeds[0];
+
+    [
+      { team: koreanSeriesWinner, finalRank: 1 },
+      { team: koreanSeriesLoser, finalRank: 2 },
+      { team: playoffLoser, finalRank: 3 },
+      { team: semiPlayoffLoser, finalRank: 4 },
+      { team: wildCardLoser, finalRank: 5 },
+    ].forEach(({ team, finalRank }) => {
+      finalRankSums.set(team.id, (finalRankSums.get(team.id) ?? 0) + finalRank);
+    });
+
+    koreanSeriesCounts.set(
+      koreanSeriesWinner.id,
+      (koreanSeriesCounts.get(koreanSeriesWinner.id) ?? 0) + 1,
+    );
+    koreanSeriesCounts.set(
+      koreanSeriesLoser.id,
+      (koreanSeriesCounts.get(koreanSeriesLoser.id) ?? 0) + 1,
+    );
+    championshipCounts.set(
+      koreanSeriesWinner.id,
+      (championshipCounts.get(koreanSeriesWinner.id) ?? 0) + 1,
+    );
+  }
+
+  return seeds
+    .map((team): PostseasonProjectionRow => {
+      const standing = standingByTeamId.get(team.id);
+
+      return {
+        teamId: team.id,
+        teamShortName: team.shortName,
+        teamName: team.name,
+        seed: seedByTeamId.get(team.id) ?? standing?.rank ?? 0,
+        averageFinalRank: (finalRankSums.get(team.id) ?? 0) / simulations,
+        koreanSeriesProbability:
+          (koreanSeriesCounts.get(team.id) ?? 0) / simulations,
+        championshipProbability:
+          (championshipCounts.get(team.id) ?? 0) / simulations,
+        pythagoreanWinRate: pythagoreanByTeamId.get(team.id) ?? 0.5,
+        projectedWinRate: projectedWinRateByTeamId.get(team.id) ?? 0.5,
+        championshipHistory:
+          standing?.championshipHistory ??
+          ({
+            currentTitles: 0,
+            targetTitle: 1,
+            lastTitleYear: null,
+          } satisfies TeamChampionshipHistory),
+      };
+    })
+    .sort((a, b) => {
+      if (a.averageFinalRank !== b.averageFinalRank) {
+        return a.averageFinalRank - b.averageFinalRank;
+      }
+
+      return b.championshipProbability - a.championshipProbability;
+    });
+}
+
 export function calculateSeasonProjection(
   standings: SeasonProjectionInput | null,
   games: Game[],
@@ -424,6 +681,7 @@ export function calculateSeasonProjection(
   const winSums = new Map(teams.map((team) => [team.id, 0]));
   const drawSums = new Map(teams.map((team) => [team.id, 0]));
   const lossSums = new Map(teams.map((team) => [team.id, 0]));
+  const playoffCounts = new Map(teams.map((team) => [team.id, 0]));
 
   for (let simulation = 0; simulation < simulations; simulation += 1) {
     const records = new Map(
@@ -515,11 +773,22 @@ export function calculateSeasonProjection(
         team.id,
         (lossSums.get(team.id) ?? 0) + (record?.losses ?? 0),
       );
+
+      if (rank <= 5) {
+        playoffCounts.set(team.id, (playoffCounts.get(team.id) ?? 0) + 1);
+      }
     });
   }
 
   const standingByTeamId = new Map(
     standings.items.map((item) => [item.teamId, item]),
+  );
+  const postseasonRows = calculatePostseasonProjection(
+    standings,
+    teams,
+    projectedWinRateByTeamId,
+    pythagoreanByTeamId,
+    simulations,
   );
 
   return {
@@ -528,6 +797,7 @@ export function calculateSeasonProjection(
     seriesId: standings.seriesId,
     modelVersion: SEASON_PROJECTION_MODEL_VERSION,
     generatedAt: new Date().toISOString(),
+    status: postseasonRows.length ? 'postseason' : 'regularSeason',
     rows: teams
       .map((team) => {
         const averageWins = Math.min(
@@ -548,6 +818,7 @@ export function calculateSeasonProjection(
           teamId: team.id,
           teamShortName: team.shortName,
           teamName: team.name,
+          playoffProbability: (playoffCounts.get(team.id) ?? 0) / simulations,
           averageRank: (rankSums.get(team.id) ?? 0) / simulations,
           averageWins,
           averageDraws,
@@ -577,6 +848,7 @@ export function calculateSeasonProjection(
 
         return b.expectedWinRate - a.expectedWinRate;
       }),
+    postseasonRows,
     simulations,
     minGames: MIN_GAMES_FOR_PROJECTION,
     remainingGames: remainingGames.length,

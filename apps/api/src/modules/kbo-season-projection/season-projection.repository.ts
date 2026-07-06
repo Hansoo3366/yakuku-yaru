@@ -6,6 +6,7 @@ import {
 } from '../teams/championship-history.js';
 import {
   SEASON_PROJECTION_MODEL_VERSION,
+  type PostseasonProjectionRow,
   type SeasonProjection,
   type SeasonProjectionRow,
 } from './season-projection-calculator.js';
@@ -50,7 +51,9 @@ export function emptySeasonProjection(input: {
     seriesId: input.seriesId ?? '0',
     modelVersion: input.modelVersion ?? SEASON_PROJECTION_MODEL_VERSION,
     generatedAt: null,
+    status: 'regularSeason' as const,
     rows: [],
+    postseasonRows: [],
     simulations: 0,
     minGames: 40,
     remainingGames: 0,
@@ -109,6 +112,7 @@ export async function replaceSeasonProjection(projection: SeasonProjection) {
         `INSERT INTO season_projection_rows (
            snapshot_id,
            team_id,
+           playoff_probability,
            average_rank,
            average_wins,
            average_draws,
@@ -119,10 +123,11 @@ export async function replaceSeasonProjection(projection: SeasonProjection) {
            schedule_adjusted_win_rate,
            current_rank
          )
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           snapshotId,
           row.teamId,
+          row.playoffProbability,
           row.averageRank,
           row.averageWins,
           row.averageDraws,
@@ -132,6 +137,38 @@ export async function replaceSeasonProjection(projection: SeasonProjection) {
           row.pythagoreanWinRate,
           row.scheduleAdjustedWinRate,
           row.currentRank,
+        ],
+      );
+    }
+
+    await connection.execute(
+      `DELETE FROM season_postseason_projection_rows
+       WHERE snapshot_id = ?`,
+      [snapshotId],
+    );
+
+    for (const row of projection.postseasonRows) {
+      await connection.execute(
+        `INSERT INTO season_postseason_projection_rows (
+           snapshot_id,
+           team_id,
+           seed,
+           average_final_rank,
+           korean_series_probability,
+           championship_probability,
+           pythagorean_win_rate,
+           projected_win_rate
+         )
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          snapshotId,
+          row.teamId,
+          row.seed,
+          row.averageFinalRank,
+          row.koreanSeriesProbability,
+          row.championshipProbability,
+          row.pythagoreanWinRate,
+          row.projectedWinRate,
         ],
       );
     }
@@ -183,6 +220,7 @@ export async function getLatestSeasonProjection(
       team_id: number;
       team_short_name: string;
       team_name: string;
+      playoff_probability: string | number;
       average_rank: string | number;
       average_wins: string | number;
       average_draws: string | number;
@@ -198,6 +236,7 @@ export async function getLatestSeasonProjection(
        spr.team_id,
        t.short_name AS team_short_name,
        t.name AS team_name,
+       spr.playoff_probability,
        spr.average_rank,
        spr.average_wins,
        spr.average_draws,
@@ -213,6 +252,35 @@ export async function getLatestSeasonProjection(
      ORDER BY spr.average_rank ASC, spr.expected_win_rate DESC`,
     [meta.id],
   );
+  const [postseasonRows] = await db.query<
+    (RowDataPacket & {
+      team_id: number;
+      team_short_name: string;
+      team_name: string;
+      seed: number;
+      average_final_rank: string | number;
+      korean_series_probability: string | number;
+      championship_probability: string | number;
+      pythagorean_win_rate: string | number;
+      projected_win_rate: string | number;
+    })[]
+  >(
+    `SELECT
+       sppr.team_id,
+       t.short_name AS team_short_name,
+       t.name AS team_name,
+       sppr.seed,
+       sppr.average_final_rank,
+       sppr.korean_series_probability,
+       sppr.championship_probability,
+       sppr.pythagorean_win_rate,
+       sppr.projected_win_rate
+     FROM season_postseason_projection_rows sppr
+     INNER JOIN teams t ON t.id = sppr.team_id
+     WHERE sppr.snapshot_id = ?
+     ORDER BY sppr.average_final_rank ASC, sppr.championship_probability DESC`,
+    [meta.id],
+  );
 
   return {
     seasonYear: Number(meta.season_year),
@@ -220,11 +288,13 @@ export async function getLatestSeasonProjection(
     seriesId: meta.series_id,
     modelVersion: meta.model_version,
     generatedAt: formatDateTime(meta.generated_at),
+    status: postseasonRows.length ? 'postseason' : 'regularSeason',
     rows: rows.map(
       (row): SeasonProjectionRow => ({
         teamId: Number(row.team_id),
         teamShortName: row.team_short_name,
         teamName: row.team_name,
+        playoffProbability: Number(row.playoff_probability),
         averageRank: Number(row.average_rank),
         averageWins: Number(row.average_wins),
         averageDraws: Number(row.average_draws),
@@ -235,6 +305,22 @@ export async function getLatestSeasonProjection(
         pythagoreanWinRate: Number(row.pythagorean_win_rate),
         scheduleAdjustedWinRate: Number(row.schedule_adjusted_win_rate),
         currentRank: Number(row.current_rank),
+        championshipHistory: getTeamChampionshipHistory(
+          row.team_short_name,
+        ) satisfies TeamChampionshipHistory,
+      }),
+    ),
+    postseasonRows: postseasonRows.map(
+      (row): PostseasonProjectionRow => ({
+        teamId: Number(row.team_id),
+        teamShortName: row.team_short_name,
+        teamName: row.team_name,
+        seed: Number(row.seed),
+        averageFinalRank: Number(row.average_final_rank),
+        koreanSeriesProbability: Number(row.korean_series_probability),
+        championshipProbability: Number(row.championship_probability),
+        pythagoreanWinRate: Number(row.pythagorean_win_rate),
+        projectedWinRate: Number(row.projected_win_rate),
         championshipHistory: getTeamChampionshipHistory(
           row.team_short_name,
         ) satisfies TeamChampionshipHistory,

@@ -612,6 +612,7 @@ export async function runMigrations() {
          id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
          snapshot_id BIGINT UNSIGNED NOT NULL,
          team_id BIGINT UNSIGNED NOT NULL,
+         playoff_probability DECIMAL(7, 4) NOT NULL DEFAULT 0,
          average_rank DECIMAL(8, 4) NOT NULL,
          average_wins DECIMAL(8, 4) NOT NULL,
          average_draws DECIMAL(8, 4) NOT NULL,
@@ -628,6 +629,48 @@ export async function runMigrations() {
            FOREIGN KEY (snapshot_id) REFERENCES season_projection_snapshots(id)
            ON DELETE CASCADE,
          CONSTRAINT fk_season_projection_rows_team
+           FOREIGN KEY (team_id) REFERENCES teams(id)
+           ON DELETE CASCADE
+       )`,
+    );
+  }
+
+  const hasSeasonProjectionRowsPlayoffProbability = await columnExists(
+    'season_projection_rows',
+    'playoff_probability',
+  );
+
+  if (!hasSeasonProjectionRowsPlayoffProbability) {
+    await db.execute(
+      `ALTER TABLE season_projection_rows
+       ADD COLUMN playoff_probability DECIMAL(7, 4) NOT NULL DEFAULT 0
+       AFTER team_id`,
+    );
+  }
+
+  const hasSeasonPostseasonProjectionRows = await tableExists(
+    'season_postseason_projection_rows',
+  );
+
+  if (!hasSeasonPostseasonProjectionRows) {
+    await db.execute(
+      `CREATE TABLE season_postseason_projection_rows (
+         id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+         snapshot_id BIGINT UNSIGNED NOT NULL,
+         team_id BIGINT UNSIGNED NOT NULL,
+         seed INT NOT NULL,
+         average_final_rank DECIMAL(8, 4) NOT NULL,
+         korean_series_probability DECIMAL(7, 4) NOT NULL,
+         championship_probability DECIMAL(7, 4) NOT NULL,
+         pythagorean_win_rate DECIMAL(7, 4) NOT NULL,
+         projected_win_rate DECIMAL(7, 4) NOT NULL,
+         PRIMARY KEY (id),
+         UNIQUE KEY uq_season_postseason_projection_row (snapshot_id, team_id),
+         KEY idx_season_postseason_projection_rows_team (team_id),
+         CONSTRAINT fk_season_postseason_projection_rows_snapshot
+           FOREIGN KEY (snapshot_id) REFERENCES season_projection_snapshots(id)
+           ON DELETE CASCADE,
+         CONSTRAINT fk_season_postseason_projection_rows_team
            FOREIGN KEY (team_id) REFERENCES teams(id)
            ON DELETE CASCADE
        )`,

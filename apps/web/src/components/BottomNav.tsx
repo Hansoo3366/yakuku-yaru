@@ -27,8 +27,8 @@ const navItems: Array<{
 
 export function BottomNav() {
   const pathname = usePathname();
-  const token = useAuthStore((state) => state.token);
-  const visibleNavItems = token
+  const user = useAuthStore((state) => state.user);
+  const visibleNavItems = user
     ? navItems
     : navItems.filter((item) => item.href !== '/me');
 

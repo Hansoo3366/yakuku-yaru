@@ -13,6 +13,8 @@ export default function robots(): MetadataRoute.Robots {
         '/login',
         '/me',
         '/offline',
+        '/posts/new',
+        '/posts/*/edit',
         '/register',
         '/reset-password',
         '/verify-email',

@@ -88,7 +88,7 @@ export function AppHeader() {
 
         <nav className="site-nav" aria-label="상단 메뉴">
           {primaryLinks
-            .filter((item) => token || item.href !== '/me')
+            .filter((item) => user || item.href !== '/me')
             .map((item) => (
               <Link
                 aria-current={
@@ -155,7 +155,7 @@ export function AppHeader() {
 
 export function AppFooter() {
   const pathname = usePathname();
-  const token = useAuthStore((state) => state.token);
+  const user = useAuthStore((state) => state.user);
   const isWideLayout =
     pathname === '/calendar' || pathname.startsWith('/calendar/');
 
@@ -171,7 +171,7 @@ export function AppFooter() {
           <Link href="/calendar">캘린더</Link>
           <Link href="/cheers">응원가</Link>
           <Link href="/posts">게시판</Link>
-          {token ? <Link href="/me">마이페이지</Link> : null}
+          {user ? <Link href="/me">마이페이지</Link> : null}
         </nav>
       </div>
     </footer>

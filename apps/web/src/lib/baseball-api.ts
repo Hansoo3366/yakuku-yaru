@@ -123,6 +123,7 @@ export type SeasonProjectionRow = {
   teamId: number;
   teamShortName: string;
   teamName: string;
+  playoffProbability: number;
   averageRank: number;
   averageWins: number;
   averageDraws: number;
@@ -136,13 +137,28 @@ export type SeasonProjectionRow = {
   championshipHistory: TeamChampionshipHistory;
 };
 
+export type PostseasonProjectionRow = {
+  teamId: number;
+  teamShortName: string;
+  teamName: string;
+  seed: number;
+  averageFinalRank: number;
+  koreanSeriesProbability: number;
+  championshipProbability: number;
+  pythagoreanWinRate: number;
+  projectedWinRate: number;
+  championshipHistory: TeamChampionshipHistory;
+};
+
 export type SeasonProjectionResponse = {
   seasonYear: number;
   rankDate: string | null;
   seriesId: string;
   modelVersion: string;
   generatedAt: string | null;
+  status: 'regularSeason' | 'postseason';
   rows: SeasonProjectionRow[];
+  postseasonRows: PostseasonProjectionRow[];
   simulations: number;
   minGames: number;
   remainingGames: number;
