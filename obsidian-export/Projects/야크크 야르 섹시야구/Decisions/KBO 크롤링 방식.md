@@ -40,6 +40,6 @@ fallback unique        → (game_date, home_team_id, away_team_id)
 
 ## 관련
 
-- [[Features/KBO 데이터 동기화]]
-- [[Issues/KBO 파서 구조 변경 대응]]
-- [[Decisions/공식 스코어 사용자 수정 불가]]
+- [[KBO 데이터 동기화]]
+- [[KBO 파서 구조 변경 대응]]
+- [[공식 스코어 사용자 수정 불가]]

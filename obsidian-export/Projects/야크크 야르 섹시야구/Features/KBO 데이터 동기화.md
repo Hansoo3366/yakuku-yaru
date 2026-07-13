@@ -51,6 +51,6 @@ KBO 상태 문구 → `rain`, `dust`, `ground`, `heat`, `cold`, `other`
 
 ## 관련
 
-- [[Decisions/KBO 크롤링 방식]]
-- [[Issues/KBO 파서 구조 변경 대응]]
-- [[05 배포 및 운영#KBO 동기화 운영]]
+- [[KBO 크롤링 방식]]
+- [[KBO 파서 구조 변경 대응]]
+- [[Project/야크크 야르 섹시야구/05 배포 및 운영#KBO 동기화 운영]]

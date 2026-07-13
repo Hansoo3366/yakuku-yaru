@@ -1,4 +1,4 @@
-# e2-small VM 빌드 부담
+# e2-small VM 빌드 문제
 
 ## 증상
 
@@ -16,7 +16,7 @@ GCP VM에서 `docker compose up --build` 시:
 
 ## 해결
 
-→ [[Decisions/GHCR 빌드 분리 배포]]
+→ [[GHCR 이미지 분리 배포]]
 
 1. GitHub Actions (ubuntu-latest)에서 이미지 빌드
 2. GHCR push
@@ -34,4 +34,4 @@ GCP VM에서 `docker compose up --build` 시:
 
 ## 관련
 
-- [[05 배포 및 운영]]
+- [[Project/야크크 야르 섹시야구/05 배포 및 운영]]

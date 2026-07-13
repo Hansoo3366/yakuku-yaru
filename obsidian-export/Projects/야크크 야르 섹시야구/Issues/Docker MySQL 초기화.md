@@ -33,8 +33,8 @@ docker compose up -d mysql
 
 ## 관련
 
-- [[03 DB 설계]]
-- [[05 배포 및 운영#데이터 보존]]
+- [[Project/야크크 야르 섹시야구/03 DB 설계]]
+- [[Project/야크크 야르 섹시야구/05 배포 및 운영#데이터 보존 (Docker Volume)]]
 
 ## 로컬 기타
 

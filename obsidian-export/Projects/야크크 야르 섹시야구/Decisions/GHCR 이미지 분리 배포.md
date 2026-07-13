@@ -1,13 +1,13 @@
-# GHCR 빌드 분리 배포
+# GHCR 이미지 분리 배포
 
 ## 결정
 
-Next.js·API Docker 이미지를 **GitHub Actions에서 빌드해 GHCR에 push**하고, GCP VM은 **pull + up --no-build**만 수행한다.
+Next.js·API Docker 이미지는 **GitHub Actions에서 빌드해 GHCR로 `push`**하고, GCP VM에서는 **`pull`과 `up --no-build`**만 수행한다.
 
 ## 배경
 
 - e2-small(2 vCPU, 2GB)에서 `next build` 시 OOM·극심한 지연
-- 배포마다 VM에서 npm install + build 하면 수 분~실패
+- 배포할 때마다 VM에서 `npm install`과 빌드를 수행하면 시간이 오래 걸리거나 실패함
 
 ## 흐름
 
@@ -29,6 +29,6 @@ Next.js·API Docker 이미지를 **GitHub Actions에서 빌드해 GHCR에 push**
 
 ## 관련
 
-- [[05 배포 및 운영]]
-- [[Issues/e2-small VM 빌드 부담]]
-- [[Issues/GitHub Actions SSH 인증 실패]]
+- [[Project/야크크 야르 섹시야구/05 배포 및 운영]]
+- [[e2-small VM 빌드 문제]]
+- [[GitHub Actions SSH 인증 실패]]

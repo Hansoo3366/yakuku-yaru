@@ -47,5 +47,5 @@ npm run sync:kbo-schedule:dev -- --mode=today
 
 ## 관련
 
-- [[Decisions/KBO 크롤링 방식]]
-- [[Features/KBO 데이터 동기화]]
+- [[KBO 크롤링 방식]]
+- [[KBO 데이터 동기화]]

@@ -10,7 +10,7 @@ unable to authenticate, attempted methods [none publickey]
 
 ## 원인
 
-1. **`DEPLOY_SSH_KEY` Secret 불일치** — private key 전체가 아니거나 줄바꿈 깨짐
+1. **`DEPLOY_SSH_KEY` Secret 불일치** — 개인 키 전체가 아니거나 줄바꿈이 깨짐
 2. **서버 `authorized_keys`와 키 쌍 불일치**
 3. **GCP OS Login** — metadata SSH와 authorized_keys 충돌
 4. (과거) `key_path`로 runner 파일 참조 — ssh-action은 Docker 안에서 실행되어 runner 홈 접근 불가
@@ -24,7 +24,7 @@ cd ~/yakuku-yaru
 bash scripts/deploy/setup-github-actions-ssh.sh
 ```
 
-출력된 **private key 전체** → GitHub `DEPLOY_SSH_KEY`
+출력된 **개인 키 전체** → GitHub `DEPLOY_SSH_KEY`
 
 ### 2. 지문 검증
 
@@ -56,5 +56,5 @@ ssh -i <private_key> <DEPLOY_USER>@<DEPLOY_HOST> "echo ok"
 
 ## 관련
 
-- [[05 배포 및 운영]]
-- [[Decisions/GHCR 빌드 분리 배포]]
+- [[Project/야크크 야르 섹시야구/05 배포 및 운영]]
+- [[GHCR 이미지 분리 배포]]

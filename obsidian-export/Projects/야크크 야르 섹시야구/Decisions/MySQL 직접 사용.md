@@ -26,8 +26,8 @@ Supabase / Firebase 등 BaaS 대신 **MySQL 8.4를 Docker로 직접 운영**한�
 
 ## 관련
 
-- [[03 DB 설계]]
-- [[05 배포 및 운영]]
+- [[Project/야크크 야르 섹시야구/03 DB 설계]]
+- [[Project/야크크 야르 섹시야구/05 배포 및 운영]]
 
 ## 날짜
 

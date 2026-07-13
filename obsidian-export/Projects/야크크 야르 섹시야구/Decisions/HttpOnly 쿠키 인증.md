@@ -1,8 +1,8 @@
-# httpOnly Cookie 인증
+# HttpOnly 쿠키 인증
 
 ## 결정
 
-JWT를 **httpOnly Cookie** (`yakuku_session`)로 내려주고, 프론트엔드는 토큰 값을 localStorage에 저장하지 않는다.
+JWT를 **`HttpOnly` 쿠키** (`yakuku_session`)로 내려주고, 프론트엔드는 토큰 값을 localStorage에 저장하지 않는다.
 
 ## 배경
 
@@ -32,5 +32,5 @@ res.cookie('yakuku_session', token, {
 
 ## 관련
 
-- [[06 재사용 코드#2. httpOnly Cookie JWT 인증]]
-- [[Features/게시판]] (인증 필요 API)
+- [[06 재사용 코드#2. `HttpOnly` 쿠키 JWT 인증]]
+- [[게시판]] (인증 필요 API)
