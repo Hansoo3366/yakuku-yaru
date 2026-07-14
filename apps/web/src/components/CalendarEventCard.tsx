@@ -124,6 +124,9 @@ export function CalendarEventCard({
     >
       <span className="calendar-event-head">
         <span className="calendar-event-time">{timeLabel}</span>
+        {outcomeLabel ? (
+          <span className="calendar-event-outcome">{outcomeLabel}</span>
+        ) : null}
         {logos}
       </span>
       <span className="calendar-event-body">

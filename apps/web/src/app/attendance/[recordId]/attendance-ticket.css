@@ -1,0 +1,733 @@
+.attendance-ticket-page {
+  --attendance-ink: #18222d;
+  --attendance-muted: #52606d;
+  --attendance-paper: #edf1f3;
+  --attendance-paper-deep: #e3e9ed;
+  --attendance-team-surface: var(
+    --team-color-surface,
+    var(--team-color, #183b66)
+  );
+  gap: 20px;
+  max-width: 1080px;
+  padding-top: 32px;
+}
+
+.attendance-ticket-page__topbar {
+  align-items: center;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+  min-height: 36px;
+}
+
+.attendance-ticket-back {
+  align-items: center;
+  color: var(--attendance-ink);
+  display: inline-flex;
+  font-size: 13px;
+  font-weight: 700;
+  gap: 7px;
+  width: fit-content;
+}
+
+.attendance-ticket-back span {
+  color: var(--team-color, var(--attendance-ink));
+  font-size: 17px;
+  line-height: 1;
+}
+
+.attendance-ticket-actions,
+.attendance-ticket-delete-confirm__actions {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+}
+
+.attendance-ticket-action {
+  align-items: center;
+  background: #f4f6f7;
+  border: 0;
+  border-radius: 6px;
+  color: var(--attendance-ink);
+  display: inline-flex;
+  font-size: 12px;
+  font-weight: 700;
+  justify-content: center;
+  line-height: 1;
+  min-height: 34px;
+  padding: 0 13px;
+  transition:
+    background-color 160ms ease,
+    color 160ms ease,
+    transform 160ms ease;
+}
+
+.attendance-ticket-action--primary {
+  background: var(--attendance-team-surface);
+  color: #fff;
+}
+
+.attendance-ticket-action--danger {
+  background: transparent;
+  color: #993f46;
+}
+
+.attendance-ticket-action--danger-solid {
+  background: #8e343b;
+  color: #fff;
+}
+
+.attendance-ticket-delete-confirm {
+  align-items: center;
+  background: #f7e9e9;
+  border-radius: 8px;
+  color: #702d33;
+  display: flex;
+  gap: 20px;
+  justify-content: space-between;
+  padding: 14px 16px;
+}
+
+.attendance-ticket-delete-confirm strong {
+  display: block;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.attendance-ticket-delete-confirm p {
+  color: #835158;
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+.attendance-ticket-heading {
+  display: grid;
+  gap: 4px;
+  padding: 6px 0 2px;
+}
+
+.attendance-ticket-heading > span {
+  color: var(--team-color, var(--attendance-ink));
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+}
+
+.attendance-ticket-heading h1 {
+  color: var(--attendance-ink);
+  font-size: clamp(24px, 3vw, 30px);
+  font-weight: 800;
+  letter-spacing: -0.035em;
+  line-height: 1.18;
+}
+
+.attendance-ticket-heading p {
+  color: var(--attendance-muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.attendance-ticket-card {
+  background: var(--attendance-paper);
+  border-radius: 14px 14px 9px 9px;
+  color: var(--attendance-ink);
+  overflow: hidden;
+  position: relative;
+}
+
+.attendance-ticket-card::before,
+.attendance-ticket-card::after {
+  background: var(--color-paper);
+  border-radius: 50%;
+  content: '';
+  height: 20px;
+  position: absolute;
+  top: 78px;
+  width: 20px;
+  z-index: 2;
+}
+
+.attendance-ticket-card::before {
+  left: -10px;
+}
+
+.attendance-ticket-card::after {
+  right: -10px;
+}
+
+.attendance-ticket-card__top {
+  align-items: center;
+  background: var(--attendance-team-surface);
+  color: #fff;
+  display: flex;
+  gap: 24px;
+  justify-content: space-between;
+  min-height: 88px;
+  padding: 18px 28px;
+}
+
+.attendance-ticket-card__identity,
+.attendance-ticket-card__status {
+  display: grid;
+}
+
+.attendance-ticket-card__identity {
+  gap: 2px;
+}
+
+.attendance-ticket-card__identity span,
+.attendance-ticket-card__status span {
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+}
+
+.attendance-ticket-card__identity strong {
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -0.015em;
+}
+
+.attendance-ticket-card__status {
+  gap: 3px;
+  justify-items: end;
+  text-align: right;
+}
+
+.attendance-ticket-card__status strong {
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.attendance-ticket-card__body {
+  display: grid;
+  gap: 28px;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  padding: 28px;
+}
+
+.attendance-ticket-photo {
+  aspect-ratio: 4 / 3;
+  background: color-mix(
+    in srgb,
+    var(--team-color, #365b7c) 7%,
+    #dfe5e9 93%
+  );
+  border-radius: 8px;
+  margin: 0;
+  min-height: 280px;
+  overflow: hidden;
+}
+
+.attendance-ticket-photo img {
+  display: block;
+  height: 100%;
+  object-fit: cover;
+  width: 100%;
+}
+
+.attendance-ticket-photo__empty {
+  align-content: center;
+  color: var(--attendance-muted);
+  display: grid;
+  gap: 6px;
+  height: 100%;
+  justify-items: center;
+  padding: 28px;
+  text-align: center;
+}
+
+.attendance-ticket-photo__empty > span {
+  color: color-mix(
+    in srgb,
+    var(--team-color, var(--attendance-ink)) 68%,
+    #5d6976 32%
+  );
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+}
+
+.attendance-ticket-photo__empty strong {
+  color: var(--attendance-ink);
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.attendance-ticket-photo__empty p {
+  font-size: 12px;
+  line-height: 1.55;
+  max-width: 29ch;
+}
+
+.attendance-ticket-photo__empty a {
+  color: var(--team-color, var(--attendance-ink));
+  font-size: 12px;
+  font-weight: 800;
+  margin-top: 6px;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 4px;
+}
+
+.attendance-ticket-game {
+  align-content: start;
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+}
+
+.attendance-ticket-matchup {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.78);
+  border-radius: 9px;
+  display: grid;
+  gap: 14px;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  min-height: 152px;
+  padding: 18px;
+}
+
+.attendance-ticket-team {
+  align-items: center;
+  display: grid;
+  gap: 3px;
+  justify-items: center;
+  min-width: 0;
+  text-align: center;
+}
+
+.attendance-ticket-team img {
+  height: 52px;
+  margin-bottom: 3px;
+  object-fit: contain;
+  width: 52px;
+}
+
+.attendance-ticket-team strong {
+  font-size: 14px;
+  font-weight: 800;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.attendance-ticket-team span {
+  color: var(--attendance-muted);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.attendance-ticket-score {
+  align-items: center;
+  display: flex;
+  font-variant-numeric: tabular-nums;
+  gap: 6px;
+  justify-content: center;
+  min-width: 92px;
+}
+
+.attendance-ticket-score strong {
+  color: var(--attendance-ink);
+  font-size: 36px;
+  font-weight: 800;
+  letter-spacing: -0.05em;
+  line-height: 1;
+}
+
+.attendance-ticket-score > span:not(.attendance-ticket-score__vs) {
+  color: #89939e;
+  font-size: 20px;
+  font-weight: 500;
+}
+
+.attendance-ticket-score__vs {
+  color: var(--attendance-muted);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.attendance-ticket-meta {
+  display: grid;
+  gap: 6px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 0;
+}
+
+.attendance-ticket-meta div {
+  background: color-mix(
+    in srgb,
+    var(--team-color, #365b7c) 4%,
+    #fff 96%
+  );
+  border-radius: 6px;
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  padding: 10px 12px;
+}
+
+.attendance-ticket-meta dt {
+  color: var(--attendance-muted);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.attendance-ticket-meta dd {
+  color: var(--attendance-ink);
+  font-size: 12px;
+  font-weight: 750;
+  line-height: 1.35;
+  margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.attendance-ticket-meta time {
+  white-space: nowrap;
+}
+
+.attendance-ticket-game-link {
+  align-items: center;
+  color: var(--team-color, var(--attendance-ink));
+  display: inline-flex;
+  font-size: 12px;
+  font-weight: 800;
+  gap: 6px;
+  justify-self: end;
+  padding: 3px 1px;
+}
+
+.attendance-ticket-game-link span {
+  transition: transform 160ms ease;
+}
+
+.attendance-ticket-memory {
+  align-items: start;
+  background: rgba(255, 255, 255, 0.66);
+  display: grid;
+  gap: 20px;
+  grid-template-columns: 104px minmax(0, 1fr);
+  margin: 0 28px 28px;
+  padding: 18px 20px;
+}
+
+.attendance-ticket-memory > span {
+  color: var(--team-color, var(--attendance-ink));
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.attendance-ticket-memory p {
+  color: var(--attendance-ink);
+  font-size: 14px;
+  font-weight: 650;
+  line-height: 1.65;
+  white-space: pre-wrap;
+}
+
+.attendance-ticket-memory .attendance-ticket-memory__empty {
+  color: var(--attendance-muted);
+  font-weight: 500;
+}
+
+.attendance-ticket-ledger {
+  background: var(--attendance-paper-deep);
+  border-radius: 8px;
+  color: var(--attendance-ink);
+  display: grid;
+  gap: 16px;
+  padding: 20px 22px 22px;
+}
+
+.attendance-ticket-ledger__heading {
+  align-items: baseline;
+  display: flex;
+  gap: 10px;
+}
+
+.attendance-ticket-ledger__heading h2 {
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.attendance-ticket-ledger__heading span {
+  color: var(--attendance-muted);
+  font-size: 11px;
+}
+
+.attendance-ticket-ledger__content {
+  align-items: start;
+  display: grid;
+  gap: 24px;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.attendance-ticket-provenance {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 32px;
+  margin: 0;
+}
+
+.attendance-ticket-provenance div {
+  display: grid;
+  gap: 3px;
+}
+
+.attendance-ticket-provenance dt,
+.attendance-ticket-companions h3 {
+  color: var(--attendance-muted);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.attendance-ticket-provenance dd {
+  font-size: 12px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.attendance-ticket-companions {
+  display: grid;
+  gap: 7px;
+  min-width: 180px;
+}
+
+.attendance-ticket-companions__list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.attendance-ticket-person {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.72);
+  border-radius: 4px;
+  display: inline-flex;
+  gap: 7px;
+  min-height: 28px;
+  padding: 0 9px;
+}
+
+.attendance-ticket-person strong {
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.attendance-ticket-person small {
+  color: var(--attendance-muted);
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.attendance-ticket-person[data-status='accepted'] small {
+  color: #267254;
+}
+
+.attendance-ticket-person[data-status='rejected'] small {
+  color: #963f47;
+}
+
+.attendance-ticket-permission-note {
+  color: var(--attendance-muted);
+  font-size: 11px;
+}
+
+@media (hover: hover) {
+  .attendance-ticket-back:hover,
+  .attendance-ticket-game-link:hover,
+  .attendance-ticket-photo__empty a:hover {
+    color: var(--attendance-team-surface);
+  }
+
+  .attendance-ticket-action:hover {
+    background: #e8ecef;
+  }
+
+  .attendance-ticket-action--primary:hover {
+    background: color-mix(
+      in srgb,
+      var(--attendance-team-surface) 88%,
+      #000 12%
+    );
+    color: #fff;
+  }
+
+  .attendance-ticket-action--danger:hover {
+    background: #f7e9e9;
+  }
+
+  .attendance-ticket-action--danger-solid:hover {
+    background: #782b32;
+  }
+
+  .attendance-ticket-action:active {
+    transform: translateY(1px);
+  }
+
+  .attendance-ticket-game-link:hover span {
+    transform: translateX(3px);
+  }
+}
+
+@media (max-width: 760px) {
+  .attendance-ticket-page {
+    gap: 16px;
+    padding-top: 20px;
+  }
+
+  .attendance-ticket-card__top {
+    min-height: 82px;
+    padding: 16px 20px;
+  }
+
+  .attendance-ticket-card::before,
+  .attendance-ticket-card::after {
+    top: 72px;
+  }
+
+  .attendance-ticket-card__body {
+    gap: 18px;
+    grid-template-columns: 1fr;
+    padding: 18px;
+  }
+
+  .attendance-ticket-photo {
+    aspect-ratio: 16 / 10;
+    min-height: 0;
+  }
+
+  .attendance-ticket-photo__empty {
+    min-height: 220px;
+  }
+
+  .attendance-ticket-matchup {
+    min-height: 142px;
+  }
+
+  .attendance-ticket-memory {
+    gap: 7px;
+    grid-template-columns: 1fr;
+    margin: 0 18px 18px;
+    padding: 15px 16px 17px;
+  }
+
+  .attendance-ticket-ledger__content {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 520px) {
+  .attendance-ticket-page__topbar {
+    align-items: flex-start;
+  }
+
+  .attendance-ticket-actions {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .attendance-ticket-action {
+    min-height: 32px;
+    padding-inline: 11px;
+  }
+
+  .attendance-ticket-delete-confirm {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .attendance-ticket-delete-confirm__actions {
+    justify-content: flex-end;
+  }
+
+  .attendance-ticket-heading h1 {
+    font-size: 24px;
+  }
+
+  .attendance-ticket-card__top {
+    gap: 14px;
+    padding-inline: 18px;
+  }
+
+  .attendance-ticket-card__identity strong {
+    font-size: 15px;
+  }
+
+  .attendance-ticket-card__status strong {
+    font-size: 13px;
+  }
+
+  .attendance-ticket-card__identity span,
+  .attendance-ticket-card__status span {
+    font-size: 9px;
+  }
+
+  .attendance-ticket-card__body {
+    padding: 14px;
+  }
+
+  .attendance-ticket-photo__empty {
+    min-height: 190px;
+    padding: 20px;
+  }
+
+  .attendance-ticket-matchup {
+    gap: 7px;
+    min-height: 132px;
+    padding: 14px 10px;
+  }
+
+  .attendance-ticket-team img {
+    height: 44px;
+    width: 44px;
+  }
+
+  .attendance-ticket-team strong {
+    font-size: 13px;
+  }
+
+  .attendance-ticket-score {
+    gap: 4px;
+    min-width: 76px;
+  }
+
+  .attendance-ticket-score strong {
+    font-size: 31px;
+  }
+
+  .attendance-ticket-meta div {
+    padding: 9px 10px;
+  }
+
+  .attendance-ticket-meta dd {
+    font-size: 11px;
+  }
+
+  .attendance-ticket-memory {
+    margin: 0 14px 14px;
+  }
+
+  .attendance-ticket-ledger {
+    padding: 17px 16px 19px;
+  }
+
+  .attendance-ticket-ledger__heading {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 2px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .attendance-ticket-action,
+  .attendance-ticket-game-link span {
+    transition: none;
+  }
+}

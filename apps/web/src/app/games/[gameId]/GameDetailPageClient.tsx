@@ -2,6 +2,8 @@
 
 /* eslint-disable @next/next/no-img-element */
 
+import './game-detail.css';
+
 import Link from 'next/link';
 import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useState } from 'react';
@@ -93,6 +95,7 @@ function teamCheerToDialogItem(
   imageUrl: string | null,
 ): CheerDialogItem {
   return {
+    accentColor: cheer.teamPrimaryColor,
     cheerId: cheer.cheerId,
     imageUrl,
     imageMode: 'raw',
@@ -107,21 +110,29 @@ function teamCheerToDialogItem(
 }
 
 function StarterPitcherCard({
+  isFavoriteTeam,
   label,
   pitcher,
   team,
 }: {
+  isFavoriteTeam: boolean;
   label: string;
   pitcher: Pitcher | null;
   team: Game['homeTeam'];
 }) {
   return (
-    <article className="starter-pitcher-card">
+    <article
+      className={`starter-pitcher-card${
+        isFavoriteTeam ? ' is-favorite-team' : ''
+      }`}
+    >
       <div className="starter-pitcher-head">
         <PlayerPhoto
           className="starter-pitcher-photo"
+          height={82}
           placeholderClassName="starter-pitcher-photo--placeholder"
           profileImageUrl={pitcher?.profileImageUrl}
+          width={82}
         />
         <div>
           <span>{label}</span>
@@ -186,26 +197,42 @@ function StarterPitcherCard({
 
 function LineupPanel({
   gameStarted,
+  isFavoriteTeam,
+  isMobileActive,
   onPlayerClick,
   onTeamCheerClick,
+  panelId,
   players,
+  sideLabel,
   team,
   teamCheer,
 }: {
   gameStarted: boolean;
+  isFavoriteTeam: boolean;
+  isMobileActive: boolean;
   onPlayerClick: (playerId: number) => void;
   onTeamCheerClick: (cheer: TeamCheer, imageUrl: string | null) => void;
+  panelId: string;
   players: LineupPlayer[];
+  sideLabel: string;
   team: Game['homeTeam'];
   teamCheer: TeamCheer | null;
 }) {
   const hasTeamCheer = Boolean(teamCheer?.cheerId);
 
   return (
-    <div className="lineup-panel">
+    <div
+      className={`lineup-panel${isFavoriteTeam ? ' is-favorite-team' : ''}`}
+      data-mobile-active={isMobileActive}
+      id={panelId}
+    >
       <div className="lineup-team-title">
-        <img alt="" src={getTeamLogoSrc(team)} />
-        <strong>{team.shortName}</strong>
+        <img alt="" height={34} src={getTeamLogoSrc(team)} width={34} />
+        <div>
+          <span>{sideLabel}</span>
+          <strong>{team.shortName}</strong>
+        </div>
+        {isFavoriteTeam ? <em>MY TEAM</em> : null}
         <button
           aria-label={`${team.shortName} 팀 응원가 보기`}
           className="lineup-team-cheer-button"
@@ -229,8 +256,10 @@ function LineupPanel({
                 <span className="lineup-order">{player.battingOrder}</span>
                 <PlayerPhoto
                   className="lineup-player-photo"
+                  height={40}
                   placeholderClassName="lineup-player-photo--placeholder"
                   profileImageUrl={player.profileImageUrl}
+                  width={40}
                 />
                 <div className="lineup-player-main">
                   <div className="lineup-player-name-row">
@@ -311,11 +340,12 @@ function GameRecordPanel({
     return (
       <section
         aria-label="이 경기의 내 티켓"
-        className="card game-record-panel"
+        className="game-detail-surface game-record-panel"
+        id="game-record"
       >
         <div className="section-heading">
           <div>
-            <h2>이 경기의 내 티켓</h2>
+            <h2>내 관람 기록</h2>
             <p>
               직접 남겼거나 태깅된 포토 티켓 {attendanceRecords.length}개
             </p>
@@ -334,7 +364,12 @@ function GameRecordPanel({
                   onClick={() => onCheeredTeamSelect(team.id)}
                   type="button"
                 >
-                  <img alt="" src={getTeamLogoSrc(team)} />
+                  <img
+                    alt=""
+                    height={18}
+                    src={getTeamLogoSrc(team)}
+                    width={18}
+                  />
                   {team.shortName}
                 </button>
               ))}
@@ -373,7 +408,9 @@ function GameRecordPanel({
                     {attendanceRecord.photoUrl ? (
                       <img
                         alt="직관 사진"
+                        height={240}
                         src={getAssetUrl(attendanceRecord.photoUrl)}
+                        width={320}
                       />
                     ) : (
                       <span className="game-record-ticket-photo-empty">
@@ -412,11 +449,15 @@ function GameRecordPanel({
   }
 
   return (
-    <section aria-label="직관 기록" className="card game-record-panel">
+    <section
+      aria-label="관람 기록"
+      className="game-detail-surface game-record-panel game-record-panel--empty"
+      id="game-record"
+    >
       <div className="section-heading">
         <div>
-          <h2>직관 기록</h2>
-          <p>경기 후 포토 티켓으로 남겨보세요</p>
+          <h2>내 관람 기록</h2>
+          <p>직관과 집관의 순간을 포토 티켓으로 남겨보세요</p>
         </div>
       </div>
       {!isLoggedIn ? (
@@ -429,11 +470,54 @@ function GameRecordPanel({
           className="btn btn-primary btn-lg game-record-cta"
           href={`/attendance/new?gameId=${game.id}`}
         >
-          직관 기록 작성
+          포토 티켓 남기기
         </Link>
       ) : (
         <p className="score-input-hint">
           경기 시작 후에 직관 기록을 작성할 수 있어요.
+        </p>
+      )}
+    </section>
+  );
+}
+
+function GameTicketPanel({ game }: { game: Game }) {
+  const hasTicketExtras = Boolean(game.ticketUrl || game.ticketOpenAt);
+
+  return (
+    <section
+      aria-label="예매 및 티켓 오픈"
+      className="game-detail-surface game-extras-panel"
+    >
+      <div className="section-heading">
+        <div>
+          <h2>예매 정보</h2>
+          <p>티켓 오픈 시간과 공식 예매처</p>
+        </div>
+      </div>
+      {hasTicketExtras ? (
+        <div className="game-extras-stack">
+          {game.ticketOpenAt ? (
+            <div className="game-ticket-open-notice">
+              <span className="game-ticket-open-label">티켓 오픈</span>
+              <strong>{formatTicketOpenAt(game.ticketOpenAt)}</strong>
+              <p>오픈 전에 로그인과 결제 수단을 확인해 두세요.</p>
+            </div>
+          ) : null}
+          {game.ticketUrl ? (
+            <a
+              className="btn btn-primary btn-lg"
+              href={game.ticketUrl}
+              rel="noreferrer"
+              target="_blank"
+            >
+              공식 예매처 열기
+            </a>
+          ) : null}
+        </div>
+      ) : (
+        <p className="game-detail-empty-copy">
+          아직 등록된 티켓 오픈 정보가 없습니다.
         </p>
       )}
     </section>
@@ -453,6 +537,9 @@ export function GameDetailPageClient({ gameId }: { gameId: number }) {
     useState<CheerDialogItem | null>(null);
   const [cheerError, setCheerError] = useState('');
   const [savingCheeredTeam, setSavingCheeredTeam] = useState(false);
+  const [selectedLineupTeamId, setSelectedLineupTeamId] = useState<
+    number | null
+  >(null);
   const game = gameQuery.data?.game ?? null;
   const attendanceRecords = useMemo(
     () =>
@@ -539,11 +626,6 @@ export function GameDetailPageClient({ gameId }: { gameId: number }) {
     isGameFinished(game) &&
     game.homeScore !== null &&
     game.awayScore !== null;
-  const scoreText = isFinished
-    ? `${game.awayScore} : ${game.homeScore}`
-    : isCancelled && game.homeScore !== null && game.awayScore !== null
-      ? `${game.awayScore} : ${game.homeScore}`
-      : null;
   const hasLineup =
     game.lineups.home.length > 0 || game.lineups.away.length > 0;
   const showLineupPredictedNotice =
@@ -553,106 +635,163 @@ export function GameDetailPageClient({ gameId }: { gameId: number }) {
     game.status !== 'cancelled' &&
     !hasGameStarted(game);
   const canWriteAttendance = canWriteAttendanceRecord(game);
-  const hasTicketExtras = Boolean(game.ticketUrl || game.ticketOpenAt);
+  const hasDisplayScore =
+    (isFinished || isCancelled) &&
+    game.awayScore !== null &&
+    game.homeScore !== null;
+  const awayScore = game.awayScore ?? 0;
+  const homeScore = game.homeScore ?? 0;
+  const awayResult = !isFinished
+    ? 'pending'
+    : awayScore === homeScore
+      ? 'draw'
+      : awayScore > homeScore
+        ? 'winner'
+        : 'loser';
+  const homeResult = !isFinished
+    ? 'pending'
+    : homeScore === awayScore
+      ? 'draw'
+      : homeScore > awayScore
+        ? 'winner'
+        : 'loser';
+  const favoriteTeamIsPlaying =
+    viewerFavoriteTeamId === game.awayTeam.id ||
+    viewerFavoriteTeamId === game.homeTeam.id;
+  const activeLineupTeamId =
+    selectedLineupTeamId ??
+    (favoriteTeamIsPlaying ? viewerFavoriteTeamId : game.awayTeam.id);
 
   return (
     <main className="app-shell app-shell--game-detail">
-      <Link className="back-link" href="/calendar">
-        캘린더로
-      </Link>
-
       <section
         aria-label="경기 스코어보드"
         className="match-hero match-hero--report"
+        id="game-summary"
       >
+        <div className="match-hero-topline">
+          <Link className="game-detail-back" href="/calendar">
+            <span aria-hidden="true">←</span> 경기 일정
+          </Link>
+          <span className={getGameStatusBadgeClass(statusTone)}>
+            {getGameStatusLabel(statusTone)}
+          </span>
+        </div>
         <div className="match-hero-copy">
-          <span className="eyebrow">Game Preview</span>
+          <span className="eyebrow">KBO MATCH</span>
           <h1>
             {game.awayTeam.name} vs {game.homeTeam.name}
           </h1>
-          <p className="match-hero-stadium">
-            <span className={getGameStatusBadgeClass(statusTone)}>
-              {getGameStatusLabel(statusTone)}
-            </span>
-            <span className="match-hero-stadium-sep" aria-hidden="true">
-              ·
-            </span>
-            <span>
-              {formatDateTime(game.gameDate)} · {game.stadium}
-            </span>
-          </p>
+          <div className="match-hero-meta">
+            <time dateTime={game.gameDate}>{formatDateTime(game.gameDate)}</time>
+            <span>{game.stadium}</span>
+          </div>
         </div>
 
         <div className="match-scoreboard">
-          <div className="match-team">
-            <img alt="" src={getTeamLogoSrc(game.awayTeam)} />
+          <div
+            className="match-team"
+            data-favorite={viewerFavoriteTeamId === game.awayTeam.id}
+            data-result={awayResult}
+          >
+            <span className="match-team-side">원정</span>
+            <img
+              alt=""
+              height={68}
+              src={getTeamLogoSrc(game.awayTeam)}
+              width={68}
+            />
             <strong>{game.awayTeam.shortName}</strong>
-            <small>Away</small>
+            <small>{game.awayTeam.name}</small>
+            {hasDisplayScore ? (
+              <b className="match-team-score">{game.awayScore}</b>
+            ) : null}
           </div>
           <div className="match-score">
-            {isCancelled ? (
-              <>
-                <span className="match-score-label">CANCELLED</span>
-                <span className="match-score-vs">
-                  {scoreText ?? '경기 취소'}
-                </span>
-              </>
-            ) : isFinished ? (
-              <>
-                <span className="match-score-label">FINAL</span>
-                <span>{scoreText}</span>
-              </>
-            ) : (
-              <>
-                <span className="match-score-label">Scheduled</span>
-                <span className="match-score-vs">VS</span>
-              </>
-            )}
+            <span className="match-score-label">
+              {isCancelled
+                ? '경기 취소'
+                : isFinished
+                  ? '경기 종료'
+                  : '경기 예정'}
+            </span>
+            <span className="match-score-vs">
+              {hasDisplayScore ? ':' : 'VS'}
+            </span>
           </div>
-          <div className="match-team">
-            <img alt="" src={getTeamLogoSrc(game.homeTeam)} />
+          <div
+            className="match-team"
+            data-favorite={viewerFavoriteTeamId === game.homeTeam.id}
+            data-result={homeResult}
+          >
+            <span className="match-team-side">홈</span>
+            <img
+              alt=""
+              height={68}
+              src={getTeamLogoSrc(game.homeTeam)}
+              width={68}
+            />
             <strong>{game.homeTeam.shortName}</strong>
-            <small>Home</small>
+            <small>{game.homeTeam.name}</small>
+            {hasDisplayScore ? (
+              <b className="match-team-score">{game.homeScore}</b>
+            ) : null}
           </div>
         </div>
       </section>
 
-      <GameRecordPanel
-        attendanceRecords={attendanceRecords}
-        canWriteAttendance={canWriteAttendance}
-        game={game}
-        isLoggedIn={Boolean(token)}
-        onCheeredTeamSelect={handleCompanionCheeredTeamSelect}
-        savingCheeredTeam={savingCheeredTeam}
-        viewerFavoriteTeamId={viewerFavoriteTeamId}
-      />
+      <div className="game-detail-action-grid">
+        <GameRecordPanel
+          attendanceRecords={attendanceRecords}
+          canWriteAttendance={canWriteAttendance}
+          game={game}
+          isLoggedIn={Boolean(token)}
+          onCheeredTeamSelect={handleCompanionCheeredTeamSelect}
+          savingCheeredTeam={savingCheeredTeam}
+          viewerFavoriteTeamId={viewerFavoriteTeamId}
+        />
+        <GameTicketPanel game={game} />
+      </div>
 
-      <section aria-label="선발 투수" className="card game-report-section">
+      <section
+        aria-label="선발 투수"
+        className="game-detail-surface game-report-section"
+        id="starting-pitchers"
+      >
         <div className="section-heading">
           <div>
             <h2>선발 투수</h2>
-            <p>시즌 기준 주요 지표</p>
+            <p>시즌 성적과 주요 지표를 같은 기준으로 비교합니다</p>
           </div>
         </div>
         <div className="starter-pitcher-grid">
           <StarterPitcherCard
-            label="Away 선발"
+            isFavoriteTeam={viewerFavoriteTeamId === game.awayTeam.id}
+            label="원정 선발"
             pitcher={game.probablePitchers.away}
             team={game.awayTeam}
           />
+          <span aria-hidden="true" className="starter-matchup-divider">
+            VS
+          </span>
           <StarterPitcherCard
-            label="Home 선발"
+            isFavoriteTeam={viewerFavoriteTeamId === game.homeTeam.id}
+            label="홈 선발"
             pitcher={game.probablePitchers.home}
             team={game.homeTeam}
           />
         </div>
       </section>
 
-      <section aria-label="라인업" className="card game-report-section">
+      <section
+        aria-label="라인업"
+        className="game-detail-surface game-report-section"
+        id="lineups"
+      >
         <div className="section-heading">
           <div>
             <h2>라인업</h2>
-            <p>타순·포지션·시즌 타율/OPS/WAR</p>
+            <p>타순·포지션과 시즌 타율·OPS·WAR</p>
           </div>
         </div>
         {showLineupPredictedNotice ? (
@@ -669,63 +808,66 @@ export function GameDetailPageClient({ gameId }: { gameId: number }) {
             <strong>공식 라인업입니다.</strong>
           </p>
         ) : null}
+        <div aria-label="모바일 라인업 선택" className="lineup-mobile-switch">
+          {[game.awayTeam, game.homeTeam].map((team) => {
+            const selected = activeLineupTeamId === team.id;
+
+            return (
+              <button
+                aria-controls={`lineup-team-${team.id}`}
+                aria-pressed={selected}
+                className={selected ? 'is-selected' : ''}
+                key={team.id}
+                onClick={() => setSelectedLineupTeamId(team.id)}
+                type="button"
+              >
+                <img
+                  alt=""
+                  height={24}
+                  src={getTeamLogoSrc(team)}
+                  width={24}
+                />
+                {team.shortName}
+              </button>
+            );
+          })}
+        </div>
         <div className="lineup-grid">
           <LineupPanel
             gameStarted={hasGameStarted(game)}
+            isFavoriteTeam={viewerFavoriteTeamId === game.awayTeam.id}
+            isMobileActive={activeLineupTeamId === game.awayTeam.id}
             onPlayerClick={handleLineupPlayerClick}
             onTeamCheerClick={handleTeamCheerClick}
+            panelId={`lineup-team-${game.awayTeam.id}`}
             players={game.lineups.away}
+            sideLabel="원정 라인업"
             team={game.awayTeam}
             teamCheer={teamCheersById.get(game.awayTeam.id) ?? null}
           />
           <LineupPanel
             gameStarted={hasGameStarted(game)}
+            isFavoriteTeam={viewerFavoriteTeamId === game.homeTeam.id}
+            isMobileActive={activeLineupTeamId === game.homeTeam.id}
             onPlayerClick={handleLineupPlayerClick}
             onTeamCheerClick={handleTeamCheerClick}
+            panelId={`lineup-team-${game.homeTeam.id}`}
             players={game.lineups.home}
+            sideLabel="홈 라인업"
             team={game.homeTeam}
             teamCheer={teamCheersById.get(game.homeTeam.id) ?? null}
           />
         </div>
-        {cheerError ? <p className="form-error">{cheerError}</p> : null}
+        {cheerError ? (
+          <p className="form-error" role="alert">
+            {cheerError}
+          </p>
+        ) : null}
       </section>
 
-      <section
-        aria-label="예매 및 티켓 오픈"
-        className="card game-report-section game-extras-panel"
-      >
-        <div className="section-heading">
-          <div>
-            <h2>예매 · 알림</h2>
-            <p>티켓 예매와 오픈 일정</p>
-          </div>
-        </div>
-        {hasTicketExtras ? (
-          <div className="game-extras-stack">
-            {game.ticketOpenAt ? (
-              <div className="game-ticket-open-notice">
-                <span className="game-ticket-open-label">티켓 오픈 예정</span>
-                <strong>{formatTicketOpenAt(game.ticketOpenAt)}</strong>
-                <p>오픈 시각을 확인하고 예매를 준비해 보세요.</p>
-              </div>
-            ) : null}
-            {game.ticketUrl ? (
-              <a
-                className="btn btn-primary btn-lg"
-                href={game.ticketUrl}
-                rel="noreferrer"
-                target="_blank"
-              >
-                예매처 열기
-              </a>
-            ) : null}
-          </div>
-        ) : (
-          <p className="muted">등록된 예매·오픈 정보가 없어요.</p>
-        )}
-      </section>
-
-      <StadiumPersonalNotes stadium={game.stadium} />
+      <div className="game-detail-stadium" id="stadium-notes">
+        <StadiumPersonalNotes stadium={game.stadium} />
+      </div>
       <PlayerCheerDialog
         onClose={() => setSelectedPlayerCheer(null)}
         player={selectedPlayerCheer}

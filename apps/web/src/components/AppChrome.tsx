@@ -70,11 +70,8 @@ export function AppHeader() {
   const teams = teamsQuery.data?.items ?? [];
   const favoriteTeam = teams.find((team) => team.id === user?.favoriteTeamId);
   useTeamTheme(favoriteTeam?.primaryColor ?? null);
-  const isWideLayout =
-    pathname === '/calendar' || pathname.startsWith('/calendar/');
-
   return (
-    <header className={`site-header${isWideLayout ? ' is-layout-wide' : ''}`}>
+    <header className="site-header">
       <div className="site-header-inner">
         <Link className="brand-link" href="/">
           <span className="brand-mark" aria-hidden="true">

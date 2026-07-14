@@ -1,0 +1,335 @@
+.cheer-dialog-backdrop {
+  align-items: center;
+  backdrop-filter: blur(6px);
+  background: rgba(10, 18, 28, 0.68);
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  padding: 24px;
+  position: fixed;
+  z-index: 80;
+}
+
+.cheer-dialog {
+  --cheer-dialog-ink: #19232e;
+  --cheer-dialog-muted: #52606d;
+  background: #edf1f3;
+  border-radius: 14px;
+  color: var(--cheer-dialog-ink);
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  max-height: min(780px, calc(100dvh - 48px));
+  max-width: 900px;
+  overflow: hidden;
+  width: min(100%, 900px);
+}
+
+.cheer-dialog-titlebar {
+  align-items: center;
+  background: var(--cheer-dialog-surface, #183b66);
+  color: #fff;
+  display: flex;
+  justify-content: space-between;
+  min-height: 64px;
+  padding: 12px 16px 12px 20px;
+}
+
+.cheer-dialog-titlebar > div {
+  display: grid;
+  gap: 1px;
+}
+
+.cheer-dialog-titlebar span {
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 9px;
+  font-weight: 750;
+  letter-spacing: 0.16em;
+}
+
+.cheer-dialog-titlebar strong {
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.cheer-dialog-close {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.14);
+  border: 0;
+  border-radius: 6px;
+  color: #fff;
+  display: inline-flex;
+  font-size: 22px;
+  font-weight: 400;
+  height: 36px;
+  justify-content: center;
+  line-height: 1;
+  padding: 0 0 2px;
+  transition:
+    background-color 160ms ease,
+    transform 160ms ease;
+  width: 36px;
+}
+
+.cheer-dialog-close:focus-visible {
+  outline: 3px solid rgba(255, 255, 255, 0.76);
+  outline-offset: 2px;
+}
+
+.cheer-dialog-scroll {
+  display: grid;
+  grid-template-columns: minmax(220px, 270px) minmax(0, 1fr);
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.cheer-dialog-identity {
+  align-content: start;
+  background: color-mix(
+    in srgb,
+    var(--cheer-dialog-accent, #183b66) 9%,
+    #e1e7eb 91%
+  );
+  display: grid;
+  gap: 20px;
+  min-width: 0;
+  padding: 28px;
+}
+
+.cheer-dialog-photo {
+  aspect-ratio: 4 / 5;
+  background: #d4dde2;
+  border: 0;
+  border-radius: 8px;
+  display: block;
+  height: auto;
+  max-height: 270px;
+  object-fit: cover;
+  width: 100%;
+}
+
+.cheer-dialog-photo--logo {
+  aspect-ratio: 1;
+  background: rgba(255, 255, 255, 0.76);
+  object-fit: contain;
+  padding: 34px;
+}
+
+.cheer-dialog-identity__copy {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.cheer-dialog-identity__copy > span {
+  color: var(--cheer-dialog-surface, var(--cheer-dialog-ink));
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.cheer-dialog-identity__copy h2 {
+  color: var(--cheer-dialog-ink);
+  font-size: clamp(24px, 3.2vw, 32px);
+  font-weight: 800;
+  letter-spacing: -0.045em;
+  line-height: 1.12;
+  overflow-wrap: anywhere;
+}
+
+.cheer-dialog-identity__copy p {
+  color: var(--cheer-dialog-muted);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.cheer-dialog-body {
+  align-content: start;
+  display: grid;
+  gap: 18px;
+  min-width: 0;
+  padding: 28px 30px 32px;
+}
+
+.cheer-dialog-track {
+  display: grid;
+  gap: 4px;
+}
+
+.cheer-dialog-track span {
+  color: var(--cheer-dialog-surface, var(--cheer-dialog-ink));
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.15em;
+}
+
+.cheer-dialog-track h3 {
+  color: var(--cheer-dialog-ink);
+  font-size: 21px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.25;
+  text-wrap: balance;
+}
+
+.cheer-dialog-video {
+  aspect-ratio: 16 / 9;
+  background: #101b27;
+  border-radius: 8px;
+  overflow: hidden;
+  width: 100%;
+}
+
+.cheer-dialog-video iframe {
+  border: 0;
+  display: block;
+  height: 100%;
+  width: 100%;
+}
+
+.cheer-dialog-lyrics {
+  background: rgba(255, 255, 255, 0.78);
+  border-radius: 8px;
+  display: grid;
+  gap: 9px;
+  padding: 18px 20px 22px;
+}
+
+.cheer-dialog-lyrics h4 {
+  color: var(--cheer-dialog-surface, var(--cheer-dialog-ink));
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.cheer-dialog-lyrics p {
+  color: var(--cheer-dialog-ink);
+  font-size: 14px;
+  font-weight: 550;
+  line-height: 1.85;
+  white-space: pre-wrap;
+}
+
+.cheer-dialog-media-empty,
+.cheer-dialog-empty {
+  align-content: center;
+  background: rgba(255, 255, 255, 0.66);
+  border-radius: 8px;
+  color: var(--cheer-dialog-muted);
+  display: grid;
+  font-size: 12px;
+  justify-items: center;
+  min-height: 180px;
+  padding: 24px;
+  text-align: center;
+}
+
+.cheer-dialog-empty {
+  align-self: stretch;
+  border-radius: 0;
+  gap: 5px;
+  min-height: 360px;
+}
+
+.cheer-dialog-empty > span {
+  color: var(--cheer-dialog-surface, var(--cheer-dialog-ink));
+  font-size: 27px;
+  line-height: 1;
+  margin-bottom: 5px;
+}
+
+.cheer-dialog-empty strong {
+  color: var(--cheer-dialog-ink);
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.cheer-dialog-empty p {
+  color: var(--cheer-dialog-muted);
+  font-size: 12px;
+  line-height: 1.5;
+  text-wrap: pretty;
+}
+
+@media (hover: hover) {
+  .cheer-dialog-close:hover {
+    background: rgba(255, 255, 255, 0.24);
+  }
+
+  .cheer-dialog-close:active {
+    transform: translateY(1px);
+  }
+}
+
+@media (max-width: 720px) {
+  .cheer-dialog-backdrop {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  .cheer-dialog {
+    border-radius: 16px 16px 0 0;
+    max-height: calc(100dvh - 52px);
+    max-width: none;
+    width: 100%;
+  }
+
+  .cheer-dialog-titlebar {
+    min-height: 58px;
+    padding: 10px 12px 10px 18px;
+  }
+
+  .cheer-dialog-scroll {
+    grid-template-columns: 1fr;
+  }
+
+  .cheer-dialog-identity {
+    align-items: center;
+    gap: 15px;
+    grid-template-columns: 78px minmax(0, 1fr);
+    padding: 18px;
+  }
+
+  .cheer-dialog-photo {
+    aspect-ratio: 1;
+    height: 78px;
+    max-height: none;
+    width: 78px;
+  }
+
+  .cheer-dialog-photo--logo {
+    padding: 13px;
+  }
+
+  .cheer-dialog-identity__copy h2 {
+    font-size: 24px;
+  }
+
+  .cheer-dialog-body {
+    gap: 15px;
+    padding: 20px 18px 28px;
+  }
+
+  .cheer-dialog-track h3 {
+    font-size: 19px;
+  }
+
+  .cheer-dialog-lyrics {
+    padding: 16px 17px 20px;
+  }
+
+  .cheer-dialog-lyrics p {
+    font-size: 13px;
+    line-height: 1.8;
+  }
+
+  .cheer-dialog-empty {
+    min-height: 260px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cheer-dialog-close {
+    transition: none;
+  }
+}

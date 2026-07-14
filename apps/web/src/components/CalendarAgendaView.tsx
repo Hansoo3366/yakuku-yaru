@@ -96,6 +96,7 @@ export function CalendarAgendaView({
             ]
               .filter(Boolean)
               .join(' ')}
+            aria-current={isToday ? 'date' : undefined}
             id={getAgendaDayElementId(key)}
             key={key}
           >

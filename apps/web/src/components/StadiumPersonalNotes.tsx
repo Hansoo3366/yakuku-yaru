@@ -144,8 +144,8 @@ export function StadiumPersonalNotes({ stadium }: Props) {
       </div>
 
       {isLoading ? (
-        <p className="muted" style={{ fontSize: 'var(--text-sm)' }}>
-          메모 불러오는 중
+        <p className="muted stadium-note-loading">
+          메모 불러오는 중…
         </p>
       ) : (
         <div className="form-grid">
@@ -154,15 +154,17 @@ export function StadiumPersonalNotes({ stadium }: Props) {
               맛집 메모
             </label>
             <textarea
+              autoComplete="off"
               className="form-textarea"
               id="stadium-food-memo"
+              name="stadiumFoodMemo"
               onChange={(event) => setFoodMemo(event.target.value)}
               onKeyDown={(event) => {
                 if (event.key === 'Enter') {
                   event.stopPropagation();
                 }
               }}
-              placeholder="예) 3루 외야 쪽 포장마차, 구장 내 푸드코트 추천 메뉴..."
+              placeholder="예) 3루 외야 쪽 포장마차, 구장 내 푸드코트 추천 메뉴…"
               rows={4}
               value={foodMemo}
             />
@@ -173,15 +175,17 @@ export function StadiumPersonalNotes({ stadium }: Props) {
               주차 정보
             </label>
             <textarea
+              autoComplete="off"
               className="form-textarea"
               id="stadium-parking-memo"
+              name="stadiumParkingMemo"
               onChange={(event) => setParkingMemo(event.target.value)}
               onKeyDown={(event) => {
                 if (event.key === 'Enter') {
                   event.stopPropagation();
                 }
               }}
-              placeholder="예) OO 주차장 2시간 무료, 막히는 시간대..."
+              placeholder="예) OO 주차장 2시간 무료, 막히는 시간대…"
               rows={4}
               value={parkingMemo}
             />
@@ -202,7 +206,11 @@ export function StadiumPersonalNotes({ stadium }: Props) {
               {statusMessage}
             </p>
           ) : null}
-          {errorMessage ? <p className="form-error">{errorMessage}</p> : null}
+          {errorMessage ? (
+            <p className="form-error" role="alert">
+              {errorMessage}
+            </p>
+          ) : null}
 
           <button
             className="btn btn-primary"
@@ -210,7 +218,7 @@ export function StadiumPersonalNotes({ stadium }: Props) {
             onClick={handleSave}
             type="button"
           >
-            {isSaving ? '저장 중' : '구장 메모 저장'}
+            {isSaving ? '저장 중…' : '구장 메모 저장'}
           </button>
         </div>
       )}

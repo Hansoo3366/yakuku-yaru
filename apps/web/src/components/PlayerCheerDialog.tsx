@@ -2,11 +2,20 @@
 
 /* eslint-disable @next/next/no-img-element */
 
-import { useEffect } from 'react';
+import './PlayerCheerDialog.css';
+
+import {
+  type CSSProperties,
+  useEffect,
+  useMemo,
+  useRef,
+} from 'react';
 import { PlayerPhoto } from '@/components/PlayerPhoto';
 import type { PlayerCheer } from '@/lib/player-cheer-api';
+import { getAccessibleTeamSurface } from '@/lib/team-color';
 
 export type CheerDialogItem = {
+  accentColor: string | null;
   cheerId: number | null;
   imageUrl: string | null;
   imageMode?: 'player' | 'raw';
@@ -59,6 +68,7 @@ function extractYoutubeId(value: string | null | undefined) {
 
 function toPlayerCheerDialogItem(player: PlayerCheer): CheerDialogItem {
   return {
+    accentColor: player.teamPrimaryColor,
     cheerId: player.cheerId,
     imageUrl: player.profileImageUrl,
     imageMode: 'player',
@@ -78,7 +88,17 @@ function toPlayerCheerDialogItem(player: PlayerCheer): CheerDialogItem {
 }
 
 export function PlayerCheerDialog({ cheer, player, onClose }: Props) {
-  const item = cheer ?? (player ? toPlayerCheerDialogItem(player) : null);
+  const item = useMemo(
+    () => cheer ?? (player ? toPlayerCheerDialogItem(player) : null),
+    [cheer, player],
+  );
+  const closeButtonRef = useRef<HTMLButtonElement | null>(null);
+  const dialogRef = useRef<HTMLElement | null>(null);
+  const onCloseRef = useRef(onClose);
+
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
 
   useEffect(() => {
     if (!item) {
@@ -86,10 +106,51 @@ export function PlayerCheerDialog({ cheer, player, onClose }: Props) {
     }
 
     const previousOverflow = document.body.style.overflow;
+    const previouslyFocused = document.activeElement as HTMLElement | null;
+    const frame = window.requestAnimationFrame(() => {
+      closeButtonRef.current?.focus();
+    });
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        onCloseRef.current();
+        return;
+      }
+
+      if (event.key !== 'Tab') {
+        return;
+      }
+
+      const focusable = Array.from(
+        dialogRef.current?.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), a[href], iframe, [tabindex]:not([tabindex="-1"])',
+        ) ?? [],
+      );
+
+      if (!focusable.length) {
+        event.preventDefault();
+        return;
+      }
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
     document.body.style.overflow = 'hidden';
+    document.addEventListener('keydown', handleKeyDown);
 
     return () => {
+      window.cancelAnimationFrame(frame);
       document.body.style.overflow = previousOverflow;
+      document.removeEventListener('keydown', handleKeyDown);
+      previouslyFocused?.focus();
     };
   }, [item]);
 
@@ -99,76 +160,100 @@ export function PlayerCheerDialog({ cheer, player, onClose }: Props) {
 
   const hasCheer = Boolean(item.cheerId);
   const youtubeId = item.youtubeId ?? extractYoutubeId(item.youtubeUrl);
+  const accentColor = item.accentColor || '#183b66';
+  const dialogStyle = {
+    '--cheer-dialog-accent': accentColor,
+    '--cheer-dialog-surface': getAccessibleTeamSurface(accentColor),
+  } as CSSProperties;
 
   return (
     <div
       aria-labelledby="player-cheer-dialog-title"
       aria-modal="true"
-      className="player-cheer-dialog-backdrop"
-      onClick={onClose}
+      className="cheer-dialog-backdrop"
+      onClick={() => onCloseRef.current()}
       role="dialog"
     >
-      <div
-        className="player-cheer-dialog"
+      <section
+        className="cheer-dialog"
         onClick={(event) => event.stopPropagation()}
+        ref={dialogRef}
+        style={dialogStyle}
       >
-        <div className="player-cheer-dialog-titlebar">
-          <strong>응원가</strong>
+        <header className="cheer-dialog-titlebar">
+          <div>
+            <span>CHANT SHEET</span>
+            <strong>응원가</strong>
+          </div>
           <button
             aria-label="응원가 팝업 닫기"
-            className="icon-button player-cheer-dialog-close"
-            onClick={onClose}
+            className="cheer-dialog-close"
+            onClick={() => onCloseRef.current()}
+            ref={closeButtonRef}
             type="button"
           >
             ×
           </button>
-        </div>
-        <div className="player-cheer-dialog-scroll">
-          <div className="player-cheer-dialog-head">
+        </header>
+        <div className="cheer-dialog-scroll">
+          <aside className="cheer-dialog-identity">
             {item.imageMode === 'raw' && item.imageUrl ? (
               <img
-                alt=""
-                className="player-cheer-dialog-photo player-cheer-dialog-photo--logo"
+                alt={`${item.title} 로고`}
+                className="cheer-dialog-photo cheer-dialog-photo--logo"
                 src={item.imageUrl}
               />
             ) : (
               <PlayerPhoto
-                className="player-cheer-dialog-photo"
+                className="cheer-dialog-photo"
                 profileImageUrl={item.imageUrl}
               />
             )}
-            <div>
+            <div className="cheer-dialog-identity__copy">
               <span>{item.subtitle}</span>
               <h2 id="player-cheer-dialog-title">{item.title}</h2>
               <p>{item.meta}</p>
             </div>
-          </div>
+          </aside>
 
           {hasCheer ? (
-            <div className="player-cheer-dialog-body">
-              <h3>{item.cheerTitle || `${item.title} 응원가`}</h3>
+            <div className="cheer-dialog-body">
+              <header className="cheer-dialog-track">
+                <span>NOW SINGING</span>
+                <h3>{item.cheerTitle || `${item.title} 응원가`}</h3>
+              </header>
               {youtubeId ? (
-                <div className="player-cheer-video">
+                <div className="cheer-dialog-video">
                   <iframe
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                     allowFullScreen
+                    loading="lazy"
                     src={`https://www.youtube-nocookie.com/embed/${youtubeId}`}
                     title={`${item.title} 응원가 영상`}
                   />
                 </div>
               ) : null}
               {item.lyrics ? (
-                <p className="player-cheer-dialog-lyrics">{item.lyrics}</p>
+                <section className="cheer-dialog-lyrics" aria-label="응원가 가사">
+                  <h4>가사</h4>
+                  <p>{item.lyrics}</p>
+                </section>
+              ) : null}
+              {!youtubeId && !item.lyrics ? (
+                <div className="cheer-dialog-media-empty">
+                  영상과 가사를 준비하고 있습니다.
+                </div>
               ) : null}
             </div>
           ) : (
-            <div className="player-cheer-dialog-empty">
-              <strong>아직 등록된 응원가 정보가 없어요.</strong>
-              <p>관리자 페이지에서 유튜브 링크와 가사를 등록할 수 있습니다.</p>
+            <div className="cheer-dialog-empty">
+              <span aria-hidden="true">♪</span>
+              <strong>응원가를 준비하고 있습니다.</strong>
+              <p>다른 선수를 선택하거나 나중에 다시 확인해주세요.</p>
             </div>
           )}
         </div>
-      </div>
+      </section>
     </div>
   );
 }

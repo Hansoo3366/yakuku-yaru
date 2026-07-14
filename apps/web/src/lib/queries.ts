@@ -37,10 +37,14 @@ export function useTeamsQuery() {
   });
 }
 
-export function useTeamStandingsQuery(seasonYear?: number) {
+export function useTeamStandingsQuery(
+  seasonYear?: number,
+  options?: { enabled?: boolean },
+) {
   return useQuery({
     queryKey: queryKeys.teamStandings(seasonYear),
     queryFn: () => listTeamStandings(seasonYear),
+    enabled: options?.enabled ?? true,
     staleTime: 1000 * 60 * 10,
   });
 }

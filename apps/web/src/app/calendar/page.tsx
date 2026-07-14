@@ -2,7 +2,7 @@
 
 import './calendar.css';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { type Game } from '@/lib/baseball-api';
 import { type AttendanceRecord } from '@/lib/attendance-api';
 import { CalendarAgendaView } from '@/components/CalendarAgendaView';
@@ -11,6 +11,10 @@ import {
   getCalendarViewAnchorDate,
 } from '@/components/CalendarFilterBar';
 import { CalendarEventCard } from '@/components/CalendarEventCard';
+import type {
+  CalendarOutcomeCounts,
+  CalendarOutcomeFilter,
+} from '@/components/CalendarOutcomeLegend';
 import { EmptyState } from '@/components/EmptyState';
 import { Skeleton } from '@/components/Skeleton';
 import { getStadiumAttendanceOpponentInsights } from '@/lib/calendar-opponent-insights';
@@ -43,6 +47,8 @@ import {
   countsTowardWinRate,
   isNeutralAttendance,
 } from '@/lib/attendance-game';
+import { resolveAttendanceOutcome } from '@/lib/attendance-score';
+import { getFavoriteTeamGameOutcome } from '@/lib/game-outcome';
 import { useMediaQuery } from '@/lib/use-media-query';
 import { useAuthStore } from '@/lib/auth-store';
 import {
@@ -175,6 +181,8 @@ export default function CalendarPage() {
   const [agendaFocusDateKey, setAgendaFocusDateKey] = useState<string | null>(
     null,
   );
+  const [outcomeFilter, setOutcomeFilter] =
+    useState<CalendarOutcomeFilter>('all');
   const isMobile = useMediaQuery('(max-width: 720px)');
   const token = useAuthStore((state) => state.token);
   const storedUser = useAuthStore((state) => state.user);
@@ -210,6 +218,12 @@ export default function CalendarPage() {
   }, [clearSession, meQuery.isError]);
 
   useEffect(() => {
+    if (!effectiveFavoriteTeamId && outcomeFilter !== 'all') {
+      setOutcomeFilter('all');
+    }
+  }, [effectiveFavoriteTeamId, outcomeFilter]);
+
+  useEffect(() => {
     if (!isAuthed || !meQuery.data?.user || hasAppliedDefaultScheduleFilter) {
       return;
     }
@@ -241,7 +255,9 @@ export default function CalendarPage() {
     token,
     { enabled: isAuthed },
   );
-  const teamStandingsQuery = useTeamStandingsQuery(statsYear);
+  const teamStandingsQuery = useTeamStandingsQuery(statsYear, {
+    enabled: isAuthed,
+  });
   const yearSeasonGamesQuery = useGamesQuery(
     { ...yearRange, teamId: effectiveFavoriteTeamId ?? undefined },
     { enabled: Boolean(isAuthed && effectiveFavoriteTeamId) },
@@ -308,15 +324,33 @@ export default function CalendarPage() {
     ],
   );
 
+  const outcomeScopedAttendanceRecords = useMemo(() => {
+    if (outcomeFilter === 'all') {
+      return scheduleScopedAttendanceRecords;
+    }
+
+    return scheduleScopedAttendanceRecords.filter((record) => {
+      const outcome =
+        resolveAttendanceOutcome(record, effectiveFavoriteTeamId) ??
+        getFavoriteTeamGameOutcome(record.game, effectiveFavoriteTeamId);
+
+      return outcome === outcomeFilter;
+    });
+  }, [
+    scheduleScopedAttendanceRecords,
+    outcomeFilter,
+    effectiveFavoriteTeamId,
+  ]);
+
   const periodRecords = useMemo(() => {
     const fromMs = new Date(`${range.from}T00:00:00`).getTime();
     const toMs = new Date(`${range.to}T00:00:00`).getTime();
 
-    return scheduleScopedAttendanceRecords.filter((record) => {
+    return outcomeScopedAttendanceRecords.filter((record) => {
       const ms = new Date(record.game.gameDate).getTime();
       return ms >= fromMs && ms < toMs;
     });
-  }, [scheduleScopedAttendanceRecords, range.from, range.to]);
+  }, [outcomeScopedAttendanceRecords, range.from, range.to]);
 
   const statsAttendanceRecords = useMemo(() => {
     const byId = new Map<number, AttendanceRecord>();
@@ -399,7 +433,19 @@ export default function CalendarPage() {
     [games],
   );
 
-  const displayGamesByDate = useMemo(() => {
+  const attendanceRecordsByGameId = useMemo(
+    () =>
+      scheduleScopedAttendanceRecords.reduce<Record<number, AttendanceRecord[]>>(
+        (acc, record) => {
+          acc[record.gameId] = [...(acc[record.gameId] ?? []), record];
+          return acc;
+        },
+        {},
+      ),
+    [scheduleScopedAttendanceRecords],
+  );
+
+  const baseDisplayGamesByDate = useMemo(() => {
     if (effectiveWatchTypeFilter === 'all') {
       return gamesByDate;
     }
@@ -424,31 +470,85 @@ export default function CalendarPage() {
     gamesById,
   ]);
 
-  const displayGameCount = useMemo(() => {
-    if (effectiveWatchTypeFilter === 'all') {
-      return games.length;
+  const resolveGameOutcome = useCallback(
+    (game: Game) => {
+      const attendance = attendanceRecordsByGameId[game.id]?.[0] ?? null;
+
+      return attendance
+        ? (resolveAttendanceOutcome(attendance, effectiveFavoriteTeamId) ??
+            getFavoriteTeamGameOutcome(game, effectiveFavoriteTeamId))
+        : getFavoriteTeamGameOutcome(game, effectiveFavoriteTeamId);
+    },
+    [attendanceRecordsByGameId, effectiveFavoriteTeamId],
+  );
+
+  const outcomeCounts = useMemo<CalendarOutcomeCounts>(() => {
+    const counts: CalendarOutcomeCounts = {
+      win: 0,
+      lose: 0,
+      draw: 0,
+      cancelled: 0,
+      scheduled: 0,
+    };
+    const countedGameIds = new Set<number>();
+
+    for (const dayGames of Object.values(baseDisplayGamesByDate)) {
+      for (const game of dayGames) {
+        if (countedGameIds.has(game.id)) {
+          continue;
+        }
+
+        countedGameIds.add(game.id);
+        const outcome = resolveGameOutcome(game);
+
+        if (outcome !== 'unknown') {
+          counts[outcome] += 1;
+        }
+      }
     }
 
+    return counts;
+  }, [baseDisplayGamesByDate, resolveGameOutcome]);
+
+  const displayGamesByDate = useMemo<Record<string, Game[]>>(() => {
+    if (outcomeFilter === 'all') {
+      return baseDisplayGamesByDate;
+    }
+
+    const result: Record<string, Game[]> = {};
+
+    for (const [key, dayGames] of Object.entries(baseDisplayGamesByDate)) {
+      const filteredGames = dayGames.filter(
+        (game) => resolveGameOutcome(game) === outcomeFilter,
+      );
+
+      if (filteredGames.length > 0) {
+        result[key] = filteredGames;
+      }
+    }
+
+    return result;
+  }, [baseDisplayGamesByDate, outcomeFilter, resolveGameOutcome]);
+
+  const displayGameCount = useMemo(() => {
     return Object.values(displayGamesByDate).reduce(
       (total, dayGames) => total + dayGames.length,
       0,
     );
-  }, [effectiveWatchTypeFilter, games.length, displayGamesByDate]);
+  }, [displayGamesByDate]);
 
-  const attendanceRecordsByGameId = scheduleScopedAttendanceRecords.reduce<
-    Record<number, AttendanceRecord[]>
-  >((acc, record) => {
-    acc[record.gameId] = [...(acc[record.gameId] ?? []), record];
-    return acc;
-  }, {});
-
-  const attendanceByDate = scheduleScopedAttendanceRecords.reduce<
-    Record<string, AttendanceRecord[]>
-  >((acc, record) => {
-    const key = record.game.gameDate.slice(0, 10);
-    acc[key] = [...(acc[key] ?? []), record];
-    return acc;
-  }, {});
+  const attendanceByDate = useMemo(
+    () =>
+      outcomeScopedAttendanceRecords.reduce<Record<string, AttendanceRecord[]>>(
+        (acc, record) => {
+          const key = record.game.gameDate.slice(0, 10);
+          acc[key] = [...(acc[key] ?? []), record];
+          return acc;
+        },
+        {},
+      ),
+    [outcomeScopedAttendanceRecords],
+  );
 
   const days =
     viewMode === 'month'
@@ -465,6 +565,7 @@ export default function CalendarPage() {
     setScheduleFilter(filter);
     if (filter === 'all') {
       setWatchTypeFilter('all');
+      setOutcomeFilter('all');
     }
   }
 
@@ -474,6 +575,18 @@ export default function CalendarPage() {
     }
 
     setWatchTypeFilter(filter);
+  }
+
+  function handleOutcomeFilterChange(filter: CalendarOutcomeFilter) {
+    if (!isAuthed || !effectiveFavoriteTeamId) {
+      return;
+    }
+
+    if (filter !== 'all' && effectiveScheduleFilter === 'all') {
+      setScheduleFilter('favorite');
+    }
+
+    setOutcomeFilter(filter);
   }
 
   function renderDayCell(
@@ -508,9 +621,22 @@ export default function CalendarPage() {
         className={classNames}
         id={`calendar-day-${key}`}
         key={key}
+        aria-current={isToday ? 'date' : undefined}
         tabIndex={-1}
       >
-        <span className="calendar-day-number">{date.getDate()}</span>
+        <button
+          aria-label={`${date.getMonth() + 1}월 ${date.getDate()}일 주간 보기`}
+          className="calendar-day-number"
+          onClick={() => {
+            setAgendaFocusDateKey(key);
+            setViewMode('week');
+            setAnchorDate(getWeekStart(date));
+          }}
+          title="이 날짜의 주간 일정 보기"
+          type="button"
+        >
+          {date.getDate()}
+        </button>
         <div className="calendar-events">
           {dayGames.map((game) => {
             const gameAttendanceRecords =
@@ -567,7 +693,7 @@ export default function CalendarPage() {
 
   const toolbarTitle =
     viewMode === 'month'
-      ? `${anchorDate.getFullYear()}.${String(anchorDate.getMonth() + 1).padStart(2, '0')}`
+      ? `${anchorDate.getFullYear()}년 ${String(anchorDate.getMonth() + 1).padStart(2, '0')}월`
       : formatWeekLabel(weekStart);
 
   function goToToday() {
@@ -661,6 +787,18 @@ export default function CalendarPage() {
     favoriteTeamStanding?.recentTen ?? null,
   );
   const favoriteStreakLabel = favoriteTeamStanding?.streak ?? null;
+  const outcomeEmptyLabel =
+    outcomeFilter === 'win'
+      ? '승리'
+      : outcomeFilter === 'lose'
+        ? '패배'
+        : outcomeFilter === 'draw'
+          ? '무승부'
+          : outcomeFilter === 'cancelled'
+            ? '취소된'
+            : outcomeFilter === 'scheduled'
+              ? '예정된'
+              : null;
 
   return (
     <main
@@ -668,71 +806,91 @@ export default function CalendarPage() {
         isMobile ? ' has-calendar-filter-dock' : ''
       }`}
     >
-      <header className="app-page-header">
-        <span className="eyebrow">Calendar</span>
-        <h1>
-          {favoriteTeam
-            ? `${favoriteTeam.shortName} 직관 캘린더`
-            : 'KBO 야구 일정 캘린더'}
-        </h1>
-        <p>
-          {isAuthed && user?.nickname
-            ? `${user.nickname}님의 ${viewMode === 'month' ? '월간' : '주간'} 일정과 기록`
-            : '로그인 없이 KBO 전체 팀 경기 일정과 프로야구 캘린더를 확인하세요.'}
-        </p>
-      </header>
-
       <section
-        className={`calendar-summary-row${
-          favoriteRankLabel ? '' : ' calendar-summary-row--duo'
+        className={`calendar-overview${
+          isAuthed ? '' : ' calendar-overview--public'
         }`}
-        aria-label="기간 요약"
+        aria-labelledby="calendar-title"
       >
-        <div className="calendar-summary-card">
-          <span>{periodLabel} 경기</span>
-          <strong>{displayGameCount}</strong>
-        </div>
-        <div className="calendar-summary-card">
-          <span>기록한 경기</span>
-          <strong>{periodRecords.length}</strong>
-        </div>
-        {favoriteRankLabel ? (
-          <div className="calendar-summary-card">
-            <span>{favoriteTeam?.shortName ?? '우리팀'} 순위</span>
-            <strong>{favoriteRankLabel}</strong>
-            {favoriteRecentTenLabel || favoriteStreakLabel ? (
-              <div className="calendar-summary-trends">
-                {favoriteRecentTenLabel ? (
-                  <span className="calendar-summary-trend-chip">
-                    <span className="calendar-summary-trend-label">최근 10경기</span>
-                    <strong>{favoriteRecentTenLabel}</strong>
-                  </span>
-                ) : null}
-                {favoriteStreakLabel ? (
-                  <span
-                    className="calendar-summary-trend-chip"
-                    data-kind={getStreakKind(favoriteStreakLabel)}
-                  >
-                    <span className="calendar-summary-trend-label">연속</span>
-                    <strong>{favoriteStreakLabel}</strong>
-                  </span>
+        <header className="app-page-header">
+          <span className="eyebrow">{anchorDate.getFullYear()} Season</span>
+          <h1 id="calendar-title">
+            {favoriteTeam
+              ? `${favoriteTeam.shortName} 직관 캘린더`
+              : 'KBO 야구 일정 캘린더'}
+          </h1>
+          <p>
+            {isAuthed && user?.nickname
+              ? `${user.nickname}님의 ${viewMode === 'month' ? '월간' : '주간'} 일정과 기록`
+              : '로그인 없이 KBO 전체 팀 경기 일정과 프로야구 캘린더를 확인하세요.'}
+          </p>
+        </header>
+
+        {isAuthed ? (
+          <section
+            className={`calendar-summary-row${
+              favoriteRankLabel ? '' : ' calendar-summary-row--duo'
+            }`}
+            aria-label="기간 요약"
+          >
+            <div className="calendar-summary-card">
+              <span>{periodLabel} 경기</span>
+              <strong>
+                {displayGameCount}
+                <small>경기</small>
+              </strong>
+            </div>
+            <div className="calendar-summary-card">
+              <span>기록한 경기</span>
+              <strong>
+                {periodRecords.length}
+                <small>회</small>
+              </strong>
+            </div>
+            {favoriteRankLabel ? (
+              <div className="calendar-summary-card">
+                <span>{favoriteTeam?.shortName ?? '우리팀'} 순위</span>
+                <strong>{favoriteRankLabel}</strong>
+                {favoriteRecentTenLabel || favoriteStreakLabel ? (
+                  <div className="calendar-summary-trends">
+                    {favoriteRecentTenLabel ? (
+                      <span className="calendar-summary-trend-chip">
+                        <span className="calendar-summary-trend-label">
+                          최근 10경기
+                        </span>
+                        <strong>{favoriteRecentTenLabel}</strong>
+                      </span>
+                    ) : null}
+                    {favoriteStreakLabel ? (
+                      <span
+                        className="calendar-summary-trend-chip"
+                        data-kind={getStreakKind(favoriteStreakLabel)}
+                      >
+                        <span className="calendar-summary-trend-label">
+                          연속
+                        </span>
+                        <strong>{favoriteStreakLabel}</strong>
+                      </span>
+                    ) : null}
+                  </div>
                 ) : null}
               </div>
             ) : null}
-          </div>
+          </section>
         ) : null}
       </section>
 
       <div
         className={`calendar-main-layout${
           !isMobile ? ' calendar-main-layout--with-rails' : ''
-        }`}
+        }${isAuthed ? '' : ' calendar-main-layout--public'}`}
       >
         {!isMobile ? (
           <aside aria-label="캘린더 필터" className="calendar-filter-rail">
             <CalendarFilterBar
               favoriteTeamId={effectiveFavoriteTeamId}
               layout="rail"
+              onOutcomeFilterChange={handleOutcomeFilterChange}
               onScheduleFilterChange={handleScheduleFilterChange}
               onViewModeChange={(mode) => {
                 setViewMode(mode);
@@ -740,6 +898,8 @@ export default function CalendarPage() {
               }}
               onWatchTypeFilterChange={handleWatchTypeFilterChange}
               publicScheduleOnly={!isAuthed}
+              outcomeCounts={outcomeCounts}
+              outcomeFilter={outcomeFilter}
               scheduleFilter={effectiveScheduleFilter}
               viewMode={viewMode}
               watchTypeFilter={effectiveWatchTypeFilter}
@@ -764,7 +924,10 @@ export default function CalendarPage() {
                 ←
               </button>
               <div className="calendar-month-label">
-                <small>{viewMode === 'month' ? 'Monthly' : 'Weekly'}</small>
+                <small>
+                  {viewMode === 'month' ? '월간 일정' : '주간 일정'} ·{' '}
+                  {displayGameCount}경기
+                </small>
                 <span>{toolbarTitle}</span>
               </div>
               <button
@@ -810,6 +973,7 @@ export default function CalendarPage() {
               <CalendarFilterBar
                 favoriteTeamId={effectiveFavoriteTeamId}
                 layout="mobile"
+                onOutcomeFilterChange={handleOutcomeFilterChange}
                 onScheduleFilterChange={handleScheduleFilterChange}
                 onViewModeChange={(mode) => {
                   setViewMode(mode);
@@ -817,6 +981,8 @@ export default function CalendarPage() {
                 }}
                 onWatchTypeFilterChange={handleWatchTypeFilterChange}
                 publicScheduleOnly={!isAuthed}
+                outcomeCounts={outcomeCounts}
+                outcomeFilter={outcomeFilter}
                 scheduleFilter={effectiveScheduleFilter}
                 viewMode={viewMode}
                 watchTypeFilter={effectiveWatchTypeFilter}
@@ -849,7 +1015,11 @@ export default function CalendarPage() {
             <EmptyState
               icon="◌"
               title={
-                effectiveWatchTypeFilter === 'all'
+                outcomeEmptyLabel
+                  ? viewMode === 'month'
+                    ? `이번 달엔 ${outcomeEmptyLabel} 경기가 없어요`
+                    : `이번 주엔 ${outcomeEmptyLabel} 경기가 없어요`
+                  : effectiveWatchTypeFilter === 'all'
                   ? effectiveScheduleFilter === 'favorite-home'
                     ? viewMode === 'month'
                       ? '이번 달엔 홈구장 경기가 없어요'
@@ -862,7 +1032,9 @@ export default function CalendarPage() {
                     : '이번 기간에 집관 기록이 없어요'
               }
               description={
-                effectiveWatchTypeFilter === 'all'
+                outcomeEmptyLabel
+                  ? '다른 경기 결과를 선택하거나 기간을 이동해보세요.'
+                  : effectiveWatchTypeFilter === 'all'
                   ? effectiveScheduleFilter === 'favorite-home'
                     ? '원정 경기는 「응원팀」으로 확인해보세요.'
                     : '다른 기간으로 이동해보세요.'
@@ -872,8 +1044,9 @@ export default function CalendarPage() {
           ) : null}
         </div>
 
-        <aside className="calendar-insight-rail" aria-label="승률 요약">
-          <section className="calendar-win-rate-panel">
+        {isAuthed ? (
+          <aside className="calendar-insight-rail" aria-label="승률 요약">
+            <section className="calendar-win-rate-panel">
             <div className="calendar-win-rate-group">
               <h2 className="calendar-win-rate-heading">
                 {statsYear}년<small>연간 승률</small>
@@ -922,8 +1095,9 @@ export default function CalendarPage() {
                 </div>
               </div>
             ) : null}
-          </section>
-        </aside>
+            </section>
+          </aside>
+        ) : null}
       </div>
     </main>
   );

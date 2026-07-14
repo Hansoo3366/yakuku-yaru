@@ -3,7 +3,14 @@
 /* eslint-disable @next/next/no-img-element */
 
 import Link from 'next/link';
-import { Info, X } from 'lucide-react';
+import {
+  ArrowUpRight,
+  CalendarDays,
+  ChevronRight,
+  Info,
+  MapPin,
+  X,
+} from 'lucide-react';
 import { useEffect, useId, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { type AttendanceRecord } from '@/lib/attendance-api';
@@ -52,21 +59,24 @@ function formatAttendanceResultLabel(
 
 const features = [
   {
-    icon: '◇',
+    code: 'CAL',
+    href: '/calendar',
     title: 'KBO 야구 캘린더',
     description:
-      '오늘 야구 일정과 프로야구 일정표, 직관 기록을 한 화면에서 봅니다.',
+      '오늘 경기부터 월별 일정, 내 직관 기록까지 날짜를 중심으로 봅니다.',
   },
   {
-    icon: '⌖',
+    code: 'LOG',
+    href: '/attendance/new',
     title: '직관 인증과 사진',
-    description: '경기별로 사진과 메모, 스코어를 함께 남겨요.',
+    description: '사진, 함께 간 친구, 현장 스코어를 한 경기 기록으로 남깁니다.',
   },
   {
-    icon: '★',
+    code: 'HON',
+    href: '/me',
     title: 'KBO 팬 명예타이틀',
     description:
-      '승률과 기록 패턴에 따라 여러 명예타이틀이 마이페이지에 붙어요.',
+      '관람 승률과 응원 패턴이 쌓이면 나만의 팬 타이틀을 확인할 수 있습니다.',
   },
 ];
 
@@ -292,7 +302,7 @@ function SeasonProjectionTable({
 
   if (loading) {
     return (
-      <section aria-busy="true" className="card stack">
+      <section aria-busy="true" className="card stack season-projection-card">
         <div className="section-heading season-projection-heading">
           <div>
             <h2>2026 KBO 예상 순위</h2>
@@ -324,7 +334,7 @@ function SeasonProjectionTable({
 
   if (projection.status === 'postseason' && projection.postseasonRows.length) {
     return (
-      <section className="card stack">
+      <section className="card stack season-projection-card">
         <div className="section-heading season-projection-heading">
           <div>
             <h2>2026 KBO 포스트시즌 최종 예측</h2>
@@ -401,7 +411,7 @@ function SeasonProjectionTable({
   }
 
   return (
-    <section className="card stack">
+    <section className="card stack season-projection-card">
       <div className="section-heading season-projection-heading">
         <div>
           <h2>2026 KBO 시즌 예상 순위</h2>
@@ -556,60 +566,95 @@ export default function HomePage() {
   );
   const seasonProjection = seasonProjectionQuery.data ?? null;
   const seasonProjectionLoading = seasonProjectionQuery.isLoading;
+  const nextGame = upcomingGames[0] ?? null;
+  const nextGameDate = nextGame ? formatDateParts(nextGame.gameDate) : null;
+  const favoriteStanding = favoriteTeam
+    ? teamStandings?.items.find((item) => item.teamId === favoriteTeam.id) ?? null
+    : null;
 
   if (authState === 'guest') {
     return (
-      <main className="page-shell">
+      <main className="page-shell home-public">
         <section className="home-hero">
-          <span className="eyebrow">야크크 야르~ 섹시야구</span>
-          <h1>
-            KBO 일정과 시즌 예상
-            <br />
-            순위를 한눈에
-          </h1>
-          <p>
-            프로야구 일정표와 야구 캘린더, 팀 순위와 2026 시즌 예상 순위, <br />
-            직관 사진과 같이 간 친구의 기록까지 남기는 야구 앱입니다.
-          </p>
-          <div className="actions">
-            <Link className="btn btn-primary btn-lg" href="/register">
-              지금 가입하기
-            </Link>
-            <Link className="btn btn-ghost btn-lg" href="/login">
-              로그인
-            </Link>
+          <div className="home-hero__copy">
+            <span className="eyebrow">야구 보는 날의 모든 기록</span>
+            <h1>
+              오늘 경기를 보고,
+              <br />내 야구를 남기세요.
+            </h1>
+            <p>
+              KBO 일정과 순위를 확인하고, 직관과 집관의 순간을 한 시즌의
+              기록으로 모읍니다.
+            </p>
+            <div className="actions">
+              <Link className="btn btn-primary btn-lg" href="/register">
+                내 시즌 시작하기
+                <ArrowUpRight aria-hidden="true" size={18} />
+              </Link>
+              <Link className="home-hero__text-link" href="/calendar">
+                오늘 경기 먼저 보기
+              </Link>
+            </div>
+          </div>
+          <div aria-hidden="true" className="home-hero__media">
+            <div className="home-hero__scorebug">
+              <span>KBO</span>
+              <strong>{seasonYear}</strong>
+              <small>REGULAR SEASON</small>
+            </div>
           </div>
         </section>
 
-        <section
-          aria-label="핵심 기능"
-          className="home-features"
-          style={{ marginTop: 'var(--space-5)' }}
-        >
+        <div className="home-season-strip" aria-label="서비스 주요 정보">
+          <span><b>10</b> clubs</span>
+          <span><b>144</b> games per team</span>
+          <span><b>1</b> fan archive</span>
+        </div>
+
+        <section aria-label="핵심 기능" className="home-features">
+          <header className="home-features__intro">
+            <span className="eyebrow">Your season</span>
+            <h2>경기를 보는 순간부터 기록이 됩니다.</h2>
+          </header>
           {features.map((feature) => (
-            <div className="home-feature-card" key={feature.title}>
-              <span aria-hidden="true" className="icon">
-                {feature.icon}
+            <Link className="home-feature-card" href={feature.href} key={feature.title}>
+              <span aria-hidden="true" className="home-feature-card__code">
+                {feature.code}
               </span>
-              <h3>{feature.title}</h3>
-              <p>{feature.description}</p>
-            </div>
+              <span className="home-feature-card__body">
+                <h3>{feature.title}</h3>
+                <p>{feature.description}</p>
+              </span>
+              <ArrowUpRight aria-hidden="true" className="home-feature-card__arrow" size={20} />
+            </Link>
           ))}
         </section>
 
-        <section className="card stack" style={{ marginTop: 'var(--space-5)' }}>
-          <div className="section-heading">
-            <div>
-              <h2>KBO 팀 순위와 프로야구 일정</h2>
-              <p>공식 기록실 순위와 야구 일정 데이터를 매일 반영해요.</p>
-            </div>
+        <section className="home-public__league">
+          <header className="home-public__section-copy">
+            <span className="eyebrow">League pulse</span>
+            <h2>오늘의 리그 판도</h2>
+            <p>매일 갱신되는 KBO 공식 순위로 선두 경쟁과 중위권 흐름을 확인하세요.</p>
+            <Link href="/calendar">
+              전체 일정 보기 <ArrowUpRight aria-hidden="true" size={16} />
+            </Link>
+          </header>
+          <div className="home-public__standings">
+            <TeamStandingsTable standings={teamStandings} />
           </div>
-          <TeamStandingsTable standings={teamStandings} />
         </section>
-        <SeasonProjectionTable
-          loading={seasonProjectionLoading}
-          projection={seasonProjection}
-        />
+
+        <section className="home-public__projection">
+          <div className="home-public__projection-intro">
+            <span className="eyebrow">Season forecast</span>
+            <h2>지금 성적이 시즌 끝까지 이어진다면</h2>
+            <p>현재 전력과 남은 대진을 10만 번 시뮬레이션한 예상입니다.</p>
+          </div>
+          <SeasonProjectionTable
+            loading={seasonProjectionLoading}
+            projection={seasonProjection}
+          />
+        </section>
       </main>
     );
   }
@@ -618,27 +663,85 @@ export default function HomePage() {
     <main className="page-shell page-shell--dashboard">
       <section className="dashboard-grid">
         <div className="dashboard-greeting">
-          <div>
-            <span className="eyebrow">Today</span>
-            <h2>
-              {user?.nickname ?? '야구팬'}님,{' '}
-              {favoriteTeam?.shortName ?? '내 팀'} 경기 보러 가세요
-            </h2>
+          <div className="dashboard-greeting__content">
+            <div className="dashboard-greeting__identity">
+              {favoriteTeam ? (
+                <span className="dashboard-greeting__logo">
+                  <img alt="" src={getTeamLogoSrc(favoriteTeam)} />
+                </span>
+              ) : null}
+              <span className="eyebrow">
+                {seasonYear} season · {favoriteTeam?.shortName ?? 'My team'}
+              </span>
+              {favoriteStanding ? (
+                <span className="dashboard-greeting__rank">
+                  현재 {favoriteStanding.rank}위
+                </span>
+              ) : null}
+            </div>
+            <h1>
+              {user?.nickname ?? '야구팬'}님,
+              <br />오늘도 플레이볼.
+            </h1>
             <p>
-              {favoriteTeam
-                ? `${favoriteTeam.name}의 다가오는 KBO 일정과 직관 캘린더를 정리했어요.`
-                : '마이페이지에서 응원 팀을 설정하면 야구 일정과 캘린더가 더 정확해져요.'}
+              {favoriteTeam && favoriteStanding
+                ? `${favoriteTeam.shortName}은 현재 ${favoriteStanding.rank}위 · 내 관람 기록은 ${stats?.totalCount ?? 0}경기예요.`
+                : favoriteTeam
+                  ? `${favoriteTeam.name}의 다음 경기를 기다리고 있어요.`
+                  : '응원 팀을 설정하면 내 팀 일정부터 정리해 드려요.'}
             </p>
           </div>
-          <Link className="btn btn-primary" href="/calendar">
-            캘린더 열기
-          </Link>
+          <div className="dashboard-greeting__actions">
+            {nextGame && nextGameDate ? (
+              <Link
+                className="dashboard-next-ticket"
+                href={`/games/${nextGame.id}`}
+              >
+                <span className="dashboard-next-ticket__top">
+                  <span>
+                    <CalendarDays aria-hidden="true" size={14} /> Next game
+                  </span>
+                  <ArrowUpRight aria-hidden="true" size={16} />
+                </span>
+                <span className="dashboard-next-ticket__matchup">
+                  <span>
+                    <img alt="" src={getTeamLogoSrc(nextGame.awayTeam)} />
+                    <strong>{nextGame.awayTeam.shortName}</strong>
+                  </span>
+                  <b>VS</b>
+                  <span>
+                    <img alt="" src={getTeamLogoSrc(nextGame.homeTeam)} />
+                    <strong>{nextGame.homeTeam.shortName}</strong>
+                  </span>
+                </span>
+                <span className="dashboard-next-ticket__meta">
+                  <strong>
+                    {nextGameDate.month}.{nextGameDate.day}{' '}
+                    {nextGameDate.weekday}
+                  </strong>
+                  <span>{nextGameDate.time}</span>
+                  <span>
+                    <MapPin aria-hidden="true" size={13} />
+                    {nextGame.stadium}
+                  </span>
+                </span>
+              </Link>
+            ) : null}
+            <Link className="dashboard-greeting__calendar-link" href="/calendar">
+              <CalendarDays aria-hidden="true" size={17} />
+              전체 일정
+              <ChevronRight aria-hidden="true" size={16} />
+            </Link>
+          </div>
         </div>
 
         <div className="dashboard-personal-zone">
           <header className="dashboard-zone-header">
-            <h2>내 경기</h2>
-            <p>다가오는 일정과 직관 기록을 한눈에</p>
+            <div>
+              <span className="dashboard-zone-kicker">My ballpark</span>
+              <h2>내 경기</h2>
+            </div>
+            <p>다가오는 일정과 나의 관람 기록</p>
           </header>
 
           <div className="dashboard-main-grid">
@@ -853,8 +956,11 @@ export default function HomePage() {
 
       <section className="dashboard-league-zone stack">
         <header className="dashboard-zone-header">
-          <h2>리그 현황</h2>
-          <p>팀 순위와 2026 시즌 예상 순위</p>
+          <div>
+            <span className="dashboard-zone-kicker">League board</span>
+            <h2>리그 현황</h2>
+          </div>
+          <p>팀 순위와 {seasonYear} 시즌 예상 순위</p>
         </header>
 
         <section className="card stack home-leaderboard-card">

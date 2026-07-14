@@ -1,0 +1,863 @@
+.cheers-shell {
+  --cheers-ink: #19232e;
+  --cheers-muted: #52606d;
+  --cheers-paper: #edf1f3;
+  --cheers-paper-deep: #e2e8ec;
+  gap: 28px;
+  max-width: 1180px;
+  padding-top: 38px;
+  width: 100%;
+}
+
+.cheers-page-intro {
+  display: grid;
+  gap: 5px;
+  max-width: 660px;
+}
+
+.cheers-page-intro > span,
+.cheers-roster__heading > div > span {
+  color: var(--team-color, var(--cheers-ink));
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+}
+
+.cheers-page-intro h1 {
+  color: var(--cheers-ink);
+  font-size: clamp(28px, 3.4vw, 38px);
+  font-weight: 800;
+  letter-spacing: -0.045em;
+  line-height: 1.1;
+}
+
+.cheers-page-intro p {
+  color: var(--cheers-muted);
+  font-size: 14px;
+  line-height: 1.55;
+  text-wrap: pretty;
+}
+
+.cheers-lookup {
+  align-items: flex-end;
+  background: var(--cheers-paper-deep);
+  border: 0;
+  border-radius: 10px;
+  display: grid;
+  gap: 18px;
+  grid-template-columns: minmax(300px, 1fr) auto;
+  padding: 14px;
+}
+
+.cheers-shell .cheers-search {
+  display: grid;
+  gap: 6px;
+  position: static;
+}
+
+.cheers-shell .cheers-search > label {
+  color: var(--cheers-ink);
+  font-size: 11px;
+  font-weight: 800;
+  height: auto;
+  margin: 0;
+  overflow: visible;
+  position: static;
+  white-space: normal;
+  width: auto;
+}
+
+.cheers-shell .cheers-search-row {
+  align-items: center;
+  background: #fff;
+  border: 0;
+  border-radius: 7px;
+  display: grid;
+  gap: 6px;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  height: 44px;
+  padding: 4px;
+}
+
+.cheers-shell .cheers-search-row:focus-within {
+  box-shadow: 0 0 0 3px
+    color-mix(
+      in srgb,
+      var(--team-color, var(--cheers-ink)) 24%,
+      transparent 76%
+    );
+}
+
+.cheers-shell .cheers-search input {
+  background: transparent;
+  border: 0;
+  color: var(--cheers-ink);
+  font-size: 13px;
+  min-height: 0;
+  outline: none;
+  padding: 0 10px;
+  width: 100%;
+}
+
+.cheers-shell .cheers-search input::placeholder {
+  color: #697580;
+}
+
+.cheers-search-clear,
+.cheers-search-submit,
+.cheers-roster-message button,
+.cheers-pagination button {
+  border: 0;
+  border-radius: 5px;
+  font-size: 11px;
+  font-weight: 800;
+  min-height: 34px;
+  padding: 0 12px;
+  transition:
+    background-color 160ms ease,
+    color 160ms ease,
+    transform 160ms ease;
+}
+
+.cheers-search-clear {
+  background: transparent;
+  color: var(--cheers-muted);
+}
+
+.cheers-search-submit {
+  background: var(
+    --team-color-surface,
+    var(--team-color, var(--cheers-ink))
+  );
+  color: #fff;
+  min-width: 58px;
+}
+
+.cheers-view-options {
+  align-items: center;
+  display: flex;
+  gap: 14px;
+}
+
+.cheers-shell .cheers-mode-bar {
+  background: #d4dde2;
+  border: 0;
+  border-radius: 7px;
+  display: grid;
+  gap: 3px;
+  grid-template-columns: repeat(2, minmax(84px, 1fr));
+  height: 44px;
+  padding: 4px;
+}
+
+.cheers-shell .cheers-mode-bar button {
+  background: transparent;
+  border: 0;
+  border-radius: 5px;
+  color: var(--cheers-muted);
+  font-size: 11px;
+  font-weight: 750;
+  min-height: 36px;
+  padding: 0 11px;
+}
+
+.cheers-shell .cheers-mode-bar button.active {
+  background: #fff;
+  color: var(--cheers-ink);
+}
+
+.cheers-available-toggle {
+  align-items: center;
+  color: var(--cheers-ink);
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 11px;
+  font-weight: 700;
+  gap: 7px;
+  white-space: nowrap;
+}
+
+.cheers-available-toggle input {
+  height: 1px;
+  margin: -1px;
+  opacity: 0;
+  overflow: hidden;
+  position: absolute;
+  width: 1px;
+}
+
+.cheers-available-toggle > span {
+  background: #bdc8cf;
+  border-radius: 10px;
+  display: inline-block;
+  height: 18px;
+  padding: 3px;
+  transition: background-color 160ms ease;
+  width: 32px;
+}
+
+.cheers-available-toggle > span::after {
+  background: #fff;
+  border-radius: 50%;
+  content: '';
+  display: block;
+  height: 12px;
+  transition: transform 160ms ease;
+  width: 12px;
+}
+
+.cheers-available-toggle input:checked + span {
+  background: var(
+    --team-color-surface,
+    var(--team-color, var(--cheers-ink))
+  );
+}
+
+.cheers-available-toggle input:checked + span::after {
+  transform: translateX(14px);
+}
+
+.cheers-available-toggle input:focus-visible + span {
+  outline: 3px solid var(--color-ticket-gold-soft);
+  outline-offset: 2px;
+}
+
+.cheers-team-section {
+  display: grid;
+  gap: 13px;
+}
+
+.cheers-section-heading,
+.cheers-roster__heading {
+  align-items: flex-end;
+  display: flex;
+  gap: 20px;
+  justify-content: space-between;
+}
+
+.cheers-section-heading h2,
+.cheers-roster__heading h2 {
+  color: var(--cheers-ink);
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.035em;
+  line-height: 1.2;
+}
+
+.cheers-section-heading p,
+.cheers-roster__heading p {
+  color: var(--cheers-muted);
+  font-size: 11px;
+  margin-top: 3px;
+}
+
+.cheers-section-heading > span {
+  color: var(--cheers-muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.cheers-team-rail {
+  display: grid;
+  gap: 6px;
+  grid-template-columns: repeat(11, minmax(70px, 1fr));
+  min-width: 0;
+}
+
+.cheers-team-tab {
+  align-items: center;
+  background: var(--cheers-paper);
+  border: 0;
+  border-radius: 7px;
+  color: var(--cheers-ink);
+  display: grid;
+  gap: 5px;
+  justify-items: center;
+  min-height: 76px;
+  min-width: 0;
+  padding: 9px 5px 8px;
+  position: relative;
+  transition:
+    background-color 160ms ease,
+    transform 160ms ease;
+}
+
+.cheers-team-tab::after {
+  background: var(
+    --team-tab-color,
+    var(--team-color, var(--cheers-ink))
+  );
+  border-radius: 2px;
+  bottom: 6px;
+  content: '';
+  height: 3px;
+  opacity: 0;
+  position: absolute;
+  transform: scaleX(0.4);
+  transition:
+    opacity 160ms ease,
+    transform 160ms ease;
+  width: 18px;
+}
+
+.cheers-team-tab.active {
+  background: color-mix(
+    in srgb,
+    var(--team-tab-color, var(--team-color, var(--cheers-ink))) 11%,
+    #fff 89%
+  );
+}
+
+.cheers-team-tab.active::after {
+  opacity: 1;
+  transform: scaleX(1);
+}
+
+.cheers-team-tab img,
+.cheers-team-tab__all {
+  height: 34px;
+  object-fit: contain;
+  width: 34px;
+}
+
+.cheers-team-tab__all {
+  align-items: center;
+  background: var(
+    --team-color-surface,
+    var(--team-color, var(--cheers-ink))
+  );
+  border-radius: 6px;
+  color: #fff;
+  display: inline-flex;
+  font-size: 9px;
+  font-weight: 800;
+  justify-content: center;
+  letter-spacing: 0.04em;
+}
+
+.cheers-team-tab strong {
+  font-size: 11px;
+  font-weight: 800;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cheers-team-feature {
+  align-items: center;
+  background: color-mix(
+    in srgb,
+    var(--team-tab-color, var(--team-color, var(--cheers-ink))) 8%,
+    #e9eef1 92%
+  );
+  border-radius: 9px;
+  display: flex;
+  gap: 24px;
+  justify-content: space-between;
+  padding: 16px 18px;
+}
+
+.cheers-team-feature__identity {
+  align-items: center;
+  display: flex;
+  gap: 13px;
+  min-width: 0;
+}
+
+.cheers-team-feature__identity img {
+  height: 48px;
+  object-fit: contain;
+  width: 48px;
+}
+
+.cheers-team-feature__identity > div {
+  display: grid;
+  gap: 1px;
+}
+
+.cheers-team-feature__identity span {
+  color: var(--cheers-muted);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.cheers-team-feature__identity h2 {
+  color: var(--cheers-ink);
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+}
+
+.cheers-team-feature__identity p {
+  color: var(--cheers-muted);
+  font-size: 11px;
+}
+
+.cheers-team-feature > button {
+  background: var(
+    --team-tab-surface,
+    var(--team-color-surface, var(--cheers-ink))
+  );
+  border: 0;
+  border-radius: 6px;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  min-height: 38px;
+  padding: 0 14px;
+  white-space: nowrap;
+}
+
+.cheers-team-feature > button:disabled {
+  background: rgba(82, 96, 109, 0.1);
+  color: #4b5966;
+  cursor: not-allowed;
+  opacity: 1;
+}
+
+.cheers-roster {
+  display: grid;
+  gap: 15px;
+}
+
+.cheers-roster__heading > div {
+  display: grid;
+  gap: 3px;
+}
+
+.cheers-shell .cheers-search-note {
+  background: var(--cheers-paper);
+  border-radius: 5px;
+  color: var(--cheers-muted);
+  font-size: 11px;
+  margin: 0;
+  padding: 7px 9px;
+}
+
+.cheers-shell .cheers-search-note strong {
+  color: var(--cheers-ink);
+}
+
+.cheer-player-list,
+.cheers-roster-skeleton {
+  display: grid;
+  gap: 6px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.cheer-player-row {
+  align-items: center;
+  background: #f7f9fa;
+  border: 0;
+  border-radius: 8px;
+  color: var(--cheers-ink);
+  display: grid;
+  gap: 11px;
+  grid-template-columns: 44px 58px minmax(0, 1fr) auto;
+  min-height: 86px;
+  min-width: 0;
+  padding: 10px 12px 10px 8px;
+  text-align: left;
+  transition:
+    background-color 160ms ease,
+    transform 160ms ease;
+}
+
+.cheer-player-row:nth-child(4n + 2),
+.cheer-player-row:nth-child(4n + 3) {
+  background: var(--cheers-paper);
+}
+
+.cheer-player-order {
+  align-content: center;
+  align-self: stretch;
+  background: color-mix(
+    in srgb,
+    var(--player-team-color, var(--team-color, var(--cheers-ink))) 8%,
+    #fff 92%
+  );
+  border-radius: 5px;
+  display: grid;
+  gap: 1px;
+  justify-items: center;
+  min-width: 0;
+}
+
+.cheer-player-order strong {
+  color: var(--cheers-ink);
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.cheer-player-order small {
+  color: var(--cheers-muted);
+  font-size: 8px;
+  font-weight: 750;
+  max-width: 38px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cheers-shell .cheer-player-photo {
+  background: #dfe6ea;
+  border: 0;
+  border-radius: 6px;
+  height: 58px;
+  object-fit: cover;
+  width: 58px;
+}
+
+.cheers-shell .cheer-player-main {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+}
+
+.cheers-shell .cheer-player-team {
+  color: var(
+    --team-color-surface,
+    var(--team-color, var(--cheers-ink))
+  );
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.cheer-player-main > strong {
+  color: var(--cheers-ink);
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 1.25;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cheers-shell .cheer-player-meta {
+  color: var(--cheers-muted);
+  font-size: 10px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cheer-player-status {
+  align-items: center;
+  color: var(--cheers-muted);
+  display: inline-flex;
+  font-size: 10px;
+  font-weight: 750;
+  gap: 6px;
+  justify-self: end;
+  white-space: nowrap;
+}
+
+.cheer-player-row[data-available='true'] .cheer-player-status {
+  color: var(
+    --team-color-surface,
+    var(--team-color, var(--cheers-ink))
+  );
+  font-weight: 800;
+}
+
+.cheer-player-status span {
+  font-size: 13px;
+  transition: transform 160ms ease;
+}
+
+.cheers-roster-skeleton span {
+  animation: cheers-skeleton-pulse 1.2s ease-in-out infinite alternate;
+  background: var(--cheers-paper);
+  border-radius: 8px;
+  min-height: 86px;
+}
+
+.cheers-roster-skeleton span:nth-child(even) {
+  animation-delay: 120ms;
+}
+
+@keyframes cheers-skeleton-pulse {
+  from {
+    opacity: 0.55;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.cheers-roster-message {
+  align-content: center;
+  background: var(--cheers-paper);
+  border-radius: 8px;
+  color: var(--cheers-ink);
+  display: grid;
+  gap: 5px;
+  justify-items: start;
+  min-height: 150px;
+  padding: 24px;
+}
+
+.cheers-roster-message strong {
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.cheers-roster-message p {
+  color: var(--cheers-muted);
+  font-size: 12px;
+}
+
+.cheers-roster-message button {
+  background: var(
+    --team-color-surface,
+    var(--team-color, var(--cheers-ink))
+  );
+  color: #fff;
+  margin-top: 8px;
+}
+
+.cheers-shell .cheers-pagination {
+  align-items: center;
+  color: var(--cheers-muted);
+  display: flex;
+  gap: 9px;
+  justify-content: center;
+  padding-top: 7px;
+}
+
+.cheers-shell .cheers-pagination button {
+  background: var(--cheers-paper);
+  color: var(--cheers-ink);
+  min-width: 60px;
+}
+
+.cheers-shell .cheers-pagination button:disabled {
+  color: #89939c;
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+.cheers-shell .cheers-pagination > span {
+  color: var(--cheers-muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  min-width: 60px;
+  text-align: center;
+}
+
+.cheers-shell .cheers-pagination strong {
+  color: var(--cheers-ink);
+  font-weight: 800;
+}
+
+@media (hover: hover) {
+  .cheers-search-clear:hover,
+  .cheers-shell .cheers-pagination button:not(:disabled):hover {
+    background: #d9e1e5;
+    color: var(--cheers-ink);
+  }
+
+  .cheers-search-submit:hover,
+  .cheers-roster-message button:hover {
+    background: color-mix(
+      in srgb,
+      var(--team-color-surface, var(--cheers-ink)) 88%,
+      #000 12%
+    );
+  }
+
+  .cheers-team-tab:hover,
+  .cheer-player-row:hover {
+    background: color-mix(
+      in srgb,
+      var(--team-color, var(--cheers-ink)) 7%,
+      #fff 93%
+    );
+  }
+
+  .cheer-player-row:hover {
+    transform: translateY(-1px);
+  }
+
+  .cheer-player-row:hover .cheer-player-status span {
+    transform: translateX(3px);
+  }
+
+  .cheers-search-clear:active,
+  .cheers-search-submit:active,
+  .cheers-team-tab:active,
+  .cheer-player-row:active,
+  .cheers-pagination button:active {
+    transform: translateY(1px);
+  }
+}
+
+@media (max-width: 900px) {
+  .cheers-lookup {
+    align-items: stretch;
+    grid-template-columns: 1fr;
+  }
+
+  .cheers-view-options {
+    justify-content: space-between;
+  }
+
+  .cheers-team-rail {
+    grid-template-columns: repeat(11, minmax(64px, 1fr));
+  }
+
+  .cheer-player-row {
+    grid-template-columns: 40px 54px minmax(0, 1fr) auto;
+  }
+
+  .cheers-shell .cheer-player-photo {
+    height: 54px;
+    width: 54px;
+  }
+}
+
+@media (max-width: 720px) {
+  .cheers-shell {
+    gap: 22px;
+    padding-top: 24px;
+  }
+
+  .cheers-page-intro h1 {
+    font-size: 28px;
+  }
+
+  .cheers-lookup {
+    gap: 13px;
+    padding: 12px;
+  }
+
+  .cheers-view-options {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .cheers-shell .cheers-mode-bar {
+    width: 100%;
+  }
+
+  .cheers-available-toggle {
+    min-height: 28px;
+  }
+
+  .cheers-section-heading,
+  .cheers-roster__heading {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 7px;
+  }
+
+  .cheers-section-heading > span {
+    white-space: normal;
+  }
+
+  .cheers-team-rail {
+    grid-auto-columns: 68px;
+    grid-auto-flow: column;
+    grid-template-columns: none;
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+    padding: 0 2px 7px;
+    scroll-padding-inline: 2px;
+    scroll-snap-type: inline proximity;
+    scrollbar-width: none;
+  }
+
+  .cheers-team-rail::-webkit-scrollbar {
+    display: none;
+  }
+
+  .cheers-team-tab {
+    min-height: 72px;
+    scroll-snap-align: start;
+  }
+
+  .cheers-team-feature {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 13px;
+  }
+
+  .cheers-team-feature > button {
+    width: 100%;
+  }
+
+  .cheer-player-list,
+  .cheers-roster-skeleton {
+    grid-template-columns: 1fr;
+  }
+
+  .cheer-player-row:nth-child(4n + 2),
+  .cheer-player-row:nth-child(4n + 3) {
+    background: #f7f9fa;
+  }
+
+  .cheer-player-row:nth-child(even) {
+    background: var(--cheers-paper);
+  }
+}
+
+@media (max-width: 420px) {
+  .cheers-shell .cheers-search-row {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+  }
+
+  .cheers-search-clear,
+  .cheers-search-submit {
+    padding-inline: 9px;
+  }
+
+  .cheer-player-row {
+    gap: 8px;
+    grid-template-columns: 37px 50px minmax(0, 1fr) auto;
+    min-height: 78px;
+    padding: 8px 9px 8px 6px;
+  }
+
+  .cheers-shell .cheer-player-photo {
+    height: 50px;
+    width: 50px;
+  }
+
+  .cheer-player-order small {
+    display: none;
+  }
+
+  .cheer-player-status {
+    font-size: 0;
+    gap: 0;
+  }
+
+  .cheer-player-status span {
+    font-size: 14px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cheers-available-toggle > span,
+  .cheers-available-toggle > span::after,
+  .cheers-search-clear,
+  .cheers-search-submit,
+  .cheers-team-tab,
+  .cheer-player-row,
+  .cheer-player-status span,
+  .cheers-roster-message button,
+  .cheers-pagination button {
+    transition: none;
+  }
+
+  .cheers-roster-skeleton span {
+    animation: none;
+  }
+}

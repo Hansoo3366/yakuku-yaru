@@ -1,7 +1,11 @@
 'use client';
 
-import { useState } from 'react';
-import { CalendarOutcomeLegend } from '@/components/CalendarOutcomeLegend';
+import { useEffect, useState } from 'react';
+import {
+  CalendarOutcomeLegend,
+  type CalendarOutcomeCounts,
+  type CalendarOutcomeFilter,
+} from '@/components/CalendarOutcomeLegend';
 import { getMonthStart, getWeekStart } from '@/lib/calendar-range';
 
 type ViewMode = 'month' | 'week';
@@ -20,6 +24,12 @@ const WATCH_LABELS: Record<WatchTypeFilter, string> = {
   home: '집관',
 };
 
+const SCHEDULE_DESCRIPTIONS: Record<ScheduleFilter, string> = {
+  all: 'KBO 모든 구단',
+  favorite: '홈·원정 모두',
+  'favorite-home': '홈 경기만',
+};
+
 type Props = {
   layout: 'mobile' | 'rail';
   viewMode: ViewMode;
@@ -30,6 +40,9 @@ type Props = {
   onWatchTypeFilterChange: (filter: WatchTypeFilter) => void;
   favoriteTeamId?: number | null;
   publicScheduleOnly?: boolean;
+  outcomeFilter: CalendarOutcomeFilter;
+  outcomeCounts: CalendarOutcomeCounts;
+  onOutcomeFilterChange: (filter: CalendarOutcomeFilter) => void;
 };
 
 export function CalendarFilterBar({
@@ -42,12 +55,45 @@ export function CalendarFilterBar({
   onWatchTypeFilterChange,
   favoriteTeamId,
   publicScheduleOnly = false,
+  outcomeFilter,
+  outcomeCounts,
+  onOutcomeFilterChange,
 }: Props) {
   const [expanded, setExpanded] = useState(false);
 
+  useEffect(() => {
+    if (layout !== 'mobile' || !expanded) {
+      return undefined;
+    }
+
+    function handleEscape(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        setExpanded(false);
+      }
+    }
+
+    window.addEventListener('keydown', handleEscape);
+
+    return () => window.removeEventListener('keydown', handleEscape);
+  }, [expanded, layout]);
+
   const summary = publicScheduleOnly
     ? `${viewMode === 'month' ? '월간' : '주간'} · 리그 전체`
-    : `${viewMode === 'month' ? '월간' : '주간'} · ${SCHEDULE_LABELS[scheduleFilter]} · ${WATCH_LABELS[watchTypeFilter]}`;
+    : `${viewMode === 'month' ? '월간' : '주간'} · ${SCHEDULE_LABELS[scheduleFilter]} · ${WATCH_LABELS[watchTypeFilter]}${
+        outcomeFilter === 'all'
+          ? ''
+          : ` · ${
+              outcomeFilter === 'scheduled'
+                ? '경기전'
+                : outcomeFilter === 'cancelled'
+                  ? '취소'
+                  : outcomeFilter === 'win'
+                    ? '승'
+                    : outcomeFilter === 'lose'
+                      ? '패'
+                      : '무'
+            }`
+      }`;
 
   function collapseIfMobile() {
     if (layout === 'mobile') {
@@ -57,140 +103,170 @@ export function CalendarFilterBar({
 
   const outcomeLegend = favoriteTeamId ? (
     <div className="calendar-filter-legend-block">
-      <span className="filter-group-label">결과</span>
-      <CalendarOutcomeLegend />
+      <span className="filter-group-label">경기 결과</span>
+      <CalendarOutcomeLegend
+        counts={outcomeCounts}
+        onChange={(filter) => {
+          onOutcomeFilterChange(filter);
+          collapseIfMobile();
+        }}
+        selected={outcomeFilter}
+      />
     </div>
   ) : null;
 
   const filterGroups = (
     <>
-      <div className="filter-group">
-        <span className="filter-group-label">보기</span>
-        <button
-          className={`filter-pill ${viewMode === 'month' ? 'is-selected' : ''}`}
-          onClick={() => {
-            onViewModeChange('month');
-            collapseIfMobile();
-          }}
-          type="button"
-        >
-          월간
-        </button>
-        <button
-          className={`filter-pill ${viewMode === 'week' ? 'is-selected' : ''}`}
-          onClick={() => {
-            onViewModeChange('week');
-            collapseIfMobile();
-          }}
-          type="button"
-        >
-          주간
-        </button>
-      </div>
-      {publicScheduleOnly ? null : (
-        <div className="filter-group">
-          <span className="filter-group-label">경기</span>
-          <button
-            className={`filter-pill ${scheduleFilter === 'all' ? 'is-selected' : ''}`}
-            onClick={() => {
-              onScheduleFilterChange('all');
-              collapseIfMobile();
-            }}
-            title="KBO 전체 팀 일정"
-            type="button"
-          >
-            리그 전체
-          </button>
-          <button
-            className={`filter-pill ${scheduleFilter === 'favorite' ? 'is-selected' : ''}`}
-            disabled={!favoriteTeamId}
-            onClick={() => {
-              onScheduleFilterChange('favorite');
-              collapseIfMobile();
-            }}
-            title="응원 팀 경기 전체 (홈·원정)"
-            type="button"
-          >
-            응원팀
-          </button>
-          <button
-            className={`filter-pill ${scheduleFilter === 'favorite-home' ? 'is-selected' : ''}`}
-            disabled={!favoriteTeamId}
-            onClick={() => {
-              onScheduleFilterChange('favorite-home');
-              collapseIfMobile();
-            }}
-            title="우리 팀이 홈팀인 경기만"
-            type="button"
-          >
-            홈구장
-          </button>
+      <fieldset className="calendar-filter-group" data-layout="split">
+        <legend className="calendar-filter-group__label">기간</legend>
+        <div className="calendar-filter-options">
+          {(['month', 'week'] as const).map((mode) => {
+            const selected = viewMode === mode;
+
+            return (
+              <button
+                aria-pressed={selected}
+                className={`calendar-filter-choice${selected ? ' is-selected' : ''}`}
+                key={mode}
+                onClick={() => {
+                  onViewModeChange(mode);
+                  collapseIfMobile();
+                }}
+                type="button"
+              >
+                <strong>{mode === 'month' ? '월간' : '주간'}</strong>
+                <small>{mode === 'month' ? '한 달' : '한 주'}</small>
+              </button>
+            );
+          })}
         </div>
+      </fieldset>
+      {publicScheduleOnly ? null : (
+        <fieldset className="calendar-filter-group" data-layout="rows">
+          <legend className="calendar-filter-group__label">경기 범위</legend>
+          <div className="calendar-filter-options">
+            {(['favorite', 'favorite-home', 'all'] as const).map((filter) => {
+              const selected = scheduleFilter === filter;
+
+              return (
+                <button
+                  aria-pressed={selected}
+                  className={`calendar-filter-choice${selected ? ' is-selected' : ''}`}
+                  disabled={filter !== 'all' && !favoriteTeamId}
+                  key={filter}
+                  onClick={() => {
+                    onScheduleFilterChange(filter);
+                    collapseIfMobile();
+                  }}
+                  type="button"
+                >
+                  <span aria-hidden className="calendar-filter-choice__mark" />
+                  <span className="calendar-filter-choice__copy">
+                    <strong>{SCHEDULE_LABELS[filter]}</strong>
+                    <small>{SCHEDULE_DESCRIPTIONS[filter]}</small>
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </fieldset>
       )}
       {publicScheduleOnly ? (
-        <div className="filter-group">
-          <span className="filter-group-label">경기</span>
-          <button
-            className="filter-pill is-selected"
-            disabled
-            title="KBO 전체 팀 일정"
-            type="button"
-          >
-            리그 전체
-          </button>
-        </div>
-      ) : null}
-      {publicScheduleOnly ? null : (
-        <div className="filter-group">
-          <span className="filter-group-label">기록</span>
-          {(['all', 'stadium', 'home'] as const).map((type) => (
+        <fieldset className="calendar-filter-group" data-layout="rows">
+          <legend className="calendar-filter-group__label">경기 범위</legend>
+          <div className="calendar-filter-options">
             <button
-              className={`filter-pill ${watchTypeFilter === type ? 'is-selected' : ''}`}
-              key={type}
-              onClick={() => {
-                onWatchTypeFilterChange(type);
-                collapseIfMobile();
-              }}
+              aria-pressed="true"
+              className="calendar-filter-choice is-selected"
+              disabled
               type="button"
             >
-              {WATCH_LABELS[type]}
+              <span aria-hidden className="calendar-filter-choice__mark" />
+              <span className="calendar-filter-choice__copy">
+                <strong>리그 전체</strong>
+                <small>KBO 모든 구단</small>
+              </span>
             </button>
-          ))}
-        </div>
+          </div>
+        </fieldset>
+      ) : null}
+      {publicScheduleOnly ? null : (
+        <fieldset className="calendar-filter-group" data-layout="segments">
+          <legend className="calendar-filter-group__label">관람 기록</legend>
+          <div className="calendar-filter-options">
+            {(['all', 'stadium', 'home'] as const).map((type) => {
+              const selected = watchTypeFilter === type;
+
+              return (
+                <button
+                  aria-pressed={selected}
+                  className={`calendar-filter-choice${selected ? ' is-selected' : ''}`}
+                  key={type}
+                  onClick={() => {
+                    onWatchTypeFilterChange(type);
+                    collapseIfMobile();
+                  }}
+                  type="button"
+                >
+                  <strong>{WATCH_LABELS[type]}</strong>
+                </button>
+              );
+            })}
+          </div>
+        </fieldset>
       )}
     </>
   );
 
   if (layout === 'mobile') {
     return (
-      <section
-        aria-label="캘린더 필터"
-        className={`calendar-filter-dock${expanded ? ' is-expanded' : ''}`}
-      >
-        <button
-          aria-expanded={expanded}
-          className="calendar-filter-dock__toggle"
-          onClick={() => setExpanded((value) => !value)}
-          type="button"
-        >
-          <span className="calendar-filter-dock__label">필터</span>
-          <span className="calendar-filter-dock__summary">{summary}</span>
-          <span aria-hidden className="calendar-filter-dock__chevron">
-            {expanded ? '▲' : '▼'}
-          </span>
-        </button>
+      <>
         {expanded ? (
-          <div className="calendar-filter-dock__panel">
-            <div className="calendar-filter-groups">{filterGroups}</div>
-            {outcomeLegend}
-          </div>
+          <button
+            aria-label="필터 닫기"
+            className="calendar-filter-dock__backdrop"
+            onClick={() => setExpanded(false)}
+            type="button"
+          />
         ) : null}
-      </section>
+        <section
+          aria-label="캘린더 필터"
+          className={`calendar-filter-dock${expanded ? ' is-expanded' : ''}`}
+        >
+          <button
+            aria-controls="calendar-mobile-filter-panel"
+            aria-expanded={expanded}
+            className="calendar-filter-dock__toggle"
+            onClick={() => setExpanded((value) => !value)}
+            type="button"
+          >
+            <span className="calendar-filter-dock__label">필터</span>
+            <span className="calendar-filter-dock__summary">{summary}</span>
+            <span aria-hidden className="calendar-filter-dock__chevron">
+              {expanded ? '▲' : '▼'}
+            </span>
+          </button>
+          {expanded ? (
+            <div
+              className="calendar-filter-dock__panel"
+              id="calendar-mobile-filter-panel"
+            >
+              <div className="calendar-filter-groups">{filterGroups}</div>
+              {outcomeLegend}
+            </div>
+          ) : null}
+        </section>
+      </>
     );
   }
 
   return (
     <section aria-label="캘린더 필터" className="calendar-filter-panel">
+      <header className="calendar-filter-panel__header">
+        <span>Calendar view</span>
+        <strong>일정 보기</strong>
+        <p>{summary}</p>
+      </header>
       <div className="calendar-filter-groups">{filterGroups}</div>
       {outcomeLegend}
     </section>
@@ -201,5 +277,7 @@ export function getCalendarViewAnchorDate(
   mode: ViewMode,
   currentAnchor: Date,
 ): Date {
-  return mode === 'month' ? getMonthStart(currentAnchor) : getWeekStart(new Date());
+  return mode === 'month'
+    ? getMonthStart(currentAnchor)
+    : getWeekStart(currentAnchor);
 }

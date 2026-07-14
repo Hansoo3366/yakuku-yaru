@@ -12,10 +12,15 @@ const bootScript = `
     var root = document.documentElement;
     root.dataset.authState = 'guest';
     var teamColor = window.localStorage.getItem('yakuku.teamColor');
+    var teamSurface = window.localStorage.getItem('yakuku.teamSurface');
     if (teamColor) {
       root.style.setProperty('--team-color', teamColor);
       root.style.setProperty('--team-color-soft', teamColor + '1f');
       root.style.setProperty('--team-color-strong', teamColor + 'cc');
+      root.style.setProperty(
+        '--team-color-surface',
+        teamSurface || 'color-mix(in srgb, ' + teamColor + ' 58%, #111827 42%)'
+      );
     }
   } catch (error) {
     document.documentElement.dataset.authState = 'guest';
