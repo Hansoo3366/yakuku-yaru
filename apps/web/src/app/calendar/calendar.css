@@ -32,7 +32,7 @@
   background: var(--color-white);
   border: 1px solid var(--color-line);
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
+  box-shadow: none;
   display: grid;
   gap: var(--space-3);
   padding: var(--space-3);
@@ -493,17 +493,26 @@
 
 /* Scorebook calendar: flat surfaces, compact type and team-led navigation. */
 .app-shell--calendar {
-  --calendar-canvas: #c8d0cc;
+  --calendar-canvas: #fafaf8;
+  --calendar-divider: #ecece8;
   --calendar-surface: #ffffff;
-  --calendar-outside-surface: #e4e8e6;
-  --calendar-ink-soft: #59616d;
-  --calendar-warm-surface: #e1e2dc;
-  --calendar-team-solid: var(--team-color, var(--color-night-navy));
+  --calendar-surface-raised: #ffffff;
+  --calendar-outside-surface: #f3f3ef;
+  --calendar-ink-soft: #5f625f;
+  --calendar-panel-surface: #f7f7f3;
+  --calendar-warm-surface: #f6f6f2;
+  --calendar-team-solid: var(
+    --team-color-display,
+    var(--team-color, var(--color-night-navy))
+  );
   --calendar-team-ink: var(
     --team-color-ink,
     var(--team-color-surface, var(--color-night-navy))
   );
-  --calendar-on-team: var(--team-color-contrast, var(--color-white));
+  --calendar-on-team: var(
+    --team-color-display-contrast,
+    var(--team-color-contrast, var(--color-white))
+  );
   align-content: start;
   background: var(--calendar-canvas);
   gap: 18px;
@@ -511,10 +520,12 @@
 }
 
 html[data-auth-state='guest'] .app-shell--calendar {
-  --team-color: #315f78;
+  --team-color: #171717;
   --team-color-contrast: #ffffff;
-  --team-color-ink: #26495d;
-  --team-color-surface: #26495d;
+  --team-color-ink: #171717;
+  --team-color-surface: #171717;
+  --calendar-team-solid: #171717;
+  --calendar-on-team: #ffffff;
 }
 
 .calendar-overview {
@@ -575,7 +586,7 @@ html[data-auth-state='guest'] .app-shell--calendar {
 
 .calendar-overview > .calendar-summary-row .calendar-summary-card {
   align-content: center;
-  background: color-mix(in srgb, var(--calendar-on-team) 11%, transparent);
+  background: #ffffff;
   border: 0;
   border-radius: 8px;
   box-shadow: none;
@@ -588,14 +599,14 @@ html[data-auth-state='guest'] .app-shell--calendar {
   .calendar-overview
   > .calendar-summary-row
   .calendar-summary-card:nth-child(even) {
-  background: color-mix(in srgb, var(--calendar-on-team) 15%, transparent);
+  background: #ffffff;
 }
 
 .app-shell--calendar
   .calendar-overview
   > .calendar-summary-row
   .calendar-summary-card:nth-child(3) {
-  background: color-mix(in srgb, var(--calendar-on-team) 17%, transparent);
+  background: #ffffff;
 }
 
 .calendar-overview > .calendar-summary-row .calendar-summary-card > span,
@@ -607,11 +618,11 @@ html[data-auth-state='guest'] .app-shell--calendar {
 }
 
 .calendar-overview > .calendar-summary-row .calendar-summary-card > span {
-  color: var(--calendar-on-team);
+  color: var(--calendar-ink-soft);
 }
 
 .calendar-overview > .calendar-summary-row .calendar-summary-card > strong {
-  color: var(--calendar-on-team);
+  color: #111111;
   font-size: 22px;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.035em;
@@ -619,7 +630,7 @@ html[data-auth-state='guest'] .app-shell--calendar {
 }
 
 .calendar-overview .calendar-summary-card > strong small {
-  color: var(--calendar-on-team);
+  color: var(--calendar-ink-soft);
 }
 
 .calendar-summary-card > strong small {
@@ -636,16 +647,16 @@ html[data-auth-state='guest'] .app-shell--calendar {
 
 .calendar-overview .calendar-summary-trend-chip,
 .calendar-overview .calendar-summary-trend-chip[data-kind] {
-  background: rgba(0, 0, 0, 0.34);
+  background: #f1f1ed;
   border: 0;
   border-radius: 5px;
-  color: var(--color-white);
+  color: var(--calendar-ink-soft);
   padding: 3px 7px;
 }
 
 .calendar-overview .calendar-summary-trend-label,
 .calendar-overview .calendar-summary-trend-chip strong {
-  color: var(--color-white);
+  color: #111111;
 }
 
 .calendar-main-layout--with-rails {
@@ -653,9 +664,9 @@ html[data-auth-state='guest'] .app-shell--calendar {
 }
 
 .calendar-filter-panel {
-  background: var(--calendar-surface);
+  background: var(--calendar-surface-raised);
   border: 0;
-  border-radius: 9px;
+  border-radius: 11px;
   box-shadow: none;
   gap: 0;
   overflow: hidden;
@@ -663,18 +674,14 @@ html[data-auth-state='guest'] .app-shell--calendar {
 }
 
 .calendar-filter-panel__header {
-  background: color-mix(
-    in srgb,
-    var(--team-color, var(--color-night-navy)) 15%,
-    white 85%
-  );
+  background: var(--calendar-team-solid);
   display: grid;
   gap: 2px;
   padding: 14px;
 }
 
 .calendar-filter-panel__header > span {
-  color: var(--calendar-team-ink);
+  color: color-mix(in srgb, var(--calendar-on-team) 74%, transparent);
   font-size: 9px;
   font-weight: var(--weight-black);
   letter-spacing: 0.1em;
@@ -682,13 +689,13 @@ html[data-auth-state='guest'] .app-shell--calendar {
 }
 
 .calendar-filter-panel__header > strong {
-  color: var(--color-ink);
+  color: var(--calendar-on-team);
   font-size: 16px;
   letter-spacing: -0.025em;
 }
 
 .calendar-filter-panel__header > p {
-  color: var(--calendar-ink-soft);
+  color: color-mix(in srgb, var(--calendar-on-team) 72%, transparent);
   font-size: 10px;
   line-height: 1.4;
   margin: 3px 0 0;
@@ -730,7 +737,7 @@ html[data-auth-state='guest'] .app-shell--calendar {
 }
 
 .calendar-filter-group[data-layout='segments'] .calendar-filter-options {
-  background: #edf0ed;
+  background: #f4f4f0;
   border-radius: 6px;
   gap: 3px;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -739,7 +746,7 @@ html[data-auth-state='guest'] .app-shell--calendar {
 
 .calendar-filter-choice {
   align-items: center;
-  background: #f0f2f0;
+  background: #f6f6f3;
   border: 0;
   border-radius: 6px;
   color: var(--color-ink);
@@ -756,7 +763,7 @@ html[data-auth-state='guest'] .app-shell--calendar {
 }
 
 .calendar-filter-choice:hover:not(:disabled):not(.is-selected) {
-  background: #e5e9e5;
+  background: #eeeeea;
 }
 
 .calendar-filter-choice strong {
@@ -805,8 +812,8 @@ html[data-auth-state='guest'] .app-shell--calendar {
 .calendar-filter-group[data-layout='rows'] .calendar-filter-choice.is-selected {
   background: color-mix(
     in srgb,
-    var(--team-color, var(--color-night-navy)) 14%,
-    white 86%
+    var(--team-color, var(--color-night-navy)) 9%,
+    white 91%
   );
 }
 
@@ -820,8 +827,7 @@ html[data-auth-state='guest'] .app-shell--calendar {
 
 .calendar-filter-choice.is-selected .calendar-filter-choice__mark {
   background: var(--calendar-team-solid);
-  box-shadow: inset 0 0 0 3px
-    color-mix(in srgb, var(--calendar-on-team) 78%, transparent);
+  box-shadow: none;
 }
 
 .calendar-filter-choice__copy {
@@ -835,8 +841,9 @@ html[data-auth-state='guest'] .app-shell--calendar {
 
 .calendar-filter-rail .calendar-filter-legend-block,
 .calendar-filter-dock .calendar-filter-legend-block {
-  background: var(--calendar-warm-surface);
+  background: var(--calendar-panel-surface);
   border: 0;
+  border-radius: 7px;
   gap: 8px;
   margin: 0 10px 10px;
   padding: 11px;
@@ -860,7 +867,7 @@ html[data-auth-state='guest'] .app-shell--calendar {
 
 .calendar-outcome-legend-item {
   align-items: center;
-  background: rgba(255, 255, 255, 0.58);
+  background: rgba(255, 255, 255, 0.72);
   border: 0;
   border-radius: 5px;
   color: var(--color-ink);
@@ -890,7 +897,8 @@ html[data-auth-state='guest'] .app-shell--calendar {
 }
 
 .calendar-outcome-legend-item.is-selected {
-  background: var(--color-white);
+  background: var(--calendar-surface-raised);
+  box-shadow: none;
 }
 
 .calendar-outcome-legend-item.is-selected.is-all {
@@ -958,9 +966,9 @@ html[data-auth-state='guest'] .app-shell--calendar {
 }
 
 .calendar-toolbar-sticky .calendar-toolbar {
-  background: var(--calendar-surface);
+  background: var(--calendar-team-solid);
   border: 0;
-  border-radius: 9px;
+  border-radius: 11px;
   box-shadow: none;
   gap: 6px;
   min-height: 54px;
@@ -971,18 +979,15 @@ html[data-auth-state='guest'] .app-shell--calendar {
   background: transparent;
   border: 0;
   border-radius: 6px;
-  color: var(--calendar-team-ink);
-  font-size: 17px;
+  color: var(--calendar-on-team);
+  font-size: 20px;
+  font-weight: var(--weight-black);
   height: 34px;
   width: 34px;
 }
 
 .calendar-toolbar .icon-button:hover:not(:disabled) {
-  background: color-mix(
-    in srgb,
-    var(--team-color, var(--color-night-navy)) 11%,
-    white 89%
-  );
+  background: color-mix(in srgb, var(--calendar-on-team) 14%, transparent);
 }
 
 .calendar-month-label {
@@ -993,35 +998,32 @@ html[data-auth-state='guest'] .app-shell--calendar {
 }
 
 .calendar-month-label small {
-  color: var(--calendar-ink-soft);
-  font-size: 10px;
+  color: color-mix(in srgb, var(--calendar-on-team) 70%, transparent);
+  font-size: 11px;
   letter-spacing: 0;
   text-transform: none;
 }
 
 .calendar-month-label span {
-  color: var(--color-ink);
+  color: var(--calendar-on-team);
   font-size: 18px;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.025em;
 }
 
 .calendar-today-button {
-  background: var(--calendar-team-solid);
+  background: #ffffff;
   border: 0;
   border-radius: 6px;
-  color: var(--calendar-on-team);
-  font-size: 11px;
+  color: #111111;
+  font-size: 12px;
+  font-weight: var(--weight-black);
   height: 34px;
-  min-width: 52px;
+  min-width: 56px;
 }
 
 .calendar-today-button:hover {
-  background: color-mix(
-    in srgb,
-    var(--team-color, var(--color-night-navy)) 86%,
-    black 14%
-  );
+  background: #f1f1ed;
   filter: none;
 }
 
@@ -1035,32 +1037,35 @@ html[data-auth-state='guest'] .app-shell--calendar {
 }
 
 .calendar-weekdays {
-  background: var(--calendar-team-solid);
+  background: #171717;
   border-radius: 9px 9px 0 0;
-  min-height: 34px;
+  min-height: 38px;
 }
 
 .calendar-weekdays span {
-  color: color-mix(in srgb, var(--calendar-on-team) 90%, transparent);
-  font-size: 10px;
+  color: #f7f7f5;
+  font-size: 12px;
+  font-weight: var(--weight-black);
   letter-spacing: 0;
   text-transform: none;
 }
 
 .calendar-weekdays span:first-child {
-  color: color-mix(in srgb, var(--calendar-on-team) 82%, #d92d20 18%);
+  color: #ff7b72;
+  font-weight: var(--weight-black);
 }
 
 .calendar-weekdays span:last-child {
-  color: color-mix(in srgb, var(--calendar-on-team) 82%, #175cd3 18%);
+  color: #77a8ff;
+  font-weight: var(--weight-black);
 }
 
 .calendar-grid {
-  background: var(--calendar-canvas);
+  background: var(--calendar-divider);
   border-radius: 0 0 7px 7px;
-  gap: 1px;
+  gap: 3px;
   overflow: hidden;
-  padding: 1px;
+  padding: 3px;
 }
 
 .calendar-day {
@@ -1087,15 +1092,12 @@ html[data-auth-state='guest'] .app-shell--calendar {
   animation: none;
   background: color-mix(
     in srgb,
-    var(--team-color, var(--color-night-navy)) 16%,
-    var(--calendar-surface) 84%
+    var(--team-color, var(--color-night-navy)) 12%,
+    var(--calendar-surface-raised) 88%
   );
-  box-shadow: inset 0 0 0 2px
-    color-mix(
-      in srgb,
-      var(--team-color, var(--color-night-navy)) 42%,
-      transparent 58%
-    );
+  box-shadow: none;
+  position: relative;
+  z-index: 1;
 }
 
 .calendar-day.has-record:not(.is-today):not(.is-focused-day):not(.is-outside) {
@@ -1150,8 +1152,8 @@ html[data-auth-state='guest'] .app-shell--calendar {
 .calendar-event[data-outcome='scheduled'] {
   background: color-mix(
     in srgb,
-    var(--team-color, var(--color-night-navy)) 17%,
-    white 83%
+    var(--team-color, var(--color-night-navy)) 7%,
+    white 93%
   );
   border: 0;
   border-radius: 5px;
@@ -1164,8 +1166,8 @@ html[data-auth-state='guest'] .app-shell--calendar {
 .calendar-event:hover {
   background: color-mix(
     in srgb,
-    var(--team-color, var(--color-night-navy)) 23%,
-    white 77%
+    var(--team-color, var(--color-night-navy)) 12%,
+    white 88%
   );
   border: 0;
   box-shadow: none;
@@ -1195,6 +1197,39 @@ html[data-auth-state='guest'] .app-shell--calendar {
   background: #e8e9e6;
   border: 0;
   box-shadow: none;
+}
+
+.calendar-day.is-today .calendar-event,
+.calendar-day.is-today .calendar-event[data-outcome='scheduled'],
+.calendar-day.is-focused-day .calendar-event,
+.calendar-day.is-focused-day .calendar-event[data-outcome='scheduled'] {
+  background: rgba(255, 255, 255, 0.88);
+  box-shadow: none;
+}
+
+.calendar-day.is-today .calendar-event:hover,
+.calendar-day.is-focused-day .calendar-event:hover {
+  background: var(--calendar-surface-raised);
+}
+
+.calendar-day.is-today .calendar-event[data-outcome='win'],
+.calendar-day.is-focused-day .calendar-event[data-outcome='win'] {
+  background: color-mix(in srgb, var(--color-win) 12%, white 88%);
+}
+
+.calendar-day.is-today .calendar-event[data-outcome='lose'],
+.calendar-day.is-focused-day .calendar-event[data-outcome='lose'] {
+  background: color-mix(in srgb, var(--color-lose) 12%, white 88%);
+}
+
+.calendar-day.is-today .calendar-event[data-outcome='draw'],
+.calendar-day.is-focused-day .calendar-event[data-outcome='draw'] {
+  background: color-mix(in srgb, var(--color-draw) 12%, white 88%);
+}
+
+.calendar-day.is-today .calendar-event[data-outcome='cancelled'],
+.calendar-day.is-focused-day .calendar-event[data-outcome='cancelled'] {
+  background: #f5f6f4;
 }
 
 .calendar-event[data-outcome='cancelled'] .calendar-event-matchup {
@@ -1297,9 +1332,9 @@ html[data-auth-state='guest'] .app-shell--calendar {
 }
 
 .calendar-insight-rail .calendar-win-rate-panel {
-  background: var(--calendar-warm-surface);
+  background: var(--calendar-panel-surface);
   border: 0;
-  border-radius: 9px;
+  border-radius: 11px;
   box-shadow: none;
   gap: 20px;
   padding: 14px;
@@ -1324,9 +1359,9 @@ html[data-auth-state='guest'] .app-shell--calendar {
 }
 
 .calendar-insight-rail .calendar-summary-card {
-  background: rgba(255, 255, 255, 0.9);
+  background: var(--calendar-surface-raised);
   border: 0;
-  border-radius: 6px;
+  border-radius: 7px;
   box-shadow: none;
   gap: 3px;
   min-height: 62px;
@@ -1336,8 +1371,8 @@ html[data-auth-state='guest'] .app-shell--calendar {
 .calendar-insight-rail .calendar-summary-card:nth-child(even) {
   background: color-mix(
     in srgb,
-    var(--team-color, var(--color-night-navy)) 14%,
-    white 86%
+    var(--team-color, var(--color-night-navy)) 8%,
+    white 92%
   );
 }
 
@@ -1368,16 +1403,16 @@ html[data-auth-state='guest'] .app-shell--calendar {
 }
 
 .calendar-agenda-day {
-  background: transparent;
+  background: var(--calendar-surface-raised);
   border: 0;
-  border-radius: 0;
+  border-radius: 8px;
   box-shadow: none;
 }
 
 .calendar-filter-dock {
-  background: var(--calendar-surface);
+  background: var(--calendar-surface-raised);
   border: 0;
-  border-radius: 9px;
+  border-radius: 11px;
   box-shadow: none;
 }
 
@@ -1496,7 +1531,7 @@ html[data-auth-state='guest'] .app-shell--calendar {
 
   .calendar-agenda-day-head {
     align-content: center;
-    background: #d8ddd8;
+    background: var(--calendar-panel-surface);
     border: 0;
     border-radius: 6px;
     display: grid;
@@ -1593,7 +1628,7 @@ html[data-auth-state='guest'] .app-shell--calendar {
   }
 
   .calendar-filter-dock__panel {
-    background: #eef1ee;
+    background: var(--calendar-canvas);
   }
 
   .calendar-filter-dock .calendar-filter-groups {

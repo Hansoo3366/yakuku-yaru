@@ -14,8 +14,10 @@ const bootScript = `
     var teamColor = window.localStorage.getItem('yakuku.teamColor');
     var teamSurface = window.localStorage.getItem('yakuku.teamSurface');
     var teamContrast = window.localStorage.getItem('yakuku.teamContrast');
+    var teamDisplay = window.localStorage.getItem('yakuku.teamDisplay');
+    var teamDisplayContrast = window.localStorage.getItem('yakuku.teamDisplayContrast');
     if (teamColor) {
-      if (!teamContrast && /^#[0-9a-f]{6}$/i.test(teamColor)) {
+      if (/^#[0-9a-f]{6}$/i.test(teamColor)) {
         var toLuminance = function (hex) {
           var channels = [1, 3, 5].map(function (offset) {
             var value = parseInt(hex.slice(offset, offset + 2), 16) / 255;
@@ -25,14 +27,34 @@ const bootScript = `
           });
           return channels[0] * 0.2126 + channels[1] * 0.7152 + channels[2] * 0.0722;
         };
-        var backgroundLuminance = toLuminance(teamColor);
-        var darkLuminance = toLuminance('#111111');
-        var lightContrast = 1.05 / (backgroundLuminance + 0.05);
-        var darkContrast =
-          (Math.max(backgroundLuminance, darkLuminance) + 0.05) /
-          (Math.min(backgroundLuminance, darkLuminance) + 0.05);
-        teamContrast = darkContrast > lightContrast ? '#111111' : '#ffffff';
-        window.localStorage.setItem('yakuku.teamContrast', teamContrast);
+        var getContrastColor = function (background) {
+          var backgroundLuminance = toLuminance(background);
+          var darkLuminance = toLuminance('#111111');
+          var lightContrast = 1.05 / (backgroundLuminance + 0.05);
+          var darkContrast =
+            (Math.max(backgroundLuminance, darkLuminance) + 0.05) /
+            (Math.min(backgroundLuminance, darkLuminance) + 0.05);
+          return darkContrast > lightContrast ? '#111111' : '#ffffff';
+        };
+
+        if (!teamContrast) {
+          teamContrast = getContrastColor(teamColor);
+          window.localStorage.setItem('yakuku.teamContrast', teamContrast);
+        }
+
+        var displayChannels = [1, 3, 5].map(function (offset) {
+          var channel = parseInt(teamColor.slice(offset, offset + 2), 16);
+          return Math.round(channel * 0.95 + 255 * 0.05)
+            .toString(16)
+            .padStart(2, '0');
+        });
+        teamDisplay = '#' + displayChannels.join('');
+        teamDisplayContrast = getContrastColor(teamDisplay);
+        window.localStorage.setItem('yakuku.teamDisplay', teamDisplay);
+        window.localStorage.setItem(
+          'yakuku.teamDisplayContrast',
+          teamDisplayContrast
+        );
       }
       root.style.setProperty('--team-color', teamColor);
       root.style.setProperty('--team-color-soft', teamColor + '1f');
@@ -46,6 +68,11 @@ const bootScript = `
         teamSurface || 'color-mix(in srgb, ' + teamColor + ' 58%, #111827 42%)'
       );
       root.style.setProperty('--team-color-contrast', teamContrast || '#ffffff');
+      root.style.setProperty('--team-color-display', teamDisplay || teamColor);
+      root.style.setProperty(
+        '--team-color-display-contrast',
+        teamDisplayContrast || teamContrast || '#ffffff'
+      );
     }
   } catch (error) {
     document.documentElement.dataset.authState = 'guest';

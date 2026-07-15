@@ -31,6 +31,23 @@ function toHexColor(color: Rgb) {
     .join('')}`;
 }
 
+export function getLightenedTeamColor(primaryColor: string, whiteRatio = 0.05) {
+  const source = parseHexColor(primaryColor);
+
+  if (!source) {
+    return primaryColor;
+  }
+
+  const ratio = Math.min(1, Math.max(0, whiteRatio));
+  const sourceRatio = 1 - ratio;
+
+  return toHexColor({
+    red: source.red * sourceRatio + 255 * ratio,
+    green: source.green * sourceRatio + 255 * ratio,
+    blue: source.blue * sourceRatio + 255 * ratio,
+  });
+}
+
 function getRelativeLuminance(color: Rgb) {
   const [red, green, blue] = [color.red, color.green, color.blue].map(
     (channel) => {

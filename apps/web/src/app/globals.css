@@ -10152,16 +10152,29 @@ img {
 .site-header {
   --header-accent: color-mix(
     in srgb,
-    var(--team-color-contrast, white) 92%,
+    var(--site-header-contrast) 92%,
     transparent
   );
-  background: var(--team-color, var(--home-night));
+  --site-header-surface: var(--team-color, var(--home-night));
+  --site-header-contrast: var(--team-color-contrast, white);
+  background: var(--site-header-surface);
   border-bottom-color: color-mix(
     in srgb,
-    var(--team-color-contrast, white) 14%,
+    var(--site-header-contrast) 14%,
     transparent
   );
-  color: var(--team-color-contrast, white);
+  color: var(--site-header-contrast);
+}
+
+:root[data-auth-state='authed'] .site-header {
+  --site-header-surface: var(
+    --team-color-display,
+    var(--team-color, var(--home-night))
+  );
+  --site-header-contrast: var(
+    --team-color-display-contrast,
+    var(--team-color-contrast, white)
+  );
 }
 
 .site-nav a.active::after {
@@ -10172,26 +10185,22 @@ img {
 .site-header .site-nav a:hover,
 .site-header .site-nav a.active,
 .site-header .account-actions .account-name {
-  color: var(--team-color-contrast, white);
+  color: var(--site-header-contrast);
 }
 
 .site-header .brand-text small,
 .site-header .site-nav a,
 .site-header .account-actions .account-link,
 .site-header .notification-bell .bell-button {
-  color: color-mix(in srgb, var(--team-color-contrast, white) 82%, transparent);
+  color: color-mix(in srgb, var(--site-header-contrast) 82%, transparent);
 }
 
 .site-header .notification-bell .bell-button:hover {
-  background: color-mix(
-    in srgb,
-    var(--team-color-contrast, white) 14%,
-    transparent
-  );
+  background: color-mix(in srgb, var(--site-header-contrast) 14%, transparent);
 }
 
 .site-header .notification-bell .bell-badge {
-  border-color: var(--team-color, var(--home-night));
+  border-color: var(--site-header-surface);
 }
 
 .dashboard-upcoming-card {
