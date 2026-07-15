@@ -493,8 +493,9 @@
 
 /* Scorebook calendar: flat surfaces, compact type and team-led navigation. */
 .app-shell--calendar {
-  --calendar-canvas: #e9edea;
+  --calendar-canvas: #c8d0cc;
   --calendar-surface: #ffffff;
+  --calendar-outside-surface: #e4e8e6;
   --calendar-ink-soft: #59616d;
   --calendar-warm-surface: #e1e2dc;
   --calendar-team-solid: var(
@@ -1056,23 +1057,29 @@ html[data-auth-state='guest'] .app-shell--calendar {
 
 .calendar-grid {
   background: var(--calendar-canvas);
-  gap: 4px;
-  padding-top: 4px;
+  border-radius: 0 0 7px 7px;
+  gap: 1px;
+  overflow: hidden;
+  padding: 1px;
 }
 
 .calendar-day {
   background: var(--calendar-surface);
   border: 0;
-  border-radius: 4px;
+  border-radius: 0;
   box-shadow: none;
   min-height: 148px;
   padding: 7px;
 }
 
 .calendar-day.is-outside {
-  background: #d9ded9;
+  background: var(--calendar-outside-surface);
   border: 0;
-  opacity: 0.62;
+  opacity: 1;
+}
+
+.calendar-day.is-outside .calendar-day-number {
+  color: #7b8580;
 }
 
 .calendar-day.is-today,
@@ -1080,18 +1087,19 @@ html[data-auth-state='guest'] .app-shell--calendar {
   animation: none;
   background: color-mix(
     in srgb,
-    var(--team-color, var(--color-night-navy)) 13%,
-    var(--calendar-surface) 87%
+    var(--team-color, var(--color-night-navy)) 16%,
+    var(--calendar-surface) 84%
   );
-  box-shadow: none;
+  box-shadow: inset 0 0 0 2px
+    color-mix(
+      in srgb,
+      var(--team-color, var(--color-night-navy)) 42%,
+      transparent 58%
+    );
 }
 
-.calendar-day.has-record:not(.is-today) {
-  background: color-mix(
-    in srgb,
-    var(--team-color, var(--color-night-navy)) 8%,
-    var(--calendar-surface) 92%
-  );
+.calendar-day.has-record:not(.is-today):not(.is-focused-day):not(.is-outside) {
+  background: var(--calendar-surface);
 }
 
 .calendar-day.has-record:not(.is-today) .calendar-day-number::after {
