@@ -4,15 +4,13 @@
 
 import './PlayerCheerDialog.css';
 
-import {
-  type CSSProperties,
-  useEffect,
-  useMemo,
-  useRef,
-} from 'react';
+import { type CSSProperties, useEffect, useMemo, useRef } from 'react';
 import { PlayerPhoto } from '@/components/PlayerPhoto';
 import type { PlayerCheer } from '@/lib/player-cheer-api';
-import { getAccessibleTeamSurface } from '@/lib/team-color';
+import {
+  getAccessibleTeamSurface,
+  getContrastingTextColor,
+} from '@/lib/team-color';
 
 export type CheerDialogItem = {
   accentColor: string | null;
@@ -164,6 +162,7 @@ export function PlayerCheerDialog({ cheer, player, onClose }: Props) {
   const dialogStyle = {
     '--cheer-dialog-accent': accentColor,
     '--cheer-dialog-surface': getAccessibleTeamSurface(accentColor),
+    '--cheer-dialog-contrast': getContrastingTextColor(accentColor),
   } as CSSProperties;
 
   return (
@@ -234,7 +233,10 @@ export function PlayerCheerDialog({ cheer, player, onClose }: Props) {
                 </div>
               ) : null}
               {item.lyrics ? (
-                <section className="cheer-dialog-lyrics" aria-label="응원가 가사">
+                <section
+                  className="cheer-dialog-lyrics"
+                  aria-label="응원가 가사"
+                >
                   <h4>가사</h4>
                   <p>{item.lyrics}</p>
                 </section>

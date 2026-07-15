@@ -498,14 +498,12 @@
   --calendar-outside-surface: #e4e8e6;
   --calendar-ink-soft: #59616d;
   --calendar-warm-surface: #e1e2dc;
-  --calendar-team-solid: var(
-    --team-color-surface,
-    color-mix(
-      in srgb,
-      var(--team-color, var(--color-night-navy)) 78%,
-      #111827 22%
-    )
+  --calendar-team-solid: var(--team-color, var(--color-night-navy));
+  --calendar-team-ink: var(
+    --team-color-ink,
+    var(--team-color-surface, var(--color-night-navy))
   );
+  --calendar-on-team: var(--team-color-contrast, var(--color-white));
   align-content: start;
   background: var(--calendar-canvas);
   gap: 18px;
@@ -514,6 +512,8 @@
 
 html[data-auth-state='guest'] .app-shell--calendar {
   --team-color: #315f78;
+  --team-color-contrast: #ffffff;
+  --team-color-ink: #26495d;
   --team-color-surface: #26495d;
 }
 
@@ -546,7 +546,7 @@ html[data-auth-state='guest'] .app-shell--calendar {
 }
 
 .calendar-overview .app-page-header .eyebrow {
-  color: rgba(255, 255, 255, 0.82);
+  color: color-mix(in srgb, var(--calendar-on-team) 82%, transparent);
   font-size: 10px;
   font-weight: var(--weight-black);
   letter-spacing: 0.12em;
@@ -554,14 +554,14 @@ html[data-auth-state='guest'] .app-shell--calendar {
 }
 
 .calendar-overview .app-page-header h1 {
-  color: var(--color-white);
+  color: var(--calendar-on-team);
   font-size: clamp(22px, 2vw, 28px);
   letter-spacing: -0.035em;
   line-height: 1.25;
 }
 
 .calendar-overview .app-page-header p {
-  color: rgba(255, 255, 255, 0.84);
+  color: color-mix(in srgb, var(--calendar-on-team) 84%, transparent);
   font-size: 13px;
 }
 
@@ -575,7 +575,7 @@ html[data-auth-state='guest'] .app-shell--calendar {
 
 .calendar-overview > .calendar-summary-row .calendar-summary-card {
   align-content: center;
-  background: rgba(255, 255, 255, 0.11);
+  background: color-mix(in srgb, var(--calendar-on-team) 11%, transparent);
   border: 0;
   border-radius: 8px;
   box-shadow: none;
@@ -588,14 +588,14 @@ html[data-auth-state='guest'] .app-shell--calendar {
   .calendar-overview
   > .calendar-summary-row
   .calendar-summary-card:nth-child(even) {
-  background: rgba(255, 255, 255, 0.15);
+  background: color-mix(in srgb, var(--calendar-on-team) 15%, transparent);
 }
 
 .app-shell--calendar
   .calendar-overview
   > .calendar-summary-row
   .calendar-summary-card:nth-child(3) {
-  background: rgba(255, 255, 255, 0.17);
+  background: color-mix(in srgb, var(--calendar-on-team) 17%, transparent);
 }
 
 .calendar-overview > .calendar-summary-row .calendar-summary-card > span,
@@ -607,11 +607,11 @@ html[data-auth-state='guest'] .app-shell--calendar {
 }
 
 .calendar-overview > .calendar-summary-row .calendar-summary-card > span {
-  color: var(--color-white);
+  color: var(--calendar-on-team);
 }
 
 .calendar-overview > .calendar-summary-row .calendar-summary-card > strong {
-  color: var(--color-white);
+  color: var(--calendar-on-team);
   font-size: 22px;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.035em;
@@ -619,7 +619,7 @@ html[data-auth-state='guest'] .app-shell--calendar {
 }
 
 .calendar-overview .calendar-summary-card > strong small {
-  color: var(--color-white);
+  color: var(--calendar-on-team);
 }
 
 .calendar-summary-card > strong small {
@@ -674,7 +674,7 @@ html[data-auth-state='guest'] .app-shell--calendar {
 }
 
 .calendar-filter-panel__header > span {
-  color: var(--calendar-team-solid);
+  color: var(--calendar-team-ink);
   font-size: 9px;
   font-weight: var(--weight-black);
   letter-spacing: 0.1em;
@@ -785,13 +785,13 @@ html[data-auth-state='guest'] .app-shell--calendar {
 .calendar-filter-group[data-layout='segments']
   .calendar-filter-choice.is-selected {
   background: var(--calendar-team-solid);
-  color: var(--color-white);
+  color: var(--calendar-on-team);
 }
 
 .calendar-filter-group[data-layout='split']
   .calendar-filter-choice.is-selected
   small {
-  color: rgba(255, 255, 255, 0.7);
+  color: color-mix(in srgb, var(--calendar-on-team) 78%, transparent);
 }
 
 .calendar-filter-group[data-layout='segments'] .calendar-filter-choice {
@@ -820,7 +820,8 @@ html[data-auth-state='guest'] .app-shell--calendar {
 
 .calendar-filter-choice.is-selected .calendar-filter-choice__mark {
   background: var(--calendar-team-solid);
-  box-shadow: inset 0 0 0 3px rgba(255, 255, 255, 0.78);
+  box-shadow: inset 0 0 0 3px
+    color-mix(in srgb, var(--calendar-on-team) 78%, transparent);
 }
 
 .calendar-filter-choice__copy {
@@ -894,13 +895,12 @@ html[data-auth-state='guest'] .app-shell--calendar {
 
 .calendar-outcome-legend-item.is-selected.is-all {
   background: var(--calendar-team-solid);
-  color: var(--color-white);
+  color: var(--calendar-on-team);
 }
 
-.calendar-outcome-legend-item.is-selected.is-all
-  .calendar-outcome-legend-label,
+.calendar-outcome-legend-item.is-selected.is-all .calendar-outcome-legend-label,
 .calendar-outcome-legend-item.is-selected.is-all strong {
-  color: var(--color-white);
+  color: var(--calendar-on-team);
 }
 
 .calendar-outcome-legend-item.is-selected[data-outcome='win'] {
@@ -971,7 +971,7 @@ html[data-auth-state='guest'] .app-shell--calendar {
   background: transparent;
   border: 0;
   border-radius: 6px;
-  color: var(--calendar-team-solid);
+  color: var(--calendar-team-ink);
   font-size: 17px;
   height: 34px;
   width: 34px;
@@ -1010,7 +1010,7 @@ html[data-auth-state='guest'] .app-shell--calendar {
   background: var(--calendar-team-solid);
   border: 0;
   border-radius: 6px;
-  color: var(--color-white);
+  color: var(--calendar-on-team);
   font-size: 11px;
   height: 34px;
   min-width: 52px;
@@ -1041,18 +1041,18 @@ html[data-auth-state='guest'] .app-shell--calendar {
 }
 
 .calendar-weekdays span {
-  color: rgba(255, 255, 255, 0.9);
+  color: color-mix(in srgb, var(--calendar-on-team) 90%, transparent);
   font-size: 10px;
   letter-spacing: 0;
   text-transform: none;
 }
 
 .calendar-weekdays span:first-child {
-  color: #ffd1cd;
+  color: color-mix(in srgb, var(--calendar-on-team) 82%, #d92d20 18%);
 }
 
 .calendar-weekdays span:last-child {
-  color: #c9dcff;
+  color: color-mix(in srgb, var(--calendar-on-team) 82%, #175cd3 18%);
 }
 
 .calendar-grid {
@@ -1138,7 +1138,7 @@ html[data-auth-state='guest'] .app-shell--calendar {
 .calendar-day.is-today .calendar-day-number {
   background: var(--calendar-team-solid);
   border-radius: 5px;
-  color: var(--color-white);
+  color: var(--calendar-on-team);
 }
 
 .calendar-events {
@@ -1209,7 +1209,7 @@ html[data-auth-state='guest'] .app-shell--calendar {
 }
 
 .calendar-event-time {
-  color: var(--calendar-team-solid);
+  color: var(--calendar-team-ink);
   font-size: 10px;
   font-variant-numeric: tabular-nums;
   letter-spacing: 0;
@@ -1280,6 +1280,7 @@ html[data-auth-state='guest'] .app-shell--calendar {
 
 .calendar-event-tag[data-kind='stadium'] {
   background: var(--calendar-team-solid);
+  color: var(--calendar-on-team);
 }
 
 .calendar-event-tag[data-kind='home'] {
@@ -1363,7 +1364,7 @@ html[data-auth-state='guest'] .app-shell--calendar {
 }
 
 .calendar-insight-rail .calendar-opponent-ranking__rate {
-  color: var(--calendar-team-solid);
+  color: var(--calendar-team-ink);
 }
 
 .calendar-agenda-day {
@@ -1395,7 +1396,7 @@ html[data-auth-state='guest'] .app-shell--calendar {
 
 .calendar-filter-dock__label,
 .calendar-filter-dock__chevron {
-  color: var(--calendar-team-solid);
+  color: var(--calendar-team-ink);
 }
 
 @media (min-width: 1100px) {
@@ -1514,7 +1515,7 @@ html[data-auth-state='guest'] .app-shell--calendar {
   .calendar-agenda-day.is-today .calendar-agenda-date,
   .calendar-agenda-day.is-focused .calendar-agenda-weekday,
   .calendar-agenda-day.is-focused .calendar-agenda-date {
-    color: var(--color-white);
+    color: var(--calendar-on-team);
   }
 
   .calendar-agenda-weekday {
@@ -1558,9 +1559,7 @@ html[data-auth-state='guest'] .app-shell--calendar {
   .calendar-filter-dock__backdrop {
     background: rgba(8, 14, 28, 0.52);
     border: 0;
-    bottom: calc(
-      var(--bottom-nav-height) + env(safe-area-inset-bottom, 0px)
-    );
+    bottom: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom, 0px));
     cursor: default;
     inset-inline: 0;
     position: fixed;
@@ -1571,19 +1570,19 @@ html[data-auth-state='guest'] .app-shell--calendar {
   .calendar-filter-dock__toggle,
   .calendar-filter-dock.is-expanded .calendar-filter-dock__toggle {
     background: var(--calendar-team-solid);
-    color: var(--color-white);
+    color: var(--calendar-on-team);
   }
 
   .calendar-filter-dock__label {
     background: transparent;
     border-radius: 0;
-    color: var(--color-white);
+    color: var(--calendar-on-team);
     padding: 0;
   }
 
   .calendar-filter-dock__summary,
   .calendar-filter-dock__chevron {
-    color: var(--color-white);
+    color: var(--calendar-on-team);
   }
 
   .calendar-filter-dock__summary {

@@ -17,7 +17,7 @@
 
 .cheers-page-intro > span,
 .cheers-roster__heading > div > span {
-  color: var(--team-color, var(--cheers-ink));
+  color: var(--team-color-ink, var(--team-color, var(--cheers-ink)));
   font-size: 10px;
   font-weight: 800;
   letter-spacing: 0.14em;
@@ -125,11 +125,8 @@
 }
 
 .cheers-search-submit {
-  background: var(
-    --team-color-surface,
-    var(--team-color, var(--cheers-ink))
-  );
-  color: #fff;
+  background: var(--team-color, var(--cheers-ink));
+  color: var(--team-color-contrast, #fff);
   min-width: 58px;
 }
 
@@ -207,10 +204,7 @@
 }
 
 .cheers-available-toggle input:checked + span {
-  background: var(
-    --team-color-surface,
-    var(--team-color, var(--cheers-ink))
-  );
+  background: var(--team-color, var(--cheers-ink));
 }
 
 .cheers-available-toggle input:checked + span::after {
@@ -284,10 +278,7 @@
 }
 
 .cheers-team-tab::after {
-  background: var(
-    --team-tab-color,
-    var(--team-color, var(--cheers-ink))
-  );
+  background: var(--team-tab-color, var(--team-color, var(--cheers-ink)));
   border-radius: 2px;
   bottom: 6px;
   content: '';
@@ -323,12 +314,9 @@
 
 .cheers-team-tab__all {
   align-items: center;
-  background: var(
-    --team-color-surface,
-    var(--team-color, var(--cheers-ink))
-  );
+  background: var(--team-color, var(--cheers-ink));
   border-radius: 6px;
-  color: #fff;
+  color: var(--team-color-contrast, #fff);
   display: inline-flex;
   font-size: 9px;
   font-weight: 800;
@@ -397,13 +385,10 @@
 }
 
 .cheers-team-feature > button {
-  background: var(
-    --team-tab-surface,
-    var(--team-color-surface, var(--cheers-ink))
-  );
+  background: var(--team-tab-surface, var(--team-color, var(--cheers-ink)));
   border: 0;
   border-radius: 6px;
-  color: #fff;
+  color: var(--team-tab-contrast, var(--team-color-contrast, #fff));
   font-size: 11px;
   font-weight: 800;
   min-height: 38px;
@@ -521,8 +506,8 @@
 
 .cheers-shell .cheer-player-team {
   color: var(
-    --team-color-surface,
-    var(--team-color, var(--cheers-ink))
+    --team-color-ink,
+    var(--team-color-surface, var(--team-color, var(--cheers-ink)))
   );
   font-size: 9px;
   font-weight: 800;
@@ -559,8 +544,8 @@
 
 .cheer-player-row[data-available='true'] .cheer-player-status {
   color: var(
-    --team-color-surface,
-    var(--team-color, var(--cheers-ink))
+    --team-color-ink,
+    var(--team-color-surface, var(--team-color, var(--cheers-ink)))
   );
   font-weight: 800;
 }
@@ -613,11 +598,8 @@
 }
 
 .cheers-roster-message button {
-  background: var(
-    --team-color-surface,
-    var(--team-color, var(--cheers-ink))
-  );
-  color: #fff;
+  background: var(--team-color, var(--cheers-ink));
+  color: var(--team-color-contrast, #fff);
   margin-top: 8px;
 }
 
@@ -667,7 +649,7 @@
   .cheers-roster-message button:hover {
     background: color-mix(
       in srgb,
-      var(--team-color-surface, var(--cheers-ink)) 88%,
+      var(--team-color, var(--cheers-ink)) 88%,
       #000 12%
     );
   }

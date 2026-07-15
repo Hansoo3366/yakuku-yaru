@@ -64,6 +64,21 @@ export function getContrastRatio(foreground: string, background: string) {
   return (lighter + 0.05) / (darker + 0.05);
 }
 
+export function getContrastingTextColor(
+  background: string,
+  lightColor = '#ffffff',
+  darkColor = '#111111',
+) {
+  const lightContrast = getContrastRatio(lightColor, background);
+  const darkContrast = getContrastRatio(darkColor, background);
+
+  if (lightContrast === null || darkContrast === null) {
+    return lightColor;
+  }
+
+  return darkContrast > lightContrast ? darkColor : lightColor;
+}
+
 export function getAccessibleTeamSurface(
   primaryColor: string,
   minimumContrast = 7,

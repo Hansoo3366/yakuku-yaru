@@ -26,8 +26,8 @@
 
 .cheer-dialog-titlebar {
   align-items: center;
-  background: var(--cheer-dialog-surface, #183b66);
-  color: #fff;
+  background: var(--cheer-dialog-accent, #183b66);
+  color: var(--cheer-dialog-contrast, #fff);
   display: flex;
   justify-content: space-between;
   min-height: 64px;
@@ -40,7 +40,11 @@
 }
 
 .cheer-dialog-titlebar span {
-  color: rgba(255, 255, 255, 0.78);
+  color: color-mix(
+    in srgb,
+    var(--cheer-dialog-contrast, #fff) 78%,
+    transparent
+  );
   font-size: 9px;
   font-weight: 750;
   letter-spacing: 0.16em;
@@ -53,10 +57,14 @@
 
 .cheer-dialog-close {
   align-items: center;
-  background: rgba(255, 255, 255, 0.14);
+  background: color-mix(
+    in srgb,
+    var(--cheer-dialog-contrast, #fff) 14%,
+    transparent
+  );
   border: 0;
   border-radius: 6px;
-  color: #fff;
+  color: var(--cheer-dialog-contrast, #fff);
   display: inline-flex;
   font-size: 22px;
   font-weight: 400;
@@ -71,7 +79,8 @@
 }
 
 .cheer-dialog-close:focus-visible {
-  outline: 3px solid rgba(255, 255, 255, 0.76);
+  outline: 3px solid
+    color-mix(in srgb, var(--cheer-dialog-contrast, #fff) 76%, transparent);
   outline-offset: 2px;
 }
 
@@ -253,7 +262,11 @@
 
 @media (hover: hover) {
   .cheer-dialog-close:hover {
-    background: rgba(255, 255, 255, 0.24);
+    background: color-mix(
+      in srgb,
+      var(--cheer-dialog-contrast, #fff) 24%,
+      transparent
+    );
   }
 
   .cheer-dialog-close:active {

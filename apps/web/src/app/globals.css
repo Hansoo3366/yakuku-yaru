@@ -102,7 +102,9 @@
    * logged-in fans still get their team color via JS. */
   --team-color: var(--color-ink);
   --team-color-soft: var(--color-surface-card);
+  --team-color-ink: var(--color-ink);
   --team-color-surface: var(--color-ink);
+  --team-color-contrast: var(--color-white);
 
   /* Spacing scale */
   --space-1: 4px;
@@ -736,7 +738,7 @@ img {
 }
 
 .link-btn:hover:not(:disabled) {
-  color: var(--team-color, var(--color-field-700));
+  color: var(--team-color-ink, var(--team-color, var(--color-field-700)));
 }
 
 .link-btn:disabled {
@@ -746,7 +748,7 @@ img {
 }
 
 .link-btn-primary {
-  color: var(--team-color, var(--color-field-700));
+  color: var(--team-color-ink, var(--team-color, var(--color-field-700)));
 }
 
 .site-footer {
@@ -848,7 +850,7 @@ img {
 }
 
 .bottom-nav a.active svg {
-  color: var(--team-color, var(--color-field-700));
+  color: var(--team-color-ink, var(--team-color, var(--color-field-700)));
 }
 
 /* =========================================================
@@ -1038,7 +1040,7 @@ img {
 .icon-btn:hover:not(:disabled) {
   background: var(--color-paper-deep);
   border-color: var(--team-color);
-  color: var(--team-color);
+  color: var(--team-color-ink, var(--team-color));
 }
 
 .icon-btn svg {
@@ -1922,7 +1924,7 @@ img {
   background: var(--team-color, var(--color-field-700));
   border: 0;
   border-radius: var(--radius-sm);
-  color: var(--color-white);
+  color: var(--team-color-contrast, var(--color-white));
   display: inline-flex;
   font-size: var(--text-sm);
   font-weight: var(--weight-black);
@@ -2095,7 +2097,7 @@ img {
 .filter-pill.is-selected {
   background: var(--team-color, var(--color-night-navy));
   border-color: var(--team-color, var(--color-night-navy));
-  color: var(--color-white);
+  color: var(--team-color-contrast, var(--color-white));
 }
 
 .filter-pill:disabled {
@@ -2217,7 +2219,7 @@ img {
 .calendar-day.is-today .calendar-day-number {
   background: var(--team-color, var(--color-night-navy));
   border-radius: var(--radius-pill);
-  color: var(--color-white);
+  color: var(--team-color-contrast, var(--color-white));
   font-weight: var(--weight-black);
 }
 
@@ -2512,6 +2514,7 @@ img {
 
 .calendar-event-tag[data-kind='stadium'] {
   background: var(--team-color, var(--color-field-700));
+  color: var(--team-color-contrast, var(--color-white));
 }
 .calendar-event-tag[data-kind='home'] {
   background: var(--color-night-navy);
@@ -3504,7 +3507,7 @@ img {
   border-radius: 999px;
   bottom: calc(var(--bottom-nav-height) + var(--space-4));
   box-shadow: var(--shadow-lg);
-  color: var(--color-white);
+  color: var(--team-color-contrast, var(--color-white));
   font-size: var(--text-sm);
   font-weight: var(--weight-black);
   letter-spacing: 0;
@@ -4481,7 +4484,7 @@ img {
 .post-toolbar-btn-primary {
   background: var(--team-color, var(--color-field-700));
   border: 1px solid var(--team-color, var(--color-field-700));
-  color: var(--color-white);
+  color: var(--team-color-contrast, var(--color-white));
 }
 
 .post-toolbar-btn-ghost {
@@ -4588,7 +4591,7 @@ img {
   bottom: calc(
     var(--bottom-nav-height) + env(safe-area-inset-bottom, 0px) + var(--space-3)
   );
-  color: var(--color-white);
+  color: var(--team-color-contrast, var(--color-white));
   display: inline-flex;
   font-size: var(--text-sm);
   font-weight: var(--weight-black);
@@ -4667,7 +4670,7 @@ img {
 
 .admin-tabs button.active {
   background: var(--team-color);
-  color: var(--color-white);
+  color: var(--team-color-contrast, var(--color-white));
 }
 
 .admin-toolbar input,
@@ -5314,7 +5317,7 @@ img {
 .profile-stat-tab[aria-selected='true'] {
   background: var(--team-color, var(--color-ink));
   box-shadow: var(--shadow-sm);
-  color: var(--color-white);
+  color: var(--team-color-contrast, var(--color-white));
 }
 
 .profile-stat-panel {
@@ -5542,6 +5545,18 @@ img {
 
 .stat-card[data-tone='stadium'] {
   background: var(--team-color, var(--color-field-700));
+}
+
+.stat-card[data-tone='stadium'] span {
+  color: color-mix(
+    in srgb,
+    var(--team-color-contrast, var(--color-white)) 72%,
+    transparent
+  );
+}
+
+.stat-card[data-tone='stadium'] strong {
+  color: var(--team-color-contrast, var(--color-white));
 }
 
 .stat-card[data-tone='home'] {
@@ -6846,7 +6861,7 @@ img {
   .calendar-filter-dock__label {
     background: var(--team-color, var(--color-field-700));
     border-radius: var(--radius-pill);
-    color: var(--color-white);
+    color: var(--team-color-contrast, var(--color-white));
     justify-self: start;
     letter-spacing: 0.02em;
     padding: 4px 9px;
@@ -6858,7 +6873,7 @@ img {
   }
 
   .calendar-filter-dock__chevron {
-    color: var(--team-color, var(--color-field-700));
+    color: var(--team-color-ink, var(--team-color, var(--color-field-700)));
     font-weight: var(--weight-black);
   }
 
@@ -7554,7 +7569,7 @@ img {
 }
 
 .companion-chip[data-status='accepted'] small {
-  color: var(--team-color, var(--color-field-700));
+  color: var(--team-color-ink, var(--team-color, var(--color-field-700)));
 }
 
 .companion-chip[data-status='rejected'] small {
@@ -7580,7 +7595,7 @@ img {
     var(--team-color, var(--color-field-700)) 16%,
     var(--color-white) 84%
   );
-  color: var(--team-color, var(--color-field-700));
+  color: var(--team-color-ink, var(--team-color, var(--color-field-700)));
 }
 
 .notification-result[data-status='rejected'] {
@@ -7851,7 +7866,7 @@ img {
 }
 
 .calendar-event-time {
-  color: var(--team-color, var(--color-field-700));
+  color: var(--team-color-ink, var(--team-color, var(--color-field-700)));
   font-size: 11px;
 }
 
@@ -8257,7 +8272,7 @@ img {
 
 .cheers-mode-bar button.active {
   background: var(--team-color, var(--color-night-navy));
-  color: var(--color-white);
+  color: var(--team-color-contrast, var(--color-white));
 }
 
 .cheers-search-note {
@@ -8320,7 +8335,7 @@ img {
 }
 
 .cheers-all-team-tab em {
-  color: var(--team-color, var(--color-night-navy));
+  color: var(--team-color-ink, var(--team-color, var(--color-night-navy)));
   font-size: var(--text-xs);
   font-style: normal;
   font-weight: var(--weight-bold);
@@ -8519,7 +8534,7 @@ img {
     var(--team-color, var(--color-field-700)) 14%,
     var(--color-white) 86%
   );
-  color: var(--team-color, var(--color-field-700));
+  color: var(--team-color-ink, var(--team-color, var(--color-field-700)));
 }
 
 .player-cheer-dialog-backdrop {
@@ -8888,7 +8903,7 @@ img {
       var(--color-line) 76%
     );
   border-radius: var(--radius-pill);
-  color: var(--team-color, var(--color-field-700));
+  color: var(--team-color-ink, var(--team-color, var(--color-field-700)));
   cursor: pointer;
   display: inline-flex;
   flex: 0 0 auto;
@@ -9214,10 +9229,10 @@ img {
 
 .dashboard-greeting .btn-primary {
   align-items: center;
-  background: var(--team-color-surface, var(--team-color, var(--home-night)));
+  background: var(--team-color, var(--home-night));
   border-color: transparent;
   border-radius: 999px;
-  color: white;
+  color: var(--team-color-contrast, white);
   display: inline-flex;
   gap: 7px;
   min-height: 46px;
@@ -9227,11 +9242,11 @@ img {
 .dashboard-greeting .btn-primary:hover:not(:disabled) {
   background: color-mix(
     in srgb,
-    var(--team-color-surface, var(--team-color)) 88%,
+    var(--team-color, var(--home-night)) 88%,
     black 12%
   );
   border-color: transparent;
-  color: white;
+  color: var(--team-color-contrast, white);
   transform: translateY(-2px);
 }
 
@@ -9249,7 +9264,7 @@ img {
 }
 
 .dashboard-zone-kicker {
-  color: var(--team-color, var(--home-muted));
+  color: var(--team-color-ink, var(--team-color, var(--home-muted)));
   font-family: ui-monospace, 'SFMono-Regular', Consolas, monospace;
   font-size: 10px;
   font-weight: 700;
@@ -9399,7 +9414,6 @@ img {
     flex-direction: column;
     gap: 8px;
   }
-
 }
 
 /* Public home — asymmetric game-program layout */
@@ -9500,7 +9514,9 @@ img {
   font-size: 13px;
   font-weight: 600;
   padding: 7px 0 5px;
-  transition: border-color 180ms ease, color 180ms ease;
+  transition:
+    border-color 180ms ease,
+    color 180ms ease;
 }
 
 .home-hero__text-link:hover {
@@ -9641,7 +9657,9 @@ img {
   grid-template-columns: 54px minmax(0, 1fr) auto;
   min-height: 144px;
   padding: 26px clamp(24px, 4vw, 48px);
-  transition: background 180ms ease, padding 180ms ease;
+  transition:
+    background 180ms ease,
+    padding 180ms ease;
 }
 
 .home-public .home-feature-card:first-of-type {
@@ -9649,7 +9667,11 @@ img {
 }
 
 .home-public .home-feature-card:hover {
-  background: color-mix(in srgb, var(--team-color, var(--home-ink)) 4%, white 96%);
+  background: color-mix(
+    in srgb,
+    var(--team-color, var(--home-ink)) 4%,
+    white 96%
+  );
   padding-left: clamp(30px, 4.5vw, 56px);
 }
 
@@ -9944,7 +9966,9 @@ img {
   overflow: hidden;
   padding: 20px;
   position: relative;
-  transition: background 180ms ease, transform 180ms ease;
+  transition:
+    background 180ms ease,
+    transform 180ms ease;
 }
 
 .dashboard-next-ticket::after {
@@ -10126,19 +10150,48 @@ img {
 
 /* Home corrections: team GNB, compact schedule, data-rich tables */
 .site-header {
-  --header-accent: rgba(255, 255, 255, 0.92);
-  background: var(
-    --team-color-surface,
-    var(--team-color, var(--home-night))
+  --header-accent: color-mix(
+    in srgb,
+    var(--team-color-contrast, white) 92%,
+    transparent
   );
+  background: var(--team-color, var(--home-night));
+  border-bottom-color: color-mix(
+    in srgb,
+    var(--team-color-contrast, white) 14%,
+    transparent
+  );
+  color: var(--team-color-contrast, white);
 }
 
 .site-nav a.active::after {
   background: var(--header-accent);
 }
 
-.brand-text small {
-  color: rgba(255, 255, 255, 0.84);
+.site-header .brand-text strong,
+.site-header .site-nav a:hover,
+.site-header .site-nav a.active,
+.site-header .account-actions .account-name {
+  color: var(--team-color-contrast, white);
+}
+
+.site-header .brand-text small,
+.site-header .site-nav a,
+.site-header .account-actions .account-link,
+.site-header .notification-bell .bell-button {
+  color: color-mix(in srgb, var(--team-color-contrast, white) 82%, transparent);
+}
+
+.site-header .notification-bell .bell-button:hover {
+  background: color-mix(
+    in srgb,
+    var(--team-color-contrast, white) 14%,
+    transparent
+  );
+}
+
+.site-header .notification-bell .bell-badge {
+  border-color: var(--team-color, var(--home-night));
 }
 
 .dashboard-upcoming-card {
@@ -10179,7 +10232,7 @@ img {
 }
 
 .dashboard-upcoming-card .dashboard-game-date strong {
-  color: var(--team-color, var(--home-ink));
+  color: var(--team-color-ink, var(--team-color, var(--home-ink)));
 }
 
 .home-leaderboard-card,
@@ -10198,12 +10251,9 @@ img {
 
 .standings-table th,
 .season-projection-table th {
-  background: var(
-    --team-color-surface,
-    var(--team-color, var(--home-night))
-  );
+  background: var(--team-color, var(--home-night));
   border-bottom: 0;
-  color: var(--color-white);
+  color: var(--team-color-contrast, var(--color-white));
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.02em;
@@ -10270,7 +10320,7 @@ img {
 .standings-table td:nth-child(7),
 .season-projection-table td:nth-child(2),
 .season-projection-table td:nth-child(3) {
-  color: var(--team-color, var(--home-ink));
+  color: var(--team-color-ink, var(--team-color, var(--home-ink)));
   font-weight: 800;
 }
 

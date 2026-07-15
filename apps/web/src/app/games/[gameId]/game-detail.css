@@ -5,7 +5,9 @@
   --game-surface-strong: #dfe5df;
   --game-ink: #151c25;
   --game-muted: #5c6673;
-  --game-team: var(--team-color-surface, #243b53);
+  --game-team: var(--team-color, #243b53);
+  --game-team-ink: var(--team-color-ink, var(--team-color-surface, #243b53));
+  --game-on-team: var(--team-color-contrast, var(--color-white));
   align-content: start;
   gap: 18px;
   max-width: 1220px;
@@ -22,7 +24,7 @@
   background: var(--game-team);
   border-radius: 12px;
   box-shadow: none;
-  color: var(--color-white);
+  color: var(--game-on-team);
   display: grid;
   gap: 18px;
   overflow: hidden;
@@ -38,7 +40,7 @@
 
 .app-shell--game-detail .game-detail-back {
   align-items: center;
-  color: var(--color-white);
+  color: var(--game-on-team);
   display: inline-flex;
   font-size: 12px;
   font-weight: var(--weight-bold);
@@ -57,7 +59,7 @@
 
 .app-shell--game-detail .game-detail-back:focus-visible,
 .app-shell--game-detail .lineup-mobile-switch button:focus-visible {
-  outline: 2px solid var(--color-white);
+  outline: 2px solid var(--game-on-team);
   outline-offset: 3px;
 }
 
@@ -76,14 +78,14 @@
 }
 
 .app-shell--game-detail .match-hero .eyebrow {
-  color: rgba(255, 255, 255, 0.82);
+  color: color-mix(in srgb, var(--game-on-team) 82%, transparent);
   font-size: 10px;
   font-weight: var(--weight-black);
   letter-spacing: 0.13em;
 }
 
 .app-shell--game-detail .match-hero h1 {
-  color: var(--color-white);
+  color: var(--game-on-team);
   font-size: clamp(22px, 2.4vw, 30px);
   letter-spacing: -0.035em;
   line-height: 1.25;
@@ -92,7 +94,7 @@
 
 .app-shell--game-detail .match-hero-meta {
   align-items: center;
-  color: rgba(255, 255, 255, 0.84);
+  color: color-mix(in srgb, var(--game-on-team) 84%, transparent);
   display: flex;
   flex-wrap: wrap;
   font-size: 13px;
@@ -109,7 +111,7 @@
 
 .app-shell--game-detail .match-hero-meta time::before,
 .app-shell--game-detail .match-hero-meta span::before {
-  background: rgba(255, 255, 255, 0.66);
+  background: color-mix(in srgb, var(--game-on-team) 66%, transparent);
   border-radius: 50%;
   content: '';
   height: 4px;
@@ -164,24 +166,26 @@
 }
 
 .app-shell--game-detail .match-team-side {
-  color: rgba(255, 255, 255, 0.76);
+  color: var(--game-on-team);
   font-size: 10px;
   font-weight: var(--weight-black);
   grid-area: side;
   letter-spacing: 0.07em;
 }
 
-.app-shell--game-detail .match-team[data-favorite='true'] .match-team-side::after {
-  background: rgba(255, 255, 255, 0.18);
+.app-shell--game-detail
+  .match-team[data-favorite='true']
+  .match-team-side::after {
+  background: color-mix(in srgb, var(--game-on-team) 18%, transparent);
   border-radius: 3px;
-  color: var(--color-white);
+  color: var(--game-on-team);
   content: 'MY';
   margin-left: 6px;
   padding: 2px 4px;
 }
 
 .app-shell--game-detail .match-team strong {
-  color: var(--color-white);
+  color: var(--game-on-team);
   font-size: 21px;
   font-weight: var(--weight-black);
   grid-area: name;
@@ -189,7 +193,7 @@
 }
 
 .app-shell--game-detail .match-team small {
-  color: rgba(255, 255, 255, 0.72);
+  color: var(--game-on-team);
   font-size: 11px;
   font-weight: var(--weight-bold);
   grid-area: full;
@@ -198,7 +202,7 @@
 }
 
 .app-shell--game-detail .match-team-score {
-  color: var(--color-white);
+  color: var(--game-on-team);
   font-size: clamp(38px, 5vw, 58px);
   font-variant-numeric: tabular-nums;
   font-weight: var(--weight-black);
@@ -220,7 +224,7 @@
 }
 
 .app-shell--game-detail .match-score-label {
-  color: rgba(255, 255, 255, 0.78);
+  color: var(--game-on-team);
   font-size: 9px;
   font-weight: var(--weight-black);
   letter-spacing: 0.03em;
@@ -229,7 +233,7 @@
 }
 
 .app-shell--game-detail .match-score-vs {
-  color: var(--color-white);
+  color: var(--game-on-team);
   font-size: 21px;
   font-weight: var(--weight-black);
   letter-spacing: 0;
@@ -303,7 +307,7 @@
 .app-shell--game-detail .stadium-personal-notes > .form-grid > .btn {
   background: var(--game-team);
   border: 0;
-  color: var(--color-white);
+  color: var(--game-on-team);
   min-height: 44px;
   width: 100%;
 }
@@ -312,7 +316,7 @@
 .app-shell--game-detail .game-extras-panel .btn:hover,
 .app-shell--game-detail .stadium-personal-notes > .form-grid > .btn:hover {
   background: color-mix(in srgb, var(--game-team) 88%, black 12%);
-  color: var(--color-white);
+  color: var(--game-on-team);
 }
 
 .app-shell--game-detail .score-input-hint,
@@ -328,7 +332,7 @@
 }
 
 .app-shell--game-detail .score-input-hint a {
-  color: var(--game-team);
+  color: var(--game-team-ink);
   font-weight: var(--weight-black);
 }
 
@@ -341,7 +345,7 @@
 }
 
 .app-shell--game-detail .game-ticket-open-label {
-  color: var(--game-team);
+  color: var(--game-team-ink);
   font-size: 10px;
   letter-spacing: 0.04em;
 }
@@ -372,7 +376,7 @@
 .app-shell--game-detail .game-record-ticket-action {
   background: var(--game-paper);
   border: 0;
-  color: var(--game-team);
+  color: var(--game-team-ink);
 }
 
 .app-shell--game-detail .game-record-cheer-picker {
@@ -386,7 +390,7 @@
 
 .app-shell--game-detail .game-record-cheer-button[data-selected='true'] {
   background: var(--game-team);
-  color: var(--color-white);
+  color: var(--game-on-team);
 }
 
 .app-shell--game-detail .starter-pitcher-grid {
@@ -418,7 +422,9 @@
   padding: 18px;
 }
 
-.app-shell--game-detail .starter-pitcher-card.is-favorite-team .starter-pitcher-head {
+.app-shell--game-detail
+  .starter-pitcher-card.is-favorite-team
+  .starter-pitcher-head {
   background: color-mix(
     in srgb,
     var(--team-color, var(--game-team)) 14%,
@@ -486,7 +492,7 @@
   align-items: center;
   background: var(--game-team);
   border-radius: 50%;
-  color: var(--color-white);
+  color: var(--game-on-team);
   display: flex;
   font-size: 10px;
   font-weight: var(--weight-black);
@@ -544,6 +550,19 @@
 
 .app-shell--game-detail .lineup-panel.is-favorite-team .lineup-team-title {
   background: var(--game-team);
+  color: var(--game-on-team);
+}
+
+.app-shell--game-detail .lineup-panel.is-favorite-team .lineup-team-title span,
+.app-shell--game-detail .lineup-panel.is-favorite-team .lineup-team-title em {
+  color: color-mix(in srgb, var(--game-on-team) 78%, transparent);
+}
+
+.app-shell--game-detail
+  .lineup-panel.is-favorite-team
+  .lineup-team-title
+  strong {
+  color: var(--game-on-team);
 }
 
 .app-shell--game-detail .lineup-team-title img {
@@ -588,7 +607,9 @@
   margin-left: 0;
 }
 
-.app-shell--game-detail .lineup-team-title:not(:has(em)) .lineup-team-cheer-button {
+.app-shell--game-detail
+  .lineup-team-title:not(:has(em))
+  .lineup-team-cheer-button {
   margin-left: auto;
 }
 
@@ -624,7 +645,7 @@
 
 .app-shell--game-detail .lineup-order {
   background: transparent;
-  color: var(--game-team);
+  color: var(--game-team-ink);
   font-size: 13px;
   font-variant-numeric: tabular-nums;
   padding: 0;
@@ -662,7 +683,7 @@
     white 88%
   );
   border: 0;
-  color: var(--game-team);
+  color: var(--game-team-ink);
 }
 
 .app-shell--game-detail .lineup-empty {
@@ -718,7 +739,7 @@
 .app-shell--game-detail .stadium-seat-map__open {
   background: var(--game-paper);
   border: 0;
-  color: var(--game-team);
+  color: var(--game-team-ink);
 }
 
 @media (max-width: 860px) {
@@ -876,7 +897,7 @@
 
   .app-shell--game-detail .lineup-mobile-switch button.is-selected {
     background: var(--game-team);
-    color: var(--color-white);
+    color: var(--game-on-team);
   }
 
   .app-shell--game-detail .lineup-mobile-switch img {

@@ -13,14 +13,39 @@ const bootScript = `
     root.dataset.authState = 'guest';
     var teamColor = window.localStorage.getItem('yakuku.teamColor');
     var teamSurface = window.localStorage.getItem('yakuku.teamSurface');
+    var teamContrast = window.localStorage.getItem('yakuku.teamContrast');
     if (teamColor) {
+      if (!teamContrast && /^#[0-9a-f]{6}$/i.test(teamColor)) {
+        var toLuminance = function (hex) {
+          var channels = [1, 3, 5].map(function (offset) {
+            var value = parseInt(hex.slice(offset, offset + 2), 16) / 255;
+            return value <= 0.04045
+              ? value / 12.92
+              : Math.pow((value + 0.055) / 1.055, 2.4);
+          });
+          return channels[0] * 0.2126 + channels[1] * 0.7152 + channels[2] * 0.0722;
+        };
+        var backgroundLuminance = toLuminance(teamColor);
+        var darkLuminance = toLuminance('#111111');
+        var lightContrast = 1.05 / (backgroundLuminance + 0.05);
+        var darkContrast =
+          (Math.max(backgroundLuminance, darkLuminance) + 0.05) /
+          (Math.min(backgroundLuminance, darkLuminance) + 0.05);
+        teamContrast = darkContrast > lightContrast ? '#111111' : '#ffffff';
+        window.localStorage.setItem('yakuku.teamContrast', teamContrast);
+      }
       root.style.setProperty('--team-color', teamColor);
       root.style.setProperty('--team-color-soft', teamColor + '1f');
       root.style.setProperty('--team-color-strong', teamColor + 'cc');
       root.style.setProperty(
+        '--team-color-ink',
+        teamSurface || 'color-mix(in srgb, ' + teamColor + ' 58%, #111827 42%)'
+      );
+      root.style.setProperty(
         '--team-color-surface',
         teamSurface || 'color-mix(in srgb, ' + teamColor + ' 58%, #111827 42%)'
       );
+      root.style.setProperty('--team-color-contrast', teamContrast || '#ffffff');
     }
   } catch (error) {
     document.documentElement.dataset.authState = 'guest';

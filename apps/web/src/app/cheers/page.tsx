@@ -9,7 +9,7 @@ import { PlayerCheerDialog } from '@/components/PlayerCheerDialog';
 import type { CheerDialogItem } from '@/components/PlayerCheerDialog';
 import { PlayerPhoto } from '@/components/PlayerPhoto';
 import { getTeamLogoSrc } from '@/lib/team-logo';
-import { getAccessibleTeamSurface } from '@/lib/team-color';
+import { getContrastingTextColor } from '@/lib/team-color';
 import type {
   PlayerCheer,
   PlayerCheerRosterScope,
@@ -75,7 +75,9 @@ export default function CheersPage() {
   const [viewMode, setViewMode] = useState<ViewMode>('recentLineup');
   const [onlyWithCheer, setOnlyWithCheer] = useState(false);
   const [page, setPage] = useState(1);
-  const [selectedPlayer, setSelectedPlayer] = useState<PlayerCheer | null>(null);
+  const [selectedPlayer, setSelectedPlayer] = useState<PlayerCheer | null>(
+    null,
+  );
   const [activeTeamCheer, setActiveTeamCheer] =
     useState<CheerDialogItem | null>(null);
   const teamsQuery = useTeamsQuery();
@@ -123,13 +125,13 @@ export default function CheersPage() {
     ? Math.round((allRegisteredPlayers / allTotalPlayers) * 100)
     : 0;
   const selectedTeam = selectedTeamId
-    ? teams.find((team) => team.id === selectedTeamId) ?? null
+    ? (teams.find((team) => team.id === selectedTeamId) ?? null)
     : null;
   const selectedTeamCheer = selectedTeamId
-    ? teamCheersById.get(selectedTeamId) ?? null
+    ? (teamCheersById.get(selectedTeamId) ?? null)
     : null;
   const selectedTeamStat = selectedTeamId
-    ? teamStatsById.get(selectedTeamId) ?? null
+    ? (teamStatsById.get(selectedTeamId) ?? null)
     : null;
   const currentTotalPlayers = selectedTeamStat?.totalPlayers ?? allTotalPlayers;
   const currentRegisteredPlayers =
@@ -279,7 +281,9 @@ export default function CheersPage() {
                 }}
                 style={
                   team.primaryColor
-                    ? ({ '--team-tab-color': team.primaryColor } as CSSProperties)
+                    ? ({
+                        '--team-tab-color': team.primaryColor,
+                      } as CSSProperties)
                     : undefined
                 }
                 type="button"
@@ -299,7 +303,8 @@ export default function CheersPage() {
             selectedTeam.primaryColor
               ? ({
                   '--team-tab-color': selectedTeam.primaryColor,
-                  '--team-tab-surface': getAccessibleTeamSurface(
+                  '--team-tab-surface': selectedTeam.primaryColor,
+                  '--team-tab-contrast': getContrastingTextColor(
                     selectedTeam.primaryColor,
                   ),
                 } as CSSProperties)
@@ -343,7 +348,9 @@ export default function CheersPage() {
       <section className="cheers-roster" aria-label="선수 응원가 목록">
         <header className="cheers-roster__heading">
           <div>
-            <span>{viewMode === 'recentLineup' ? 'LINEUP BOARD' : 'PLAYER INDEX'}</span>
+            <span>
+              {viewMode === 'recentLineup' ? 'LINEUP BOARD' : 'PLAYER INDEX'}
+            </span>
             <h2>{resultTitle}</h2>
             <p>
               응원가 {currentRegisteredPlayers}/{currentTotalPlayers}곡
@@ -358,7 +365,10 @@ export default function CheersPage() {
         </header>
 
         {cheersQuery.isLoading ? (
-          <div className="cheers-roster-skeleton" aria-label="선수 목록 불러오는 중">
+          <div
+            className="cheers-roster-skeleton"
+            aria-label="선수 목록 불러오는 중"
+          >
             {CHEER_SKELETON_ITEMS.map((item) => (
               <span key={item} />
             ))}
@@ -406,7 +416,9 @@ export default function CheersPage() {
                     </span>
                     <strong>{player.name}</strong>
                     <span className="cheer-player-meta">
-                      {player.backNumber ? `No.${player.backNumber}` : '등번호 없음'}
+                      {player.backNumber
+                        ? `No.${player.backNumber}`
+                        : '등번호 없음'}
                       {player.position ? ` · ${player.position}` : ''}
                     </span>
                   </span>
