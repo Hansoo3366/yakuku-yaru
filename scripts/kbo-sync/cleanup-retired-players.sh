@@ -24,19 +24,19 @@ DC=(docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE")
 echo "[cleanup-retired-players] 삭제 대상 조회"
 
 TARGET_COUNT="$("${DC[@]}" exec -T mysql sh -c \
-  'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" -Nse "
+  'mysql --default-character-set=utf8mb4 -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" -Nse "
     SELECT COUNT(*)
     FROM players
-    WHERE is_active = FALSE
-      AND (back_number IS NULL OR LENGTH(TRIM(back_number)) = 0);
+    WHERE (back_number IS NULL OR LENGTH(TRIM(back_number)) = 0)
+      AND (is_active = FALSE OR kbo_player_id IS NULL);
   "')"
 
 if [[ "$TARGET_COUNT" == "0" ]]; then
   echo "삭제할 선수가 없습니다."
   echo
-  echo "[진단] 등번호가 없는 선수 — is_active 값을 확인하세요."
+  echo "[진단] 등번호가 없는 선수 — is_active와 KBO ID를 확인하세요."
   "${DC[@]}" exec -T mysql sh -c \
-    'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" --table -e "
+    'mysql --default-character-set=utf8mb4 -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" --table -e "
       SELECT
         p.id,
         t.short_name AS team,
@@ -53,7 +53,7 @@ if [[ "$TARGET_COUNT" == "0" ]]; then
   echo
   echo "[진단] 비활성 선수 — 실제 등번호 값을 확인하세요."
   "${DC[@]}" exec -T mysql sh -c \
-    'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" --table -e "
+    'mysql --default-character-set=utf8mb4 -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" --table -e "
       SELECT
         p.id,
         t.short_name AS team,
@@ -70,7 +70,7 @@ if [[ "$TARGET_COUNT" == "0" ]]; then
 fi
 
 "${DC[@]}" exec -T mysql sh -c \
-  'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" --table -e "
+  'mysql --default-character-set=utf8mb4 -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" --table -e "
     SELECT
       p.id,
       t.short_name AS team,
@@ -80,14 +80,14 @@ fi
       p.is_active
     FROM players p
     JOIN teams t ON t.id = p.team_id
-    WHERE p.is_active = FALSE
-      AND (p.back_number IS NULL OR LENGTH(TRIM(p.back_number)) = 0)
+    WHERE (p.back_number IS NULL OR LENGTH(TRIM(p.back_number)) = 0)
+      AND (p.is_active = FALSE OR p.kbo_player_id IS NULL)
     ORDER BY t.short_name, p.name, p.id;
   "'
 
 echo
 echo "삭제 대상: ${TARGET_COUNT}명"
-echo "조건: is_active = FALSE 이고 등번호가 NULL 또는 빈 문자열"
+echo "조건: 등번호가 없고, 비활성 선수이거나 KBO ID가 없는 미확정 선수"
 echo "연결된 라인업, 선발투수, 응원가도 외래키 규칙에 따라 함께 삭제됩니다."
 echo
 
@@ -117,7 +117,7 @@ fi
 echo "[cleanup-retired-players] 삭제 시작"
 
 "${DC[@]}" exec -T mysql sh -c \
-  'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE"' <<'SQL'
+  'mysql --default-character-set=utf8mb4 -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE"' <<'SQL'
 START TRANSACTION;
 
 CREATE TEMPORARY TABLE retired_players_to_delete (
@@ -127,8 +127,8 @@ CREATE TEMPORARY TABLE retired_players_to_delete (
 INSERT INTO retired_players_to_delete (id)
 SELECT id
 FROM players
-WHERE is_active = FALSE
-  AND NULLIF(TRIM(back_number), '') IS NULL;
+WHERE (back_number IS NULL OR LENGTH(TRIM(back_number)) = 0)
+  AND (is_active = FALSE OR kbo_player_id IS NULL);
 
 SELECT
   COUNT(*) AS players_to_delete,
@@ -159,8 +159,8 @@ COMMIT;
 
 SELECT COUNT(*) AS remaining_targets
 FROM players
-WHERE is_active = FALSE
-  AND NULLIF(TRIM(back_number), '') IS NULL;
+WHERE (back_number IS NULL OR LENGTH(TRIM(back_number)) = 0)
+  AND (is_active = FALSE OR kbo_player_id IS NULL);
 SQL
 
 echo "[cleanup-retired-players] 완료"

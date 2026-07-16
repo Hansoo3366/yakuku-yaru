@@ -39,22 +39,33 @@ if ! "${DC[@]}" exec -T api grep -q \
   exit 1
 fi
 
-echo "[repair-player-identities] 전체 선수 동기화"
+if [[ "${SKIP_PLAYER_SYNC:-false}" == "true" ]]; then
+  echo "[repair-player-identities] 전체 선수 동기화 건너뜀"
+else
+  echo "[repair-player-identities] 전체 선수 동기화"
 
-"${DC[@]}" exec -T api \
-  node /app/apps/api/dist/scripts/sync-kbo-players.js
+  "${DC[@]}" exec -T api \
+    node /app/apps/api/dist/scripts/sync-kbo-players.js
+fi
 
 echo "[repair-player-identities] 저장된 경기일 조회"
 
-mapfile -t GAME_DATES < <(
+GAME_DATES_RAW="$(
   "${DC[@]}" exec -T mysql sh -c \
-    'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" -Nse "
-      SELECT DISTINCT DATE_FORMAT(game_date, '\''%Y%m%d'\'')
+    'mysql --default-character-set=utf8mb4 -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" -Nse "
+      SELECT DATE_FORMAT(game_date, '\''%Y%m%d'\'') AS sync_date
       FROM games
       WHERE game_date <= CURRENT_DATE
-      ORDER BY game_date;
+      GROUP BY sync_date
+      ORDER BY sync_date;
     "'
-)
+)"
+
+GAME_DATES=()
+
+if [[ -n "$GAME_DATES_RAW" ]]; then
+  mapfile -t GAME_DATES <<< "$GAME_DATES_RAW"
+fi
 
 echo "[repair-player-identities] 동기화 대상 ${#GAME_DATES[@]}일"
 
