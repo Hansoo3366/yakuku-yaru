@@ -208,26 +208,24 @@ export default function AdminPage() {
     };
   }, [cheerKeyword, cheerPage, cheerRosterScope, cheerTeamId]);
 
-  const loadAll = useCallback(async (
-    nextKeyword: string,
-    cheerInput?: Partial<CheerFilterInput>,
-  ) => {
-    if (!token) return;
-    const requestId = loadRequestIdRef.current + 1;
-    loadRequestIdRef.current = requestId;
-    const nextCheerInput = {
-      ...cheerFilterRef.current,
-      ...cheerInput,
-    };
-    const [
-      summaryResponse,
-      usersResponse,
-      postsResponse,
-      commentsResponse,
-      gamesResponse,
-      teamCheersResponse,
-      cheersResponse,
-    ] = await Promise.all([
+  const loadAll = useCallback(
+    async (nextKeyword: string, cheerInput?: Partial<CheerFilterInput>) => {
+      if (!token) return;
+      const requestId = loadRequestIdRef.current + 1;
+      loadRequestIdRef.current = requestId;
+      const nextCheerInput = {
+        ...cheerFilterRef.current,
+        ...cheerInput,
+      };
+      const [
+        summaryResponse,
+        usersResponse,
+        postsResponse,
+        commentsResponse,
+        gamesResponse,
+        teamCheersResponse,
+        cheersResponse,
+      ] = await Promise.all([
         fetchAdminSummary(token),
         listAdminUsers(token, nextKeyword),
         listAdminPosts(token, nextKeyword),
@@ -242,18 +240,20 @@ export default function AdminPage() {
           teamId: nextCheerInput.teamId,
         }),
       ]);
-    if (requestId !== loadRequestIdRef.current) {
-      return;
-    }
-    setSummary(summaryResponse);
-    setUsers(usersResponse.items);
-    setPosts(postsResponse.items);
-    setComments(commentsResponse.items);
-    setGames(gamesResponse.items);
-    setTeamCheers(teamCheersResponse.items);
-    setPlayerCheers(cheersResponse.items);
-    setPlayerCheerPagination(cheersResponse.pagination);
-  }, [token]);
+      if (requestId !== loadRequestIdRef.current) {
+        return;
+      }
+      setSummary(summaryResponse);
+      setUsers(usersResponse.items);
+      setPosts(postsResponse.items);
+      setComments(commentsResponse.items);
+      setGames(gamesResponse.items);
+      setTeamCheers(teamCheersResponse.items);
+      setPlayerCheers(cheersResponse.items);
+      setPlayerCheerPagination(cheersResponse.pagination);
+    },
+    [token],
+  );
 
   useEffect(() => {
     if (!hasHydrated) {
@@ -333,7 +333,7 @@ export default function AdminPage() {
     setEditingCheerTarget({
       kind: 'player',
       id: player.playerId,
-      label: player.name,
+      label: `${player.name}${player.kboPlayerId ? ` · KBO ${player.kboPlayerId}` : ''}`,
     });
     setCheerForm({
       lyrics: player.lyrics ?? '',
@@ -400,7 +400,9 @@ export default function AdminPage() {
   }
 
   if (isLoading) {
-    return <main className="app-shell">관리자 데이터를 불러오는 중입니다.</main>;
+    return (
+      <main className="app-shell">관리자 데이터를 불러오는 중입니다.</main>
+    );
   }
 
   if (!token || !isAdmin) {
@@ -408,7 +410,9 @@ export default function AdminPage() {
       <main className="app-shell">
         <section className="card stack">
           <h1>관리자 권한이 필요합니다</h1>
-          <p className="muted">관리자 계정으로 로그인한 뒤 다시 접근해주세요.</p>
+          <p className="muted">
+            관리자 계정으로 로그인한 뒤 다시 접근해주세요.
+          </p>
           <Link className="btn btn-primary" href="/login">
             로그인
           </Link>
@@ -438,16 +442,18 @@ export default function AdminPage() {
 
       <form className="admin-toolbar" onSubmit={handleSearch}>
         <div className="admin-tabs" role="tablist" aria-label="관리 메뉴">
-          {(['users', 'posts', 'comments', 'games', 'cheers'] as const).map((item) => (
-            <button
-              className={tab === item ? 'active' : ''}
-              key={item}
-              onClick={() => setTab(item)}
-              type="button"
-            >
-              {item}
-            </button>
-          ))}
+          {(['users', 'posts', 'comments', 'games', 'cheers'] as const).map(
+            (item) => (
+              <button
+                className={tab === item ? 'active' : ''}
+                key={item}
+                onClick={() => setTab(item)}
+                type="button"
+              >
+                {item}
+              </button>
+            ),
+          )}
         </div>
         <input
           aria-label="관리 데이터 검색"
@@ -471,12 +477,18 @@ export default function AdminPage() {
                 <strong>{user.nickname}</strong>
                 <span>{user.email}</span>
                 <span>{user.favoriteTeamShortName ?? '팀 없음'}</span>
-                <span>글 {user.postCount} / 댓글 {user.commentCount}</span>
+                <span>
+                  글 {user.postCount} / 댓글 {user.commentCount}
+                </span>
                 <select
                   aria-label={`${user.nickname} 역할`}
                   onChange={async (event) => {
                     if (!token) return;
-                    await updateAdminUserRole(user.id, event.target.value, token);
+                    await updateAdminUserRole(
+                      user.id,
+                      event.target.value,
+                      token,
+                    );
                     setMessage('사용자 역할이 변경되었습니다.');
                     await loadAll(keyword);
                   }}
@@ -538,7 +550,8 @@ export default function AdminPage() {
                 <button
                   className="btn btn-ghost btn-sm"
                   onClick={async () => {
-                    if (!token || !window.confirm('게시글을 삭제할까요?')) return;
+                    if (!token || !window.confirm('게시글을 삭제할까요?'))
+                      return;
                     await deleteAdminPost(post.id, token);
                     await loadAll(keyword);
                   }}
@@ -559,7 +572,9 @@ export default function AdminPage() {
             {comments.map((comment) => (
               <div className="admin-row" key={comment.id}>
                 <span>{comment.content}</span>
-                <Link href={`/posts/${comment.postId}`}>{comment.postTitle}</Link>
+                <Link href={`/posts/${comment.postId}`}>
+                  {comment.postTitle}
+                </Link>
                 <span>{comment.authorNickname}</span>
                 <time>{formatDate(comment.createdAt)}</time>
                 <button
@@ -680,7 +695,8 @@ export default function AdminPage() {
               <select
                 name="adminCheerScope"
                 onChange={(event) => {
-                  const nextScope = event.target.value as PlayerCheerRosterScope;
+                  const nextScope = event.target
+                    .value as PlayerCheerRosterScope;
                   setCheerRosterScope(nextScope);
                   setCheerPage(1);
                 }}
@@ -711,6 +727,7 @@ export default function AdminPage() {
                     {player.teamShortName}
                     {player.backNumber ? ` · No.${player.backNumber}` : ''}
                     {player.position ? ` · ${player.position}` : ''}
+                    {player.kboPlayerId ? ` · KBO ${player.kboPlayerId}` : ''}
                   </span>
                   <span>{player.cheerId ? '등록됨' : '미등록'}</span>
                   <span>{player.cheerTitle ?? '-'}</span>
@@ -728,7 +745,9 @@ export default function AdminPage() {
                       if (
                         !token ||
                         !player.cheerId ||
-                        !window.confirm(`${player.name} 응원가 정보를 삭제할까요?`)
+                        !window.confirm(
+                          `${player.name} 응원가 정보를 삭제할까요?`,
+                        )
                       ) {
                         return;
                       }
@@ -757,7 +776,8 @@ export default function AdminPage() {
                 이전
               </button>
               <span>
-                {playerCheerPagination.page} / {playerCheerPagination.totalPages}
+                {playerCheerPagination.page} /{' '}
+                {playerCheerPagination.totalPages}
               </span>
               <button
                 className="btn btn-ghost btn-sm"
@@ -787,7 +807,10 @@ export default function AdminPage() {
           <form className="admin-game-form" onSubmit={submitGame}>
             <input
               onChange={(event) =>
-                setGameForm((current) => ({ ...current, gameDate: event.target.value }))
+                setGameForm((current) => ({
+                  ...current,
+                  gameDate: event.target.value,
+                }))
               }
               required
               type="datetime-local"
@@ -795,7 +818,10 @@ export default function AdminPage() {
             />
             <input
               onChange={(event) =>
-                setGameForm((current) => ({ ...current, stadium: event.target.value }))
+                setGameForm((current) => ({
+                  ...current,
+                  stadium: event.target.value,
+                }))
               }
               placeholder="구장"
               required
@@ -803,7 +829,10 @@ export default function AdminPage() {
             />
             <select
               onChange={(event) =>
-                setGameForm((current) => ({ ...current, homeTeamId: event.target.value }))
+                setGameForm((current) => ({
+                  ...current,
+                  homeTeamId: event.target.value,
+                }))
               }
               required
               value={gameForm.homeTeamId}
@@ -817,7 +846,10 @@ export default function AdminPage() {
             </select>
             <select
               onChange={(event) =>
-                setGameForm((current) => ({ ...current, awayTeamId: event.target.value }))
+                setGameForm((current) => ({
+                  ...current,
+                  awayTeamId: event.target.value,
+                }))
               }
               required
               value={gameForm.awayTeamId}
@@ -831,7 +863,10 @@ export default function AdminPage() {
             </select>
             <input
               onChange={(event) =>
-                setGameForm((current) => ({ ...current, homeScore: event.target.value }))
+                setGameForm((current) => ({
+                  ...current,
+                  homeScore: event.target.value,
+                }))
               }
               placeholder="홈 점수"
               type="number"
@@ -839,7 +874,10 @@ export default function AdminPage() {
             />
             <input
               onChange={(event) =>
-                setGameForm((current) => ({ ...current, awayScore: event.target.value }))
+                setGameForm((current) => ({
+                  ...current,
+                  awayScore: event.target.value,
+                }))
               }
               placeholder="원정 점수"
               type="number"
@@ -847,7 +885,10 @@ export default function AdminPage() {
             />
             <select
               onChange={(event) =>
-                setGameForm((current) => ({ ...current, status: event.target.value }))
+                setGameForm((current) => ({
+                  ...current,
+                  status: event.target.value,
+                }))
               }
               value={gameForm.status}
             >
@@ -857,14 +898,20 @@ export default function AdminPage() {
             </select>
             <input
               onChange={(event) =>
-                setGameForm((current) => ({ ...current, ticketUrl: event.target.value }))
+                setGameForm((current) => ({
+                  ...current,
+                  ticketUrl: event.target.value,
+                }))
               }
               placeholder="예매 URL"
               value={gameForm.ticketUrl}
             />
             <input
               onChange={(event) =>
-                setGameForm((current) => ({ ...current, ticketOpenAt: event.target.value }))
+                setGameForm((current) => ({
+                  ...current,
+                  ticketOpenAt: event.target.value,
+                }))
               }
               type="datetime-local"
               value={gameForm.ticketOpenAt}
@@ -883,7 +930,8 @@ export default function AdminPage() {
                 <span>{game.stadium}</span>
                 <time>{formatDate(game.gameDate)}</time>
                 <span>
-                  {game.homeScore ?? '-'} : {game.awayScore ?? '-'} / {game.status}
+                  {game.homeScore ?? '-'} : {game.awayScore ?? '-'} /{' '}
+                  {game.status}
                 </span>
                 <button
                   className="btn btn-ghost btn-sm"

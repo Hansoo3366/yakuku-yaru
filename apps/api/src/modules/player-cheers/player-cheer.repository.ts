@@ -215,6 +215,7 @@ function buildPlayerCheerFilters(input: PlayerCheerListInput) {
   const params: Array<number | string | null> = [keyword, keyword, keyword];
   const filters = [
     'p.is_active = TRUE',
+    'p.kbo_player_id IS NOT NULL',
     `(? IS NULL OR p.name LIKE ? OR t.short_name LIKE ?)`,
   ];
 
@@ -345,6 +346,7 @@ export async function findPlayerCheerByPlayerId(playerId: number) {
     `${playerCheerSelectSql()}
      WHERE p.id = ?
        AND p.is_active = TRUE
+       AND p.kbo_player_id IS NOT NULL
      LIMIT 1`,
     [playerId],
   );
@@ -404,7 +406,13 @@ export async function upsertPlayerCheer(input: PlayerCheerInput) {
        youtube_id = VALUES(youtube_id),
        youtube_url = VALUES(youtube_url),
        lyrics = VALUES(lyrics)`,
-    [input.playerId, input.title, input.youtubeId, input.youtubeUrl, input.lyrics],
+    [
+      input.playerId,
+      input.title,
+      input.youtubeId,
+      input.youtubeUrl,
+      input.lyrics,
+    ],
   );
 
   return Number(result.insertId);
@@ -426,7 +434,13 @@ export async function upsertTeamCheer(input: TeamCheerInput) {
        youtube_id = VALUES(youtube_id),
        youtube_url = VALUES(youtube_url),
        lyrics = VALUES(lyrics)`,
-    [input.teamId, input.title, input.youtubeId, input.youtubeUrl, input.lyrics],
+    [
+      input.teamId,
+      input.title,
+      input.youtubeId,
+      input.youtubeUrl,
+      input.lyrics,
+    ],
   );
 
   return Number(result.insertId);

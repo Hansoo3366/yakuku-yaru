@@ -8,6 +8,7 @@ import {
 import { fetchKboPlayersBySearchWord } from '../kbo-players/kbo-player.client.js';
 import { upsertPlayer } from '../kbo-players/player.repository.js';
 import { isGameListLineupConfirmed } from './kbo-lineup-status.js';
+import { resolveLineupPlayerSearchMatches } from './lineup-player-match.js';
 import {
   findKboGameIdForGameCenterGame,
   listKboGameCenterTargetDates,
@@ -71,7 +72,9 @@ function getDateRange(mode: KboGameCenterSyncMode, reference = new Date()) {
     };
   }
 
-  const today = new Date(`${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}T00:00:00+09:00`);
+  const today = new Date(
+    `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}T00:00:00+09:00`,
+  );
   const from = new Date(today);
   const to = new Date(today);
 
@@ -93,7 +96,10 @@ function normalizePitcherName(value: string | null | undefined) {
   return name || null;
 }
 
-function getKboPlayerImageUrl(seasonYear: number, kboPlayerId: string | number) {
+function getKboPlayerImageUrl(
+  seasonYear: number,
+  kboPlayerId: string | number,
+) {
   return `https://6ptotvmi5753.edge.naverncp.com/KBO_IMAGE/person/kbo/${seasonYear}/${kboPlayerId}.png`;
 }
 
@@ -125,25 +131,29 @@ async function enrichLineupPlayersWithSearchIds(input: {
     input.searchCache.set(cacheKey, searchPromise);
 
     const matches = await searchPromise.catch(() => []);
-    const match = matches.find(
-      (candidate) =>
-        candidate.name === player.name &&
-        candidate.teamShortName === teamShortName,
-    );
+    const { activeMatch, retiredMatches } = resolveLineupPlayerSearchMatches({
+      matches,
+      name: player.name,
+      teamShortName,
+    });
 
-    if (!match) {
+    for (const retiredMatch of retiredMatches) {
+      await upsertPlayer(retiredMatch, input.teamIdsByShortName);
+    }
+
+    if (!activeMatch) {
       enrichedPlayers.push(player);
       continue;
     }
 
-    await upsertPlayer(match, input.teamIdsByShortName);
+    await upsertPlayer(activeMatch, input.teamIdsByShortName);
 
     enrichedPlayers.push({
       ...player,
-      kboPlayerId: Number(match.kboPlayerId),
+      kboPlayerId: Number(activeMatch.kboPlayerId),
       profileImageUrl:
         player.profileImageUrl ??
-        getKboPlayerImageUrl(input.seasonYear, match.kboPlayerId),
+        getKboPlayerImageUrl(input.seasonYear, activeMatch.kboPlayerId),
     });
   }
 
@@ -157,7 +167,9 @@ export async function syncKboGameCenter(input?: {
   const teamIdsByCode = await listKboTeamIdsByCode();
   const teamIdsByShortName = new Map<string, number>();
 
-  for (const [teamCode, shortName] of Object.entries(KBO_TEAM_CODE_TO_SHORT_NAME)) {
+  for (const [teamCode, shortName] of Object.entries(
+    KBO_TEAM_CODE_TO_SHORT_NAME,
+  )) {
     const teamId = teamIdsByCode.get(teamCode);
 
     if (teamId) {
@@ -165,12 +177,9 @@ export async function syncKboGameCenter(input?: {
     }
   }
 
-  const dates =
-    input?.dates?.length
-      ? input.dates
-      : await listKboGameCenterTargetDates(
-          getDateRange(input?.mode ?? 'today'),
-        );
+  const dates = input?.dates?.length
+    ? input.dates
+    : await listKboGameCenterTargetDates(getDateRange(input?.mode ?? 'today'));
   let parsed = 0;
   let matched = 0;
   let pitcherUpserts = 0;
@@ -195,10 +204,7 @@ export async function syncKboGameCenter(input?: {
     );
     const games = await fetchKboGameCenterList(date);
     parsed += games.length;
-    syncLog(
-      'kbo-game-center',
-      `날짜 ${date} — ${games.length}경기 처리 중…`,
-    );
+    syncLog('kbo-game-center', `날짜 ${date} — ${games.length}경기 처리 중…`);
 
     for (const game of games) {
       const gameId = await findKboGameIdForGameCenterGame(game, teamIdsByCode);
@@ -232,11 +238,14 @@ export async function syncKboGameCenter(input?: {
           name: normalizePitcherName(game.B_PIT_P_NM),
         },
       ];
-      const syncedPitchers = new Map<'away' | 'home', {
-        playerId: number;
-        teamId: number;
-        kboPlayerId: number;
-      }>();
+      const syncedPitchers = new Map<
+        'away' | 'home',
+        {
+          playerId: number;
+          teamId: number;
+          kboPlayerId: number;
+        }
+      >();
 
       for (const pitcher of pitcherInputs) {
         if (!pitcher.kboPlayerId || !pitcher.name) {
