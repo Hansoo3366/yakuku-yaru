@@ -501,6 +501,10 @@
   --calendar-ink-soft: #5f625f;
   --calendar-panel-surface: #f7f7f3;
   --calendar-warm-surface: #f6f6f2;
+  --calendar-win-surface: color-mix(in srgb, var(--color-win) 32%, white 68%);
+  --calendar-lose-surface: color-mix(in srgb, var(--color-lose) 30%, white 70%);
+  --calendar-draw-surface: color-mix(in srgb, var(--color-draw) 27%, white 73%);
+  --calendar-cancelled-surface: #dedfdb;
   --calendar-team-solid: var(
     --team-color-display,
     var(--team-color, var(--color-night-navy))
@@ -912,19 +916,19 @@ html[data-auth-state='guest'] .app-shell--calendar {
 }
 
 .calendar-outcome-legend-item.is-selected[data-outcome='win'] {
-  background: color-mix(in srgb, var(--color-win) 19%, white 81%);
+  background: var(--calendar-win-surface);
 }
 
 .calendar-outcome-legend-item.is-selected[data-outcome='lose'] {
-  background: color-mix(in srgb, var(--color-lose) 18%, white 82%);
+  background: var(--calendar-lose-surface);
 }
 
 .calendar-outcome-legend-item.is-selected[data-outcome='draw'] {
-  background: color-mix(in srgb, var(--color-draw) 20%, white 80%);
+  background: var(--calendar-draw-surface);
 }
 
 .calendar-outcome-legend-item.is-selected[data-outcome='cancelled'] {
-  background: #d9dbd8;
+  background: var(--calendar-cancelled-surface);
 }
 
 .calendar-outcome-legend-item.is-selected[data-outcome='scheduled'] {
@@ -1176,25 +1180,25 @@ html[data-auth-state='guest'] .app-shell--calendar {
 }
 
 .calendar-event[data-outcome='win'] {
-  background: color-mix(in srgb, var(--color-win) 18%, white 82%);
+  background: var(--calendar-win-surface);
   border: 0;
   box-shadow: none;
 }
 
 .calendar-event[data-outcome='lose'] {
-  background: color-mix(in srgb, var(--color-lose) 17%, white 83%);
+  background: var(--calendar-lose-surface);
   border: 0;
   box-shadow: none;
 }
 
 .calendar-event[data-outcome='draw'] {
-  background: color-mix(in srgb, var(--color-draw) 18%, white 82%);
+  background: var(--calendar-draw-surface);
   border: 0;
   box-shadow: none;
 }
 
 .calendar-event[data-outcome='cancelled'] {
-  background: #e8e9e6;
+  background: var(--calendar-cancelled-surface);
   border: 0;
   box-shadow: none;
 }
@@ -1214,22 +1218,22 @@ html[data-auth-state='guest'] .app-shell--calendar {
 
 .calendar-day.is-today .calendar-event[data-outcome='win'],
 .calendar-day.is-focused-day .calendar-event[data-outcome='win'] {
-  background: color-mix(in srgb, var(--color-win) 12%, white 88%);
+  background: var(--calendar-win-surface);
 }
 
 .calendar-day.is-today .calendar-event[data-outcome='lose'],
 .calendar-day.is-focused-day .calendar-event[data-outcome='lose'] {
-  background: color-mix(in srgb, var(--color-lose) 12%, white 88%);
+  background: var(--calendar-lose-surface);
 }
 
 .calendar-day.is-today .calendar-event[data-outcome='draw'],
 .calendar-day.is-focused-day .calendar-event[data-outcome='draw'] {
-  background: color-mix(in srgb, var(--color-draw) 12%, white 88%);
+  background: var(--calendar-draw-surface);
 }
 
 .calendar-day.is-today .calendar-event[data-outcome='cancelled'],
 .calendar-day.is-focused-day .calendar-event[data-outcome='cancelled'] {
-  background: #f5f6f4;
+  background: var(--calendar-cancelled-surface);
 }
 
 .calendar-event[data-outcome='cancelled'] .calendar-event-matchup {
@@ -1265,20 +1269,36 @@ html[data-auth-state='guest'] .app-shell--calendar {
 }
 
 .calendar-event[data-outcome='win'] .calendar-event-outcome {
-  color: var(--color-win);
+  background: var(--color-win);
+  color: #ffffff;
 }
 
 .calendar-event[data-outcome='lose'] .calendar-event-outcome {
-  color: var(--color-lose);
+  background: var(--color-lose);
+  color: #ffffff;
 }
 
 .calendar-event[data-outcome='draw'] .calendar-event-outcome {
-  color: #6a6258;
+  background: var(--color-draw);
+  color: #ffffff;
 }
 
 .calendar-event[data-outcome='cancelled'] .calendar-event-outcome {
-  background: rgba(255, 255, 255, 0.5);
-  color: #666b72;
+  background: #666b72;
+  color: #ffffff;
+}
+
+.calendar-event[data-outcome='win'] .calendar-event-time {
+  color: var(--color-win);
+}
+
+.calendar-event[data-outcome='lose'] .calendar-event-time {
+  color: var(--color-lose);
+}
+
+.calendar-event[data-outcome='draw'] .calendar-event-time,
+.calendar-event[data-outcome='cancelled'] .calendar-event-time {
+  color: #555b60;
 }
 
 .calendar-event-matchup {

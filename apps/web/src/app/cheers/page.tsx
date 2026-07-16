@@ -180,15 +180,17 @@ export default function CheersPage() {
             />
             {keyword || submittedKeyword ? (
               <button
+                aria-label="검색어 지우기"
                 className="cheers-search-clear"
                 onClick={() => {
                   setKeyword('');
                   setSubmittedKeyword('');
                   resetListState();
                 }}
+                title="검색어 지우기"
                 type="button"
               >
-                지우기
+                <span aria-hidden="true">×</span>
               </button>
             ) : null}
             <button className="cheers-search-submit" type="submit">
