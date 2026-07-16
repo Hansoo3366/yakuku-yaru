@@ -130,24 +130,20 @@ FROM players
 WHERE (back_number IS NULL OR LENGTH(TRIM(back_number)) = 0)
   AND (is_active = FALSE OR kbo_player_id IS NULL);
 
-SELECT
-  COUNT(*) AS players_to_delete,
-  (
-    SELECT COUNT(*)
-    FROM game_lineups gl
-    JOIN retired_players_to_delete target ON target.id = gl.player_id
-  ) AS lineups_to_delete,
-  (
-    SELECT COUNT(*)
-    FROM game_starting_pitchers gsp
-    JOIN retired_players_to_delete target ON target.id = gsp.player_id
-  ) AS pitchers_to_delete,
-  (
-    SELECT COUNT(*)
-    FROM player_cheers pc
-    JOIN retired_players_to_delete target ON target.id = pc.player_id
-  ) AS cheers_to_delete
+SELECT COUNT(*) AS players_to_delete
 FROM retired_players_to_delete;
+
+SELECT COUNT(*) AS lineups_to_delete
+FROM game_lineups gl
+JOIN retired_players_to_delete target ON target.id = gl.player_id;
+
+SELECT COUNT(*) AS pitchers_to_delete
+FROM game_starting_pitchers gsp
+JOIN retired_players_to_delete target ON target.id = gsp.player_id;
+
+SELECT COUNT(*) AS cheers_to_delete
+FROM player_cheers pc
+JOIN retired_players_to_delete target ON target.id = pc.player_id;
 
 DELETE p
 FROM players p
