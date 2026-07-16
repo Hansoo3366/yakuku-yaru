@@ -33,6 +33,39 @@ TARGET_COUNT="$("${DC[@]}" exec -T mysql sh -c \
 
 if [[ "$TARGET_COUNT" == "0" ]]; then
   echo "삭제할 선수가 없습니다."
+  echo
+  echo "[진단] 등번호가 없는 선수 — is_active 값을 확인하세요."
+  "${DC[@]}" exec -T mysql sh -c \
+    'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" --table -e "
+      SELECT
+        p.id,
+        t.short_name AS team,
+        p.name,
+        p.kbo_player_id,
+        p.back_number,
+        p.is_active
+      FROM players p
+      JOIN teams t ON t.id = p.team_id
+      WHERE p.back_number IS NULL
+         OR LENGTH(TRIM(p.back_number)) = 0
+      ORDER BY p.is_active, t.short_name, p.name, p.id;
+    "'
+  echo
+  echo "[진단] 비활성 선수 — 실제 등번호 값을 확인하세요."
+  "${DC[@]}" exec -T mysql sh -c \
+    'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" --table -e "
+      SELECT
+        p.id,
+        t.short_name AS team,
+        p.name,
+        p.kbo_player_id,
+        p.back_number AS stored_back_number,
+        p.is_active
+      FROM players p
+      JOIN teams t ON t.id = p.team_id
+      WHERE p.is_active = FALSE
+      ORDER BY t.short_name, p.name, p.id;
+    "'
   exit 0
 fi
 
