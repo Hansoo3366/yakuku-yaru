@@ -123,6 +123,7 @@ const structuredData = {
         '선발 투수와 라인업',
         '야구 직관 기록',
         '직관 후기 게시판',
+        '야구팬 찾기',
         'KBO 응원가',
       ],
     },
@@ -151,6 +152,7 @@ const structuredData = {
         '가을야구 확률',
         'KBO 응원가',
         '직관 후기 게시판',
+        '야구팬 찾기',
       ],
       url: [
         getAbsoluteUrl('/'),
@@ -159,6 +161,7 @@ const structuredData = {
         getAbsoluteUrl('/'),
         getAbsoluteUrl('/cheers'),
         getAbsoluteUrl('/posts'),
+        getAbsoluteUrl('/fans'),
       ],
     },
   ],

@@ -37,8 +37,32 @@ export const queryKeys = {
     token: string | null | undefined,
     input: { from?: string; to?: string } = {},
   ) => ['attendance-stats', token, input.from ?? null, input.to ?? null] as const,
-  posts: (input: { page: number; keyword?: string }) =>
-    ['posts', input.page, input.keyword ?? ''] as const,
+  posts: (input: {
+    page: number;
+    keyword?: string;
+    scope?: 'latest' | 'myTeam' | 'following';
+    token?: string | null;
+  }) =>
+    [
+      'posts',
+      input.page,
+      input.keyword ?? '',
+      input.scope ?? 'latest',
+      input.token ?? null,
+    ] as const,
   post: (postId: number) => ['post', postId] as const,
   comments: (postId: number) => ['comments', postId] as const,
+  fans: (
+    input: { keyword?: string; teamId?: number | null; page?: number },
+    token?: string | null,
+  ) =>
+    [
+      'fans',
+      input.keyword ?? '',
+      input.teamId ?? null,
+      input.page ?? 1,
+      token ?? null,
+    ] as const,
+  fanProfile: (userId: number, token?: string | null) =>
+    ['fan-profile', userId, token ?? null] as const,
 };

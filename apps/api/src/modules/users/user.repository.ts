@@ -28,9 +28,10 @@ export type PublicUser = {
 
 export type UserSearchResult = {
   id: number;
-  email: string;
   nickname: string;
+  profileImageUrl: string | null;
   favoriteTeamId: number | null;
+  favoriteTeamShortName: string | null;
 };
 
 export function getFavoriteTeamIdFromUser(
@@ -204,24 +205,32 @@ export async function searchUsers(input: {
   const [rows] = await db.query<
     (RowDataPacket & {
       id: number;
-      email: string;
       nickname: string;
+      profile_image_url: string | null;
       favorite_team_id: number | null;
+      favorite_team_short_name: string | null;
     })[]
   >(
-    `SELECT id, email, nickname, favorite_team_id
-     FROM users
-     WHERE id <> ?
-       AND (nickname LIKE ? OR email LIKE ?)
-     ORDER BY nickname ASC
+    `SELECT
+       u.id,
+       u.nickname,
+       u.profile_image_url,
+       u.favorite_team_id,
+       t.short_name AS favorite_team_short_name
+     FROM users u
+     LEFT JOIN teams t ON t.id = u.favorite_team_id
+     WHERE u.id <> ?
+       AND u.nickname LIKE ?
+     ORDER BY u.nickname ASC
      LIMIT ?`,
-    [input.excludeUserId, keyword, keyword, input.limit ?? 10],
+    [input.excludeUserId, keyword, input.limit ?? 10],
   );
 
   return rows.map<UserSearchResult>((row) => ({
     id: row.id,
-    email: row.email,
     nickname: row.nickname,
+    profileImageUrl: row.profile_image_url,
     favoriteTeamId: row.favorite_team_id,
+    favoriteTeamShortName: row.favorite_team_short_name,
   }));
 }

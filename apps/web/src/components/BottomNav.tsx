@@ -21,7 +21,7 @@ const navItems: Array<{
   { href: '/', icon: Home, label: '홈', exact: true },
   { href: '/calendar', icon: CalendarDays, label: '캘린더' },
   { href: '/cheers', icon: Music2, label: '응원가' },
-  { href: '/posts', icon: MessageSquareText, label: '게시판' },
+  { href: '/posts', icon: MessageSquareText, label: '라운지' },
   { href: '/me', icon: UserRound, label: '마이' },
 ];
 
@@ -37,9 +37,11 @@ export function BottomNav() {
       {visibleNavItems.map((item) => {
         const Icon = item.icon;
         const isActive =
-          'exact' in item && item.exact
-            ? pathname === item.href
-            : pathname === item.href || pathname.startsWith(`${item.href}/`);
+          item.href === '/posts' && pathname.startsWith('/fans')
+            ? true
+            : 'exact' in item && item.exact
+              ? pathname === item.href
+              : pathname === item.href || pathname.startsWith(`${item.href}/`);
 
         return (
           <Link

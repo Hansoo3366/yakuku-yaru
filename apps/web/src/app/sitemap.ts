@@ -10,6 +10,7 @@ const staticRoutes: Array<{
   { path: '/', changeFrequency: 'daily', priority: 1 },
   { path: '/calendar', changeFrequency: 'daily', priority: 0.9 },
   { path: '/posts', changeFrequency: 'daily', priority: 0.8 },
+  { path: '/fans', changeFrequency: 'daily', priority: 0.7 },
   { path: '/cheers', changeFrequency: 'weekly', priority: 0.7 },
 ];
 

@@ -347,9 +347,10 @@ export default function AttendanceDetailPage() {
               <h3>함께 본 사람</h3>
               <div className="attendance-ticket-companions__list">
                 {record.companions.map((companion) => (
-                  <span
+                  <Link
                     className="attendance-ticket-person"
                     data-status={companion.status}
+                    href={`/fans/${companion.userId}`}
                     key={companion.id}
                   >
                     <strong>{companion.nickname}</strong>
@@ -360,7 +361,7 @@ export default function AttendanceDetailPage() {
                           ? '거절'
                           : '대기'}
                     </small>
-                  </span>
+                  </Link>
                 ))}
               </div>
             </div>

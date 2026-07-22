@@ -14,6 +14,7 @@ import {
   listAttendanceRecords,
 } from '@/lib/attendance-api';
 import { fetchPost, listComments, listPosts } from '@/lib/post-api';
+import { fetchFanProfile, listFans } from '@/lib/user-api';
 import {
   fetchPlayerCheer,
   listPlayerCheers,
@@ -136,7 +137,12 @@ export function useAttendanceStatsQuery(
   });
 }
 
-export function usePostsQuery(input: { page: number; keyword?: string }) {
+export function usePostsQuery(input: {
+  page: number;
+  keyword?: string;
+  scope?: 'latest' | 'myTeam' | 'following';
+  token?: string | null;
+}) {
   return useQuery({
     queryKey: queryKeys.posts(input),
     queryFn: () => listPosts(input),
@@ -156,5 +162,26 @@ export function useCommentsQuery(postId: number) {
     queryKey: queryKeys.comments(postId),
     queryFn: () => listComments(postId),
     enabled: Number.isInteger(postId) && postId > 0,
+  });
+}
+
+export function useFansQuery(
+  input: { keyword?: string; teamId?: number | null; page?: number },
+  token?: string | null,
+) {
+  return useQuery({
+    queryKey: queryKeys.fans(input, token),
+    queryFn: () => listFans(input, token),
+  });
+}
+
+export function useFanProfileQuery(
+  userId: number,
+  token?: string | null,
+) {
+  return useQuery({
+    queryKey: queryKeys.fanProfile(userId, token),
+    queryFn: () => fetchFanProfile(userId, token),
+    enabled: Number.isInteger(userId) && userId > 0,
   });
 }

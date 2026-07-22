@@ -1,0 +1,567 @@
+.page {
+  --fan-black: #111111;
+  --fan-paper: #ffffff;
+  --fan-dugout: #f3f3f0;
+  --fan-muted: #707070;
+  gap: 0;
+  max-width: 1120px;
+  padding-top: clamp(20px, 4vw, 42px);
+}
+
+.hero {
+  align-items: end;
+  background: var(--fan-black);
+  color: #ffffff;
+  display: grid;
+  gap: 32px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  min-height: 218px;
+  padding: clamp(30px, 5vw, 52px);
+  position: relative;
+}
+
+.hero::before {
+  background: var(--team-color, #ffffff);
+  content: '';
+  height: 7px;
+  inset: 0 0 auto;
+  position: absolute;
+}
+
+.eyebrow {
+  color: rgba(255, 255, 255, 0.58);
+  display: block;
+  font-family: ui-monospace, 'SFMono-Regular', Consolas, monospace;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  margin-bottom: 14px;
+  text-transform: uppercase;
+}
+
+.hero h1 {
+  color: #ffffff;
+  font-size: var(--type-page-title);
+  font-weight: 900;
+  letter-spacing: -0.045em;
+  line-height: 1.12;
+}
+
+.hero p {
+  color: rgba(255, 255, 255, 0.66);
+  font-size: 13px;
+  line-height: 1.65;
+  margin-top: 14px;
+  max-width: 48ch;
+}
+
+.heroCount {
+  align-items: baseline;
+  display: flex;
+  font-family: ui-monospace, 'SFMono-Regular', Consolas, monospace;
+  gap: 7px;
+}
+
+.heroCount strong {
+  font-size: var(--type-data-large);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.heroCount span {
+  color: rgba(255, 255, 255, 0.58);
+  font-size: 11px;
+}
+
+.toolbar {
+  display: grid;
+  gap: 18px;
+  padding: 34px 0 26px;
+}
+
+.toolbarTop {
+  align-items: center;
+  display: grid;
+  gap: 20px;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 380px);
+}
+
+.toolbarTitle strong {
+  display: block;
+  font-size: var(--type-section-title);
+  letter-spacing: -0.035em;
+}
+
+.toolbarTitle span {
+  color: var(--fan-muted);
+  display: block;
+  font-size: 12px;
+  margin-top: 3px;
+}
+
+.search {
+  background: var(--fan-dugout);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  min-height: 46px;
+}
+
+.search:focus-within {
+  box-shadow: inset 0 0 0 2px var(--fan-black);
+}
+
+.search input {
+  background: transparent;
+  border: 0;
+  min-width: 0;
+  outline: 0;
+  padding: 0 15px;
+}
+
+.search button {
+  background: var(--fan-black);
+  border: 0;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 800;
+  min-width: 62px;
+}
+
+.teamFilters {
+  display: flex;
+  gap: 7px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  scrollbar-width: none;
+}
+
+.teamFilters::-webkit-scrollbar {
+  display: none;
+}
+
+.teamFilter {
+  background: #ffffff;
+  border: 0;
+  color: #7a7a7a;
+  flex: 0 0 auto;
+  font-size: 12px;
+  font-weight: 700;
+  min-height: 36px;
+  padding: 0 13px;
+}
+
+.teamFilter:hover,
+.teamFilter.isActive {
+  background: var(--fan-black);
+  color: #ffffff;
+}
+
+.fanGrid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.fanCard {
+  background: var(--fan-dugout);
+  display: grid;
+  min-height: 216px;
+  padding: 20px;
+  position: relative;
+  transition: background 180ms ease, transform 180ms ease;
+}
+
+.fanCard::before {
+  background: var(--fan-card-color, #111111);
+  content: '';
+  height: 4px;
+  inset: 0 0 auto;
+  position: absolute;
+}
+
+.fanCard:hover {
+  background: #ecece8;
+  transform: translateY(-2px);
+}
+
+.fanCardHead {
+  align-items: center;
+  display: grid;
+  gap: 13px;
+  grid-template-columns: 48px minmax(0, 1fr) auto;
+}
+
+.avatar {
+  background: #ffffff;
+  border-radius: 14px;
+  height: 48px;
+  object-fit: cover;
+  padding: 5px;
+  width: 48px;
+}
+
+.identity {
+  min-width: 0;
+}
+
+.identity strong {
+  display: block;
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.identity span {
+  color: var(--fan-muted);
+  display: block;
+  font-size: 11px;
+  margin-top: 2px;
+}
+
+.cardStats {
+  align-self: end;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(3, 1fr);
+  margin-top: 30px;
+}
+
+.cardStats div {
+  min-width: 0;
+}
+
+.cardStats span {
+  color: var(--fan-muted);
+  display: block;
+  font-size: 10px;
+  margin-bottom: 3px;
+}
+
+.cardStats strong {
+  font-family: ui-monospace, 'SFMono-Regular', Consolas, monospace;
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+}
+
+.cardLink {
+  font-size: 11px;
+  font-weight: 800;
+  margin-top: 18px;
+  width: fit-content;
+}
+
+.cardLink:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.loadingCard {
+  background: var(--fan-dugout);
+  min-height: 216px;
+  padding: 20px;
+}
+
+.empty {
+  background: var(--fan-dugout);
+  grid-column: 1 / -1;
+  padding: 64px 20px;
+}
+
+.pagination {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  padding: 28px 0 8px;
+}
+
+.pagination button {
+  background: transparent;
+  border: 0;
+  font-size: 12px;
+  font-weight: 800;
+  min-height: 42px;
+}
+
+.pagination span {
+  color: var(--fan-muted);
+  font-family: ui-monospace, 'SFMono-Regular', Consolas, monospace;
+  font-size: 11px;
+}
+
+.profileBack {
+  font-size: 12px;
+  font-weight: 800;
+  margin-bottom: 14px;
+  width: fit-content;
+}
+
+.profileHero {
+  background: var(--fan-black);
+  color: #ffffff;
+  display: grid;
+  gap: 36px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  min-height: 280px;
+  padding: clamp(30px, 5vw, 54px);
+  position: relative;
+}
+
+.profileHero::before {
+  background: var(--fan-profile-color, #ffffff);
+  content: '';
+  height: 7px;
+  inset: 0 0 auto;
+  position: absolute;
+}
+
+.profileIdentity {
+  align-items: center;
+  align-self: end;
+  display: flex;
+  gap: 20px;
+}
+
+.profileAvatar {
+  background: #ffffff;
+  border-radius: 22px;
+  height: 88px;
+  object-fit: cover;
+  padding: 8px;
+  width: 88px;
+}
+
+.profileIdentity h1 {
+  color: #ffffff;
+  font-size: var(--type-page-title);
+  font-weight: 900;
+  letter-spacing: -0.045em;
+}
+
+.profileIdentity p {
+  color: rgba(255, 255, 255, 0.64);
+  font-size: 12px;
+  margin-top: 5px;
+}
+
+.profileActions {
+  align-content: end;
+  display: grid;
+  gap: 12px;
+  justify-items: end;
+}
+
+.followNumbers {
+  color: rgba(255, 255, 255, 0.64);
+  display: flex;
+  font-size: 11px;
+  gap: 14px;
+}
+
+.followNumbers strong {
+  color: #ffffff;
+  font-family: ui-monospace, 'SFMono-Regular', Consolas, monospace;
+  margin-left: 4px;
+}
+
+.editProfile {
+  background: #ffffff;
+  color: #111111;
+  font-size: 12px;
+  font-weight: 800;
+  min-height: 42px;
+  padding: 0 16px;
+  align-items: center;
+  display: flex;
+}
+
+.sharedNote {
+  background: color-mix(in srgb, var(--fan-profile-color, #ffffff) 20%, #111111);
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 10px 13px;
+}
+
+.profileBody {
+  display: grid;
+  gap: 38px;
+  padding-top: 34px;
+}
+
+.scoreboard {
+  background: var(--fan-dugout);
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  padding: 25px;
+}
+
+.scoreboard div {
+  padding: 0 20px;
+}
+
+.scoreboard div + div {
+  border-left: 1px solid #d9d9d4;
+}
+
+.scoreboard span {
+  color: var(--fan-muted);
+  display: block;
+  font-size: 10px;
+  margin-bottom: 7px;
+}
+
+.scoreboard strong {
+  font-family: ui-monospace, 'SFMono-Regular', Consolas, monospace;
+  font-size: 22px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.05em;
+}
+
+.sectionHead {
+  align-items: flex-end;
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 15px;
+}
+
+.sectionHead h2 {
+  font-size: var(--type-section-title);
+  letter-spacing: -0.035em;
+}
+
+.sectionHead span,
+.sectionHead a {
+  color: var(--fan-muted);
+  font-size: 11px;
+}
+
+.titleList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.titleItem {
+  background: var(--fan-dugout);
+  display: grid;
+  gap: 3px;
+  min-width: 150px;
+  padding: 16px;
+}
+
+.titleItem strong {
+  font-size: 13px;
+}
+
+.titleItem span {
+  color: var(--fan-muted);
+  font-size: 10px;
+}
+
+.postList {
+  border-top: 2px solid var(--fan-black);
+}
+
+.postItem {
+  align-items: center;
+  border-bottom: 1px solid #e3e3df;
+  display: grid;
+  gap: 18px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  min-height: 68px;
+  padding: 12px 4px;
+}
+
+.postItem strong {
+  display: block;
+  font-size: 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.postItem span {
+  color: var(--fan-muted);
+  font-family: ui-monospace, 'SFMono-Regular', Consolas, monospace;
+  font-size: 10px;
+}
+
+.postItem em {
+  color: var(--fan-muted);
+  font-size: 10px;
+  font-style: normal;
+}
+
+@media (max-width: 820px) {
+  .fanGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 620px) {
+  .page {
+    padding-left: 12px;
+    padding-right: 12px;
+    padding-top: 12px;
+  }
+
+  .hero,
+  .profileHero {
+    grid-template-columns: 1fr;
+    min-height: 0;
+    padding: 34px 24px 28px;
+  }
+
+  .heroCount {
+    margin-top: 20px;
+  }
+
+  .toolbarTop {
+    align-items: stretch;
+    grid-template-columns: 1fr;
+  }
+
+  .fanGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .fanCard {
+    min-height: 196px;
+  }
+
+  .profileIdentity {
+    align-items: flex-start;
+  }
+
+  .profileAvatar {
+    border-radius: 18px;
+    height: 72px;
+    width: 72px;
+  }
+
+  .profileActions {
+    justify-items: stretch;
+  }
+
+  .scoreboard {
+    gap: 20px 0;
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .scoreboard div:nth-child(3) {
+    border-left: 0;
+  }
+
+  .scoreboard div {
+    padding: 0 14px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fanCard {
+    transition: none;
+  }
+}

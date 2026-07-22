@@ -129,7 +129,7 @@ export default function PostDetailPage() {
           <div>
             <h1>{post.title}</h1>
             <p className="post-detail-meta">
-              <span className="author-inline">
+              <Link className="author-inline" href={`/fans/${post.userId}`}>
                 <img
                   alt=""
                   src={getAuthorProfileImageSrc(
@@ -138,7 +138,7 @@ export default function PostDetailPage() {
                   )}
                 />
                 <span>{post.authorNickname}</span>
-              </span>
+              </Link>
               <time dateTime={post.createdAt}>
                 {formatKoreanDateTimeShort(post.createdAt)}
               </time>
@@ -191,7 +191,10 @@ export default function PostDetailPage() {
                 <p>{comment.content}</p>
                 <div className="comment-card-meta">
                   <span className="comment-card-author-line">
-                    <span className="author-inline">
+                    <Link
+                      className="author-inline"
+                      href={`/fans/${comment.userId}`}
+                    >
                       <img
                         alt=""
                         src={getAuthorProfileImageSrc(
@@ -200,7 +203,7 @@ export default function PostDetailPage() {
                         )}
                       />
                       <span>{comment.authorNickname}</span>
-                    </span>
+                    </Link>
                     <time dateTime={comment.createdAt}>
                       {formatKoreanDateTimeShort(comment.createdAt)}
                     </time>

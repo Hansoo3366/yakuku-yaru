@@ -317,6 +317,16 @@ export function NotificationBell({ userId }: NotificationBellProps) {
                         글 보기
                       </Link>
                     ) : null}
+                    {notification.type === 'user_followed' &&
+                    notification.actorUserId ? (
+                      <Link
+                        className="link-btn"
+                        href={`/fans/${notification.actorUserId}`}
+                        onClick={() => setOpen(false)}
+                      >
+                        프로필 보기
+                      </Link>
+                    ) : null}
                   </li>
                 );
               })}

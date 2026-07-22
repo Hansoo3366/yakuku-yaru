@@ -20,7 +20,8 @@ const primaryLinks: Array<{
   { href: '/', label: '홈', exact: true },
   { href: '/calendar', label: '캘린더' },
   { href: '/cheers', label: '응원가' },
-  { href: '/posts', label: '게시판' },
+  { href: '/posts', label: '팬 라운지' },
+  { href: '/fans', label: '팬 찾기' },
   { href: '/me', label: '마이페이지' },
 ];
 
@@ -167,7 +168,8 @@ export function AppFooter() {
           <Link href="/">홈</Link>
           <Link href="/calendar">캘린더</Link>
           <Link href="/cheers">응원가</Link>
-          <Link href="/posts">게시판</Link>
+          <Link href="/posts">팬 라운지</Link>
+          <Link href="/fans">팬 찾기</Link>
           {user ? <Link href="/me">마이페이지</Link> : null}
         </nav>
       </div>

@@ -7,7 +7,6 @@ export type AttendanceCompanion = {
   id: number;
   userId: number;
   nickname: string;
-  email: string;
   status: CompanionStatus;
   respondedAt: Date | null;
   createdAt: Date;
@@ -18,7 +17,6 @@ type CompanionRow = RowDataPacket & {
   attendance_record_id: number;
   user_id: number;
   nickname: string;
-  email: string;
   status: string;
   responded_at: Date | null;
   created_at: Date;
@@ -55,8 +53,7 @@ export async function listCompanionsByRecordIds(recordIds: number[]) {
        ac.status,
        ac.responded_at,
        ac.created_at,
-       u.nickname,
-       u.email
+       u.nickname
      FROM attendance_companions ac
      JOIN users u ON u.id = ac.user_id
      WHERE ac.attendance_record_id IN (?)
@@ -70,7 +67,6 @@ export async function listCompanionsByRecordIds(recordIds: number[]) {
       id: row.id,
       userId: row.user_id,
       nickname: row.nickname,
-      email: row.email,
       status: toCompanionStatus(row.status),
       respondedAt: row.responded_at,
       createdAt: row.created_at,
@@ -92,8 +88,7 @@ export async function findCompanionForUser(input: {
        ac.status,
        ac.responded_at,
        ac.created_at,
-       u.nickname,
-       u.email
+       u.nickname
      FROM attendance_companions ac
      JOIN users u ON u.id = ac.user_id
      WHERE ac.attendance_record_id = ?
@@ -111,7 +106,6 @@ export async function findCompanionForUser(input: {
     id: row.id,
     userId: row.user_id,
     nickname: row.nickname,
-    email: row.email,
     status: toCompanionStatus(row.status),
     respondedAt: row.responded_at,
     createdAt: row.created_at,

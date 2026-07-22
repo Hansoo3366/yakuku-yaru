@@ -8,7 +8,6 @@ import type { AttendanceCompanion } from '@/lib/attendance-api';
 export type SelectedCompanion = {
   id: number;
   nickname: string;
-  email: string;
 };
 
 type CompanionPickerProps = {
@@ -22,7 +21,6 @@ export function toSelectedCompanions(
   return companions.map((companion) => ({
     id: companion.userId,
     nickname: companion.nickname,
-    email: companion.email,
   }));
 }
 
@@ -85,7 +83,7 @@ export function CompanionPicker({
 
     onChange([
       ...selectedCompanions,
-      { id: user.id, nickname: user.nickname, email: user.email },
+      { id: user.id, nickname: user.nickname },
     ]);
     setKeyword('');
     setResults([]);
@@ -103,7 +101,7 @@ export function CompanionPicker({
           같이 간 사람
         </label>
         <span className="field-hint">
-          닉네임이나 이메일로 검색한 뒤 동행자로 태그할 수 있어요. Enter 또는 검색
+          닉네임으로 검색한 뒤 동행자로 태그할 수 있어요. Enter 또는 검색
           버튼을 눌러주세요.
         </span>
         <div className="companion-search-bar">
@@ -113,7 +111,7 @@ export function CompanionPicker({
               id="companion-search-input"
               onChange={(event) => setKeyword(event.target.value)}
               onKeyDown={handleSearchKeyDown}
-              placeholder="닉네임 또는 이메일 (2자 이상)"
+              placeholder="닉네임 (2자 이상)"
               type="search"
               value={keyword}
             />
@@ -139,7 +137,7 @@ export function CompanionPicker({
               type="button"
             >
               <strong>{user.nickname}</strong>
-              <span>{user.email}</span>
+              <span>{user.favoriteTeamShortName ?? '응원팀 미선택'}</span>
             </button>
           ))}
         </div>

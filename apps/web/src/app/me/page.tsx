@@ -2,6 +2,7 @@
 
 /* eslint-disable @next/next/no-img-element */
 
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import {
@@ -175,10 +176,10 @@ export default function MyPage() {
     !stats
   ) {
     return (
-      <main className="app-shell">
-        <Skeleton height={200} radius={10} />
-        <Skeleton height={120} radius={10} />
-        <Skeleton height={140} radius={10} />
+      <main className="app-shell app-shell--profile">
+        <Skeleton height={300} radius={0} />
+        <Skeleton height={360} radius={0} />
+        <Skeleton height={160} radius={0} />
       </main>
     );
   }
@@ -266,15 +267,17 @@ export default function MyPage() {
   }
 
   return (
-    <main className="app-shell">
+    <main className="app-shell app-shell--profile">
       <section className="profile-hero" aria-label="내 프로필 요약">
         <div className="profile-hero-top profile-hero-top-with-avatar">
           <div className="profile-header-main">
             <div className="profile-avatar-wrap">
               <img
-                alt=""
+                alt={`${user?.nickname ?? '야구팬'} 프로필`}
                 className={`profile-avatar ${hasCustomProfilePhoto ? '' : 'is-team-logo'}`}
+                height={86}
                 src={profileImageSrc}
+                width={86}
               />
               <button
                 aria-label="프로필 사진 변경"
@@ -300,8 +303,11 @@ export default function MyPage() {
               {isEditingNickname ? (
                 <div className="profile-nickname-edit">
                   <input
+                    aria-label="닉네임"
+                    autoComplete="off"
                     className="form-input profile-nickname-input"
                     maxLength={NICKNAME_MAX_LENGTH}
+                    name="nickname"
                     onChange={(event) => setNicknameDraft(event.target.value)}
                     value={nicknameDraft}
                   />
@@ -353,11 +359,21 @@ export default function MyPage() {
                 </div>
               )}
               <p>{user?.email}</p>
+              {user?.id ? (
+                <Link className="profile-public-link" href={`/fans/${user.id}`}>
+                  공개 프로필 보기 →
+                </Link>
+              ) : null}
             </div>
           </div>
           {favoriteTeam ? (
             <span className="profile-hero-team">
-              <img alt="" src={getTeamLogoSrc(favoriteTeam)} />
+              <img
+                alt=""
+                height={48}
+                src={getTeamLogoSrc(favoriteTeam)}
+                width={48}
+              />
               {favoriteTeam.shortName}
             </span>
           ) : (
@@ -488,7 +504,7 @@ export default function MyPage() {
       </section>
 
       <div className="profile-settings-grid">
-        <section className="card">
+        <section className="card profile-setting-card">
           <div className="section-heading">
             <div>
               <h2>응원 팀</h2>
@@ -503,36 +519,27 @@ export default function MyPage() {
             </button>
           </div>
           {!showTeamPicker ? (
-            <div
-              style={{
-                alignItems: 'center',
-                display: 'flex',
-                gap: 'var(--space-3)',
-              }}
-            >
+            <div className="profile-team-current">
               {favoriteTeam ? (
                 <>
                   <img
                     alt=""
+                    className="profile-team-current-logo"
+                    height={48}
                     src={getTeamLogoSrc(favoriteTeam)}
-                    style={{ height: 44, width: 44 }}
+                    width={48}
                   />
                   <div>
-                    <strong
-                      style={{ display: 'block', fontSize: 'var(--text-md)' }}
-                    >
+                    <strong className="profile-team-current-name">
                       {favoriteTeam.name}
                     </strong>
-                    <span
-                      className="muted"
-                      style={{ fontSize: 'var(--text-xs)' }}
-                    >
+                    <span className="profile-team-current-short-name">
                       {favoriteTeam.shortName}
                     </span>
                   </div>
                 </>
               ) : (
-                <p className="muted" style={{ fontSize: 'var(--text-sm)' }}>
+                <p className="profile-team-empty">
                   아직 응원 팀을 선택하지 않았어요. `변경하기`를 눌러
                   설정하세요.
                 </p>
@@ -550,7 +557,13 @@ export default function MyPage() {
                     onClick={() => handleFavoriteTeamChange(team.id)}
                     type="button"
                   >
-                    <img alt="" src={getTeamLogoSrc(team)} />
+                    <img
+                      alt=""
+                      height={48}
+                      loading="lazy"
+                      src={getTeamLogoSrc(team)}
+                      width={48}
+                    />
                     <span>{team.shortName}</span>
                   </button>
                 );
@@ -559,8 +572,11 @@ export default function MyPage() {
           )}
         </section>
 
-        <section className="card stack-sm" aria-label="계정">
-          <div className="section-heading" style={{ marginBottom: 0 }}>
+        <section
+          className="card stack-sm profile-setting-card profile-account-card"
+          aria-label="계정"
+        >
+          <div className="section-heading profile-account-heading">
             <h2>계정</h2>
           </div>
           <button

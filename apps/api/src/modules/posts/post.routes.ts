@@ -1,5 +1,8 @@
 import { Router } from 'express';
-import { authenticate } from '../../middleware/authenticate.js';
+import {
+  authenticate,
+  optionalAuthenticate,
+} from '../../middleware/authenticate.js';
 import { rateLimit } from '../../middleware/rate-limit.js';
 import { HttpError } from '../../utils/http-error.js';
 import {
@@ -54,7 +57,7 @@ function parsePositiveInt(value: unknown, fallback: number) {
   return parsed;
 }
 
-postRouter.get('/', async (req, res, next) => {
+postRouter.get('/', optionalAuthenticate, async (req, res, next) => {
   try {
     const page = parsePositiveInt(req.query.page, 1);
     const size = Math.min(parsePositiveInt(req.query.size, 10), 50);
@@ -62,7 +65,17 @@ postRouter.get('/', async (req, res, next) => {
       typeof req.query.keyword === 'string' && req.query.keyword.trim()
         ? req.query.keyword.trim()
         : undefined;
-    const result = await listPosts({ page, size, keyword });
+    const scope =
+      req.query.scope === 'myTeam' || req.query.scope === 'following'
+        ? req.query.scope
+        : 'latest';
+    const result = await listPosts({
+      page,
+      size,
+      keyword,
+      scope,
+      viewerUserId: req.user?.id ?? null,
+    });
     const totalPages = Math.ceil(result.total / size);
 
     res.json({

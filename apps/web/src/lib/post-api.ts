@@ -40,6 +40,8 @@ export function listPosts(input: {
   page?: number;
   size?: number;
   keyword?: string;
+  scope?: 'latest' | 'myTeam' | 'following';
+  token?: string | null;
 }) {
   const params = new URLSearchParams();
 
@@ -50,7 +52,13 @@ export function listPosts(input: {
     params.set('keyword', input.keyword);
   }
 
-  return request<PostListResponse>(`/posts?${params.toString()}`);
+  if (input.scope && input.scope !== 'latest') {
+    params.set('scope', input.scope);
+  }
+
+  return request<PostListResponse>(`/posts?${params.toString()}`, {
+    token: input.token,
+  });
 }
 
 export function fetchPost(postId: number) {

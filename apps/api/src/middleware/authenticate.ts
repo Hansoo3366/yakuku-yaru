@@ -42,3 +42,27 @@ export const authenticate: RequestHandler = (req, _res, next) => {
     next(new HttpError(401, 'INVALID_TOKEN', '유효하지 않은 토큰입니다.'));
   }
 };
+
+export const optionalAuthenticate: RequestHandler = (req, _res, next) => {
+  const authorization = req.header('authorization');
+  const [scheme, token] = authorization?.split(' ') ?? [];
+  const cookieToken = readCookieHeader(req.header('cookie'), AUTH_COOKIE_NAME);
+  const accessToken = scheme === 'Bearer' && token ? token : cookieToken;
+
+  if (!accessToken) {
+    next();
+    return;
+  }
+
+  try {
+    const payload = verifyAccessToken(accessToken);
+    req.user = {
+      id: payload.userId,
+      email: payload.email,
+    };
+  } catch {
+    // Public endpoints remain available when a stale optional session is sent.
+  }
+
+  next();
+};

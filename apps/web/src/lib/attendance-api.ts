@@ -52,7 +52,6 @@ export type AttendanceCompanion = {
   id: number;
   userId: number;
   nickname: string;
-  email: string;
   status: CompanionStatus;
   cheeredTeamId?: number | null;
   cheeredTeamShortName?: string | null;

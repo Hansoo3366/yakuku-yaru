@@ -134,6 +134,15 @@
   --text-3xl: 2.25rem; /* 36 */
   --text-4xl: 3rem; /* 48 */
 
+  /* Semantic typography hierarchy */
+  --type-display: clamp(2rem, 3vw, 2.5rem); /* 32–40 */
+  --type-page-title: clamp(1.5rem, 2vw, 1.75rem); /* 24–28 */
+  --type-section-title: clamp(1.125rem, 1.5vw, 1.25rem); /* 18–20 */
+  --type-card-title: 1rem; /* 16 */
+  --type-body: 0.9375rem; /* 15 */
+  --type-caption: 0.75rem; /* 12 */
+  --type-data-large: clamp(1.75rem, 2.8vw, 2.25rem); /* 28–36 */
+
   /* Weights */
   --weight-regular: 400;
   --weight-bold: 600;
@@ -167,7 +176,7 @@ body {
   background: var(--color-paper);
   color: var(--color-ink);
   font-family: var(--font-body);
-  font-size: var(--text-base);
+  font-size: var(--type-body);
   line-height: 1.55;
   padding-top: var(--header-height);
   -webkit-font-smoothing: antialiased;
@@ -194,6 +203,81 @@ button {
 button:disabled {
   cursor: not-allowed;
   opacity: 0.5;
+}
+
+.fan-follow-control {
+  display: inline-grid;
+  gap: 4px;
+}
+
+.fan-follow-error {
+  color: var(--color-error);
+  font-size: 10px;
+  max-width: 18ch;
+}
+
+.fan-follow-button {
+  align-items: center;
+  background: #ffffff;
+  border: 0;
+  color: #111111;
+  display: inline-flex;
+  font-size: 12px;
+  font-weight: 800;
+  gap: 18px;
+  justify-content: space-between;
+  min-height: 42px;
+  padding: 0 14px;
+  transition: background 180ms ease, color 180ms ease, transform 180ms ease;
+}
+
+.profile-public-link {
+  color: rgba(255, 255, 255, 0.72);
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  margin-top: 7px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.fan-follow-button strong {
+  font-family: ui-monospace, 'SFMono-Regular', Consolas, monospace;
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+.fan-follow-button:hover {
+  background: #ededed;
+  transform: translateY(-1px);
+}
+
+.fan-follow-button:active {
+  transform: translateY(0);
+}
+
+.fan-follow-button.is-following {
+  background: #303030;
+  color: #ffffff;
+}
+
+.fan-follow-button.is-compact {
+  background: #111111;
+  color: #ffffff;
+  font-size: 10px;
+  min-height: 32px;
+  padding: 0 10px;
+}
+
+.fan-follow-button.is-compact.is-following {
+  background: #dcdcd7;
+  color: #111111;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fan-follow-button {
+    transition: none;
+  }
 }
 
 h1,
@@ -924,7 +1008,7 @@ img {
 .section-heading h2 {
   color: var(--color-night-navy);
   font-family: var(--font-display);
-  font-size: var(--text-xl);
+  font-size: var(--type-section-title);
   font-weight: var(--weight-display);
   letter-spacing: 0;
   line-height: 1.3;
@@ -4758,7 +4842,7 @@ img {
 
 .post-detail-header h1 {
   color: var(--color-night-navy);
-  font-size: var(--text-2xl);
+  font-size: var(--type-page-title);
   font-weight: var(--weight-black);
   letter-spacing: 0;
   line-height: 1.25;
@@ -5711,7 +5795,7 @@ img {
 
 .auth-header h1 {
   color: var(--color-night-navy);
-  font-size: var(--text-2xl);
+  font-size: var(--type-page-title);
   font-weight: var(--weight-black);
   letter-spacing: 0;
 }
@@ -6461,7 +6545,7 @@ img {
 
 .app-page-header h1 {
   color: var(--color-night-navy);
-  font-size: var(--text-2xl);
+  font-size: var(--type-page-title);
   font-weight: var(--weight-black);
   letter-spacing: 0;
 }
@@ -10345,5 +10429,547 @@ img {
 @media (max-width: 880px) {
   .dashboard-upcoming-card {
     height: auto;
+  }
+}
+
+/* =========================================================
+ * My page redesign - Season pass / clubhouse record
+ * ========================================================= */
+
+.app-shell--profile {
+  --profile-black: #111111;
+  --profile-dugout: #f4f4f1;
+  --profile-muted: #686868;
+  gap: 46px;
+  max-width: 1080px;
+  padding-top: clamp(20px, 4vw, 44px);
+}
+
+.app-shell--profile .profile-hero {
+  background:
+    linear-gradient(
+      to right,
+      transparent 58px,
+      rgba(255, 255, 255, 0.2) 58px,
+      rgba(255, 255, 255, 0.2) 59px,
+      transparent 59px
+    ),
+    var(--profile-black);
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  gap: 28px;
+  overflow: visible;
+  padding: clamp(34px, 5vw, 54px) clamp(28px, 5vw, 54px)
+    clamp(30px, 5vw, 48px) clamp(86px, 9vw, 112px);
+  position: relative;
+}
+
+.app-shell--profile .profile-hero::before {
+  background: var(--team-color, var(--color-white));
+  content: '';
+  height: 8px;
+  inset: 0 0 auto;
+  position: absolute;
+}
+
+.app-shell--profile .profile-hero::after {
+  color: rgba(255, 255, 255, 0.035);
+  content: '2026';
+  font-family: ui-monospace, 'SFMono-Regular', Consolas, monospace;
+  font-size: clamp(4rem, 11vw, 7rem);
+  font-weight: 800;
+  inset: auto 20px -0.18em auto;
+  letter-spacing: -0.1em;
+  line-height: 1;
+  pointer-events: none;
+  position: absolute;
+  z-index: 0;
+}
+
+.app-shell--profile .profile-hero > * {
+  position: relative;
+  z-index: 1;
+}
+
+.app-shell--profile .profile-hero-top {
+  align-items: start;
+}
+
+.app-shell--profile .profile-header-main {
+  gap: 20px;
+}
+
+.app-shell--profile .profile-avatar {
+  border: 0;
+  border-radius: 2px;
+  height: 86px;
+  width: 86px;
+}
+
+.app-shell--profile .profile-avatar-edit {
+  background: var(--team-color, var(--color-white));
+  border: 2px solid var(--profile-black);
+  border-radius: 0;
+  bottom: -5px;
+  color: var(--team-color-contrast, var(--color-black));
+  height: 30px;
+  right: -5px;
+  width: 30px;
+}
+
+.app-shell--profile .profile-identity .eyebrow {
+  color: rgba(255, 255, 255, 0.5);
+  font-family: ui-monospace, 'SFMono-Regular', Consolas, monospace;
+  font-size: 10px;
+  letter-spacing: 0.14em;
+}
+
+.app-shell--profile .profile-nickname-row h1,
+.app-shell--profile .profile-hero-top h1 {
+  color: var(--color-white);
+  font-size: var(--type-display);
+  font-weight: 900;
+  letter-spacing: -0.055em;
+  line-height: 1;
+}
+
+.app-shell--profile .profile-edit-btn {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 0;
+  height: 30px;
+  width: 30px;
+}
+
+.app-shell--profile .profile-edit-btn:hover {
+  background: var(--color-white);
+  color: var(--profile-black);
+}
+
+.app-shell--profile .profile-nickname-input {
+  border: 0;
+  border-radius: 0;
+  font-size: var(--text-lg);
+  font-weight: 800;
+  height: 44px;
+}
+
+.app-shell--profile .profile-hero-top p {
+  color: rgba(255, 255, 255, 0.52);
+  font-size: 12px;
+  margin-top: 10px;
+}
+
+.app-shell--profile .profile-hero-team {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  font-family: ui-monospace, 'SFMono-Regular', Consolas, monospace;
+  font-size: 11px;
+  height: auto;
+  letter-spacing: 0.08em;
+  padding: 0;
+}
+
+.app-shell--profile .profile-hero-team img {
+  border-radius: 2px;
+  height: 48px;
+  padding: 5px;
+  width: 48px;
+}
+
+.app-shell--profile .profile-hero-metrics {
+  border-top-color: rgba(255, 255, 255, 0.18);
+  grid-template-columns: 1.35fr repeat(3, 1fr);
+  padding-top: 24px;
+}
+
+.app-shell--profile .profile-metric {
+  gap: 5px;
+  padding-inline: 20px;
+}
+
+.app-shell--profile .profile-metric span {
+  color: rgba(255, 255, 255, 0.48);
+  font-size: 11px;
+}
+
+.app-shell--profile .profile-metric strong {
+  font-family: ui-monospace, 'SFMono-Regular', Consolas, monospace;
+  font-size: var(--type-data-large);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.07em;
+}
+
+.app-shell--profile .profile-metric--primary strong {
+  color: color-mix(in srgb, var(--team-color, #ffffff) 70%, #ffffff 30%);
+}
+
+.app-shell--profile .profile-hero-titles {
+  justify-content: flex-start;
+}
+
+.app-shell--profile .profile-hero .profile-title-pill {
+  background: var(--color-white);
+  border: 0;
+  border-radius: 2px;
+  color: var(--profile-black);
+  height: 28px;
+  letter-spacing: 0;
+  padding-inline: 11px;
+  text-transform: none;
+}
+
+.app-shell--profile .profile-hero-hint {
+  color: rgba(255, 255, 255, 0.46);
+}
+
+.app-shell--profile .profile-status-banner {
+  background: var(--profile-dugout);
+  border: 0;
+  border-radius: 0;
+  color: var(--profile-black);
+  font-size: 13px;
+  margin-top: -26px;
+  padding: 12px 16px;
+}
+
+.app-shell--profile .profile-stat-explorer {
+  background: var(--color-white);
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  gap: 0;
+  padding: 0;
+}
+
+.app-shell--profile .profile-stat-explorer::before {
+  color: var(--team-color-ink, var(--team-color, var(--profile-black)));
+  content: '02 / MY RECORD';
+  font-family: ui-monospace, 'SFMono-Regular', Consolas, monospace;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  margin-bottom: 8px;
+}
+
+.app-shell--profile .profile-stat-explorer-head {
+  align-items: end;
+  margin-bottom: 24px;
+}
+
+.app-shell--profile .profile-stat-explorer-head h2 {
+  color: var(--profile-black);
+  font-size: var(--type-page-title);
+  font-weight: 900;
+  letter-spacing: -0.05em;
+}
+
+.app-shell--profile .profile-stat-explorer-head p {
+  color: var(--profile-muted);
+  font-size: 13px;
+}
+
+.app-shell--profile .profile-stat-tabs {
+  background: transparent;
+  border: 0;
+  border-bottom: 2px solid var(--profile-black);
+  border-radius: 0;
+  gap: 2px;
+  padding: 0;
+}
+
+.app-shell--profile .profile-stat-tab {
+  border-radius: 0;
+  min-height: 44px;
+  padding-inline: 18px;
+}
+
+.app-shell--profile .profile-stat-tab[aria-selected='true'] {
+  background: var(--profile-black);
+  box-shadow: none;
+  color: var(--color-white);
+}
+
+.app-shell--profile .profile-stat-panel {
+  background: var(--profile-dugout);
+  gap: clamp(30px, 6vw, 72px);
+  grid-template-columns: minmax(220px, 0.72fr) minmax(0, 1fr);
+  padding: clamp(30px, 5vw, 56px);
+}
+
+.app-shell--profile .profile-stat-donut {
+  box-shadow: none;
+  max-width: 230px;
+  padding: 18px;
+}
+
+.app-shell--profile .profile-stat-donut-core {
+  background: var(--profile-dugout);
+  box-shadow: none;
+}
+
+.app-shell--profile .profile-stat-donut-core strong,
+.app-shell--profile .profile-stat-detail > div:first-child strong {
+  color: var(--profile-black);
+  font-family: ui-monospace, 'SFMono-Regular', Consolas, monospace;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.07em;
+  font-size: var(--type-data-large);
+}
+
+.app-shell--profile .profile-stat-result-grid {
+  gap: 12px;
+}
+
+.app-shell--profile .profile-stat-result {
+  background: var(--color-white);
+  border: 0;
+  border-radius: 0;
+  min-height: 92px;
+  padding: 16px;
+}
+
+.app-shell--profile .profile-stat-result::before {
+  border-radius: 0;
+  height: 3px;
+  inset: 0 0 auto;
+  width: auto;
+}
+
+.app-shell--profile .profile-stat-result span {
+  font-family: ui-monospace, 'SFMono-Regular', Consolas, monospace;
+  padding-left: 0;
+}
+
+.app-shell--profile .profile-stat-result strong {
+  color: var(--profile-black);
+  font-family: ui-monospace, 'SFMono-Regular', Consolas, monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+.app-shell--profile .profile-settings-grid {
+  gap: 0;
+  grid-template-columns: 1fr;
+}
+
+.app-shell--profile .profile-settings-grid::before {
+  color: var(--team-color-ink, var(--team-color, var(--profile-black)));
+  content: '03 / CLUB SETTINGS';
+  font-family: ui-monospace, 'SFMono-Regular', Consolas, monospace;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  margin-bottom: 8px;
+}
+
+.app-shell--profile .profile-setting-card {
+  align-items: center;
+  background: var(--color-white);
+  border: 0;
+  border-radius: 0;
+  border-top: 1px solid #deded9;
+  box-shadow: none;
+  display: grid;
+  min-height: 124px;
+  padding: 24px 0;
+}
+
+.app-shell--profile .profile-setting-card:last-child {
+  border-bottom: 1px solid #deded9;
+}
+
+.app-shell--profile .profile-setting-card .section-heading {
+  margin-bottom: 0;
+}
+
+.app-shell--profile .profile-setting-card .section-heading h2 {
+  color: var(--profile-black);
+  font-size: 18px;
+  font-weight: 900;
+}
+
+.app-shell--profile .profile-setting-card .section-heading p {
+  color: var(--profile-muted);
+  font-size: 12px;
+}
+
+.app-shell--profile .profile-setting-card .btn-ghost {
+  background: transparent;
+  border: 0;
+  color: var(--profile-black);
+  padding-inline: 0;
+}
+
+.app-shell--profile .profile-setting-card .btn-ghost:hover:not(:disabled) {
+  background: transparent;
+  color: var(--team-color-ink, var(--team-color, var(--profile-black)));
+}
+
+.profile-team-current {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.profile-team-current-logo {
+  height: 48px;
+  object-fit: contain;
+  width: 48px;
+}
+
+.profile-team-current-name {
+  color: var(--profile-black);
+  display: block;
+  font-size: 15px;
+  font-weight: 900;
+}
+
+.profile-team-current-short-name {
+  color: var(--profile-muted);
+  font-size: 11px;
+}
+
+.profile-team-empty {
+  color: var(--profile-muted);
+  font-size: 13px;
+  margin-top: 18px;
+}
+
+.app-shell--profile .profile-setting-card .team-grid {
+  background: var(--profile-dugout);
+  gap: 8px;
+  margin-top: 18px;
+  padding: 16px;
+}
+
+.app-shell--profile .profile-setting-card .team-grid-card {
+  background: var(--color-white);
+  border: 0;
+  border-radius: 0;
+}
+
+.app-shell--profile .profile-setting-card .team-grid-card.is-selected {
+  background: var(--profile-black);
+  color: var(--color-white);
+}
+
+.app-shell--profile .profile-account-card {
+  grid-template-columns: 1fr auto;
+}
+
+.app-shell--profile .profile-account-heading {
+  margin: 0;
+}
+
+.app-shell--profile .profile-account-card > .btn {
+  color: #8c2924;
+  justify-self: end;
+}
+
+@media (max-width: 720px) {
+  .app-shell--profile {
+    gap: 38px;
+    padding-left: 12px;
+    padding-right: 12px;
+    padding-top: 12px;
+  }
+
+  .app-shell--profile .profile-hero {
+    background:
+      linear-gradient(
+        to right,
+        transparent 34px,
+        rgba(255, 255, 255, 0.2) 34px,
+        rgba(255, 255, 255, 0.2) 35px,
+        transparent 35px
+      ),
+      var(--profile-black);
+    padding: 34px 20px 28px 54px;
+  }
+
+  .app-shell--profile .profile-hero-top {
+    grid-template-columns: 1fr;
+  }
+
+  .app-shell--profile .profile-header-main {
+    align-items: flex-start;
+    gap: 14px;
+  }
+
+  .app-shell--profile .profile-avatar {
+    height: 66px;
+    width: 66px;
+  }
+
+  .app-shell--profile .profile-nickname-row h1,
+  .app-shell--profile .profile-hero-top h1 {
+    font-size: var(--type-display);
+  }
+
+  .app-shell--profile .profile-hero-team {
+    position: absolute;
+    right: 18px;
+    top: 18px;
+  }
+
+  .app-shell--profile .profile-hero-team img {
+    height: 38px;
+    width: 38px;
+  }
+
+  .app-shell--profile .profile-hero-team {
+    font-size: 0;
+  }
+
+  .app-shell--profile .profile-hero-metrics {
+    gap: 22px 12px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .app-shell--profile .profile-metric,
+  .app-shell--profile .profile-metric:first-child {
+    border-left: 0;
+    padding: 0;
+  }
+
+  .app-shell--profile .profile-stat-explorer-head {
+    align-items: start;
+    flex-direction: column;
+  }
+
+  .app-shell--profile .profile-stat-tabs {
+    border-radius: 0;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .app-shell--profile .profile-stat-tab {
+    min-width: 0;
+    padding-inline: 4px;
+  }
+
+  .app-shell--profile .profile-stat-panel {
+    gap: 32px;
+    grid-template-columns: 1fr;
+    padding: 28px 20px;
+  }
+
+  .app-shell--profile .profile-stat-donut {
+    max-width: 190px;
+  }
+
+  .app-shell--profile .profile-stat-result-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .app-shell--profile .profile-account-card {
+    align-items: center;
+    grid-template-columns: 1fr auto;
+  }
+
+  .app-shell--profile .profile-setting-card {
+    padding: 22px 0;
   }
 }

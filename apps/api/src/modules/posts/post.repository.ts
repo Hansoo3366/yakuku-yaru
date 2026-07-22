@@ -69,11 +69,50 @@ export async function listPosts(input: {
   page: number;
   size: number;
   keyword?: string;
+  scope?: 'latest' | 'myTeam' | 'following';
+  viewerUserId?: number | null;
 }) {
   const offset = (input.page - 1) * input.size;
   const keyword = input.keyword ? `%${input.keyword}%` : null;
-  const whereClause = keyword ? 'WHERE p.title LIKE ? OR p.content LIKE ?' : '';
-  const whereParams = keyword ? [keyword, keyword] : [];
+  const conditions: string[] = [];
+  const whereParams: Array<string | number> = [];
+
+  if (keyword) {
+    conditions.push('(p.title LIKE ? OR p.content LIKE ?)');
+    whereParams.push(keyword, keyword);
+  }
+
+  if (input.scope === 'myTeam') {
+    if (input.viewerUserId) {
+      conditions.push(
+        `u.favorite_team_id = (
+          SELECT favorite_team_id FROM users WHERE id = ?
+        )`,
+      );
+      whereParams.push(input.viewerUserId);
+    } else {
+      conditions.push('1 = 0');
+    }
+  }
+
+  if (input.scope === 'following') {
+    if (input.viewerUserId) {
+      conditions.push(
+        `EXISTS (
+          SELECT 1 FROM user_follows uf
+          WHERE uf.follower_user_id = ?
+            AND uf.followed_user_id = p.user_id
+        )`,
+      );
+      whereParams.push(input.viewerUserId);
+    } else {
+      conditions.push('1 = 0');
+    }
+  }
+
+  const whereClause = conditions.length
+    ? `WHERE ${conditions.join(' AND ')}`
+    : '';
 
   const [rows] = await db.query<PostRow[]>(
     `SELECT
@@ -101,6 +140,7 @@ export async function listPosts(input: {
   const [countRows] = await db.query<(RowDataPacket & { total: number })[]>(
     `SELECT COUNT(*) AS total
      FROM posts p
+     JOIN users u ON u.id = p.user_id
      ${whereClause}`,
     whereParams,
   );
@@ -109,6 +149,33 @@ export async function listPosts(input: {
     items: rows.map(toPostListItem),
     total: countRows[0]?.total ?? 0,
   };
+}
+
+export async function listRecentPostsByUser(userId: number, limit = 5) {
+  const [rows] = await db.query<PostRow[]>(
+    `SELECT
+       p.id,
+       p.user_id,
+       p.title,
+       p.content,
+       u.nickname AS author_nickname,
+       u.profile_image_url AS author_profile_image_url,
+       t.short_name AS author_favorite_team_short_name,
+       COUNT(c.id) AS comment_count,
+       p.created_at,
+       p.updated_at
+     FROM posts p
+     JOIN users u ON u.id = p.user_id
+     LEFT JOIN teams t ON t.id = u.favorite_team_id
+     LEFT JOIN comments c ON c.post_id = p.id
+     WHERE p.user_id = ?
+     GROUP BY p.id, p.user_id, p.title, p.content, u.nickname, u.profile_image_url, t.short_name, p.created_at, p.updated_at
+     ORDER BY p.created_at DESC
+     LIMIT ?`,
+    [userId, limit],
+  );
+
+  return rows.map(toPostListItem);
 }
 
 export async function findPostById(id: number) {
