@@ -43,7 +43,7 @@
   color: #ffffff;
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(210px, 0.32fr);
-  min-height: 250px;
+  min-height: 218px;
   overflow: hidden;
   position: relative;
 }
@@ -65,7 +65,7 @@
 .kicker {
   color: color-mix(in srgb, var(--team-color-contrast, #ffffff) 72%, transparent);
   font-family: ui-monospace, 'SFMono-Regular', Consolas, monospace;
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.14em;
   margin-bottom: 18px;
@@ -74,7 +74,7 @@
 
 .hero h1 {
   color: #ffffff;
-  font-size: var(--type-display);
+  font-size: var(--type-page-title);
   font-weight: 900;
   letter-spacing: -0.055em;
   line-height: 0.98;
@@ -83,7 +83,7 @@
 
 .heroCopy p {
   color: rgba(255, 255, 255, 0.62);
-  font-size: 14px;
+  font-size: 13px;
   line-height: 1.6;
   margin-top: 22px;
   max-width: 38ch;
@@ -92,7 +92,6 @@
 .heroAside {
   align-content: end;
   background: var(--team-color, #292929);
-  border-left: 1px solid rgba(255, 255, 255, 0.18);
   color: var(--team-color-contrast, #ffffff);
   display: grid;
   padding: 38px 30px;
@@ -157,22 +156,12 @@
 }
 
 .listIntro {
-  align-items: flex-start;
-  display: flex;
-  gap: 14px;
-}
-
-.index {
-  color: var(--team-color-ink, var(--team-color, #111111));
-  font-family: ui-monospace, 'SFMono-Regular', Consolas, monospace;
-  font-size: 12px;
-  font-weight: 800;
-  padding-top: 3px;
+  display: block;
 }
 
 .listIntro strong {
   display: block;
-  font-size: 20px;
+  font-size: var(--type-section-title);
   font-weight: 900;
   letter-spacing: -0.035em;
 }
@@ -492,13 +481,11 @@
   }
 
   .hero h1 {
-    font-size: var(--type-display);
+    font-size: var(--type-page-title);
   }
 
   .heroAside {
     align-items: center;
-    border-left: 0;
-    border-top: 1px solid rgba(255, 255, 255, 0.18);
     grid-template-columns: 1fr auto;
     padding: 20px 24px;
   }

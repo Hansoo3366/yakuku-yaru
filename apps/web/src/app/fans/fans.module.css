@@ -8,6 +8,31 @@
   padding-top: clamp(20px, 4vw, 42px);
 }
 
+.sectionNav {
+  display: flex;
+  gap: 20px;
+  min-height: 42px;
+}
+
+.sectionNav a {
+  color: #858585;
+  font-size: 12px;
+  font-weight: 800;
+  padding-top: 4px;
+}
+
+.sectionNav a:hover,
+.sectionNav .sectionNavActive {
+  color: #111111;
+}
+
+.sectionNav .sectionNavActive {
+  text-decoration: underline;
+  text-decoration-color: var(--team-color, #111111);
+  text-decoration-thickness: 3px;
+  text-underline-offset: 6px;
+}
+
 .hero {
   align-items: end;
   background: var(--fan-black);
@@ -89,6 +114,7 @@
 .toolbarTitle strong {
   display: block;
   font-size: var(--type-section-title);
+  font-weight: 900;
   letter-spacing: -0.035em;
 }
 

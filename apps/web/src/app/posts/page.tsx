@@ -102,7 +102,6 @@ export default function PostsPage() {
 
         <div className={styles.controlBar}>
           <div className={styles.listIntro}>
-            <span className={styles.index}>01</span>
             <div>
               <strong>{appliedKeyword ? '검색 결과' : feedLabel}</strong>
               <p>

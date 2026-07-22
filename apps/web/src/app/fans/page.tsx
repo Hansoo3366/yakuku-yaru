@@ -42,6 +42,16 @@ export default function FansPage() {
 
   return (
     <main className={`app-shell with-bottom-nav ${styles.page}`}>
+      <nav className={styles.sectionNav} aria-label="팬 커뮤니티 메뉴">
+        <Link href="/posts">팬 라운지</Link>
+        <Link
+          aria-current="page"
+          className={styles.sectionNavActive}
+          href="/fans"
+        >
+          팬 찾기
+        </Link>
+      </nav>
       <header className={styles.hero}>
         <div>
           <span className={styles.eyebrow}>Fan directory</span>
