@@ -26,6 +26,10 @@ services:
       context: .
       dockerfile: apps/api/Dockerfile
     restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
     depends_on:
       mysql:
         condition: service_healthy
@@ -41,6 +45,7 @@ services:
       KBO_SYNC_ON_START: ${KBO_SYNC_ON_START:-false}
       APP_URL: ${APP_URL:-}
       APP_DOMAIN: ${APP_DOMAIN:-}
+      CORS_ORIGINS: ${CORS_ORIGINS:-}
       JWT_SECRET: ${JWT_SECRET}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-1d}
       JWT_REMEMBER_EXPIRES_IN: ${JWT_REMEMBER_EXPIRES_IN:-30d}
@@ -57,7 +62,7 @@ services:
       MYSQL_USER: ${MYSQL_USER}
       MYSQL_PASSWORD: ${MYSQL_PASSWORD}
     ports:
-      - '${API_PORT:-4000}:4000'
+      - '127.0.0.1:${API_PORT:-4000}:4000'
     volumes:
       - ${UPLOADS_HOST_DIR:-api_uploads}:/app/apps/api/uploads
 
@@ -68,14 +73,20 @@ services:
       dockerfile: apps/web/Dockerfile
       args:
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+        NEXT_PUBLIC_CONTACT_EMAIL: ${NEXT_PUBLIC_CONTACT_EMAIL:-contact@yakuku-yaru.today}
     restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
     depends_on:
       - api
     environment:
       NODE_ENV: production
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+      NEXT_PUBLIC_CONTACT_EMAIL: ${NEXT_PUBLIC_CONTACT_EMAIL:-contact@yakuku-yaru.today}
     ports:
-      - '${WEB_PORT:-3000}:3000'
+      - '127.0.0.1:${WEB_PORT:-3000}:3000'
 
   caddy:
     image: caddy:2.9-alpine

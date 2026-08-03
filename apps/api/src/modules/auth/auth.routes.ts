@@ -15,7 +15,10 @@ import {
   issueEmailVerification,
   resendEmailVerification,
 } from './email-verification.js';
-import { getPasswordResetUrl, sendPasswordResetEmail } from './email.service.js';
+import {
+  getPasswordResetUrl,
+  sendPasswordResetEmail,
+} from './email.service.js';
 import {
   createPasswordResetToken,
   findUsablePasswordResetToken,
@@ -87,45 +90,72 @@ const resetPasswordRateLimit = rateLimit({
   max: 20,
 });
 
-authRouter.post('/check-registration', checkRegistrationRateLimit, async (req, res, next) => {
-  try {
-    const { email, nickname } = req.body as {
-      email?: string;
-      nickname?: string;
-    };
+authRouter.post(
+  '/check-registration',
+  checkRegistrationRateLimit,
+  async (req, res, next) => {
+    try {
+      const { email, nickname } = req.body as {
+        email?: string;
+        nickname?: string;
+      };
 
-    if (!email || !nickname) {
-      throw new HttpError(400, 'INVALID_INPUT', '이메일과 닉네임을 입력해주세요.');
+      if (!email || !nickname) {
+        throw new HttpError(
+          400,
+          'INVALID_INPUT',
+          '이메일과 닉네임을 입력해주세요.',
+        );
+      }
+
+      const normalizedEmail = validateEmail(email);
+      const normalizedNickname = validateNickname(nickname);
+
+      const [existingEmail, existingNickname] = await Promise.all([
+        findUserByEmail(normalizedEmail),
+        findUserByNickname(normalizedNickname),
+      ]);
+
+      res.json({
+        emailAvailable: !existingEmail,
+        nicknameAvailable: !existingNickname,
+      });
+    } catch (error) {
+      next(error);
     }
-
-    const normalizedEmail = validateEmail(email);
-    const normalizedNickname = validateNickname(nickname);
-
-    const [existingEmail, existingNickname] = await Promise.all([
-      findUserByEmail(normalizedEmail),
-      findUserByNickname(normalizedNickname),
-    ]);
-
-    res.json({
-      emailAvailable: !existingEmail,
-      nicknameAvailable: !existingNickname,
-    });
-  } catch (error) {
-    next(error);
-  }
-});
+  },
+);
 
 authRouter.post('/register', registerRateLimit, async (req, res, next) => {
   try {
-    const { email, password, nickname, favoriteTeamId } = req.body as {
+    const {
+      email,
+      password,
+      nickname,
+      favoriteTeamId,
+      agreedToTerms,
+      agreedToPrivacy,
+      confirmedAge,
+    } = req.body as {
       email?: string;
       password?: string;
       nickname?: string;
       favoriteTeamId?: number;
+      agreedToTerms?: boolean;
+      agreedToPrivacy?: boolean;
+      confirmedAge?: boolean;
     };
 
     if (!email || !password || !nickname) {
       throw new HttpError(400, 'INVALID_INPUT', '필수 값을 입력해주세요.');
+    }
+
+    if (!agreedToTerms || !agreedToPrivacy || !confirmedAge) {
+      throw new HttpError(
+        400,
+        'CONSENT_REQUIRED',
+        '이용약관·개인정보 처리방침 동의와 만 14세 이상 확인이 필요합니다.',
+      );
     }
 
     const normalizedEmail = validateEmail(email);
@@ -135,13 +165,21 @@ authRouter.post('/register', registerRateLimit, async (req, res, next) => {
     const existingUser = await findUserByEmail(normalizedEmail);
 
     if (existingUser) {
-      throw new HttpError(409, 'EMAIL_ALREADY_EXISTS', '이미 사용 중인 이메일입니다.');
+      throw new HttpError(
+        409,
+        'EMAIL_ALREADY_EXISTS',
+        '이미 사용 중인 이메일입니다.',
+      );
     }
 
     const nicknameTaken = await findUserByNickname(normalizedNickname);
 
     if (nicknameTaken) {
-      throw new HttpError(409, 'NICKNAME_ALREADY_EXISTS', '이미 사용 중인 닉네임입니다.');
+      throw new HttpError(
+        409,
+        'NICKNAME_ALREADY_EXISTS',
+        '이미 사용 중인 닉네임입니다.',
+      );
     }
 
     if (favoriteTeamId) {
@@ -158,10 +196,15 @@ authRouter.post('/register', registerRateLimit, async (req, res, next) => {
       passwordHash,
       nickname: normalizedNickname,
       favoriteTeamId: favoriteTeamId ?? null,
+      recordRequiredConsents: true,
     });
 
     if (!user) {
-      throw new HttpError(500, 'USER_CREATE_FAILED', '회원가입에 실패했습니다.');
+      throw new HttpError(
+        500,
+        'USER_CREATE_FAILED',
+        '회원가입에 실패했습니다.',
+      );
     }
 
     const verification = await issueEmailVerification({
@@ -197,20 +240,32 @@ authRouter.post('/login', loginRateLimit, async (req, res, next) => {
     };
 
     if (!email || !password) {
-      throw new HttpError(400, 'INVALID_INPUT', '이메일과 비밀번호를 입력해주세요.');
+      throw new HttpError(
+        400,
+        'INVALID_INPUT',
+        '이메일과 비밀번호를 입력해주세요.',
+      );
     }
 
     const normalizedEmail = validateEmail(email);
     const user = await findUserByEmail(normalizedEmail);
 
     if (!user) {
-      throw new HttpError(401, 'INVALID_CREDENTIALS', '이메일 또는 비밀번호가 올바르지 않습니다.');
+      throw new HttpError(
+        401,
+        'INVALID_CREDENTIALS',
+        '이메일 또는 비밀번호가 올바르지 않습니다.',
+      );
     }
 
     const isPasswordValid = await comparePassword(password, user.password_hash);
 
     if (!isPasswordValid) {
-      throw new HttpError(401, 'INVALID_CREDENTIALS', '이메일 또는 비밀번호가 올바르지 않습니다.');
+      throw new HttpError(
+        401,
+        'INVALID_CREDENTIALS',
+        '이메일 또는 비밀번호가 올바르지 않습니다.',
+      );
     }
 
     if (!user.email_verified_at) {
@@ -221,12 +276,16 @@ authRouter.post('/login', loginRateLimit, async (req, res, next) => {
       );
     }
 
-    const accessToken = signAccessToken({
-      userId: user.id,
-      email: user.email,
-    }, {
-      rememberMe: Boolean(rememberMe),
-    });
+    const accessToken = signAccessToken(
+      {
+        userId: user.id,
+        email: user.email,
+        sessionVersion: Number(user.session_version),
+      },
+      {
+        rememberMe: Boolean(rememberMe),
+      },
+    );
 
     setAuthCookie(res, accessToken, { rememberMe: Boolean(rememberMe) });
 
@@ -259,92 +318,109 @@ authRouter.get('/me', authenticate, async (req, res, next) => {
   }
 });
 
-authRouter.post('/forgot-password', forgotPasswordRateLimit, async (req, res, next) => {
-  try {
-    const { email } = req.body as { email?: string };
+authRouter.post(
+  '/forgot-password',
+  forgotPasswordRateLimit,
+  async (req, res, next) => {
+    try {
+      const { email } = req.body as { email?: string };
 
-    if (!email) {
-      throw new HttpError(400, 'INVALID_INPUT', '이메일을 입력해주세요.');
+      if (!email) {
+        throw new HttpError(400, 'INVALID_INPUT', '이메일을 입력해주세요.');
+      }
+
+      const normalizedEmail = validateEmail(email);
+      const user = await findUserByEmail(normalizedEmail);
+
+      const genericMessage =
+        '등록된 이메일이면 비밀번호 재설정 링크를 보냈어요. 메일함과 스팸함을 확인해주세요.';
+
+      if (!user) {
+        res.json({ message: genericMessage, emailSent: false });
+        return;
+      }
+
+      const resetToken = await createPasswordResetToken(user.id);
+      const emailSent = await sendPasswordResetEmail({
+        email: user.email,
+        nickname: user.nickname,
+        token: resetToken,
+      });
+
+      res.json({
+        message: genericMessage,
+        emailSent,
+        resetUrl:
+          env.nodeEnv === 'production' ? null : getPasswordResetUrl(resetToken),
+      });
+    } catch (error) {
+      next(error);
     }
+  },
+);
 
-    const normalizedEmail = validateEmail(email);
-    const user = await findUserByEmail(normalizedEmail);
+authRouter.post(
+  '/reset-password',
+  resetPasswordRateLimit,
+  async (req, res, next) => {
+    try {
+      const { token, password } = req.body as {
+        token?: string;
+        password?: string;
+      };
 
-    const genericMessage =
-      '등록된 이메일이면 비밀번호 재설정 링크를 보냈어요. 메일함과 스팸함을 확인해주세요.';
+      if (!token || !password) {
+        throw new HttpError(
+          400,
+          'INVALID_INPUT',
+          '토큰과 새 비밀번호를 입력해주세요.',
+        );
+      }
 
-    if (!user) {
-      res.json({ message: genericMessage, emailSent: false });
-      return;
+      const normalizedPassword = validatePassword(password);
+      const resetToken = await findUsablePasswordResetToken(token);
+
+      if (!resetToken) {
+        throw new HttpError(
+          400,
+          'INVALID_RESET_TOKEN',
+          '유효하지 않거나 만료된 재설정 링크입니다. 비밀번호 찾기를 다시 요청해주세요.',
+        );
+      }
+
+      const passwordHash = await hashPassword(normalizedPassword);
+      await updateUserPassword(resetToken.user_id, passwordHash);
+      await markPasswordResetTokenUsed(resetToken.id);
+
+      res.json({
+        reset: true,
+      });
+    } catch (error) {
+      next(error);
     }
+  },
+);
 
-    const resetToken = await createPasswordResetToken(user.id);
-    const emailSent = await sendPasswordResetEmail({
-      email: user.email,
-      nickname: user.nickname,
-      token: resetToken,
-    });
+authRouter.get(
+  '/verification-status',
+  checkRegistrationRateLimit,
+  async (req, res, next) => {
+    try {
+      const email = req.query.email as string | undefined;
 
-    res.json({
-      message: genericMessage,
-      emailSent,
-      resetUrl: env.nodeEnv === 'production' ? null : getPasswordResetUrl(resetToken),
-    });
-  } catch (error) {
-    next(error);
-  }
-});
+      if (!email) {
+        throw new HttpError(400, 'INVALID_INPUT', '이메일을 입력해주세요.');
+      }
 
-authRouter.post('/reset-password', resetPasswordRateLimit, async (req, res, next) => {
-  try {
-    const { token, password } = req.body as {
-      token?: string;
-      password?: string;
-    };
+      const normalizedEmail = validateEmail(email);
+      const status = await getEmailVerificationStatus(normalizedEmail);
 
-    if (!token || !password) {
-      throw new HttpError(400, 'INVALID_INPUT', '토큰과 새 비밀번호를 입력해주세요.');
+      res.json(status);
+    } catch (error) {
+      next(error);
     }
-
-    const normalizedPassword = validatePassword(password);
-    const resetToken = await findUsablePasswordResetToken(token);
-
-    if (!resetToken) {
-      throw new HttpError(
-        400,
-        'INVALID_RESET_TOKEN',
-        '유효하지 않거나 만료된 재설정 링크입니다. 비밀번호 찾기를 다시 요청해주세요.',
-      );
-    }
-
-    const passwordHash = await hashPassword(normalizedPassword);
-    await updateUserPassword(resetToken.user_id, passwordHash);
-    await markPasswordResetTokenUsed(resetToken.id);
-
-    res.json({
-      reset: true,
-    });
-  } catch (error) {
-    next(error);
-  }
-});
-
-authRouter.get('/verification-status', checkRegistrationRateLimit, async (req, res, next) => {
-  try {
-    const email = req.query.email as string | undefined;
-
-    if (!email) {
-      throw new HttpError(400, 'INVALID_INPUT', '이메일을 입력해주세요.');
-    }
-
-    const normalizedEmail = validateEmail(email);
-    const status = await getEmailVerificationStatus(normalizedEmail);
-
-    res.json(status);
-  } catch (error) {
-    next(error);
-  }
-});
+  },
+);
 
 authRouter.post(
   '/resend-verification-email',
@@ -378,49 +454,64 @@ authRouter.post(
   },
 );
 
-authRouter.post('/verify-email', verifyEmailRateLimit, async (req, res, next) => {
-  try {
-    const { token, email, code } = req.body as {
-      token?: string;
-      email?: string;
-      code?: string;
-    };
+authRouter.post(
+  '/verify-email',
+  verifyEmailRateLimit,
+  async (req, res, next) => {
+    try {
+      const { token, email, code } = req.body as {
+        token?: string;
+        email?: string;
+        code?: string;
+      };
 
-    let verificationToken = null;
+      let verificationToken = null;
 
-    if (email && code) {
-      const normalizedEmail = validateEmail(email);
-      const normalizedCode = String(code).trim().replace(/\D/g, '');
+      if (email && code) {
+        const normalizedEmail = validateEmail(email);
+        const normalizedCode = String(code).trim().replace(/\D/g, '');
 
-      if (normalizedCode.length !== 6) {
-        throw new HttpError(400, 'INVALID_INPUT', '6자리 인증번호를 입력해주세요.');
+        if (normalizedCode.length !== 6) {
+          throw new HttpError(
+            400,
+            'INVALID_INPUT',
+            '6자리 인증번호를 입력해주세요.',
+          );
+        }
+
+        verificationToken =
+          await findUsableEmailVerificationTokenByEmailAndCode(
+            normalizedEmail,
+            normalizedCode,
+          );
+      } else if (token) {
+        verificationToken = await findUsableEmailVerificationToken(
+          token.trim(),
+        );
+      } else {
+        throw new HttpError(
+          400,
+          'INVALID_INPUT',
+          '이메일과 인증번호를 입력해주세요.',
+        );
       }
 
-      verificationToken = await findUsableEmailVerificationTokenByEmailAndCode(
-        normalizedEmail,
-        normalizedCode,
-      );
-    } else if (token) {
-      verificationToken = await findUsableEmailVerificationToken(token.trim());
-    } else {
-      throw new HttpError(400, 'INVALID_INPUT', '이메일과 인증번호를 입력해주세요.');
+      if (!verificationToken) {
+        throw new HttpError(
+          400,
+          'INVALID_VERIFICATION_TOKEN',
+          '인증번호가 올바르지 않거나 만료되었습니다.',
+        );
+      }
+
+      await markUserEmailVerified(verificationToken.user_id);
+      await markEmailVerificationTokenUsed(verificationToken.id);
+
+      res.json({
+        verified: true,
+      });
+    } catch (error) {
+      next(error);
     }
-
-    if (!verificationToken) {
-      throw new HttpError(
-        400,
-        'INVALID_VERIFICATION_TOKEN',
-        '인증번호가 올바르지 않거나 만료되었습니다.',
-      );
-    }
-
-    await markUserEmailVerified(verificationToken.user_id);
-    await markEmailVerificationTokenUsed(verificationToken.id);
-
-    res.json({
-      verified: true,
-    });
-  } catch (error) {
-    next(error);
-  }
-});
+  },
+);

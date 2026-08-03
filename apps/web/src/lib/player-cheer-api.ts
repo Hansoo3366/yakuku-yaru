@@ -68,6 +68,15 @@ export type PlayerCheerTeamStat = {
   registeredPlayers: number;
 };
 
+export function getPlayerCheerType(
+  player: Pick<PlayerCheer, 'position' | 'recentLineupRole'>,
+) {
+  return player.position?.includes('투수') ||
+    player.recentLineupRole?.startsWith('pitcher')
+    ? '등장곡'
+    : '응원가';
+}
+
 export function listPlayerCheers(input: {
   keyword?: string;
   teamId?: number | null;

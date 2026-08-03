@@ -15,6 +15,7 @@ import type {
   PlayerCheerRosterScope,
   TeamCheer,
 } from '@/lib/player-cheer-api';
+import { getPlayerCheerType } from '@/lib/player-cheer-api';
 import {
   usePlayerCheersQuery,
   useTeamCheersQuery,
@@ -158,7 +159,7 @@ export default function CheersPage() {
       <header className="cheers-page-intro">
         <span>2026 KBO CHANTS</span>
         <h1>응원가</h1>
-        <p>오늘의 라인업부터 전체 선수까지, 부르고 싶은 응원가를 찾습니다.</p>
+        <p>오늘의 라인업부터 전체 선수까지, 응원가와 등장곡을 찾습니다.</p>
       </header>
 
       <section className="cheers-lookup" aria-label="응원가 검색과 보기 설정">
@@ -234,7 +235,7 @@ export default function CheersPage() {
               type="checkbox"
             />
             <span aria-hidden="true" />
-            등록된 응원가만
+            등록된 응원곡만
           </label>
         </div>
       </section>
@@ -322,7 +323,7 @@ export default function CheersPage() {
               <span>선택한 팀</span>
               <h2>{selectedTeam.name}</h2>
               <p>
-                선수 응원가 {selectedTeamStat?.registeredPlayers ?? 0}/
+                선수 응원곡 {selectedTeamStat?.registeredPlayers ?? 0}/
                 {selectedTeamStat?.totalPlayers ?? 0}곡 등록
               </p>
             </div>
@@ -355,7 +356,7 @@ export default function CheersPage() {
             </span>
             <h2>{resultTitle}</h2>
             <p>
-              응원가 {currentRegisteredPlayers}/{currentTotalPlayers}곡
+              응원곡 {currentRegisteredPlayers}/{currentTotalPlayers}곡
               {pagination ? ` · 검색 결과 ${pagination.total}명` : ''}
             </p>
           </div>
@@ -377,7 +378,7 @@ export default function CheersPage() {
           </div>
         ) : cheersQuery.isError ? (
           <div className="cheers-roster-message" role="alert">
-            <strong>선수 응원가를 불러오지 못했습니다.</strong>
+            <strong>선수 응원곡을 불러오지 못했습니다.</strong>
             <p>연결 상태를 확인한 뒤 다시 시도해주세요.</p>
             <button onClick={() => void cheersQuery.refetch()} type="button">
               다시 불러오기
@@ -390,7 +391,7 @@ export default function CheersPage() {
 
               return (
                 <button
-                  aria-label={`${player.name} ${player.cheerId ? '응원가 보기' : '응원가 준비 상태 보기'}`}
+                  aria-label={`${player.name} ${player.cheerId ? `${getPlayerCheerType(player)} 보기` : '응원곡 준비 상태 보기'}`}
                   className="cheer-player-row"
                   data-available={Boolean(player.cheerId)}
                   key={player.playerId}
@@ -425,7 +426,9 @@ export default function CheersPage() {
                     </span>
                   </span>
                   <span className="cheer-player-status">
-                    {player.cheerId ? '응원가 보기' : '준비 중'}
+                    {player.cheerId
+                      ? `${getPlayerCheerType(player)} 보기`
+                      : '준비 중'}
                     <span aria-hidden="true">→</span>
                   </span>
                 </button>

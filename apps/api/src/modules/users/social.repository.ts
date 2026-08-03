@@ -4,6 +4,7 @@ import { db } from '../../config/database.js';
 type FanSummaryRow = RowDataPacket & {
   id: number;
   nickname: string;
+  role: string;
   profile_image_url: string | null;
   favorite_team_id: number | null;
   favorite_team_name: string | null;
@@ -22,6 +23,7 @@ type FanSummaryRow = RowDataPacket & {
 export type FanSummary = {
   id: number;
   nickname: string;
+  role: string;
   profileImageUrl: string | null;
   favoriteTeam: {
     id: number;
@@ -44,6 +46,7 @@ function toFanSummary(row: FanSummaryRow, viewerUserId: number | null): FanSumma
   return {
     id: Number(row.id),
     nickname: row.nickname,
+    role: row.role,
     profileImageUrl: row.profile_image_url,
     favoriteTeam:
       row.favorite_team_id &&
@@ -72,6 +75,7 @@ const summarySelect = `
   SELECT
     u.id,
     u.nickname,
+    u.role,
     u.profile_image_url,
     t.id AS favorite_team_id,
     t.name AS favorite_team_name,
@@ -278,4 +282,3 @@ export async function unfollowUser(input: {
 
   return result.affectedRows > 0;
 }
-

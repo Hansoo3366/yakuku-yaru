@@ -39,15 +39,28 @@ export function rateLimit(options: RateLimitOptions): RequestHandler {
     const bucket = buckets.get(key);
 
     if (!bucket || bucket.resetAt <= now) {
+      const resetAt = now + options.windowMs;
       buckets.set(key, {
         count: 1,
-        resetAt: now + options.windowMs,
+        resetAt,
       });
+      res.setHeader('RateLimit-Limit', String(options.max));
+      res.setHeader(
+        'RateLimit-Remaining',
+        String(Math.max(0, options.max - 1)),
+      );
+      res.setHeader('RateLimit-Reset', String(Math.ceil(resetAt / 1000)));
       next();
       return;
     }
 
     bucket.count += 1;
+    res.setHeader('RateLimit-Limit', String(options.max));
+    res.setHeader(
+      'RateLimit-Remaining',
+      String(Math.max(0, options.max - bucket.count)),
+    );
+    res.setHeader('RateLimit-Reset', String(Math.ceil(bucket.resetAt / 1000)));
 
     if (bucket.count > options.max) {
       const retryAfterSeconds = Math.ceil((bucket.resetAt - now) / 1000);

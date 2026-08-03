@@ -7,6 +7,7 @@ export type CommentRow = RowDataPacket & {
   user_id: number;
   content: string;
   author_nickname: string;
+  author_role: string;
   author_profile_image_url: string | null;
   author_favorite_team_short_name: string | null;
   created_at: Date;
@@ -19,6 +20,7 @@ export type CommentItem = {
   userId: number;
   content: string;
   authorNickname: string;
+  authorRole: string;
   authorProfileImageUrl: string | null;
   authorFavoriteTeamShortName: string | null;
   createdAt: Date;
@@ -32,6 +34,7 @@ export function toCommentItem(row: CommentRow): CommentItem {
     userId: row.user_id,
     content: row.content,
     authorNickname: row.author_nickname,
+    authorRole: row.author_role,
     authorProfileImageUrl: row.author_profile_image_url,
     authorFavoriteTeamShortName: row.author_favorite_team_short_name,
     createdAt: row.created_at,
@@ -61,6 +64,7 @@ export async function listCommentsByPostId(postId: number) {
        c.user_id,
        c.content,
        u.nickname AS author_nickname,
+       u.role AS author_role,
        u.profile_image_url AS author_profile_image_url,
        t.short_name AS author_favorite_team_short_name,
        c.created_at,
@@ -84,6 +88,7 @@ export async function findCommentById(id: number) {
        c.user_id,
        c.content,
        u.nickname AS author_nickname,
+       u.role AS author_role,
        u.profile_image_url AS author_profile_image_url,
        t.short_name AS author_favorite_team_short_name,
        c.created_at,

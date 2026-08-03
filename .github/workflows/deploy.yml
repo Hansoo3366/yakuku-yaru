@@ -88,6 +88,7 @@ jobs:
             ${{ env.WEB_IMAGE_LATEST }}
           build-args: |
             NEXT_PUBLIC_API_URL=${{ secrets.NEXT_PUBLIC_API_URL }}
+            NEXT_PUBLIC_CONTACT_EMAIL=${{ vars.NEXT_PUBLIC_CONTACT_EMAIL || 'contact@yakuku-yaru.today' }}
           cache-from: type=gha,scope=web
           cache-to: type=gha,mode=max,scope=web
 

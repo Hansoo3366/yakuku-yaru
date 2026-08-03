@@ -12,11 +12,11 @@ Cloud Server
   └─ mysql  MySQL 8.4
 ```
 
-초기 테스트 배포는 서버 IP와 포트로 접근할 수 있습니다.
+`web`과 `api` 포트는 서버의 loopback에만 바인딩하고, 외부 사용자는 Caddy를 통해서만 접근합니다.
 
 ```txt
-http://SERVER_IP:3000       Web
-http://SERVER_IP:4000/api   API
+127.0.0.1:3000       Web (서버 내부 확인용)
+127.0.0.1:4000/api   API (서버 내부 확인용)
 ```
 
 현재 제출용 배포는 도메인과 HTTPS를 기준으로 합니다.
@@ -53,7 +53,8 @@ cp .env.production.example .env.production
 `.env.production`에서 반드시 수정합니다.
 
 ```env
-NEXT_PUBLIC_API_URL=http://YOUR_SERVER_IP:4000/api
+NEXT_PUBLIC_API_URL=https://YOUR_DOMAIN/api
+APP_URL=https://YOUR_DOMAIN
 APP_DOMAIN=YOUR_DOMAIN
 JWT_SECRET=replace-with-a-long-random-secret
 JWT_REMEMBER_EXPIRES_IN=30d
@@ -61,12 +62,7 @@ MYSQL_PASSWORD=replace-with-strong-password
 MYSQL_ROOT_PASSWORD=replace-with-strong-root-password
 ```
 
-도메인을 연결한 뒤에는 `NEXT_PUBLIC_API_URL`을 도메인 기준으로 바꿉니다.
-
-```env
-NEXT_PUBLIC_API_URL=https://yakuku-yaru.today/api
-APP_DOMAIN=yakuku-yaru.today
-```
+`APP_URL`과 `NEXT_PUBLIC_API_URL`은 실제 HTTPS 서비스 도메인과 정확히 일치해야 합니다.
 
 ## 4. 컨테이너 실행
 
@@ -91,8 +87,8 @@ docker compose --env-file .env.production -f docker-compose.prod.yml logs -f mys
 ## 7. 접속 확인
 
 ```txt
-http://SERVER_IP:3000
-http://SERVER_IP:4000/api/health
+http://127.0.0.1:3000
+http://127.0.0.1:4000/api/health
 ```
 
 도메인 연결 후에는 아래 주소를 확인합니다.
@@ -108,6 +104,13 @@ https://yakuku-yaru.today/uploads/<uploaded-file-name>
 ```bash
 git pull
 docker compose --env-file .env.production -f docker-compose.prod.yml up -d --build
+```
+
+기존 업로드 중 DB에서 더 이상 참조하지 않는 파일은 먼저 dry run으로 확인한 뒤 정리합니다.
+
+```bash
+docker compose --env-file .env.production -f docker-compose.prod.yml exec api npm run uploads:prune --workspace @yakuku-yaru/api
+docker compose --env-file .env.production -f docker-compose.prod.yml exec api npm run uploads:prune --workspace @yakuku-yaru/api -- --delete
 ```
 
 ## 9. GitHub Actions 자동 배포
@@ -268,7 +271,7 @@ GitHub Actions 자동 배포에서도 Caddy를 함께 실행하려면 repository
 DEPLOY_COMPOSE_PROFILES=proxy
 ```
 
-도메인 HTTPS 접속이 확인되면 Google Cloud 방화벽에서 `3000`, `4000` 포트는 닫고 `80`, `443`만 외부에 열어두는 것을 권장합니다.
+Google Cloud 방화벽에서도 `3000`, `4000` 포트는 닫고 `80`, `443`만 외부에 열어둡니다.
 
 ## 10-1. 운영 환경 변수
 

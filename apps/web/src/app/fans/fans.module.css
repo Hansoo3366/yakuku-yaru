@@ -230,8 +230,14 @@
   min-width: 0;
 }
 
-.identity strong {
-  display: block;
+.identityName {
+  align-items: center;
+  display: flex;
+  gap: 6px;
+  min-width: 0;
+}
+
+.identityName strong {
   font-size: 16px;
   font-weight: 800;
   letter-spacing: -0.025em;
@@ -240,7 +246,7 @@
   white-space: nowrap;
 }
 
-.identity span {
+.identity > span {
   color: var(--fan-muted);
   display: block;
   font-size: 11px;
@@ -364,6 +370,13 @@
   font-size: var(--type-page-title);
   font-weight: 900;
   letter-spacing: -0.045em;
+}
+
+.profileNameRow {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .profileIdentity p {

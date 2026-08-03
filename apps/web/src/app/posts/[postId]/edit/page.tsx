@@ -1,21 +1,17 @@
 'use client';
 
-import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { zodResolver } from '@hookform/resolvers/zod';
 import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { PostEditor } from '@/components/PostEditor';
 import { ApiError } from '@/lib/api';
 import { useAuthStore } from '@/lib/auth-store';
 import { useAuthGuard } from '@/lib/use-auth-guard';
 import { fetchPost, updatePost } from '@/lib/post-api';
 import { Skeleton } from '@/components/Skeleton';
-import {
-  postFormSchema,
-  type PostFormValues,
-} from '@/lib/form-schemas';
+import type { PostFormValues } from '@/lib/form-schemas';
 import { queryKeys } from '@/lib/query-keys';
+import { useMeQuery } from '@/lib/queries';
 
 export default function EditPostPage() {
   const params = useParams<{ postId: string }>();
@@ -23,19 +19,15 @@ export default function EditPostPage() {
   const queryClient = useQueryClient();
   useAuthGuard();
   const token = useAuthStore((state) => state.token);
+  const storedUser = useAuthStore((state) => state.user);
   const hasHydrated = useAuthStore((state) => state.hasHydrated);
+  const meQuery = useMeQuery(token);
   const postId = Number(params.postId);
   const [errorMessage, setErrorMessage] = useState('');
   const [isLoaded, setIsLoaded] = useState(false);
-  const {
-    formState: { errors, isSubmitting },
-    handleSubmit,
-    register,
-    reset,
-  } = useForm<PostFormValues>({
-    defaultValues: { title: '', content: '' },
-    resolver: zodResolver(postFormSchema),
-  });
+  const [initialValues, setInitialValues] = useState<PostFormValues | null>(null);
+  const currentUser = meQuery.data?.user ?? storedUser;
+  const isAdmin = currentUser?.role === 'admin';
 
   useEffect(() => {
     if (!hasHydrated) {
@@ -49,13 +41,18 @@ export default function EditPostPage() {
 
     fetchPost(postId)
       .then((response) => {
-        reset({
+        setInitialValues({
+          category:
+            response.post.category === 'notice' && !isAdmin
+              ? 'free'
+              : response.post.category,
           title: response.post.title,
           content: response.post.content,
+          isPinned: isAdmin ? response.post.isPinned : false,
         });
       })
       .finally(() => setIsLoaded(true));
-  }, [hasHydrated, postId, reset, router, token]);
+  }, [hasHydrated, isAdmin, postId, router, token]);
 
   async function onSubmit(values: PostFormValues) {
     if (!token) {
@@ -66,7 +63,18 @@ export default function EditPostPage() {
     setErrorMessage('');
 
     try {
-      const response = await updatePost(postId, values, token);
+      const response = await updatePost(
+        postId,
+        {
+          ...values,
+          category:
+            !isAdmin && values.category === 'notice'
+              ? 'free'
+              : values.category,
+          isPinned: isAdmin ? values.isPinned : false,
+        },
+        token,
+      );
       queryClient.setQueryData(queryKeys.post(postId), {
         post: response.post,
       });
@@ -81,7 +89,7 @@ export default function EditPostPage() {
     }
   }
 
-  if (!isLoaded) {
+  if (!isLoaded || !initialValues) {
     return (
       <main className="app-shell">
         <Skeleton height={32} width="60%" />
@@ -91,62 +99,15 @@ export default function EditPostPage() {
   }
 
   return (
-    <main className="app-shell">
-      <Link className="back-link" href={`/posts/${postId}`}>
-        게시글로
-      </Link>
-
-      <header className="app-page-header">
-        <span className="eyebrow">Edit Post</span>
-        <h1>후기 수정</h1>
-      </header>
-
-      <form className="form-grid" onSubmit={handleSubmit(onSubmit)}>
-        <section className="card stack">
-          <div className="field">
-            <label className="field-label" htmlFor="title-input">
-              제목
-            </label>
-            <input
-              className="form-input"
-              id="title-input"
-              {...register('title')}
-            />
-            {errors.title?.message ? (
-              <p className="form-error">{errors.title.message}</p>
-            ) : null}
-          </div>
-          <div className="field">
-            <label className="field-label" htmlFor="content-input">
-              본문
-            </label>
-            <textarea
-              className="form-textarea"
-              id="content-input"
-              rows={10}
-              {...register('content')}
-            />
-            {errors.content?.message ? (
-              <p className="form-error">{errors.content.message}</p>
-            ) : null}
-          </div>
-        </section>
-
-        {errorMessage ? <p className="form-error">{errorMessage}</p> : null}
-
-        <div className="action-bar">
-          <button
-            className="btn btn-primary btn-lg"
-            disabled={isSubmitting}
-            type="submit"
-          >
-            {isSubmitting ? '저장 중' : '수정 완료'}
-          </button>
-          <Link className="btn btn-ghost btn-lg" href={`/posts/${postId}`}>
-            취소
-          </Link>
-        </div>
-      </form>
-    </main>
+    <PostEditor
+      cancelHref={`/posts/${postId}`}
+      description="글의 종류와 내용을 다시 확인하고 더 정확하게 다듬어주세요."
+      errorMessage={errorMessage}
+      initialValues={initialValues}
+      isAdmin={isAdmin}
+      key={`${postId}-${isAdmin}-${initialValues.category}-${initialValues.isPinned}`}
+      mode="edit"
+      onSubmit={onSubmit}
+    />
   );
 }

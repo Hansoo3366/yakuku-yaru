@@ -41,6 +41,7 @@ export const queryKeys = {
     page: number;
     keyword?: string;
     scope?: 'latest' | 'myTeam' | 'following';
+    category?: import('./post-api').PostCategory;
     token?: string | null;
   }) =>
     [
@@ -48,6 +49,7 @@ export const queryKeys = {
       input.page,
       input.keyword ?? '',
       input.scope ?? 'latest',
+      input.category ?? null,
       input.token ?? null,
     ] as const,
   post: (postId: number) => ['post', postId] as const,

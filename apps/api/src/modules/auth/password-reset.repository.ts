@@ -10,6 +10,10 @@ type PasswordResetTokenRow = RowDataPacket & {
   used_at: Date | null;
 };
 
+function hashPasswordResetToken(token: string) {
+  return crypto.createHash('sha256').update(token).digest('hex');
+}
+
 export async function invalidatePasswordResetTokensForUser(userId: number) {
   await db.execute(
     `UPDATE password_reset_tokens
@@ -22,19 +26,21 @@ export async function invalidatePasswordResetTokensForUser(userId: number) {
 
 export async function createPasswordResetToken(userId: number) {
   const token = crypto.randomBytes(32).toString('hex');
+  const tokenHash = hashPasswordResetToken(token);
 
   await invalidatePasswordResetTokensForUser(userId);
 
   await db.execute<ResultSetHeader>(
     `INSERT INTO password_reset_tokens (user_id, token, expires_at)
      VALUES (?, ?, DATE_ADD(CURRENT_TIMESTAMP, INTERVAL 1 HOUR))`,
-    [userId, token],
+    [userId, tokenHash],
   );
 
   return token;
 }
 
 export async function findUsablePasswordResetToken(token: string) {
+  const tokenHash = hashPasswordResetToken(token);
   const [rows] = await db.query<PasswordResetTokenRow[]>(
     `SELECT id, user_id, token, expires_at, used_at
      FROM password_reset_tokens
@@ -42,7 +48,7 @@ export async function findUsablePasswordResetToken(token: string) {
        AND used_at IS NULL
        AND expires_at > CURRENT_TIMESTAMP
      LIMIT 1`,
-    [token],
+    [tokenHash],
   );
 
   return rows[0] ?? null;

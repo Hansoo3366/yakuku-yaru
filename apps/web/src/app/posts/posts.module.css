@@ -248,6 +248,40 @@
   color: #ffffff;
 }
 
+.categoryTabs {
+  border-bottom: 1px solid #deded9;
+  display: flex;
+  gap: 18px;
+  margin-bottom: 18px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.categoryTabs button {
+  background: transparent;
+  border: 0;
+  color: #777777;
+  flex: 0 0 auto;
+  font-size: 12px;
+  font-weight: 800;
+  min-height: 42px;
+  padding: 0 1px;
+  position: relative;
+}
+
+.categoryTabs .categoryTabActive {
+  color: #111111;
+}
+
+.categoryTabs .categoryTabActive::after {
+  background: var(--team-color, #111111);
+  bottom: -1px;
+  content: '';
+  height: 3px;
+  inset-inline: 0;
+  position: absolute;
+}
+
 .postList {
   border-top: 2px solid #111111;
 }
@@ -328,6 +362,35 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.postTitleLine {
+  align-items: center;
+  display: flex;
+  gap: 9px;
+  min-width: 0;
+}
+
+.categoryBadge {
+  background: #eeeeea;
+  color: #444444;
+  flex: 0 0 auto;
+  font-size: 9px;
+  font-weight: 900;
+  padding: 4px 6px;
+}
+
+.noticeBadge {
+  background: #111111;
+  color: #ffffff;
+}
+
+.requestStatus {
+  border: 1px solid currentColor;
+  color: var(--team-color-ink, #333333);
+  font-size: 9px;
+  font-weight: 900;
+  padding: 2px 5px;
 }
 
 .postTitle:hover,
@@ -454,6 +517,55 @@
   z-index: 45;
 }
 
+.bottomWriteCta {
+  align-items: center;
+  background: #111111;
+  border-left: 7px solid var(--team-color, #ffffff);
+  color: #ffffff;
+  display: flex;
+  gap: 28px;
+  justify-content: space-between;
+  margin-top: 42px;
+  padding: 26px 28px;
+}
+
+.bottomWriteCta > div {
+  display: grid;
+  gap: 4px;
+}
+
+.bottomWriteCta > div > span {
+  color: rgba(255, 255, 255, 0.5);
+  font-family: ui-monospace, 'SFMono-Regular', Consolas, monospace;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+}
+
+.bottomWriteCta strong {
+  font-size: 17px;
+  font-weight: 900;
+  letter-spacing: -0.025em;
+}
+
+.bottomWriteCta p {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 11px;
+}
+
+.bottomWriteCta > a {
+  align-items: center;
+  background: var(--team-color, #ffffff);
+  color: var(--team-color-contrast, #111111);
+  display: inline-flex;
+  flex: 0 0 auto;
+  font-size: 12px;
+  font-weight: 900;
+  gap: 18px;
+  min-height: 46px;
+  padding: 0 16px;
+}
+
 .writeButton,
 .loginButton,
 .clearButton,
@@ -547,12 +659,31 @@
     font-size: 15px;
   }
 
+  .categoryTabs {
+    gap: 16px;
+  }
+
+  .categoryBadge {
+    display: none;
+  }
+
   .teamTag {
     display: none;
   }
 
   .mobileWriteButton {
     display: inline-flex;
+  }
+
+  .bottomWriteCta {
+    align-items: flex-start;
+    flex-direction: column;
+    padding: 22px;
+  }
+
+  .bottomWriteCta > a {
+    justify-content: space-between;
+    width: 100%;
   }
 }
 

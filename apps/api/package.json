@@ -14,6 +14,7 @@
     "sync:kbo-season-projection": "node dist/scripts/sync-kbo-season-projection.js",
     "sync:kbo-players": "node dist/scripts/sync-kbo-players.js",
     "sync:kbo-game-center": "node dist/scripts/sync-kbo-game-center.js",
+    "uploads:prune": "node dist/scripts/prune-orphan-uploads.js",
     "db:reset-users": "node dist/scripts/reset-users-and-seed-admin.js",
     "db:reset-app": "node dist/scripts/reset-app-data.js",
     "db:reset-games": "node dist/scripts/reset-games-kbo.js",
@@ -22,6 +23,7 @@
     "sync:kbo-season-projection:dev": "tsx src/scripts/sync-kbo-season-projection.ts",
     "sync:kbo-players:dev": "tsx src/scripts/sync-kbo-players.ts",
     "sync:kbo-game-center:dev": "tsx src/scripts/sync-kbo-game-center.ts",
+    "uploads:prune:dev": "tsx src/scripts/prune-orphan-uploads.ts",
     "db:reset-users:dev": "tsx src/scripts/reset-users-and-seed-admin.ts",
     "db:reset-app:dev": "tsx src/scripts/reset-app-data.ts",
     "db:reset-games:dev": "tsx src/scripts/reset-games-kbo.ts"

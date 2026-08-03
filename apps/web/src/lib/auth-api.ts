@@ -55,6 +55,9 @@ export function register(input: {
   password: string;
   nickname: string;
   favoriteTeamId?: number | null;
+  agreedToTerms: boolean;
+  agreedToPrivacy: boolean;
+  confirmedAge: boolean;
 }) {
   return request<RegisterResponse>('/auth/register', {
     method: 'POST',

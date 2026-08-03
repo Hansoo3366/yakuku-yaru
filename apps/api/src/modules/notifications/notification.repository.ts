@@ -68,6 +68,34 @@ export async function createNotification(input: {
   );
 }
 
+export async function createAdminNotifications(input: {
+  actorUserId: number;
+  postId?: number | null;
+  type: 'feature_requested' | 'content_reported';
+  message: string;
+}) {
+  await db.execute<ResultSetHeader>(
+    `INSERT INTO notifications (
+      user_id,
+      actor_user_id,
+      post_id,
+      type,
+      message
+    )
+    SELECT id, ?, ?, ?, ?
+    FROM users
+    WHERE role = 'admin'
+      AND id <> ?`,
+    [
+      input.actorUserId,
+      input.postId ?? null,
+      input.type,
+      input.message,
+      input.actorUserId,
+    ],
+  );
+}
+
 export async function listNotifications(userId: number) {
   const [rows] = await db.query<NotificationRow[]>(
     `SELECT id, user_id, actor_user_id, attendance_record_id, post_id, type, message, read_at, created_at
@@ -120,15 +148,12 @@ export async function deleteNotification(input: {
   id: number;
   userId: number;
 }) {
-  await db.execute(
-    `DELETE FROM notifications WHERE id = ? AND user_id = ?`,
-    [input.id, input.userId],
-  );
+  await db.execute(`DELETE FROM notifications WHERE id = ? AND user_id = ?`, [
+    input.id,
+    input.userId,
+  ]);
 }
 
 export async function deleteAllNotifications(userId: number) {
-  await db.execute(
-    `DELETE FROM notifications WHERE user_id = ?`,
-    [userId],
-  );
+  await db.execute(`DELETE FROM notifications WHERE user_id = ?`, [userId]);
 }

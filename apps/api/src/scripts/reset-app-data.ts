@@ -1,20 +1,20 @@
 import { runMigrations } from '../config/migrations.js';
 import { runKboSyncMode } from '../modules/kbo-schedule/sync-modes.js';
 import { clearAppData } from './lib/clear-app-data.js';
-import { seedAdminUser } from './lib/seed-admin.js';
+import { getAdminSeedConfig, seedAdminUser } from './lib/seed-admin.js';
 
 const skipKboSync = process.env.SKIP_KBO_SYNC === 'true';
+const adminSeedConfig = getAdminSeedConfig();
 
 await runMigrations();
 await clearAppData();
 
-const { adminEmail, adminPassword } = await seedAdminUser();
+const { adminEmail } = await seedAdminUser(adminSeedConfig);
 
 console.log('[db] 경기·사용자·게시판·직관·알림 데이터를 모두 비웠습니다.');
 console.log('[db] 관리자 계정을 생성했습니다.');
 console.log(`      이메일: ${adminEmail}`);
-console.log(`      비밀번호: ${adminPassword}`);
-console.log('      (운영: ADMIN_EMAIL / ADMIN_PASSWORD 환경 변수로 지정)');
+console.log('      비밀번호는 로그에 표시하지 않습니다.');
 
 if (skipKboSync) {
   console.log('[db] SKIP_KBO_SYNC=true — KBO 동기화를 건너뜁니다.');

@@ -28,6 +28,16 @@ async function columnExists(tableName: string, columnName: string) {
 }
 
 export async function runMigrations() {
+  const hasSessionVersion = await columnExists('users', 'session_version');
+
+  if (!hasSessionVersion) {
+    await db.execute(
+      `ALTER TABLE users
+       ADD COLUMN session_version INT UNSIGNED NOT NULL DEFAULT 0
+       AFTER password_hash`,
+    );
+  }
+
   const hasWatchType = await columnExists('attendance_records', 'watch_type');
 
   if (!hasWatchType) {
@@ -80,7 +90,10 @@ export async function runMigrations() {
     );
   }
 
-  const hasCancellationReason = await columnExists('games', 'cancellation_reason');
+  const hasCancellationReason = await columnExists(
+    'games',
+    'cancellation_reason',
+  );
 
   if (!hasCancellationReason) {
     await db.execute(
@@ -136,7 +149,7 @@ export async function runMigrations() {
     `UPDATE teams
      SET ticket_url = CASE short_name
        WHEN 'LG' THEN 'https://www.ticketlink.co.kr/sports/137/59'
-       WHEN '두산' THEN 'https://ticket.interpark.com/Contents/Sports/GoodsInfo?SportsCode=07001&TeamCode=PB004'
+       WHEN '두산' THEN 'https://nol.yanolja.com/ticket/genre/sports/bears'
        WHEN 'KIA' THEN 'https://www.ticketlink.co.kr/sports/137/58'
        WHEN '삼성' THEN 'https://www.ticketlink.co.kr/sports/137/57'
        WHEN '한화' THEN 'https://www.ticketlink.co.kr/sports/137/63'
@@ -144,10 +157,60 @@ export async function runMigrations() {
        WHEN 'SSG' THEN 'https://ticket.ssg.com/ticket'
        WHEN 'NC' THEN 'https://ticket.ncdinos.com/games'
        WHEN 'KT' THEN 'https://www.ticketlink.co.kr/sports/137/62'
-       WHEN '키움' THEN 'https://ticket.interpark.com/Contents/Sports/GoodsInfo?SportsCode=07001&TeamCode=PB003'
+       WHEN '키움' THEN 'https://nol.yanolja.com/ticket/genre/sports/heroes'
        ELSE ticket_url
      END
-     WHERE short_name IN ('LG', '두산', 'KIA', '삼성', '한화', '롯데', 'SSG', 'NC', 'KT', '키움')`,
+     WHERE short_name IN ('LG', '두산', 'KIA', '삼성', '한화', '롯데', 'SSG', 'NC', 'KT', '키움')
+       AND ticket_url IS NULL`,
+  );
+
+  const hasTermsAgreedAt = await columnExists('users', 'terms_agreed_at');
+
+  if (!hasTermsAgreedAt) {
+    await db.execute(
+      `ALTER TABLE users
+       ADD COLUMN terms_agreed_at DATETIME NULL AFTER email_verified_at,
+       ADD COLUMN privacy_agreed_at DATETIME NULL AFTER terms_agreed_at,
+       ADD COLUMN age_confirmed_at DATETIME NULL AFTER privacy_agreed_at`,
+    );
+  }
+
+  const hasPostCategory = await columnExists('posts', 'category');
+
+  if (!hasPostCategory) {
+    await db.execute(
+      `ALTER TABLE posts
+       ADD COLUMN category VARCHAR(20) NOT NULL DEFAULT 'review' AFTER user_id,
+       ADD COLUMN is_pinned BOOLEAN NOT NULL DEFAULT FALSE AFTER content,
+       ADD COLUMN request_status VARCHAR(20) NULL AFTER is_pinned,
+       ADD INDEX idx_posts_category_pinned_created (category, is_pinned, created_at)`,
+    );
+  }
+
+  await db.execute(
+    `CREATE TABLE IF NOT EXISTS content_reports (
+      id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+      reporter_user_id BIGINT UNSIGNED NOT NULL,
+      target_type VARCHAR(20) NOT NULL,
+      target_id BIGINT UNSIGNED NOT NULL,
+      reason VARCHAR(30) NOT NULL,
+      detail VARCHAR(500) NULL,
+      status VARCHAR(20) NOT NULL DEFAULT 'pending',
+      admin_note VARCHAR(500) NULL,
+      resolved_by_user_id BIGINT UNSIGNED NULL,
+      resolved_at DATETIME NULL,
+      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      PRIMARY KEY (id),
+      UNIQUE KEY uq_content_reports_reporter_target (reporter_user_id, target_type, target_id),
+      KEY idx_content_reports_status_created (status, created_at),
+      CONSTRAINT fk_content_reports_reporter
+        FOREIGN KEY (reporter_user_id) REFERENCES users(id)
+        ON DELETE CASCADE,
+      CONSTRAINT fk_content_reports_resolver
+        FOREIGN KEY (resolved_by_user_id) REFERENCES users(id)
+        ON DELETE SET NULL
+    )`,
   );
 
   await db.execute(
@@ -404,7 +467,21 @@ export async function runMigrations() {
     )`,
   );
 
-  const hasPlayerCheerYoutubeId = await columnExists('player_cheers', 'youtube_id');
+  await db.execute(
+    `UPDATE player_cheers pc
+     JOIN players p ON p.id = pc.player_id
+     SET pc.title = CASE
+       WHEN p.position LIKE '%투수%' THEN '등장곡'
+       ELSE '응원가'
+     END
+     WHERE pc.title IS NULL
+        OR pc.title NOT IN ('등장곡', '응원가')`,
+  );
+
+  const hasPlayerCheerYoutubeId = await columnExists(
+    'player_cheers',
+    'youtube_id',
+  );
 
   if (!hasPlayerCheerYoutubeId) {
     await db.execute(

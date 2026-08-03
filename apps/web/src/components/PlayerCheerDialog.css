@@ -107,20 +107,22 @@
 }
 
 .cheer-dialog-photo {
-  aspect-ratio: 4 / 5;
+  aspect-ratio: 1;
   background: #d4dde2;
-  border: 0;
-  border-radius: 8px;
+  border: 3px solid rgba(255, 255, 255, 0.82);
+  border-radius: 50%;
   display: block;
   height: auto;
-  max-height: 270px;
-  object-fit: cover;
-  width: 100%;
+  justify-self: center;
+  max-height: 214px;
+  object-fit: contain;
+  width: min(100%, 214px);
 }
 
 .cheer-dialog-photo--logo {
   aspect-ratio: 1;
   background: rgba(255, 255, 255, 0.76);
+  border-radius: 12px;
   object-fit: contain;
   padding: 34px;
 }

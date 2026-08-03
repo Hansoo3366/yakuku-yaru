@@ -5,6 +5,8 @@ import swaggerUi from 'swagger-ui-express';
 import { openApiDocument } from './config/openapi.js';
 import { env } from './config/env.js';
 import { errorHandler } from './middleware/error-handler.js';
+import { requireTrustedOrigin } from './middleware/request-origin.js';
+import { rateLimit } from './middleware/rate-limit.js';
 import { adminRouter } from './modules/admin/admin.routes.js';
 import { attendanceRouter } from './modules/attendance/attendance.routes.js';
 import { commentRouter } from './modules/comments/comment.routes.js';
@@ -15,6 +17,7 @@ import { notificationRouter } from './modules/notifications/notification.routes.
 import { playerCheerRouter } from './modules/player-cheers/player-cheer.routes.js';
 import { postRouter } from './modules/posts/post.routes.js';
 import { reminderRouter } from './modules/reminders/reminder.routes.js';
+import { reportRouter } from './modules/reports/report.routes.js';
 import { teamRouter } from './modules/teams/team.routes.js';
 import { userRouter } from './modules/users/user.routes.js';
 import { healthRouter } from './routes/health.js';
@@ -22,6 +25,12 @@ import { healthRouter } from './routes/health.js';
 export function createApp() {
   const app = express();
   app.set('trust proxy', 1);
+  const globalApiRateLimit = rateLimit({
+    scope: 'api:global',
+    windowMs: 60 * 1000,
+    max: 600,
+    message: '요청이 너무 많습니다. 잠시 후 다시 시도해주세요.',
+  });
 
   app.use(
     helmet({
@@ -32,12 +41,24 @@ export function createApp() {
   );
   app.use(
     cors({
-      origin: true,
+      origin(origin, callback) {
+        callback(null, !origin || env.allowedOrigins.includes(origin));
+      },
       credentials: true,
     }),
   );
-  app.use(express.json());
-  app.use('/uploads', express.static(env.uploadDir));
+  app.use(requireTrustedOrigin);
+  app.use(globalApiRateLimit);
+  app.use(express.json({ limit: '100kb' }));
+  app.use(
+    '/uploads',
+    express.static(env.uploadDir, {
+      dotfiles: 'deny',
+      index: false,
+      immutable: true,
+      maxAge: '1d',
+    }),
+  );
 
   if (env.nodeEnv !== 'production') {
     app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(openApiDocument));
@@ -59,6 +80,7 @@ export function createApp() {
   app.use('/api/games', gameRouter);
   app.use('/api/attendance-records', attendanceRouter);
   app.use('/api/reminders', reminderRouter);
+  app.use('/api/reports', reportRouter);
 
   app.use(errorHandler);
 

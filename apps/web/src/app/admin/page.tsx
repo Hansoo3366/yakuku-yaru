@@ -1,5 +1,7 @@
 'use client';
 
+/* eslint-disable @next/next/no-img-element */
+
 import Link from 'next/link';
 import {
   type Dispatch,
@@ -12,29 +14,40 @@ import {
   useState,
 } from 'react';
 import {
+  clearAdminAttendancePhoto,
+  clearAdminUserProfileImage,
   createAdminGame,
+  deleteAdminAttendanceRecord,
   deleteAdminComment,
   deleteAdminPost,
   deleteAdminUser,
   fetchAdminSummary,
+  listAdminAttendanceRecords,
   listAdminComments,
   listAdminGames,
   listAdminPosts,
+  listAdminReports,
   listAdminUsers,
   updateAdminGame,
+  updateAdminPostModeration,
+  updateAdminReport,
   updateAdminUserEmailVerification,
   updateAdminUserRole,
+  type AdminAttendanceRecord,
   type AdminComment,
   type AdminGame,
   type AdminGameInput,
   type AdminPost,
+  type AdminReport,
   type AdminSummary,
   type AdminUser,
 } from '@/lib/admin-api';
+import { getAssetUrl } from '@/lib/api';
 import { useAuthStore } from '@/lib/auth-store';
 import { fetchMe } from '@/lib/auth-api';
 import { listTeams, type Team } from '@/lib/baseball-api';
 import { formatKoreanDateTimeShort } from '@/lib/date-format';
+import { FEATURE_STATUS_LABELS, POST_CATEGORY_LABELS } from '@/lib/post-meta';
 import {
   deleteAdminPlayerCheer,
   deleteAdminTeamCheer,
@@ -42,13 +55,50 @@ import {
   listAdminPlayerCheers,
   saveAdminTeamCheer,
   saveAdminPlayerCheer,
+  getPlayerCheerType,
   type PlayerCheer,
   type PlayerCheerPagination,
   type PlayerCheerRosterScope,
   type TeamCheer,
 } from '@/lib/player-cheer-api';
 
-type AdminTab = 'users' | 'posts' | 'comments' | 'games' | 'cheers';
+type AdminTab =
+  | 'users'
+  | 'posts'
+  | 'comments'
+  | 'media'
+  | 'reports'
+  | 'games'
+  | 'cheers';
+
+const ADMIN_TAB_LABELS: Record<AdminTab, string> = {
+  users: '사용자',
+  posts: '게시글',
+  comments: '댓글',
+  media: '이미지',
+  reports: '신고',
+  games: '경기',
+  cheers: '응원가',
+};
+
+const ADMIN_TABS: AdminTab[] = [
+  'users',
+  'posts',
+  'comments',
+  'media',
+  'reports',
+  'games',
+  'cheers',
+];
+
+const SUMMARY_LABELS: Record<keyof AdminSummary, string> = {
+  users: '사용자',
+  posts: '게시글',
+  comments: '댓글',
+  games: '경기',
+  pendingReports: '처리 대기 신고',
+  photos: '직관 이미지',
+};
 
 const emptyGameForm = {
   awayScore: '',
@@ -81,7 +131,7 @@ type CheerFilterInput = {
 
 type EditingCheerTarget =
   | { kind: 'team'; id: number; label: string }
-  | { kind: 'player'; id: number; label: string };
+  | { kind: 'player'; id: number; label: string; autoTitle: string };
 
 function toInput(form: GameForm): AdminGameInput {
   return {
@@ -102,29 +152,39 @@ function formatDate(value: string) {
 }
 
 function CheerFormFields({
+  autoTitle,
   cheerForm,
   setCheerForm,
 }: {
+  autoTitle?: string;
   cheerForm: CheerForm;
   setCheerForm: Dispatch<SetStateAction<CheerForm>>;
 }) {
   return (
     <>
-      <label className="admin-cheer-field">
-        <span>제목</span>
-        <input
-          autoComplete="off"
-          name="cheerTitle"
-          onChange={(event) =>
-            setCheerForm((current) => ({
-              ...current,
-              title: event.target.value,
-            }))
-          }
-          placeholder="응원가 제목…"
-          value={cheerForm.title}
-        />
-      </label>
+      {autoTitle ? (
+        <div className="admin-cheer-auto-title">
+          <span>곡 구분 자동 입력</span>
+          <strong>{autoTitle}</strong>
+          <p>선수 포지션을 기준으로 저장됩니다.</p>
+        </div>
+      ) : (
+        <label className="admin-cheer-field">
+          <span>제목</span>
+          <input
+            autoComplete="off"
+            name="cheerTitle"
+            onChange={(event) =>
+              setCheerForm((current) => ({
+                ...current,
+                title: event.target.value,
+              }))
+            }
+            placeholder="팀 응원가 제목…"
+            value={cheerForm.title}
+          />
+        </label>
+      )}
       <label className="admin-cheer-field">
         <span>유튜브 영상 ID</span>
         <input
@@ -167,6 +227,10 @@ export default function AdminPage() {
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [posts, setPosts] = useState<AdminPost[]>([]);
   const [comments, setComments] = useState<AdminComment[]>([]);
+  const [attendanceRecords, setAttendanceRecords] = useState<
+    AdminAttendanceRecord[]
+  >([]);
+  const [reports, setReports] = useState<AdminReport[]>([]);
   const [games, setGames] = useState<AdminGame[]>([]);
   const [playerCheers, setPlayerCheers] = useState<PlayerCheer[]>([]);
   const [teamCheers, setTeamCheers] = useState<TeamCheer[]>([]);
@@ -174,6 +238,13 @@ export default function AdminPage() {
     useState<PlayerCheerPagination | null>(null);
   const [teams, setTeams] = useState<Team[]>([]);
   const [keyword, setKeyword] = useState('');
+  const [userRoleFilter, setUserRoleFilter] = useState('all');
+  const [userVerificationFilter, setUserVerificationFilter] = useState('all');
+  const [postCategoryFilter, setPostCategoryFilter] = useState('all');
+  const [postPinFilter, setPostPinFilter] = useState('all');
+  const [mediaTypeFilter, setMediaTypeFilter] = useState('all');
+  const [reportStatusFilter, setReportStatusFilter] = useState('all');
+  const [gameStatusFilter, setGameStatusFilter] = useState('all');
   const [cheerKeyword, setCheerKeyword] = useState('');
   const [cheerTeamId, setCheerTeamId] = useState<number | null>(null);
   const [cheerPage, setCheerPage] = useState(1);
@@ -200,6 +271,19 @@ export default function AdminPage() {
   const hasHydrated = useAuthStore((state) => state.hasHydrated);
 
   useEffect(() => {
+    function syncTabWithHash() {
+      const nextTab = window.location.hash.slice(1) as AdminTab;
+      if (ADMIN_TABS.includes(nextTab)) {
+        setTab(nextTab);
+      }
+    }
+
+    syncTabWithHash();
+    window.addEventListener('hashchange', syncTabWithHash);
+    return () => window.removeEventListener('hashchange', syncTabWithHash);
+  }, []);
+
+  useEffect(() => {
     cheerFilterRef.current = {
       keyword: cheerKeyword,
       page: cheerPage,
@@ -222,6 +306,8 @@ export default function AdminPage() {
         usersResponse,
         postsResponse,
         commentsResponse,
+        attendanceResponse,
+        reportsResponse,
         gamesResponse,
         teamCheersResponse,
         cheersResponse,
@@ -230,6 +316,8 @@ export default function AdminPage() {
         listAdminUsers(token, nextKeyword),
         listAdminPosts(token, nextKeyword),
         listAdminComments(token, nextKeyword),
+        listAdminAttendanceRecords(token, nextKeyword),
+        listAdminReports(token),
         listAdminGames(token),
         listAdminTeamCheers(token),
         listAdminPlayerCheers(token, {
@@ -247,6 +335,8 @@ export default function AdminPage() {
       setUsers(usersResponse.items);
       setPosts(postsResponse.items);
       setComments(commentsResponse.items);
+      setAttendanceRecords(attendanceResponse.items);
+      setReports(reportsResponse.items);
       setGames(gamesResponse.items);
       setTeamCheers(teamCheersResponse.items);
       setPlayerCheers(cheersResponse.items);
@@ -330,14 +420,16 @@ export default function AdminPage() {
   }
 
   function editCheer(player: PlayerCheer) {
+    const autoTitle = getPlayerCheerType(player);
     setEditingCheerTarget({
       kind: 'player',
       id: player.playerId,
       label: `${player.name}${player.kboPlayerId ? ` · KBO ${player.kboPlayerId}` : ''}`,
+      autoTitle,
     });
     setCheerForm({
       lyrics: player.lyrics ?? '',
-      title: player.cheerTitle ?? '',
+      title: autoTitle,
       youtubeId: player.youtubeId ?? '',
     });
   }
@@ -382,7 +474,10 @@ export default function AdminPage() {
 
     const input = {
       lyrics: cheerForm.lyrics.trim() || null,
-      title: cheerForm.title.trim() || null,
+      title:
+        editingCheerTarget.kind === 'player'
+          ? editingCheerTarget.autoTitle
+          : cheerForm.title.trim() || '팀 응원가',
       youtubeId: cheerForm.youtubeId.trim() || null,
       youtubeUrl: null,
     };
@@ -398,6 +493,33 @@ export default function AdminPage() {
     closeCheerEditor();
     await loadAll(keyword);
   }
+
+  const visibleUsers = users.filter(
+    (user) =>
+      (userRoleFilter === 'all' || user.role === userRoleFilter) &&
+      (userVerificationFilter === 'all' ||
+        (userVerificationFilter === 'verified'
+          ? Boolean(user.emailVerifiedAt)
+          : !user.emailVerifiedAt)),
+  );
+  const visiblePosts = posts.filter(
+    (post) =>
+      (postCategoryFilter === 'all' || post.category === postCategoryFilter) &&
+      (postPinFilter === 'all' ||
+        (postPinFilter === 'pinned' ? post.isPinned : !post.isPinned)),
+  );
+  const visibleAttendanceRecords = attendanceRecords.filter(
+    (record) =>
+      record.photoUrl &&
+      (mediaTypeFilter === 'all' || record.watchType === mediaTypeFilter),
+  );
+  const visibleReports = reports.filter(
+    (report) =>
+      reportStatusFilter === 'all' || report.status === reportStatusFilter,
+  );
+  const visibleGames = games.filter(
+    (game) => gameStatusFilter === 'all' || game.status === gameStatusFilter,
+  );
 
   if (isLoading) {
     return (
@@ -426,14 +548,14 @@ export default function AdminPage() {
       <header className="app-page-header">
         <span className="eyebrow">Admin</span>
         <h1>운영 관리</h1>
-        <p>사용자, 게시판, KBO 경기 데이터를 관리합니다.</p>
+        <p>사용자 콘텐츠와 신고, 이미지, KBO 경기 데이터를 검수·관리합니다.</p>
       </header>
 
       <section className="admin-summary-grid">
         {summary
           ? Object.entries(summary).map(([key, value]) => (
               <div className="admin-summary-card" key={key}>
-                <span>{key}</span>
+                <span>{SUMMARY_LABELS[key as keyof AdminSummary]}</span>
                 <strong>{value}</strong>
               </div>
             ))
@@ -442,18 +564,16 @@ export default function AdminPage() {
 
       <form className="admin-toolbar" onSubmit={handleSearch}>
         <div className="admin-tabs" role="tablist" aria-label="관리 메뉴">
-          {(['users', 'posts', 'comments', 'games', 'cheers'] as const).map(
-            (item) => (
-              <button
-                className={tab === item ? 'active' : ''}
-                key={item}
-                onClick={() => setTab(item)}
-                type="button"
-              >
-                {item}
-              </button>
-            ),
-          )}
+          {ADMIN_TABS.map((item) => (
+            <button
+              className={tab === item ? 'active' : ''}
+              key={item}
+              onClick={() => setTab(item)}
+              type="button"
+            >
+              {ADMIN_TAB_LABELS[item]}
+            </button>
+          ))}
         </div>
         <input
           aria-label="관리 데이터 검색"
@@ -466,15 +586,163 @@ export default function AdminPage() {
         </button>
       </form>
 
+      {tab !== 'comments' && tab !== 'cheers' ? (
+        <section className="admin-filter-rail" aria-label="현재 목록 필터">
+          <div>
+            <span>FILTER</span>
+            <strong>{ADMIN_TAB_LABELS[tab]} 보기 조건</strong>
+          </div>
+          {tab === 'users' ? (
+            <>
+              <label>
+                <span>역할</span>
+                <select
+                  onChange={(event) => setUserRoleFilter(event.target.value)}
+                  value={userRoleFilter}
+                >
+                  <option value="all">전체 역할</option>
+                  <option value="user">일반 사용자</option>
+                  <option value="admin">관리자</option>
+                </select>
+              </label>
+              <label>
+                <span>이메일 인증</span>
+                <select
+                  onChange={(event) =>
+                    setUserVerificationFilter(event.target.value)
+                  }
+                  value={userVerificationFilter}
+                >
+                  <option value="all">전체 상태</option>
+                  <option value="verified">인증됨</option>
+                  <option value="unverified">미인증</option>
+                </select>
+              </label>
+              <b>{visibleUsers.length}명</b>
+            </>
+          ) : null}
+          {tab === 'posts' ? (
+            <>
+              <label>
+                <span>글 종류</span>
+                <select
+                  onChange={(event) =>
+                    setPostCategoryFilter(event.target.value)
+                  }
+                  value={postCategoryFilter}
+                >
+                  <option value="all">전체 글</option>
+                  {Object.entries(POST_CATEGORY_LABELS).map(
+                    ([value, label]) => (
+                      <option key={value} value={value}>
+                        {label}
+                      </option>
+                    ),
+                  )}
+                </select>
+              </label>
+              <label>
+                <span>고정 상태</span>
+                <select
+                  onChange={(event) => setPostPinFilter(event.target.value)}
+                  value={postPinFilter}
+                >
+                  <option value="all">전체 상태</option>
+                  <option value="pinned">상단 고정</option>
+                  <option value="unpinned">일반 글</option>
+                </select>
+              </label>
+              <b>{visiblePosts.length}건</b>
+            </>
+          ) : null}
+          {tab === 'media' ? (
+            <>
+              <label>
+                <span>관람 유형</span>
+                <select
+                  onChange={(event) => setMediaTypeFilter(event.target.value)}
+                  value={mediaTypeFilter}
+                >
+                  <option value="all">전체 이미지</option>
+                  <option value="stadium">직관</option>
+                  <option value="home">집관</option>
+                </select>
+              </label>
+              <b>{visibleAttendanceRecords.length}건</b>
+            </>
+          ) : null}
+          {tab === 'reports' ? (
+            <>
+              <label>
+                <span>처리 상태</span>
+                <select
+                  onChange={(event) =>
+                    setReportStatusFilter(event.target.value)
+                  }
+                  value={reportStatusFilter}
+                >
+                  <option value="all">전체 신고</option>
+                  <option value="pending">처리 대기</option>
+                  <option value="reviewing">확인 중</option>
+                  <option value="resolved">조치 완료</option>
+                  <option value="dismissed">문제 없음</option>
+                </select>
+              </label>
+              <b>{visibleReports.length}건</b>
+            </>
+          ) : null}
+          {tab === 'games' ? (
+            <>
+              <label>
+                <span>경기 상태</span>
+                <select
+                  onChange={(event) => setGameStatusFilter(event.target.value)}
+                  value={gameStatusFilter}
+                >
+                  <option value="all">전체 경기</option>
+                  <option value="scheduled">예정</option>
+                  <option value="finished">종료</option>
+                  <option value="cancelled">취소</option>
+                </select>
+              </label>
+              <b>{visibleGames.length}건</b>
+            </>
+          ) : null}
+        </section>
+      ) : null}
+
       {message ? <p className="form-success">{message}</p> : null}
 
       {tab === 'users' ? (
         <section className="admin-table-card">
-          <h2>유저 관리</h2>
+          <div className="admin-section-heading">
+            <div>
+              <h2>유저 관리</h2>
+              <p>
+                가입 정보와 권한을 확인하고, 부적절하거나 권리를 침해하는 프로필
+                사진을 내릴 수 있습니다.
+              </p>
+            </div>
+          </div>
           <div className="admin-table">
-            {users.map((user) => (
+            {visibleUsers.map((user) => (
               <div className="admin-row admin-row--user" key={user.id}>
-                <strong>{user.nickname}</strong>
+                <span className="admin-user-cell">
+                  {user.profileImageUrl ? (
+                    <img alt="" src={getAssetUrl(user.profileImageUrl)} />
+                  ) : (
+                    <i aria-hidden="true">{user.nickname.slice(0, 1)}</i>
+                  )}
+                  <span className="admin-user-copy">
+                    <strong>{user.nickname}</strong>
+                    <small>
+                      가입{' '}
+                      <time dateTime={user.createdAt}>
+                        {formatDate(user.createdAt)}
+                      </time>
+                    </small>
+                  </span>
+                </span>
                 <span>{user.email}</span>
                 <span>{user.favoriteTeamShortName ?? '팀 없음'}</span>
                 <span>
@@ -514,6 +782,30 @@ export default function AdminPage() {
                   <option value="verified">인증됨</option>
                   <option value="unverified">미인증</option>
                 </select>
+                {user.profileImageUrl ? (
+                  <button
+                    className="btn btn-ghost btn-sm admin-profile-photo-action"
+                    onClick={async () => {
+                      if (
+                        !token ||
+                        !window.confirm(
+                          `${user.nickname}님의 프로필 사진을 내릴까요? 부적절하거나 권리 침해가 있는 사진을 비공개 처리할 때 사용하는 기능입니다.`,
+                        )
+                      ) {
+                        return;
+                      }
+                      await clearAdminUserProfileImage(user.id, token);
+                      setMessage('프로필 사진을 내렸습니다.');
+                      await loadAll(keyword);
+                    }}
+                    title="부적절하거나 권리를 침해하는 프로필 사진을 내립니다."
+                    type="button"
+                  >
+                    프로필 사진 내리기
+                  </button>
+                ) : (
+                  <span className="admin-profile-photo-empty">기본 이미지</span>
+                )}
                 <button
                   className="btn btn-ghost btn-sm"
                   disabled={user.id === currentUserId}
@@ -533,6 +825,11 @@ export default function AdminPage() {
                 </button>
               </div>
             ))}
+            {!visibleUsers.length ? (
+              <p className="admin-filter-empty">
+                조건에 맞는 사용자가 없습니다.
+              </p>
+            ) : null}
           </div>
         </section>
       ) : null}
@@ -541,26 +838,119 @@ export default function AdminPage() {
         <section className="admin-table-card">
           <h2>게시글 관리</h2>
           <div className="admin-table">
-            {posts.map((post) => (
-              <div className="admin-row" key={post.id}>
-                <Link href={`/posts/${post.id}`}>{post.title}</Link>
-                <span>{post.authorNickname}</span>
-                <span>댓글 {post.commentCount}</span>
-                <time>{formatDate(post.createdAt)}</time>
-                <button
-                  className="btn btn-ghost btn-sm"
-                  onClick={async () => {
-                    if (!token || !window.confirm('게시글을 삭제할까요?'))
-                      return;
-                    await deleteAdminPost(post.id, token);
-                    await loadAll(keyword);
-                  }}
-                  type="button"
-                >
-                  삭제
-                </button>
-              </div>
+            {visiblePosts.map((post) => (
+              <article className="admin-content-card" key={post.id}>
+                <div className="admin-content-card-head">
+                  <div>
+                    <span>{POST_CATEGORY_LABELS[post.category]}</span>
+                    <Link href={`/posts/${post.id}`}>{post.title}</Link>
+                    <small>
+                      {post.authorNickname} · 댓글 {post.commentCount} ·{' '}
+                      {formatDate(post.createdAt)}
+                    </small>
+                  </div>
+                  {post.authorProfileImageUrl ? (
+                    <img
+                      alt={`${post.authorNickname} 프로필`}
+                      src={getAssetUrl(post.authorProfileImageUrl)}
+                    />
+                  ) : null}
+                </div>
+                <p>{post.content}</p>
+                <div className="admin-moderation-controls">
+                  <select
+                    aria-label={`${post.title} 분류`}
+                    onChange={async (event) => {
+                      if (!token) return;
+                      await updateAdminPostModeration(
+                        post.id,
+                        {
+                          category: event.target.value as AdminPost['category'],
+                          isPinned: post.isPinned,
+                          requestStatus: post.requestStatus,
+                        },
+                        token,
+                      );
+                      await loadAll(keyword);
+                    }}
+                    value={post.category}
+                  >
+                    {Object.entries(POST_CATEGORY_LABELS).map(
+                      ([value, label]) => (
+                        <option key={value} value={value}>
+                          {label}
+                        </option>
+                      ),
+                    )}
+                  </select>
+                  {post.category === 'feature' ? (
+                    <select
+                      aria-label={`${post.title} 처리 상태`}
+                      onChange={async (event) => {
+                        if (!token) return;
+                        await updateAdminPostModeration(
+                          post.id,
+                          {
+                            category: post.category,
+                            isPinned: post.isPinned,
+                            requestStatus: event.target
+                              .value as AdminPost['requestStatus'],
+                          },
+                          token,
+                        );
+                        await loadAll(keyword);
+                      }}
+                      value={post.requestStatus ?? 'received'}
+                    >
+                      {Object.entries(FEATURE_STATUS_LABELS).map(
+                        ([value, label]) => (
+                          <option key={value} value={value}>
+                            {label}
+                          </option>
+                        ),
+                      )}
+                    </select>
+                  ) : null}
+                  <label className="admin-pin-control">
+                    <input
+                      checked={post.isPinned}
+                      onChange={async (event) => {
+                        if (!token) return;
+                        await updateAdminPostModeration(
+                          post.id,
+                          {
+                            category: post.category,
+                            isPinned: event.target.checked,
+                            requestStatus: post.requestStatus,
+                          },
+                          token,
+                        );
+                        await loadAll(keyword);
+                      }}
+                      type="checkbox"
+                    />
+                    상단 고정
+                  </label>
+                  <button
+                    className="btn btn-ghost btn-sm"
+                    onClick={async () => {
+                      if (!token || !window.confirm('게시글을 삭제할까요?'))
+                        return;
+                      await deleteAdminPost(post.id, token);
+                      await loadAll(keyword);
+                    }}
+                    type="button"
+                  >
+                    삭제
+                  </button>
+                </div>
+              </article>
             ))}
+            {!visiblePosts.length ? (
+              <p className="admin-filter-empty">
+                조건에 맞는 게시글이 없습니다.
+              </p>
+            ) : null}
           </div>
         </section>
       ) : null}
@@ -590,6 +980,140 @@ export default function AdminPage() {
                 </button>
               </div>
             ))}
+          </div>
+        </section>
+      ) : null}
+
+      {tab === 'media' ? (
+        <section className="admin-table-card">
+          <div className="admin-section-heading">
+            <div>
+              <h2>직관 이미지 검수</h2>
+              <p>사용자가 직관 기록에 올린 이미지와 메모를 함께 확인합니다.</p>
+            </div>
+            <strong>{visibleAttendanceRecords.length}</strong>
+          </div>
+          <div className="admin-media-grid">
+            {visibleAttendanceRecords.map((record) => (
+              <article className="admin-media-card" key={record.id}>
+                <a
+                  href={getAssetUrl(record.photoUrl)}
+                  rel="noreferrer"
+                  target="_blank"
+                >
+                  <img
+                    alt={`${record.authorNickname} 사용자가 올린 직관 이미지`}
+                    src={getAssetUrl(record.photoUrl)}
+                  />
+                </a>
+                <div>
+                  <span>
+                    {record.awayTeamShortName} @ {record.homeTeamShortName}
+                  </span>
+                  <strong>{record.authorNickname}</strong>
+                  <p>{record.memo || '메모 없음'}</p>
+                  <small>
+                    {record.stadium} · {formatDate(record.gameDate)}
+                  </small>
+                </div>
+                <div className="admin-media-actions">
+                  <button
+                    className="btn btn-ghost btn-sm"
+                    onClick={async () => {
+                      if (!token || !window.confirm('이 이미지만 삭제할까요?'))
+                        return;
+                      await clearAdminAttendancePhoto(record.id, token);
+                      setMessage('직관 이미지가 삭제되었습니다.');
+                      await loadAll(keyword);
+                    }}
+                    type="button"
+                  >
+                    이미지 삭제
+                  </button>
+                  <button
+                    className="btn btn-ghost btn-sm"
+                    onClick={async () => {
+                      if (
+                        !token ||
+                        !window.confirm('직관 기록 전체를 삭제할까요?')
+                      )
+                        return;
+                      await deleteAdminAttendanceRecord(record.id, token);
+                      setMessage('직관 기록이 삭제되었습니다.');
+                      await loadAll(keyword);
+                    }}
+                    type="button"
+                  >
+                    기록 삭제
+                  </button>
+                </div>
+              </article>
+            ))}
+            {!visibleAttendanceRecords.length ? (
+              <p className="admin-filter-empty">검수할 이미지가 없습니다.</p>
+            ) : null}
+          </div>
+        </section>
+      ) : null}
+
+      {tab === 'reports' ? (
+        <section className="admin-table-card">
+          <div className="admin-section-heading">
+            <div>
+              <h2>신고 처리함</h2>
+              <p>신고 대상 원문을 확인하고 처리 상태를 기록합니다.</p>
+            </div>
+            <strong>
+              {reports.filter((report) => report.status === 'pending').length}
+            </strong>
+          </div>
+          <div className="admin-report-list">
+            {visibleReports.map((report) => (
+              <article className="admin-report-card" key={report.id}>
+                <div>
+                  <span>
+                    {report.targetType} #{report.targetId} · {report.reason}
+                  </span>
+                  {report.targetType === 'post' ? (
+                    <Link href={`/posts/${report.targetId}`}>
+                      {report.targetLabel ?? '삭제된 게시글'}
+                    </Link>
+                  ) : (
+                    <strong>{report.targetLabel ?? '삭제된 콘텐츠'}</strong>
+                  )}
+                  <p>{report.detail || '상세 신고 내용 없음'}</p>
+                  <small>
+                    신고자 {report.reporterNickname} ·{' '}
+                    {formatDate(report.createdAt)}
+                  </small>
+                </div>
+                <select
+                  aria-label={`신고 ${report.id} 처리 상태`}
+                  onChange={async (event) => {
+                    if (!token) return;
+                    await updateAdminReport(
+                      report.id,
+                      {
+                        status: event.target.value as AdminReport['status'],
+                        adminNote: report.adminNote,
+                      },
+                      token,
+                    );
+                    setMessage('신고 상태가 변경되었습니다.');
+                    await loadAll(keyword);
+                  }}
+                  value={report.status}
+                >
+                  <option value="pending">처리 대기</option>
+                  <option value="reviewing">확인 중</option>
+                  <option value="resolved">조치 완료</option>
+                  <option value="dismissed">문제 없음</option>
+                </select>
+              </article>
+            ))}
+            {!visibleReports.length ? (
+              <p className="admin-filter-empty">조건에 맞는 신고가 없습니다.</p>
+            ) : null}
           </div>
         </section>
       ) : null}
@@ -730,7 +1254,9 @@ export default function AdminPage() {
                     {player.kboPlayerId ? ` · KBO ${player.kboPlayerId}` : ''}
                   </span>
                   <span>{player.cheerId ? '등록됨' : '미등록'}</span>
-                  <span>{player.cheerTitle ?? '-'}</span>
+                  <span>
+                    {player.cheerId ? getPlayerCheerType(player) : '-'}
+                  </span>
                   <button
                     className="btn btn-ghost btn-sm"
                     onClick={() => editCheer(player)}
@@ -922,7 +1448,7 @@ export default function AdminPage() {
           </form>
 
           <div className="admin-table">
-            {games.map((game) => (
+            {visibleGames.map((game) => (
               <div className="admin-row" key={game.id}>
                 <strong>
                   {game.homeTeamShortName} vs {game.awayTeamShortName}
@@ -942,6 +1468,9 @@ export default function AdminPage() {
                 </button>
               </div>
             ))}
+            {!visibleGames.length ? (
+              <p className="admin-filter-empty">조건에 맞는 경기가 없습니다.</p>
+            ) : null}
           </div>
         </section>
       ) : null}
@@ -981,6 +1510,11 @@ export default function AdminPage() {
             </div>
             <div className="admin-cheer-dialog-body">
               <CheerFormFields
+                autoTitle={
+                  editingCheerTarget.kind === 'player'
+                    ? editingCheerTarget.autoTitle
+                    : undefined
+                }
                 cheerForm={cheerForm}
                 setCheerForm={setCheerForm}
               />

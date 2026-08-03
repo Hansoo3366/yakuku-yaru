@@ -3,14 +3,25 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { FormEvent, useState } from 'react';
+import { AdminBadge } from '@/components/AdminBadge';
 import { EmptyState } from '@/components/EmptyState';
 import { Skeleton } from '@/components/Skeleton';
 import { useAuthStore } from '@/lib/auth-store';
 import { formatKoreanDateShort } from '@/lib/date-format';
 import { usePostsQuery } from '@/lib/queries';
+import type { PostCategory } from '@/lib/post-api';
+import { FEATURE_STATUS_LABELS, POST_CATEGORY_LABELS } from '@/lib/post-meta';
 import styles from './posts.module.css';
 
 const LOADING_ROWS = Array.from({ length: 6 }, (_, index) => index);
+const CATEGORY_FILTERS: Array<[PostCategory | 'all', string]> = [
+  ['all', '전체'],
+  ['notice', '공지'],
+  ['review', '직관 후기'],
+  ['free', '자유'],
+  ['info', '정보'],
+  ['feature', '기능 개선'],
+];
 
 export default function PostsPage() {
   const router = useRouter();
@@ -21,11 +32,13 @@ export default function PostsPage() {
   const [scope, setScope] = useState<'latest' | 'myTeam' | 'following'>(
     'latest',
   );
+  const [category, setCategory] = useState<PostCategory | 'all'>('all');
   const token = useAuthStore((state) => state.token);
   const postsQuery = usePostsQuery({
     page,
     keyword: appliedKeyword,
     scope,
+    category: category === 'all' ? undefined : category,
     token,
   });
   const posts = postsQuery.data?.items ?? [];
@@ -52,6 +65,11 @@ export default function PostsPage() {
     }
 
     setScope(nextScope);
+    setPage(1);
+  }
+
+  function selectCategory(nextCategory: PostCategory | 'all') {
+    setCategory(nextCategory);
     setPage(1);
   }
 
@@ -87,14 +105,14 @@ export default function PostsPage() {
           <div className={styles.heroAside}>
             <span>쌓인 이야기</span>
             <strong>{postsQuery.isLoading ? '—' : totalPosts}</strong>
-            <small>개의 직관 기록</small>
+            <small>개의 팬 이야기</small>
             {hasToken ? (
               <Link className={styles.writeButton} href="/posts/new">
-                후기 쓰기 <span aria-hidden="true">↗</span>
+                글쓰기 <span aria-hidden="true">↗</span>
               </Link>
             ) : (
               <Link className={styles.loginButton} href="/login">
-                로그인하고 기록하기
+                로그인하고 글쓰기
               </Link>
             )}
           </div>
@@ -168,6 +186,20 @@ export default function PostsPage() {
           ))}
         </div>
 
+        <div className={styles.categoryTabs} aria-label="글 종류 선택">
+          {CATEGORY_FILTERS.map(([value, label]) => (
+            <button
+              aria-pressed={category === value}
+              className={category === value ? styles.categoryTabActive : ''}
+              key={value}
+              onClick={() => selectCategory(value)}
+              type="button"
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
         {postsQuery.isLoading ? (
           <div className={styles.postList} aria-label="게시글 불러오는 중">
             {LOADING_ROWS.map((row) => (
@@ -214,10 +246,25 @@ export default function PostsPage() {
                   {String(post.id).padStart(3, '0')}
                 </span>
                 <span className={styles.postMain}>
-                  <Link className={styles.postTitle} href={`/posts/${post.id}`}>
-                    {post.title}
-                  </Link>
+                  <span className={styles.postTitleLine}>
+                    <span
+                      className={`${styles.categoryBadge} ${
+                        post.category === 'notice' ? styles.noticeBadge : ''
+                      }`}
+                    >
+                      {post.isPinned ? '고정 · ' : ''}
+                      {POST_CATEGORY_LABELS[post.category]}
+                    </span>
+                    <Link className={styles.postTitle} href={`/posts/${post.id}`}>
+                      {post.title}
+                    </Link>
+                  </span>
                   <span className={styles.postMeta}>
+                    {post.requestStatus ? (
+                      <span className={styles.requestStatus}>
+                        {FEATURE_STATUS_LABELS[post.requestStatus]}
+                      </span>
+                    ) : null}
                     {post.authorFavoriteTeamShortName ? (
                       <span className={styles.teamTag}>
                         {post.authorFavoriteTeamShortName}
@@ -226,6 +273,7 @@ export default function PostsPage() {
                     <Link className={styles.author} href={`/fans/${post.userId}`}>
                       {post.authorNickname}
                     </Link>
+                    {post.authorRole === 'admin' ? <AdminBadge /> : null}
                     <time dateTime={post.createdAt}>
                       {formatKoreanDateShort(post.createdAt)}
                     </time>
@@ -254,14 +302,14 @@ export default function PostsPage() {
                     ? '팔로잉 피드가 비어 있어요'
                     : scope === 'myTeam'
                       ? '내 팀 팬의 글이 아직 없어요'
-                      : '아직 작성된 후기가 없어요'
+                      : '아직 작성된 글이 없어요'
               }
               description={
                 appliedKeyword
                   ? '검색어를 줄이거나 다른 단어로 찾아보세요.'
                   : scope === 'following'
                     ? '팬 찾기에서 마음에 드는 팬을 팔로우해보세요.'
-                    : '첫 후기를 남기고 다른 팬들과 공유해보세요.'
+                  : '첫 글을 남기고 다른 팬들과 이야기를 나눠보세요.'
               }
               action={
                 scope === 'following' ? (
@@ -270,7 +318,7 @@ export default function PostsPage() {
                   </Link>
                 ) : hasToken ? (
                   <Link className="btn btn-primary btn-sm" href="/posts/new">
-                    후기 작성하기
+                    글쓰기
                   </Link>
                 ) : null
               }
@@ -300,6 +348,18 @@ export default function PostsPage() {
             </button>
           </nav>
         ) : null}
+
+        <aside className={styles.bottomWriteCta}>
+          <div>
+            <span>YOUR TURN</span>
+            <strong>이번에는 어떤 야구 이야기를 남겨볼까요?</strong>
+            <p>후기, 구장 정보, 자유로운 이야기와 기능 제안을 기다리고 있어요.</p>
+          </div>
+          <Link href={hasToken ? '/posts/new' : '/login'}>
+            {hasToken ? '새 글 쓰기' : '로그인하고 글쓰기'}
+            <span aria-hidden="true">→</span>
+          </Link>
+        </aside>
       </section>
 
       {hasToken ? (
@@ -308,7 +368,7 @@ export default function PostsPage() {
           className={styles.mobileWriteButton}
           href="/posts/new"
         >
-          <span aria-hidden="true">＋</span> 후기
+          <span aria-hidden="true">＋</span> 글쓰기
         </Link>
       ) : null}
     </main>

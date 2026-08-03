@@ -5,6 +5,7 @@ import {
   AUTH_COOKIE_NAME,
   readCookieHeader,
 } from '../modules/auth/auth-cookie.js';
+import { findUserSessionStateById } from '../modules/users/user.repository.js';
 
 declare global {
   // eslint-disable-next-line @typescript-eslint/no-namespace
@@ -18,7 +19,7 @@ declare global {
   }
 }
 
-export const authenticate: RequestHandler = (req, _res, next) => {
+export const authenticate: RequestHandler = async (req, _res, next) => {
   const authorization = req.header('authorization');
   const [scheme, token] = authorization?.split(' ') ?? [];
   const cookieToken = readCookieHeader(req.header('cookie'), AUTH_COOKIE_NAME);
@@ -31,10 +32,18 @@ export const authenticate: RequestHandler = (req, _res, next) => {
 
   try {
     const payload = verifyAccessToken(accessToken);
+    const sessionState = await findUserSessionStateById(payload.userId);
+
+    if (
+      !sessionState ||
+      Number(sessionState.session_version) !== Number(payload.sessionVersion)
+    ) {
+      throw new Error('Session has been revoked');
+    }
 
     req.user = {
       id: payload.userId,
-      email: payload.email,
+      email: sessionState.email,
     };
 
     next();
@@ -43,7 +52,7 @@ export const authenticate: RequestHandler = (req, _res, next) => {
   }
 };
 
-export const optionalAuthenticate: RequestHandler = (req, _res, next) => {
+export const optionalAuthenticate: RequestHandler = async (req, _res, next) => {
   const authorization = req.header('authorization');
   const [scheme, token] = authorization?.split(' ') ?? [];
   const cookieToken = readCookieHeader(req.header('cookie'), AUTH_COOKIE_NAME);
@@ -56,9 +65,18 @@ export const optionalAuthenticate: RequestHandler = (req, _res, next) => {
 
   try {
     const payload = verifyAccessToken(accessToken);
+    const sessionState = await findUserSessionStateById(payload.userId);
+
+    if (
+      !sessionState ||
+      Number(sessionState.session_version) !== Number(payload.sessionVersion)
+    ) {
+      next();
+      return;
+    }
     req.user = {
       id: payload.userId,
-      email: payload.email,
+      email: sessionState.email,
     };
   } catch {
     // Public endpoints remain available when a stale optional session is sent.

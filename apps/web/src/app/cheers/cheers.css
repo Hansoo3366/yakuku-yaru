@@ -504,9 +504,10 @@
 .cheers-shell .cheer-player-photo {
   background: #dfe6ea;
   border: 0;
-  border-radius: 6px;
+  border: 2px solid #fff;
+  border-radius: 50%;
   height: 58px;
-  object-fit: cover;
+  object-fit: contain;
   width: 58px;
 }
 

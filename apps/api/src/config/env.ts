@@ -15,14 +15,43 @@ if (nodeEnv === 'production' && jwtSecret === 'change-me-in-local-env') {
   throw new Error('JWT_SECRET must be set in production');
 }
 
+if (nodeEnv === 'production' && jwtSecret.length < 32) {
+  throw new Error('JWT_SECRET must be at least 32 characters in production');
+}
+
+const appUrl =
+  process.env.APP_URL ??
+  (process.env.APP_DOMAIN
+    ? `https://${process.env.APP_DOMAIN}`
+    : 'http://localhost:3000');
+
+function normalizeOrigin(value: string) {
+  try {
+    return new URL(value.trim()).origin;
+  } catch {
+    return null;
+  }
+}
+
+const allowedOrigins = Array.from(
+  new Set(
+    [
+      appUrl,
+      ...(process.env.CORS_ORIGINS ?? '').split(','),
+      ...(nodeEnv === 'production'
+        ? []
+        : ['http://localhost:3000', 'http://127.0.0.1:3000']),
+    ]
+      .map(normalizeOrigin)
+      .filter((origin): origin is string => Boolean(origin)),
+  ),
+);
+
 export const env = {
   nodeEnv,
   apiPort: Number(process.env.API_PORT ?? 4000),
-  appUrl:
-    process.env.APP_URL ??
-    (process.env.APP_DOMAIN
-      ? `https://${process.env.APP_DOMAIN}`
-      : 'http://localhost:3000'),
+  appUrl,
+  allowedOrigins,
   jwt: {
     secret: jwtSecret,
     expiresIn: process.env.JWT_EXPIRES_IN ?? '1d',

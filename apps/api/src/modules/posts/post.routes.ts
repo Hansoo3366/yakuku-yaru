@@ -23,9 +23,49 @@ import {
   listCommentsByPostId,
   toCommentItem,
 } from '../comments/comment.repository.js';
-import { createNotification } from '../notifications/notification.repository.js';
+import {
+  createAdminNotifications,
+  createNotification,
+} from '../notifications/notification.repository.js';
+import { findUserById } from '../users/user.repository.js';
 
 export const postRouter = Router();
+
+const POST_CATEGORIES = new Set([
+  'review',
+  'free',
+  'info',
+  'feature',
+  'notice',
+]);
+
+function normalizePostCategory(value: unknown) {
+  return typeof value === 'string' && POST_CATEGORIES.has(value)
+    ? value
+    : 'review';
+}
+
+async function assertCanUseModeration(
+  userId: number,
+  category: string,
+  isPinned: boolean,
+) {
+  if (category !== 'notice' && !isPinned) return;
+
+  const user = await findUserById(userId);
+  if (user?.role !== 'admin') {
+    throw new HttpError(
+      403,
+      'FORBIDDEN',
+      '공지 작성과 상단 고정은 관리자만 사용할 수 있습니다.',
+    );
+  }
+}
+
+async function canModeratePosts(userId: number) {
+  const user = await findUserById(userId);
+  return user?.role === 'admin';
+}
 
 const createPostRateLimit = rateLimit({
   scope: 'posts:create',
@@ -63,16 +103,22 @@ postRouter.get('/', optionalAuthenticate, async (req, res, next) => {
     const size = Math.min(parsePositiveInt(req.query.size, 10), 50);
     const keyword =
       typeof req.query.keyword === 'string' && req.query.keyword.trim()
-        ? req.query.keyword.trim()
+        ? req.query.keyword.trim().slice(0, 100)
         : undefined;
     const scope =
       req.query.scope === 'myTeam' || req.query.scope === 'following'
         ? req.query.scope
         : 'latest';
+    const category =
+      typeof req.query.category === 'string' &&
+      POST_CATEGORIES.has(req.query.category)
+        ? req.query.category
+        : undefined;
     const result = await listPosts({
       page,
       size,
       keyword,
+      category,
       scope,
       viewerUserId: req.user?.id ?? null,
     });
@@ -96,26 +142,57 @@ postRouter.post(
   createPostRateLimit,
   async (req, res, next) => {
     try {
-      const { title, content } = req.body as {
+      const {
+        title,
+        content,
+        isPinned: requestedPinned,
+      } = req.body as {
         title?: string;
         content?: string;
+        category?: string;
+        isPinned?: boolean;
       };
 
       const safeTitle = validatePostTitle(title ?? '');
       const safeContent = validatePostContent(content ?? '');
 
       if (!safeTitle || !safeContent) {
-        throw new HttpError(400, 'INVALID_INPUT', '제목과 본문을 입력해주세요.');
+        throw new HttpError(
+          400,
+          'INVALID_INPUT',
+          '제목과 본문을 입력해주세요.',
+        );
       }
 
+      const userId = req.user?.id ?? 0;
+      const category = normalizePostCategory(req.body?.category);
+      const isPinned = requestedPinned === true;
+      await assertCanUseModeration(userId, category, isPinned);
+
       const post = await createPost({
-        userId: req.user?.id ?? 0,
+        userId,
+        category,
         title: safeTitle,
         content: safeContent,
+        isPinned,
       });
 
       if (!post) {
-        throw new HttpError(500, 'POST_CREATE_FAILED', '게시글 작성에 실패했습니다.');
+        throw new HttpError(
+          500,
+          'POST_CREATE_FAILED',
+          '게시글 작성에 실패했습니다.',
+        );
+      }
+
+      if (category === 'feature') {
+        const actor = await findUserById(userId);
+        await createAdminNotifications({
+          actorUserId: userId,
+          postId: post.id,
+          type: 'feature_requested',
+          message: `${actor?.nickname ?? '한 팬'}님이 기능 개선 요청을 등록했어요.`,
+        });
       }
 
       res.status(201).json({
@@ -152,29 +229,76 @@ postRouter.patch(
       const post = await findPostById(Number(req.params.postId));
 
       if (!post) {
-        throw new HttpError(404, 'POST_NOT_FOUND', '게시글을 찾을 수 없습니다.');
+        throw new HttpError(
+          404,
+          'POST_NOT_FOUND',
+          '게시글을 찾을 수 없습니다.',
+        );
       }
 
       if (post.user_id !== req.user?.id) {
-        throw new HttpError(403, 'FORBIDDEN', '본인이 작성한 글만 수정할 수 있습니다.');
+        throw new HttpError(
+          403,
+          'FORBIDDEN',
+          '본인이 작성한 글만 수정할 수 있습니다.',
+        );
       }
 
-      const { title, content } = req.body as {
+      const {
+        title,
+        content,
+        category: requestedCategory,
+        isPinned: requestedPinned,
+      } = req.body as {
         title?: string;
         content?: string;
+        category?: string;
+        isPinned?: boolean;
       };
 
       const safeTitle = validatePostTitle(title ?? '');
       const safeContent = validatePostContent(content ?? '');
 
       if (!safeTitle || !safeContent) {
-        throw new HttpError(400, 'INVALID_INPUT', '제목과 본문을 입력해주세요.');
+        throw new HttpError(
+          400,
+          'INVALID_INPUT',
+          '제목과 본문을 입력해주세요.',
+        );
       }
+
+      const category = normalizePostCategory(
+        requestedCategory ?? post.category,
+      );
+      const actorCanModerate = await canModeratePosts(req.user?.id ?? 0);
+
+      if (
+        !actorCanModerate &&
+        (requestedCategory === 'notice' || requestedPinned === true)
+      ) {
+        throw new HttpError(
+          403,
+          'FORBIDDEN',
+          '공지 작성과 상단 고정은 관리자만 사용할 수 있습니다.',
+        );
+      }
+
+      const effectiveCategory =
+        !actorCanModerate && post.category === 'notice'
+          ? post.category
+          : category;
+      const isPinned = actorCanModerate
+        ? typeof requestedPinned === 'boolean'
+          ? requestedPinned
+          : Boolean(post.is_pinned)
+        : Boolean(post.is_pinned);
 
       const updatedPost = await updatePost({
         id: post.id,
+        category: effectiveCategory,
         title: safeTitle,
         content: safeContent,
+        isPinned,
       });
 
       res.json({
@@ -195,7 +319,11 @@ postRouter.delete('/:postId', authenticate, async (req, res, next) => {
     }
 
     if (post.user_id !== req.user?.id) {
-      throw new HttpError(403, 'FORBIDDEN', '본인이 작성한 글만 삭제할 수 있습니다.');
+      throw new HttpError(
+        403,
+        'FORBIDDEN',
+        '본인이 작성한 글만 삭제할 수 있습니다.',
+      );
     }
 
     await deletePost(post.id);
@@ -233,7 +361,11 @@ postRouter.post(
       const post = await findPostById(Number(req.params.postId));
 
       if (!post) {
-        throw new HttpError(404, 'POST_NOT_FOUND', '게시글을 찾을 수 없습니다.');
+        throw new HttpError(
+          404,
+          'POST_NOT_FOUND',
+          '게시글을 찾을 수 없습니다.',
+        );
       }
 
       const { content } = req.body as {

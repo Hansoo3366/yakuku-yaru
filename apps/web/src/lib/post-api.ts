@@ -1,10 +1,22 @@
 import { request } from './api';
 
+export type PostCategory = 'review' | 'free' | 'info' | 'feature' | 'notice';
+export type FeatureRequestStatus =
+  | 'received'
+  | 'reviewing'
+  | 'in_progress'
+  | 'completed'
+  | 'deferred';
+
 export type PostListItem = {
   id: number;
   userId: number;
+  category: PostCategory;
   title: string;
+  isPinned: boolean;
+  requestStatus: FeatureRequestStatus | null;
   authorNickname: string;
+  authorRole: string;
   authorProfileImageUrl: string | null;
   authorFavoriteTeamShortName: string | null;
   commentCount: number;
@@ -22,6 +34,7 @@ export type CommentItem = {
   userId: number;
   content: string;
   authorNickname: string;
+  authorRole: string;
   authorProfileImageUrl: string | null;
   authorFavoriteTeamShortName: string | null;
   createdAt: string;
@@ -41,6 +54,7 @@ export function listPosts(input: {
   size?: number;
   keyword?: string;
   scope?: 'latest' | 'myTeam' | 'following';
+  category?: PostCategory;
   token?: string | null;
 }) {
   const params = new URLSearchParams();
@@ -56,6 +70,10 @@ export function listPosts(input: {
     params.set('scope', input.scope);
   }
 
+  if (input.category) {
+    params.set('category', input.category);
+  }
+
   return request<PostListResponse>(`/posts?${params.toString()}`, {
     token: input.token,
   });
@@ -66,7 +84,12 @@ export function fetchPost(postId: number) {
 }
 
 export function createPost(
-  input: { title: string; content: string },
+  input: {
+    title: string;
+    content: string;
+    category: PostCategory;
+    isPinned: boolean;
+  },
   token: string,
 ) {
   return request<{ post: PostDetail }>('/posts', {
@@ -78,11 +101,32 @@ export function createPost(
 
 export function updatePost(
   postId: number,
-  input: { title: string; content: string },
+  input: {
+    title: string;
+    content: string;
+    category: PostCategory;
+    isPinned: boolean;
+  },
   token: string,
 ) {
   return request<{ post: PostDetail }>(`/posts/${postId}`, {
     method: 'PATCH',
+    body: input,
+    token,
+  });
+}
+
+export function reportContent(
+  input: {
+    targetType: 'post' | 'comment' | 'user' | 'attendance';
+    targetId: number;
+    reason: 'spam' | 'abuse' | 'privacy' | 'copyright' | 'illegal' | 'other';
+    detail?: string;
+  },
+  token: string,
+) {
+  return request<{ reported: boolean }>('/reports', {
+    method: 'POST',
     body: input,
     token,
   });

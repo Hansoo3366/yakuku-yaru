@@ -15,11 +15,15 @@ CREATE TABLE IF NOT EXISTS users (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   email VARCHAR(255) NOT NULL,
   password_hash VARCHAR(255) NOT NULL,
+  session_version INT UNSIGNED NOT NULL DEFAULT 0,
   nickname VARCHAR(50) NOT NULL,
   profile_image_url VARCHAR(500) NULL,
   role VARCHAR(20) NOT NULL DEFAULT 'user',
   favorite_team_id BIGINT UNSIGNED NULL,
   email_verified_at DATETIME NULL,
+  terms_agreed_at DATETIME NULL,
+  privacy_agreed_at DATETIME NULL,
+  age_confirmed_at DATETIME NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
@@ -335,16 +339,44 @@ CREATE TABLE IF NOT EXISTS game_reminders (
 CREATE TABLE IF NOT EXISTS posts (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   user_id BIGINT UNSIGNED NOT NULL,
+  category VARCHAR(20) NOT NULL DEFAULT 'review',
   title VARCHAR(200) NOT NULL,
   content TEXT NOT NULL,
+  is_pinned BOOLEAN NOT NULL DEFAULT FALSE,
+  request_status VARCHAR(20) NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
   KEY idx_posts_created_at (created_at),
+  KEY idx_posts_category_pinned_created (category, is_pinned, created_at),
   KEY idx_posts_user_id (user_id),
   CONSTRAINT fk_posts_user
     FOREIGN KEY (user_id) REFERENCES users(id)
     ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS content_reports (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  reporter_user_id BIGINT UNSIGNED NOT NULL,
+  target_type VARCHAR(20) NOT NULL,
+  target_id BIGINT UNSIGNED NOT NULL,
+  reason VARCHAR(30) NOT NULL,
+  detail VARCHAR(500) NULL,
+  status VARCHAR(20) NOT NULL DEFAULT 'pending',
+  admin_note VARCHAR(500) NULL,
+  resolved_by_user_id BIGINT UNSIGNED NULL,
+  resolved_at DATETIME NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_content_reports_reporter_target (reporter_user_id, target_type, target_id),
+  KEY idx_content_reports_status_created (status, created_at),
+  CONSTRAINT fk_content_reports_reporter
+    FOREIGN KEY (reporter_user_id) REFERENCES users(id)
+    ON DELETE CASCADE,
+  CONSTRAINT fk_content_reports_resolver
+    FOREIGN KEY (resolved_by_user_id) REFERENCES users(id)
+    ON DELETE SET NULL
 );
 
 CREATE TABLE IF NOT EXISTS comments (

@@ -5,6 +5,7 @@ export type UserRow = RowDataPacket & {
   id: number;
   email: string;
   password_hash: string;
+  session_version: number;
   nickname: string;
   profile_image_url: string | null;
   role: string;
@@ -61,7 +62,7 @@ export function toPublicUser(user: UserRow): PublicUser {
 }
 
 const userSelectColumns =
-  'id, email, password_hash, nickname, profile_image_url, role, favorite_team_id, email_verified_at, created_at, updated_at';
+  'id, email, password_hash, session_version, nickname, profile_image_url, role, favorite_team_id, email_verified_at, created_at, updated_at';
 
 export async function findUserByEmail(email: string) {
   const [rows] = await db.query<UserRow[]>(
@@ -81,6 +82,7 @@ export async function findUserById(id: number) {
        u.id,
        u.email,
        u.password_hash,
+       u.session_version,
        u.nickname,
        u.profile_image_url,
        u.role,
@@ -99,7 +101,24 @@ export async function findUserById(id: number) {
   return rows[0] ?? null;
 }
 
-export async function findUserByNickname(nickname: string, excludeUserId?: number) {
+export async function findUserSessionStateById(id: number) {
+  const [rows] = await db.query<
+    (RowDataPacket & { email: string; session_version: number })[]
+  >(
+    `SELECT email, session_version
+     FROM users
+     WHERE id = ?
+     LIMIT 1`,
+    [id],
+  );
+
+  return rows[0] ?? null;
+}
+
+export async function findUserByNickname(
+  nickname: string,
+  excludeUserId?: number,
+) {
   const sql = excludeUserId
     ? `SELECT ${userSelectColumns}
        FROM users
@@ -121,10 +140,23 @@ export async function createUser(input: {
   passwordHash: string;
   nickname: string;
   favoriteTeamId?: number | null;
+  recordRequiredConsents?: boolean;
 }) {
   const [result] = await db.execute<ResultSetHeader>(
-    `INSERT INTO users (email, password_hash, nickname, favorite_team_id)
-     VALUES (?, ?, ?, ?)`,
+    `INSERT INTO users (
+       email,
+       password_hash,
+       nickname,
+       favorite_team_id,
+       terms_agreed_at,
+       privacy_agreed_at,
+       age_confirmed_at
+     )
+     VALUES (?, ?, ?, ?, ${
+       input.recordRequiredConsents
+         ? 'CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP'
+         : 'NULL, NULL, NULL'
+     })`,
     [
       input.email,
       input.passwordHash,
@@ -139,7 +171,8 @@ export async function createUser(input: {
 export async function updateUserPassword(userId: number, passwordHash: string) {
   await db.execute(
     `UPDATE users
-     SET password_hash = ?
+     SET password_hash = ?,
+         session_version = session_version + 1
      WHERE id = ?`,
     [passwordHash, userId],
   );
@@ -185,7 +218,10 @@ export async function updateUserNickname(userId: number, nickname: string) {
   return findUserById(userId);
 }
 
-export async function updateUserProfileImage(userId: number, profileImageUrl: string) {
+export async function updateUserProfileImage(
+  userId: number,
+  profileImageUrl: string,
+) {
   await db.execute(
     `UPDATE users
      SET profile_image_url = ?

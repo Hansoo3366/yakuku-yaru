@@ -6,7 +6,10 @@ import './PlayerCheerDialog.css';
 
 import { type CSSProperties, useEffect, useMemo, useRef } from 'react';
 import { PlayerPhoto } from '@/components/PlayerPhoto';
-import type { PlayerCheer } from '@/lib/player-cheer-api';
+import {
+  getPlayerCheerType,
+  type PlayerCheer,
+} from '@/lib/player-cheer-api';
 import {
   getAccessibleTeamSurface,
   getContrastingTextColor,
@@ -79,7 +82,7 @@ function toPlayerCheerDialogItem(player: PlayerCheer): CheerDialogItem {
       .join(' · '),
     subtitle: player.teamShortName,
     title: player.name,
-    cheerTitle: player.cheerTitle,
+    cheerTitle: player.cheerTitle ?? getPlayerCheerType(player),
     youtubeId: player.youtubeId,
     youtubeUrl: player.youtubeUrl,
   };
@@ -182,7 +185,7 @@ export function PlayerCheerDialog({ cheer, player, onClose }: Props) {
         <header className="cheer-dialog-titlebar">
           <div>
             <span>CHANT SHEET</span>
-            <strong>응원가</strong>
+            <strong>{item.cheerTitle ?? '응원가'}</strong>
           </div>
           <button
             aria-label="응원가 팝업 닫기"
@@ -219,7 +222,7 @@ export function PlayerCheerDialog({ cheer, player, onClose }: Props) {
             <div className="cheer-dialog-body">
               <header className="cheer-dialog-track">
                 <span>NOW SINGING</span>
-                <h3>{item.cheerTitle || `${item.title} 응원가`}</h3>
+                <h3>{item.cheerTitle || '응원가'}</h3>
               </header>
               {youtubeId ? (
                 <div className="cheer-dialog-video">

@@ -26,7 +26,11 @@ import {
   upsertAttendanceViewerPreference,
 } from './viewer-preference.repository.js';
 import { createNotification } from '../notifications/notification.repository.js';
-import { attendancePhotoUpload } from './upload.js';
+import {
+  assertUploadedImageFile,
+  assertUserUploadQuota,
+  attendancePhotoUpload,
+} from './upload.js';
 import {
   findUserById,
   getFavoriteTeamIdFromUser,
@@ -38,6 +42,8 @@ import {
   resolveFavoriteTeamIdInGame,
 } from './attendance-game.js';
 import { buildAttendanceScoreFields } from './attendance-score.js';
+import { deleteUploadedFile } from '../../utils/upload-file.js';
+import { validateAttendanceMemo } from '../../utils/user-input.js';
 
 export const attendanceRouter = Router();
 
@@ -52,17 +58,24 @@ const attendanceWriteRateLimit = rateLimit({
 const attendancePhotoRateLimit = rateLimit({
   scope: 'attendance:photo',
   windowMs: 10 * 60 * 1000,
-  max: 12,
+  max: 6,
   message: '사진 업로드 요청이 너무 많습니다. 잠시 후 다시 시도해주세요.',
 });
 
 function assertOwner(record: { userId: number }, userId: number) {
   if (record.userId !== userId) {
-    throw new HttpError(403, 'FORBIDDEN', '본인의 직관 기록만 수정할 수 있습니다.');
+    throw new HttpError(
+      403,
+      'FORBIDDEN',
+      '본인의 직관 기록만 수정할 수 있습니다.',
+    );
   }
 }
 
-async function assertCanEdit(record: { id: number; userId: number }, userId: number) {
+async function assertCanEdit(
+  record: { id: number; userId: number },
+  userId: number,
+) {
   if (record.userId === userId) {
     return;
   }
@@ -158,7 +171,8 @@ async function saveCompanionsAndNotify(input: {
 
 attendanceRouter.get('/', authenticate, async (req, res, next) => {
   try {
-    const from = typeof req.query.from === 'string' ? req.query.from : undefined;
+    const from =
+      typeof req.query.from === 'string' ? req.query.from : undefined;
     const to = typeof req.query.to === 'string' ? req.query.to : undefined;
     const records = await listAttendanceRecords({
       userId: req.user?.id ?? 0,
@@ -176,7 +190,8 @@ attendanceRouter.get('/', authenticate, async (req, res, next) => {
 
 attendanceRouter.get('/stats/me', authenticate, async (req, res, next) => {
   try {
-    const from = typeof req.query.from === 'string' ? req.query.from : undefined;
+    const from =
+      typeof req.query.from === 'string' ? req.query.from : undefined;
     const to = typeof req.query.to === 'string' ? req.query.to : undefined;
     const stats = await getAttendanceStats(req.user?.id ?? 0, { from, to });
 
@@ -224,7 +239,11 @@ attendanceRouter.post(
       });
 
       if (existingRecord) {
-        throw new HttpError(409, 'ATTENDANCE_ALREADY_EXISTS', '이미 직관 기록이 있습니다.');
+        throw new HttpError(
+          409,
+          'ATTENDANCE_ALREADY_EXISTS',
+          '이미 직관 기록이 있습니다.',
+        );
       }
 
       const user = await findUserById(userId);
@@ -260,7 +279,10 @@ attendanceRouter.post(
         gameId,
         watchType: normalizeWatchType(watchType),
         cheeredTeamId,
-        memo: memo?.trim() || null,
+        memo:
+          typeof memo === 'string'
+            ? validateAttendanceMemo(memo) || null
+            : null,
         myTeamScore: scoreFields.myTeamScore,
         opponentScore: scoreFields.opponentScore,
         result: scoreFields.result,
@@ -272,7 +294,9 @@ attendanceRouter.post(
           recordId: record.id,
           ownerId: userId,
           ownerLabel: record.ownerNickname,
-          companionUserIds: normalizeCompanionUserIds(req.body.companionUserIds),
+          companionUserIds: normalizeCompanionUserIds(
+            req.body.companionUserIds,
+          ),
         });
       }
 
@@ -292,7 +316,11 @@ attendanceRouter.get('/:recordId', authenticate, async (req, res, next) => {
     const record = await reconcileAttendanceRecordById(recordId);
 
     if (!record) {
-      throw new HttpError(404, 'ATTENDANCE_NOT_FOUND', '직관 기록을 찾을 수 없습니다.');
+      throw new HttpError(
+        404,
+        'ATTENDANCE_NOT_FOUND',
+        '직관 기록을 찾을 수 없습니다.',
+      );
     }
 
     if (record.userId !== userId) {
@@ -333,10 +361,16 @@ attendanceRouter.patch(
   attendanceWriteRateLimit,
   async (req, res, next) => {
     try {
-      const record = await findAttendanceRecordById(Number(req.params.recordId));
+      const record = await findAttendanceRecordById(
+        Number(req.params.recordId),
+      );
 
       if (!record) {
-        throw new HttpError(404, 'ATTENDANCE_NOT_FOUND', '직관 기록을 찾을 수 없습니다.');
+        throw new HttpError(
+          404,
+          'ATTENDANCE_NOT_FOUND',
+          '직관 기록을 찾을 수 없습니다.',
+        );
       }
 
       await assertCanEdit(record, req.user?.id ?? 0);
@@ -354,9 +388,11 @@ attendanceRouter.patch(
       const owner = await findUserById(record.userId);
       const editor = await findUserById(req.user?.id ?? 0);
       const ownerFavoriteTeamId = getFavoriteTeamIdFromUser(owner);
-      const ownerFavoriteTeamShortName = getFavoriteTeamShortNameFromUser(owner);
+      const ownerFavoriteTeamShortName =
+        getFavoriteTeamShortNameFromUser(owner);
       const editorFavoriteTeamId = getFavoriteTeamIdFromUser(editor);
-      const editorFavoriteTeamShortName = getFavoriteTeamShortNameFromUser(editor);
+      const editorFavoriteTeamShortName =
+        getFavoriteTeamShortNameFromUser(editor);
       const cheeredTeamId = assertValidCheeredTeamId({
         game,
         ownerFavoriteTeamId,
@@ -386,7 +422,10 @@ attendanceRouter.patch(
         id: record.id,
         watchType: normalizeWatchType(watchType),
         cheeredTeamId,
-        memo: memo?.trim() || null,
+        memo:
+          typeof memo === 'string'
+            ? validateAttendanceMemo(memo) || null
+            : null,
         myTeamScore: scoreFields.myTeamScore,
         opponentScore: scoreFields.opponentScore,
         result: scoreFields.result,
@@ -399,7 +438,9 @@ attendanceRouter.patch(
           recordId: updatedRecord.id,
           ownerId: record.userId,
           ownerLabel: record.ownerNickname,
-          companionUserIds: normalizeCompanionUserIds(req.body.companionUserIds),
+          companionUserIds: normalizeCompanionUserIds(
+            req.body.companionUserIds,
+          ),
         });
       }
 
@@ -419,12 +460,17 @@ attendanceRouter.delete('/:recordId', authenticate, async (req, res, next) => {
     const record = await findAttendanceRecordById(Number(req.params.recordId));
 
     if (!record) {
-      throw new HttpError(404, 'ATTENDANCE_NOT_FOUND', '직관 기록을 찾을 수 없습니다.');
+      throw new HttpError(
+        404,
+        'ATTENDANCE_NOT_FOUND',
+        '직관 기록을 찾을 수 없습니다.',
+      );
     }
 
     assertOwner(record, req.user?.id ?? 0);
 
     await deleteAttendanceRecord(record.id);
+    await deleteUploadedFile(record.photoUrl);
 
     res.status(204).send();
   } catch (error) {
@@ -436,31 +482,55 @@ attendanceRouter.post(
   '/:recordId/photo',
   authenticate,
   attendancePhotoRateLimit,
-  attendancePhotoUpload.single('photo'),
   async (req, res, next) => {
     try {
-      const record = await findAttendanceRecordById(Number(req.params.recordId));
+      const record = await findAttendanceRecordById(
+        Number(req.params.recordId),
+      );
 
       if (!record) {
-        throw new HttpError(404, 'ATTENDANCE_NOT_FOUND', '직관 기록을 찾을 수 없습니다.');
+        throw new HttpError(
+          404,
+          'ATTENDANCE_NOT_FOUND',
+          '직관 기록을 찾을 수 없습니다.',
+        );
       }
 
       await assertCanEdit(record, req.user?.id ?? 0);
+      res.locals.attendanceRecord = record;
+      next();
+    } catch (error) {
+      next(error);
+    }
+  },
+  attendancePhotoUpload.single('photo'),
+  async (req, res, next) => {
+    try {
+      const record = res.locals.attendanceRecord as Awaited<
+        ReturnType<typeof findAttendanceRecordById>
+      >;
 
-      if (!req.file) {
+      if (!record || !req.file) {
         throw new HttpError(400, 'INVALID_INPUT', '사진 파일을 선택해주세요.');
       }
+
+      await assertUploadedImageFile(req.file);
+      await assertUserUploadQuota(req.user?.id ?? 0, record.photoUrl);
 
       const updatedRecord = await updateAttendancePhoto({
         id: record.id,
         photoUrl: `/uploads/${req.file.filename}`,
         lastModifiedByUserId: req.user?.id ?? 0,
       });
+      await deleteUploadedFile(record.photoUrl);
 
       res.json({
         record: updatedRecord,
       });
     } catch (error) {
+      await deleteUploadedFile(
+        req.file ? `/uploads/${req.file.filename}` : null,
+      );
       next(error);
     }
   },
@@ -486,7 +556,11 @@ attendanceRouter.patch(
       const record = await findAttendanceRecordById(recordId);
 
       if (!record) {
-        throw new HttpError(404, 'ATTENDANCE_NOT_FOUND', '직관 기록을 찾을 수 없습니다.');
+        throw new HttpError(
+          404,
+          'ATTENDANCE_NOT_FOUND',
+          '직관 기록을 찾을 수 없습니다.',
+        );
       }
 
       const companion = await findCompanionForUser({ recordId, userId });

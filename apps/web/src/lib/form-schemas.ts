@@ -37,6 +37,8 @@ export const loginSchema = z.object({
 });
 
 export const postFormSchema = z.object({
+  category: z.enum(['review', 'free', 'info', 'feature', 'notice']),
+  isPinned: z.boolean(),
   title: requiredText('제목')
     .max(POST_TITLE_MAX_LENGTH, `${POST_TITLE_MAX_LENGTH}자 이하로 입력해주세요.`)
     .refine((value) => !validateBoardTextClient(value, POST_TITLE_MAX_LENGTH), {

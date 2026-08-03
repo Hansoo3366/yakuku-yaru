@@ -39,8 +39,12 @@ export function NotificationBell({ userId }: NotificationBellProps) {
   const [open, setOpen] = useState(false);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
-  const [respondedRecords, setRespondedRecords] = useState<RespondedRecords>({});
-  const [respondingRecordId, setRespondingRecordId] = useState<number | null>(null);
+  const [respondedRecords, setRespondedRecords] = useState<RespondedRecords>(
+    {},
+  );
+  const [respondingRecordId, setRespondingRecordId] = useState<number | null>(
+    null,
+  );
   const containerRef = useRef<HTMLDivElement | null>(null);
   const token = useAuthStore((state) => state.token);
 
@@ -63,7 +67,8 @@ export function NotificationBell({ userId }: NotificationBellProps) {
 
         const tagged = response.items.filter(
           (item): item is typeof item & { attendanceRecordId: number } =>
-            item.type === 'attendance_tagged' && item.attendanceRecordId !== null,
+            item.type === 'attendance_tagged' &&
+            item.attendanceRecordId !== null,
         );
         if (!tagged.length) {
           setRespondedRecords({});
@@ -180,7 +185,9 @@ export function NotificationBell({ userId }: NotificationBellProps) {
     if (!token) return;
     try {
       await deleteNotification(notification.id, token);
-      setNotifications((current) => current.filter((item) => item.id !== notification.id));
+      setNotifications((current) =>
+        current.filter((item) => item.id !== notification.id),
+      );
       if (!notification.readAt) {
         setUnreadCount((current) => Math.max(0, current - 1));
       }
@@ -218,14 +225,21 @@ export function NotificationBell({ userId }: NotificationBellProps) {
           />
         </svg>
         {unreadCount > 0 ? (
-          <span className="bell-badge" aria-label={`${unreadCount}개 미확인 알림`}>
+          <span
+            className="bell-badge"
+            aria-label={`${unreadCount}개 미확인 알림`}
+          >
             {unreadCount > 99 ? '99+' : unreadCount}
           </span>
         ) : null}
       </button>
 
       {open ? (
-        <div className="notification-popover" role="dialog" aria-label="알림 목록">
+        <div
+          className="notification-popover"
+          role="dialog"
+          aria-label="알림 목록"
+        >
           <div className="notification-popover-head">
             <strong>알림</strong>
             <button
@@ -246,7 +260,8 @@ export function NotificationBell({ userId }: NotificationBellProps) {
                   ? respondedRecords[recordId]
                   : undefined;
                 const showCompanionActions =
-                  notification.type === 'attendance_tagged' && recordId !== null;
+                  notification.type === 'attendance_tagged' &&
+                  recordId !== null;
                 const isUnread = !notification.readAt;
                 return (
                   <li
@@ -283,7 +298,9 @@ export function NotificationBell({ userId }: NotificationBellProps) {
                           <button
                             className="link-btn link-btn-primary"
                             disabled={respondingRecordId === recordId}
-                            onClick={() => handleRespond(notification, 'accepted')}
+                            onClick={() =>
+                              handleRespond(notification, 'accepted')
+                            }
                             type="button"
                           >
                             수락
@@ -291,7 +308,9 @@ export function NotificationBell({ userId }: NotificationBellProps) {
                           <button
                             className="link-btn"
                             disabled={respondingRecordId === recordId}
-                            onClick={() => handleRespond(notification, 'rejected')}
+                            onClick={() =>
+                              handleRespond(notification, 'rejected')
+                            }
                             type="button"
                           >
                             거절
@@ -315,6 +334,15 @@ export function NotificationBell({ userId }: NotificationBellProps) {
                         onClick={() => setOpen(false)}
                       >
                         글 보기
+                      </Link>
+                    ) : null}
+                    {notification.type === 'content_reported' ? (
+                      <Link
+                        className="link-btn link-btn-primary"
+                        href="/admin#reports"
+                        onClick={() => setOpen(false)}
+                      >
+                        신고 확인
                       </Link>
                     ) : null}
                     {notification.type === 'user_followed' &&

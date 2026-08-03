@@ -63,7 +63,9 @@ userRouter.get('/discover', optionalAuthenticate, async (req, res, next) => {
 userRouter.get('/search', authenticate, async (req, res, next) => {
   try {
     const keyword =
-      typeof req.query.keyword === 'string' ? req.query.keyword.trim() : '';
+      typeof req.query.keyword === 'string'
+        ? req.query.keyword.trim().slice(0, 50)
+        : '';
 
     if (keyword.length < 2) {
       res.json({ items: [] });
@@ -81,56 +83,64 @@ userRouter.get('/search', authenticate, async (req, res, next) => {
   }
 });
 
-userRouter.get('/:userId/profile', optionalAuthenticate, async (req, res, next) => {
-  try {
-    const userId = parsePositiveInt(req.params.userId, 0);
+userRouter.get(
+  '/:userId/profile',
+  optionalAuthenticate,
+  async (req, res, next) => {
+    try {
+      const userId = parsePositiveInt(req.params.userId, 0);
 
-    if (!userId) {
-      throw new HttpError(400, 'INVALID_INPUT', '사용자 ID가 올바르지 않습니다.');
-    }
+      if (!userId) {
+        throw new HttpError(
+          400,
+          'INVALID_INPUT',
+          '사용자 ID가 올바르지 않습니다.',
+        );
+      }
 
-    const summary = await findFanSummaryById({
-      userId,
-      viewerUserId: req.user?.id ?? null,
-    });
+      const summary = await findFanSummaryById({
+        userId,
+        viewerUserId: req.user?.id ?? null,
+      });
 
-    if (!summary) {
-      throw new HttpError(404, 'USER_NOT_FOUND', '팬을 찾을 수 없습니다.');
-    }
+      if (!summary) {
+        throw new HttpError(404, 'USER_NOT_FOUND', '팬을 찾을 수 없습니다.');
+      }
 
-    const [stats, recentPosts, sharedAttendanceCount] = await Promise.all([
-      getAttendanceStats(userId),
-      listRecentPostsByUser(userId),
-      req.user?.id
-        ? countSharedAttendanceGames({
-            firstUserId: userId,
-            secondUserId: req.user.id,
-          })
-        : Promise.resolve(0),
-    ]);
+      const [stats, recentPosts, sharedAttendanceCount] = await Promise.all([
+        getAttendanceStats(userId),
+        listRecentPostsByUser(userId),
+        req.user?.id
+          ? countSharedAttendanceGames({
+              firstUserId: userId,
+              secondUserId: req.user.id,
+            })
+          : Promise.resolve(0),
+      ]);
 
-    res.json({
-      fan: {
-        ...summary,
-        stats: {
-          totalCount: stats.totalCount,
-          stadiumCount: stats.stadiumCount,
-          homeCount: stats.homeCount,
-          winRate: stats.overallWinRate,
-          winCount: stats.overallWinCount,
-          loseCount: stats.overallLoseCount,
-          drawCount: stats.overallDrawCount,
-          title: stats.title,
-          titles: stats.titles,
+      res.json({
+        fan: {
+          ...summary,
+          stats: {
+            totalCount: stats.totalCount,
+            stadiumCount: stats.stadiumCount,
+            homeCount: stats.homeCount,
+            winRate: stats.overallWinRate,
+            winCount: stats.overallWinCount,
+            loseCount: stats.overallLoseCount,
+            drawCount: stats.overallDrawCount,
+            title: stats.title,
+            titles: stats.titles,
+          },
+          sharedAttendanceCount,
+          recentPosts,
         },
-        sharedAttendanceCount,
-        recentPosts,
-      },
-    });
-  } catch (error) {
-    next(error);
-  }
-});
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
 
 userRouter.post(
   '/:userId/follow',
@@ -142,11 +152,19 @@ userRouter.post(
       const followerUserId = req.user?.id ?? 0;
 
       if (!followedUserId) {
-        throw new HttpError(400, 'INVALID_INPUT', '사용자 ID가 올바르지 않습니다.');
+        throw new HttpError(
+          400,
+          'INVALID_INPUT',
+          '사용자 ID가 올바르지 않습니다.',
+        );
       }
 
       if (followedUserId === followerUserId) {
-        throw new HttpError(400, 'CANNOT_FOLLOW_SELF', '내 프로필은 팔로우할 수 없습니다.');
+        throw new HttpError(
+          400,
+          'CANNOT_FOLLOW_SELF',
+          '내 프로필은 팔로우할 수 없습니다.',
+        );
       }
 
       const [target, actor] = await Promise.all([
@@ -186,7 +204,11 @@ userRouter.delete('/:userId/follow', authenticate, async (req, res, next) => {
     const followerUserId = req.user?.id ?? 0;
 
     if (!followedUserId) {
-      throw new HttpError(400, 'INVALID_INPUT', '사용자 ID가 올바르지 않습니다.');
+      throw new HttpError(
+        400,
+        'INVALID_INPUT',
+        '사용자 ID가 올바르지 않습니다.',
+      );
     }
 
     await unfollowUser({ followerUserId, followedUserId });

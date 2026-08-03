@@ -14,6 +14,7 @@ import {
   listAttendanceRecords,
 } from '@/lib/attendance-api';
 import { fetchPost, listComments, listPosts } from '@/lib/post-api';
+import type { PostCategory } from '@/lib/post-api';
 import { fetchFanProfile, listFans } from '@/lib/user-api';
 import {
   fetchPlayerCheer,
@@ -141,6 +142,7 @@ export function usePostsQuery(input: {
   page: number;
   keyword?: string;
   scope?: 'latest' | 'myTeam' | 'following';
+  category?: PostCategory;
   token?: string | null;
 }) {
   return useQuery({

@@ -2,18 +2,35 @@ import type { ResultSetHeader, RowDataPacket } from 'mysql2';
 import { db } from '../../config/database.js';
 
 export async function getAdminSummary() {
-  const [[users], [posts], [comments], [games]] = await Promise.all([
-    db.query<(RowDataPacket & { count: number })[]>('SELECT COUNT(*) AS count FROM users'),
-    db.query<(RowDataPacket & { count: number })[]>('SELECT COUNT(*) AS count FROM posts'),
-    db.query<(RowDataPacket & { count: number })[]>('SELECT COUNT(*) AS count FROM comments'),
-    db.query<(RowDataPacket & { count: number })[]>('SELECT COUNT(*) AS count FROM games'),
-  ]);
+  const [[users], [posts], [comments], [games], [reports], [photos]] =
+    await Promise.all([
+      db.query<(RowDataPacket & { count: number })[]>(
+        'SELECT COUNT(*) AS count FROM users',
+      ),
+      db.query<(RowDataPacket & { count: number })[]>(
+        'SELECT COUNT(*) AS count FROM posts',
+      ),
+      db.query<(RowDataPacket & { count: number })[]>(
+        'SELECT COUNT(*) AS count FROM comments',
+      ),
+      db.query<(RowDataPacket & { count: number })[]>(
+        'SELECT COUNT(*) AS count FROM games',
+      ),
+      db.query<(RowDataPacket & { count: number })[]>(
+        `SELECT COUNT(*) AS count FROM content_reports WHERE status = 'pending'`,
+      ),
+      db.query<(RowDataPacket & { count: number })[]>(
+        'SELECT COUNT(*) AS count FROM attendance_records WHERE photo_url IS NOT NULL',
+      ),
+    ]);
 
   return {
     users: Number(users[0]?.count ?? 0),
     posts: Number(posts[0]?.count ?? 0),
     comments: Number(comments[0]?.count ?? 0),
     games: Number(games[0]?.count ?? 0),
+    pendingReports: Number(reports[0]?.count ?? 0),
+    photos: Number(photos[0]?.count ?? 0),
   };
 }
 
@@ -63,27 +80,122 @@ export async function deleteAdminUser(userId: number) {
   );
 }
 
+export async function listAdminUserUploadUrls(userId: number) {
+  const [rows] = await db.query<(RowDataPacket & { assetUrl: string })[]>(
+    `SELECT profile_image_url AS assetUrl
+     FROM users
+     WHERE id = ? AND profile_image_url IS NOT NULL
+     UNION ALL
+     SELECT photo_url AS assetUrl
+     FROM attendance_records
+     WHERE user_id = ? AND photo_url IS NOT NULL`,
+    [userId, userId],
+  );
+
+  return rows.map((row) => row.assetUrl);
+}
+
+export async function clearAdminUserProfileImage(userId: number) {
+  const [rows] = await db.query<
+    (RowDataPacket & { profileImageUrl: string | null })[]
+  >(
+    `SELECT profile_image_url AS profileImageUrl
+     FROM users
+     WHERE id = ?
+     LIMIT 1`,
+    [userId],
+  );
+  await db.execute(
+    `UPDATE users
+     SET profile_image_url = NULL
+     WHERE id = ?`,
+    [userId],
+  );
+
+  return rows[0]?.profileImageUrl ?? null;
+}
+
 export async function listAdminPosts(keyword?: string) {
   const q = keyword ? `%${keyword}%` : null;
   const [rows] = await db.query<RowDataPacket[]>(
     `SELECT
        p.id,
+       p.category,
        p.title,
+       p.content,
+       p.is_pinned AS isPinned,
+       p.request_status AS requestStatus,
        p.created_at AS createdAt,
        u.id AS authorId,
        u.nickname AS authorNickname,
+       u.profile_image_url AS authorProfileImageUrl,
        COUNT(c.id) AS commentCount
      FROM posts p
      JOIN users u ON u.id = p.user_id
      LEFT JOIN comments c ON c.post_id = p.id
      WHERE (? IS NULL OR p.title LIKE ? OR p.content LIKE ? OR u.nickname LIKE ?)
-     GROUP BY p.id, p.title, p.created_at, u.id, u.nickname
-     ORDER BY p.created_at DESC
+     GROUP BY p.id, p.category, p.title, p.content, p.is_pinned, p.request_status, p.created_at, u.id, u.nickname, u.profile_image_url
+     ORDER BY p.is_pinned DESC, p.created_at DESC
      LIMIT 100`,
     [q, q, q, q],
   );
 
   return rows;
+}
+
+export async function listAdminAttendanceRecords(keyword?: string) {
+  const q = keyword ? `%${keyword}%` : null;
+  const [rows] = await db.query<RowDataPacket[]>(
+    `SELECT
+       ar.id,
+       ar.photo_url AS photoUrl,
+       ar.memo,
+       ar.watch_type AS watchType,
+       ar.created_at AS createdAt,
+       u.id AS authorId,
+       u.nickname AS authorNickname,
+       u.profile_image_url AS authorProfileImageUrl,
+       g.game_date AS gameDate,
+       g.stadium,
+       ht.short_name AS homeTeamShortName,
+       at.short_name AS awayTeamShortName
+     FROM attendance_records ar
+     JOIN users u ON u.id = ar.user_id
+     JOIN games g ON g.id = ar.game_id
+     JOIN teams ht ON ht.id = g.home_team_id
+     JOIN teams at ON at.id = g.away_team_id
+     WHERE (
+       ? IS NULL OR
+       u.nickname LIKE ? OR
+       ar.memo LIKE ? OR
+       g.stadium LIKE ?
+     )
+     ORDER BY ar.created_at DESC
+     LIMIT 200`,
+    [q, q, q, q],
+  );
+
+  return rows;
+}
+
+export async function clearAdminAttendancePhoto(recordId: number) {
+  const [rows] = await db.query<
+    (RowDataPacket & { photoUrl: string | null })[]
+  >(
+    `SELECT photo_url AS photoUrl
+     FROM attendance_records
+     WHERE id = ?
+     LIMIT 1`,
+    [recordId],
+  );
+  await db.execute(
+    `UPDATE attendance_records
+     SET photo_url = NULL
+     WHERE id = ?`,
+    [recordId],
+  );
+
+  return rows[0]?.photoUrl ?? null;
 }
 
 export async function listAdminComments(keyword?: string) {
@@ -173,7 +285,9 @@ export async function updateAdminGame(input: {
   );
 }
 
-export async function createAdminGame(input: Omit<Parameters<typeof updateAdminGame>[0], 'id'>) {
+export async function createAdminGame(
+  input: Omit<Parameters<typeof updateAdminGame>[0], 'id'>,
+) {
   const [result] = await db.execute<ResultSetHeader>(
     `INSERT INTO games (
        game_date,

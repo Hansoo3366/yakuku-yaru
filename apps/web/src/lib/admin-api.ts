@@ -5,6 +5,8 @@ export type AdminSummary = {
   posts: number;
   comments: number;
   games: number;
+  pendingReports: number;
+  photos: number;
 };
 
 export type AdminUser = {
@@ -23,11 +25,45 @@ export type AdminUser = {
 
 export type AdminPost = {
   id: number;
+  category: import('./post-api').PostCategory;
   title: string;
+  content: string;
+  isPinned: boolean;
+  requestStatus: import('./post-api').FeatureRequestStatus | null;
   createdAt: string;
   authorId: number;
   authorNickname: string;
+  authorProfileImageUrl: string | null;
   commentCount: number;
+};
+
+export type AdminAttendanceRecord = {
+  id: number;
+  photoUrl: string | null;
+  memo: string | null;
+  watchType: string;
+  createdAt: string;
+  authorId: number;
+  authorNickname: string;
+  authorProfileImageUrl: string | null;
+  gameDate: string;
+  stadium: string;
+  homeTeamShortName: string;
+  awayTeamShortName: string;
+};
+
+export type AdminReport = {
+  id: number;
+  targetType: 'post' | 'comment' | 'user' | 'attendance';
+  targetId: number;
+  targetLabel: string | null;
+  reason: string;
+  detail: string | null;
+  status: 'pending' | 'reviewing' | 'resolved' | 'dismissed';
+  adminNote: string | null;
+  createdAt: string;
+  reporterNickname: string;
+  resolverNickname: string | null;
 };
 
 export type AdminComment = {
@@ -113,6 +149,13 @@ export function deleteAdminUser(userId: number, token: string) {
   });
 }
 
+export function clearAdminUserProfileImage(userId: number, token: string) {
+  return request<void>(`/admin/users/${userId}/profile-image`, {
+    method: 'DELETE',
+    token,
+  });
+}
+
 export function listAdminPosts(token: string, keyword = '') {
   return request<{ items: AdminPost[] }>(withKeyword('/admin/posts', keyword), {
     token,
@@ -122,6 +165,22 @@ export function listAdminPosts(token: string, keyword = '') {
 export function deleteAdminPost(postId: number, token: string) {
   return request<void>(`/admin/posts/${postId}`, {
     method: 'DELETE',
+    token,
+  });
+}
+
+export function updateAdminPostModeration(
+  postId: number,
+  input: {
+    category: AdminPost['category'];
+    isPinned: boolean;
+    requestStatus: AdminPost['requestStatus'];
+  },
+  token: string,
+) {
+  return request<{ post: unknown }>(`/admin/posts/${postId}/moderation`, {
+    method: 'PATCH',
+    body: input,
     token,
   });
 }
@@ -136,6 +195,46 @@ export function listAdminComments(token: string, keyword = '') {
 export function deleteAdminComment(commentId: number, token: string) {
   return request<void>(`/admin/comments/${commentId}`, {
     method: 'DELETE',
+    token,
+  });
+}
+
+export function listAdminAttendanceRecords(token: string, keyword = '') {
+  return request<{ items: AdminAttendanceRecord[] }>(
+    withKeyword('/admin/attendance-records', keyword),
+    { token },
+  );
+}
+
+export function clearAdminAttendancePhoto(recordId: number, token: string) {
+  return request<void>(`/admin/attendance-records/${recordId}/photo`, {
+    method: 'DELETE',
+    token,
+  });
+}
+
+export function deleteAdminAttendanceRecord(recordId: number, token: string) {
+  return request<void>(`/admin/attendance-records/${recordId}`, {
+    method: 'DELETE',
+    token,
+  });
+}
+
+export function listAdminReports(token: string, status = '') {
+  const path = status
+    ? `/admin/reports?${new URLSearchParams({ status }).toString()}`
+    : '/admin/reports';
+  return request<{ items: AdminReport[] }>(path, { token });
+}
+
+export function updateAdminReport(
+  reportId: number,
+  input: { status: AdminReport['status']; adminNote?: string | null },
+  token: string,
+) {
+  return request<{ ok: boolean }>(`/admin/reports/${reportId}`, {
+    method: 'PATCH',
+    body: input,
     token,
   });
 }

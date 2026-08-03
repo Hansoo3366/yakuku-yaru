@@ -22,9 +22,15 @@ export const errorHandler: ErrorRequestHandler = (error, _req, res, _next) => {
     return;
   }
 
-  if (error instanceof Error && error.message.includes('이미지만 업로드')) {
+  if (
+    error instanceof Error &&
+    (error.message.includes('이미지만 업로드') ||
+      error.message.includes('이미지 저장 용량'))
+  ) {
     res.status(400).json({
-      code: 'INVALID_FILE_TYPE',
+      code: error.message.includes('저장 용량')
+        ? 'UPLOAD_QUOTA_EXCEEDED'
+        : 'INVALID_FILE_TYPE',
       message: error.message,
     });
     return;

@@ -8,6 +8,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
+import { AdminBadge } from '@/components/AdminBadge';
 import { ApiError } from '@/lib/api';
 import { useAuthStore } from '@/lib/auth-store';
 import { getAuthorProfileImageSrc } from '@/lib/profile-image';
@@ -18,6 +19,7 @@ import {
 } from '@/lib/post-api';
 import { Skeleton } from '@/components/Skeleton';
 import { EmptyState } from '@/components/EmptyState';
+import { ReportButton } from '@/components/ReportButton';
 import {
   commentFormSchema,
   type CommentFormValues,
@@ -29,6 +31,7 @@ import {
 } from '@/lib/queries';
 import { queryKeys } from '@/lib/query-keys';
 import { formatKoreanDateTimeShort } from '@/lib/date-format';
+import { FEATURE_STATUS_LABELS, POST_CATEGORY_LABELS } from '@/lib/post-meta';
 import styles from './post-detail.module.css';
 
 export default function PostDetailPage() {
@@ -157,9 +160,20 @@ export default function PostDetailPage() {
 
       <article className={styles.article}>
         <header className={styles.articleHeader}>
-          <span className={styles.articleKicker}>
-            팬 라운지 · 글 #{String(post.id).padStart(3, '0')}
-          </span>
+          <div className={styles.articleLabelRow}>
+            <span className={styles.articleKicker}>
+              팬 라운지 · 글 #{String(post.id).padStart(3, '0')}
+            </span>
+            <span className={styles.articleCategory}>
+              {post.isPinned ? '고정 · ' : ''}
+              {POST_CATEGORY_LABELS[post.category]}
+            </span>
+            {post.requestStatus ? (
+              <span className={styles.articleStatus}>
+                {FEATURE_STATUS_LABELS[post.requestStatus]}
+              </span>
+            ) : null}
+          </div>
           <div className={styles.articleTitleRow}>
             <h1>{post.title}</h1>
             {isAuthor ? (
@@ -192,7 +206,9 @@ export default function PostDetailPage() {
                   </svg>
                 </button>
               </div>
-            ) : null}
+            ) : (
+              <ReportButton targetId={post.id} targetType="post" />
+            )}
           </div>
           <div className={styles.articleMeta}>
             <Link className={styles.authorLink} href={`/fans/${post.userId}`}>
@@ -203,8 +219,11 @@ export default function PostDetailPage() {
                   post.authorFavoriteTeamShortName,
                 )}
               />
-              <span>
-                <strong>{post.authorNickname}</strong>
+              <span className={styles.authorCopy}>
+                <span className={styles.authorNameRow}>
+                  <strong>{post.authorNickname}</strong>
+                  {post.authorRole === 'admin' ? <AdminBadge inverse /> : null}
+                </span>
                 <small>
                   {post.authorFavoriteTeamShortName
                     ? `${post.authorFavoriteTeamShortName} 팬`
@@ -249,8 +268,11 @@ export default function PostDetailPage() {
                       )}
                     />
                     <span className={styles.commentAuthorText}>
-                      <strong>{comment.authorNickname}</strong>
-                      <span>
+                      <span className={styles.commentAuthorNameRow}>
+                        <strong>{comment.authorNickname}</strong>
+                        {comment.authorRole === 'admin' ? <AdminBadge /> : null}
+                      </span>
+                      <span className={styles.commentMeta}>
                         {comment.authorFavoriteTeamShortName ? (
                           <em>{comment.authorFavoriteTeamShortName}</em>
                         ) : null}
@@ -275,7 +297,9 @@ export default function PostDetailPage() {
                         />
                       </svg>
                     </button>
-                  ) : null}
+                  ) : (
+                    <ReportButton targetId={comment.id} targetType="comment" />
+                  )}
                 </header>
                 <p className={styles.commentContent}>{comment.content}</p>
               </article>

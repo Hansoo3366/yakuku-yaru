@@ -13,6 +13,7 @@ export type UserSearchResult = {
 export type FanSummary = {
   id: number;
   nickname: string;
+  role: string;
   profileImageUrl: string | null;
   favoriteTeam: {
     id: number;

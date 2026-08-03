@@ -11,6 +11,7 @@ import { useMeQuery, useTeamsQuery } from '@/lib/queries';
 import { useTeamTheme } from '@/lib/team-theme';
 import { getProfileImageSrc } from '@/lib/profile-image';
 import { NotificationBell } from '@/components/NotificationBell';
+import { SERVICE_CONTACT_EMAIL } from '@/lib/service-contact';
 
 const primaryLinks: Array<{
   href: string;
@@ -172,6 +173,28 @@ export function AppFooter() {
           <Link href="/fans">팬 찾기</Link>
           {user ? <Link href="/me">마이페이지</Link> : null}
         </nav>
+        <div className="site-footer-legal">
+          <nav aria-label="정책 및 운영 링크">
+            <Link href="/privacy">개인정보 처리방침</Link>
+            <Link href="/terms">이용약관</Link>
+            <Link href="/community-guidelines">커뮤니티 운영정책</Link>
+            <a href={`mailto:${SERVICE_CONTACT_EMAIL}`}>문의</a>
+          </nav>
+          <p>
+            비공식 야구 팬 서비스이며 KBO 및 각 구단과 제휴 관계가 없습니다.
+            구단명·로고·선수 이미지 등의 권리는 각 권리자에게 있습니다.
+          </p>
+          <p>
+            야린이인 개발자가 야구를 더 재밌게 보기 위해 필요하다 생각되는
+            기능을 모아 만든 개인 스터디 프로젝트 사이트입니다.
+            <br />
+            아직 부족하거나 서툰 점이 있을 수 있으니, 불편한 점이나 아이디어는
+            편하게 알려주세요.
+          </p>
+          <small>
+            © 2026 Yakuku Yaru. 자체 제작 콘텐츠의 권리를 보유합니다.
+          </small>
+        </div>
       </div>
     </footer>
   );

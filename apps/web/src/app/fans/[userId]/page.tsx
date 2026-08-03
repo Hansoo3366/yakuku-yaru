@@ -5,8 +5,10 @@
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import type { CSSProperties } from 'react';
+import { AdminBadge } from '@/components/AdminBadge';
 import { EmptyState } from '@/components/EmptyState';
 import { FanFollowButton } from '@/components/FanFollowButton';
+import { ReportButton } from '@/components/ReportButton';
 import { Skeleton } from '@/components/Skeleton';
 import { useAuthStore } from '@/lib/auth-store';
 import { formatKoreanDateShort } from '@/lib/date-format';
@@ -71,7 +73,10 @@ export default function FanProfilePage() {
           />
           <div>
             <span className={styles.eyebrow}>Fan profile</span>
-            <h1>{fan.nickname}</h1>
+            <div className={styles.profileNameRow}>
+              <h1>{fan.nickname}</h1>
+              {fan.role === 'admin' ? <AdminBadge inverse /> : null}
+            </div>
             <p>
               {fan.favoriteTeam
                 ? `${fan.favoriteTeam.name} 팬`
@@ -95,11 +100,14 @@ export default function FanProfilePage() {
               내 프로필 관리
             </Link>
           ) : (
-            <FanFollowButton
-              initialFollowerCount={fan.followerCount}
-              initialIsFollowing={fan.isFollowing}
-              userId={fan.id}
-            />
+            <>
+              <FanFollowButton
+                initialFollowerCount={fan.followerCount}
+                initialIsFollowing={fan.isFollowing}
+                userId={fan.id}
+              />
+              <ReportButton targetId={fan.id} targetType="user" />
+            </>
           )}
           {fan.sharedAttendanceCount > 0 ? (
             <div className={styles.sharedNote}>

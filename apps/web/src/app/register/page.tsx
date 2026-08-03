@@ -44,6 +44,9 @@ function RegisterPageContent() {
   const [nickname, setNickname] = useState('');
   const [password, setPassword] = useState('');
   const [passwordConfirm, setPasswordConfirm] = useState('');
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const [agreedToPrivacy, setAgreedToPrivacy] = useState(false);
+  const [confirmedAge, setConfirmedAge] = useState(false);
   const [favoriteTeamId, setFavoriteTeamId] = useState<number | null>(null);
   const [teams, setTeams] = useState<Team[]>([]);
   const [errorMessage, setErrorMessage] = useState('');
@@ -168,6 +171,13 @@ function RegisterPageContent() {
       return;
     }
 
+    if (!agreedToTerms || !agreedToPrivacy || !confirmedAge) {
+      setErrorMessage(
+        '이용약관·개인정보 처리방침 동의와 만 14세 이상 확인이 필요합니다.',
+      );
+      return;
+    }
+
     setIsCheckingAccount(true);
 
     try {
@@ -206,6 +216,9 @@ function RegisterPageContent() {
         nickname,
         password,
         favoriteTeamId,
+        agreedToTerms,
+        agreedToPrivacy,
+        confirmedAge,
       });
       applyVerificationMeta(response);
       setInfoMessage(
@@ -384,6 +397,46 @@ function RegisterPageContent() {
               required
               value={passwordConfirm}
             />
+            <fieldset className="consent-list">
+              <legend className="field-label">필수 동의</legend>
+              <label className="checkbox-field">
+                <input
+                  checked={agreedToTerms}
+                  name="agreedToTerms"
+                  onChange={(event) => setAgreedToTerms(event.target.checked)}
+                  type="checkbox"
+                />
+                <span>
+                  <Link href="/terms" target="_blank">
+                    이용약관
+                  </Link>
+                  에 동의합니다.
+                </span>
+              </label>
+              <label className="checkbox-field">
+                <input
+                  checked={agreedToPrivacy}
+                  name="agreedToPrivacy"
+                  onChange={(event) => setAgreedToPrivacy(event.target.checked)}
+                  type="checkbox"
+                />
+                <span>
+                  <Link href="/privacy" target="_blank">
+                    개인정보 처리방침
+                  </Link>
+                  에 동의합니다.
+                </span>
+              </label>
+              <label className="checkbox-field">
+                <input
+                  checked={confirmedAge}
+                  name="confirmedAge"
+                  onChange={(event) => setConfirmedAge(event.target.checked)}
+                  type="checkbox"
+                />
+                <span>만 14세 이상입니다.</span>
+              </label>
+            </fieldset>
             {errorMessage ? <p className="form-error">{errorMessage}</p> : null}
             <button
               className="btn btn-primary btn-lg btn-block"

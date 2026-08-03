@@ -4,6 +4,7 @@
 
 import Link from 'next/link';
 import { FormEvent, useState, type CSSProperties } from 'react';
+import { AdminBadge } from '@/components/AdminBadge';
 import { EmptyState } from '@/components/EmptyState';
 import { FanFollowButton } from '@/components/FanFollowButton';
 import { Skeleton } from '@/components/Skeleton';
@@ -165,7 +166,10 @@ export default function FansPage() {
                 )}
               />
               <div className={styles.identity}>
-                <strong>{fan.nickname}</strong>
+                <div className={styles.identityName}>
+                  <strong>{fan.nickname}</strong>
+                  {fan.role === 'admin' ? <AdminBadge /> : null}
+                </div>
                 <span>{fan.favoriteTeam?.shortName ?? '응원팀 미선택'}</span>
               </div>
               <FanFollowButton
