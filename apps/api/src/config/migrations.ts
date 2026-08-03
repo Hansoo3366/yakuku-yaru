@@ -202,7 +202,17 @@ export async function runMigrations() {
        ELSE ticket_url
      END
      WHERE short_name IN ('LG', '두산', 'KIA', '삼성', '한화', '롯데', 'SSG', 'NC', 'KT', '키움')
-       AND ticket_url IS NULL`,
+       AND (
+         ticket_url IS NULL
+         OR (
+           short_name = '두산'
+           AND ticket_url = 'https://ticket.interpark.com/Contents/Sports/GoodsInfo?SportsCode=07001&TeamCode=PB004'
+         )
+         OR (
+           short_name = '키움'
+           AND ticket_url = 'https://ticket.interpark.com/Contents/Sports/GoodsInfo?SportsCode=07001&TeamCode=PB003'
+         )
+       )`,
   );
 
   const hasTermsAgreedAt = await columnExists('users', 'terms_agreed_at');
