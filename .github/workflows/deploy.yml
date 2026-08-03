@@ -31,12 +31,16 @@ jobs:
           DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
           DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
           NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL }}
+          NEXT_PUBLIC_CONTACT_EMAIL: ${{ vars.NEXT_PUBLIC_CONTACT_EMAIL }}
         run: |
           test -n "$DEPLOY_HOST" || (echo "DEPLOY_HOST secret is missing" && exit 1)
           test -n "$DEPLOY_USER" || (echo "DEPLOY_USER secret is missing" && exit 1)
           test -n "$DEPLOY_SSH_KEY" || (echo "DEPLOY_SSH_KEY secret is missing" && exit 1)
           test -n "$DEPLOY_PATH" || (echo "DEPLOY_PATH secret is missing" && exit 1)
           test -n "$NEXT_PUBLIC_API_URL" || (echo "NEXT_PUBLIC_API_URL secret is missing" && exit 1)
+          test -n "$NEXT_PUBLIC_CONTACT_EMAIL" || (
+            echo "NEXT_PUBLIC_CONTACT_EMAIL repository variable is missing" && exit 1
+          )
           echo "$DEPLOY_SSH_KEY" | grep -q 'BEGIN.*PRIVATE KEY' || (
             echo "DEPLOY_SSH_KEY must be a full PEM private key (BEGIN/END lines)" && exit 1
           )
@@ -88,7 +92,7 @@ jobs:
             ${{ env.WEB_IMAGE_LATEST }}
           build-args: |
             NEXT_PUBLIC_API_URL=${{ secrets.NEXT_PUBLIC_API_URL }}
-            NEXT_PUBLIC_CONTACT_EMAIL=${{ vars.NEXT_PUBLIC_CONTACT_EMAIL || 'contact@yakuku-yaru.today' }}
+            NEXT_PUBLIC_CONTACT_EMAIL=${{ vars.NEXT_PUBLIC_CONTACT_EMAIL }}
           cache-from: type=gha,scope=web
           cache-to: type=gha,mode=max,scope=web
 
