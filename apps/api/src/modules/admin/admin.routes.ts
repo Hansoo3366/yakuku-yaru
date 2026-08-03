@@ -442,7 +442,7 @@ adminRouter.patch(
   async (req, res, next) => {
     try {
       const category = req.body?.category;
-      const isPinned = req.body?.isPinned;
+      const requestedPinned = req.body?.isPinned;
       const requestStatus = req.body?.requestStatus;
       const categories = new Set([
         'review',
@@ -459,7 +459,12 @@ adminRouter.patch(
         'deferred',
       ]);
 
-      if (!categories.has(category) || typeof isPinned !== 'boolean') {
+      const hasValidPinnedValue =
+        typeof requestedPinned === 'boolean' ||
+        requestedPinned === 0 ||
+        requestedPinned === 1;
+
+      if (!categories.has(category) || !hasValidPinnedValue) {
         throw new HttpError(
           400,
           'INVALID_INPUT',
@@ -467,9 +472,13 @@ adminRouter.patch(
         );
       }
 
+      const isPinned = requestedPinned === true || requestedPinned === 1;
+
       const normalizedStatus =
-        category === 'feature' && requestStatuses.has(requestStatus)
-          ? requestStatus
+        category === 'feature'
+          ? requestStatuses.has(requestStatus)
+            ? requestStatus
+            : 'received'
           : null;
       const post = await updatePostModeration({
         id: Number(req.params.postId),
@@ -711,9 +720,30 @@ adminRouter.delete(
   },
 );
 
-adminRouter.get('/games', async (_req, res, next) => {
+adminRouter.get('/games', async (req, res, next) => {
   try {
-    res.json({ items: await listAdminGames() });
+    const page = optionalPositiveInteger(req.query.page, 1, 'page');
+    const size = Math.min(
+      optionalPositiveInteger(req.query.size, 25, 'size'),
+      50,
+    );
+    const status =
+      req.query.status === 'scheduled' ||
+      req.query.status === 'finished' ||
+      req.query.status === 'cancelled'
+        ? req.query.status
+        : undefined;
+    const result = await listAdminGames({ page, size, status });
+
+    res.json({
+      items: result.items,
+      pagination: {
+        page,
+        size,
+        total: result.total,
+        totalPages: Math.max(1, Math.ceil(result.total / size)),
+      },
+    });
   } catch (error) {
     next(error);
   }

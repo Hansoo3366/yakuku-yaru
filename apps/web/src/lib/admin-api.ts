@@ -270,8 +270,22 @@ export function updateAdminReport(
   });
 }
 
-export function listAdminGames(token: string) {
-  return request<{ items: AdminGame[] }>('/admin/games', { token });
+export function listAdminGames(
+  token: string,
+  input: { page?: number; size?: number; status?: string } = {},
+) {
+  const params = new URLSearchParams();
+  if (input.page) params.set('page', String(input.page));
+  if (input.size) params.set('size', String(input.size));
+  if (input.status && input.status !== 'all') {
+    params.set('status', input.status);
+  }
+  const query = params.toString();
+
+  return request<{ items: AdminGame[]; pagination: AdminPagination }>(
+    `/admin/games${query ? `?${query}` : ''}`,
+    { token },
+  );
 }
 
 export function createAdminGame(input: AdminGameInput, token: string) {

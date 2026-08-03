@@ -14,7 +14,9 @@ export async function getAdminSummary() {
         'SELECT COUNT(*) AS count FROM comments',
       ),
       db.query<(RowDataPacket & { count: number })[]>(
-        'SELECT COUNT(*) AS count FROM games',
+        `SELECT COUNT(*) AS count
+         FROM games
+         WHERE external_source = 'kbo'`,
       ),
       db.query<(RowDataPacket & { count: number })[]>(
         `SELECT COUNT(*) AS count FROM content_reports WHERE status = 'pending'`,
@@ -183,7 +185,10 @@ export async function listAdminPosts(input: {
   const [items] = itemsResult;
 
   return {
-    items,
+    items: items.map((item) => ({
+      ...item,
+      isPinned: Boolean(item.isPinned),
+    })),
     total: Number(countRows[0]?.count ?? 0),
   };
 }
@@ -266,9 +271,23 @@ export async function listAdminComments(keyword?: string) {
   return rows;
 }
 
-export async function listAdminGames() {
-  const [rows] = await db.query<RowDataPacket[]>(
-    `SELECT
+export async function listAdminGames(input: {
+  page: number;
+  size: number;
+  status?: string;
+}) {
+  const whereClause = input.status ? 'WHERE g.status = ?' : '';
+  const params = input.status ? [input.status] : [];
+  const offset = (input.page - 1) * input.size;
+  const [countResult, itemsResult] = await Promise.all([
+    db.query<(RowDataPacket & { count: number })[]>(
+      `SELECT COUNT(*) AS count
+       FROM games g
+       ${whereClause}`,
+      params,
+    ),
+    db.query<RowDataPacket[]>(
+      `SELECT
        g.id,
        g.game_date AS gameDate,
        g.stadium,
@@ -284,11 +303,20 @@ export async function listAdminGames() {
      FROM games g
      JOIN teams ht ON ht.id = g.home_team_id
      JOIN teams at ON at.id = g.away_team_id
+     ${whereClause}
      ORDER BY g.game_date DESC
-     LIMIT 100`,
-  );
+     LIMIT ? OFFSET ?`,
+      [...params, input.size, offset],
+    ),
+  ]);
 
-  return rows;
+  const [countRows] = countResult;
+  const [items] = itemsResult;
+
+  return {
+    items,
+    total: Number(countRows[0]?.count ?? 0),
+  };
 }
 
 export async function updateAdminGame(input: {

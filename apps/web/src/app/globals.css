@@ -4967,6 +4967,8 @@ img {
 
 .admin-profile-photo-action {
   color: var(--color-score-red);
+  min-width: 0;
+  padding-inline: 8px;
   white-space: nowrap;
 }
 
@@ -4983,6 +4985,56 @@ img {
   display: grid;
   gap: 12px;
   padding: 16px;
+}
+
+.admin-comment-card {
+  align-items: center;
+  border: 1px solid var(--color-line);
+  display: grid;
+  gap: 16px;
+  grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr) auto;
+  padding: 16px;
+}
+
+.admin-comment-body,
+.admin-comment-context {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.admin-comment-body > span,
+.admin-comment-context > span {
+  color: var(--color-field-700);
+  font-size: 10px;
+  font-weight: var(--weight-black);
+  letter-spacing: 0.08em;
+}
+
+.admin-comment-body p {
+  background: var(--color-surface-soft);
+  color: var(--color-ink);
+  line-height: 1.55;
+  padding: 10px 12px;
+  white-space: pre-wrap;
+}
+
+.admin-comment-context {
+  border-left: 2px solid var(--color-line);
+  padding-left: 16px;
+}
+
+.admin-comment-context a {
+  color: var(--color-night-navy);
+  font-weight: var(--weight-black);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-comment-context small {
+  color: var(--color-muted);
+  font-size: var(--text-xs);
 }
 
 .admin-content-card-head {
@@ -5151,6 +5203,18 @@ img {
   .admin-media-grid,
   .admin-report-card {
     grid-template-columns: 1fr;
+  }
+
+  .admin-comment-card {
+    align-items: stretch;
+    grid-template-columns: 1fr;
+  }
+
+  .admin-comment-context {
+    border-left: 0;
+    border-top: 2px solid var(--color-line);
+    padding-left: 0;
+    padding-top: 12px;
   }
 
   .admin-filter-rail {

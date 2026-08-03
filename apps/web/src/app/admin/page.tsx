@@ -96,7 +96,7 @@ const SUMMARY_LABELS: Record<keyof AdminSummary, string> = {
   users: '사용자',
   posts: '게시글',
   comments: '댓글',
-  games: '경기',
+  games: 'KBO 경기 일정',
   pendingReports: '처리 대기 신고',
   photos: '직관 이미지',
 };
@@ -134,6 +134,11 @@ type PostFilterInput = {
   category: string;
   page: number;
   pin: string;
+};
+
+type GameFilterInput = {
+  page: number;
+  status: string;
 };
 
 type EditingCheerTarget =
@@ -242,6 +247,9 @@ export default function AdminPage() {
   >([]);
   const [reports, setReports] = useState<AdminReport[]>([]);
   const [games, setGames] = useState<AdminGame[]>([]);
+  const [gamePagination, setGamePagination] = useState<AdminPagination | null>(
+    null,
+  );
   const [playerCheers, setPlayerCheers] = useState<PlayerCheer[]>([]);
   const [teamCheers, setTeamCheers] = useState<TeamCheer[]>([]);
   const [playerCheerPagination, setPlayerCheerPagination] =
@@ -256,12 +264,14 @@ export default function AdminPage() {
   const [mediaTypeFilter, setMediaTypeFilter] = useState('all');
   const [reportStatusFilter, setReportStatusFilter] = useState('all');
   const [gameStatusFilter, setGameStatusFilter] = useState('all');
+  const [gamePage, setGamePage] = useState(1);
   const [cheerKeyword, setCheerKeyword] = useState('');
   const [cheerTeamId, setCheerTeamId] = useState<number | null>(null);
   const [cheerPage, setCheerPage] = useState(1);
   const [cheerRosterScope, setCheerRosterScope] =
     useState<PlayerCheerRosterScope>('firstTeam');
   const [message, setMessage] = useState('');
+  const [postError, setPostError] = useState('');
   const [currentUserId, setCurrentUserId] = useState<number | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -282,6 +292,10 @@ export default function AdminPage() {
     page: 1,
     pin: 'all',
   });
+  const gameFilterRef = useRef<GameFilterInput>({
+    page: 1,
+    status: 'all',
+  });
   const loadRequestIdRef = useRef(0);
   const token = useAuthStore((state) => state.token);
   const hasHydrated = useAuthStore((state) => state.hasHydrated);
@@ -298,6 +312,13 @@ export default function AdminPage() {
     window.addEventListener('hashchange', syncTabWithHash);
     return () => window.removeEventListener('hashchange', syncTabWithHash);
   }, []);
+
+  useEffect(() => {
+    gameFilterRef.current = {
+      page: gamePage,
+      status: gameStatusFilter,
+    };
+  }, [gamePage, gameStatusFilter]);
 
   useEffect(() => {
     postFilterRef.current = {
@@ -321,6 +342,7 @@ export default function AdminPage() {
       nextKeyword: string,
       cheerInput?: Partial<CheerFilterInput>,
       postInput?: Partial<PostFilterInput>,
+      gameInput?: Partial<GameFilterInput>,
     ) => {
       if (!token) return;
       const requestId = loadRequestIdRef.current + 1;
@@ -332,6 +354,10 @@ export default function AdminPage() {
       const nextPostInput = {
         ...postFilterRef.current,
         ...postInput,
+      };
+      const nextGameInput = {
+        ...gameFilterRef.current,
+        ...gameInput,
       };
       const [
         summaryResponse,
@@ -356,7 +382,11 @@ export default function AdminPage() {
         listAdminComments(token, nextKeyword),
         listAdminAttendanceRecords(token, nextKeyword),
         listAdminReports(token),
-        listAdminGames(token),
+        listAdminGames(token, {
+          page: nextGameInput.page,
+          size: 25,
+          status: nextGameInput.status,
+        }),
         listAdminTeamCheers(token),
         listAdminPlayerCheers(token, {
           keyword: nextCheerInput.keyword,
@@ -377,6 +407,7 @@ export default function AdminPage() {
       setAttendanceRecords(attendanceResponse.items);
       setReports(reportsResponse.items);
       setGames(gamesResponse.items);
+      setGamePagination(gamesResponse.pagination);
       setTeamCheers(teamCheersResponse.items);
       setPlayerCheers(cheersResponse.items);
       setPlayerCheerPagination(cheersResponse.pagination);
@@ -447,6 +478,43 @@ export default function AdminPage() {
   async function updatePostPage(nextPage: number) {
     setPostPage(nextPage);
     await loadAll(keyword, undefined, { page: nextPage });
+  }
+
+  async function updateGamePage(nextPage: number) {
+    setGamePage(nextPage);
+    await loadAll(keyword, undefined, undefined, { page: nextPage });
+  }
+
+  async function savePostModeration(
+    post: AdminPost,
+    input: Partial<Pick<AdminPost, 'category' | 'isPinned' | 'requestStatus'>>,
+  ) {
+    if (!token) return;
+
+    setPostError('');
+    try {
+      await updateAdminPostModeration(
+        post.id,
+        {
+          category: input.category ?? post.category,
+          isPinned: input.isPinned ?? post.isPinned,
+          requestStatus:
+            input.requestStatus === undefined
+              ? post.requestStatus
+              : input.requestStatus,
+        },
+        token,
+      );
+      setMessage('게시글 관리 설정을 저장했습니다.');
+      await loadAll(keyword);
+    } catch (error) {
+      setMessage('');
+      setPostError(
+        error instanceof Error
+          ? error.message
+          : '게시글 관리 설정을 저장하지 못했습니다.',
+      );
+    }
   }
 
   function editGame(game: AdminGame) {
@@ -557,9 +625,7 @@ export default function AdminPage() {
     (report) =>
       reportStatusFilter === 'all' || report.status === reportStatusFilter,
   );
-  const visibleGames = games.filter(
-    (game) => gameStatusFilter === 'all' || game.status === gameStatusFilter,
-  );
+  const visibleGames = games;
 
   if (isLoading) {
     return (
@@ -750,7 +816,15 @@ export default function AdminPage() {
               <label>
                 <span>경기 상태</span>
                 <select
-                  onChange={(event) => setGameStatusFilter(event.target.value)}
+                  onChange={(event) => {
+                    const nextStatus = event.target.value;
+                    setGameStatusFilter(nextStatus);
+                    setGamePage(1);
+                    void loadAll(keyword, undefined, undefined, {
+                      page: 1,
+                      status: nextStatus,
+                    });
+                  }}
                   value={gameStatusFilter}
                 >
                   <option value="all">전체 경기</option>
@@ -759,12 +833,17 @@ export default function AdminPage() {
                   <option value="cancelled">취소</option>
                 </select>
               </label>
-              <b>{visibleGames.length}건</b>
+              <b>{gamePagination?.total ?? visibleGames.length}건</b>
             </>
           ) : null}
         </section>
       ) : null}
 
+      {postError ? (
+        <p className="form-error" role="alert">
+          {postError}
+        </p>
+      ) : null}
       {message ? <p className="form-success">{message}</p> : null}
 
       {tab === 'users' ? (
@@ -855,7 +934,7 @@ export default function AdminPage() {
                     title="부적절하거나 권리를 침해하는 프로필 사진을 내립니다."
                     type="button"
                   >
-                    프로필 사진 내리기
+                    사진 내리기
                   </button>
                 ) : (
                   <span className="admin-profile-photo-empty">기본 이미지</span>
@@ -914,18 +993,16 @@ export default function AdminPage() {
                 <div className="admin-moderation-controls">
                   <select
                     aria-label={`${post.title} 분류`}
-                    onChange={async (event) => {
-                      if (!token) return;
-                      await updateAdminPostModeration(
-                        post.id,
-                        {
-                          category: event.target.value as AdminPost['category'],
-                          isPinned: post.isPinned,
-                          requestStatus: post.requestStatus,
-                        },
-                        token,
-                      );
-                      await loadAll(keyword);
+                    onChange={(event) => {
+                      const category = event.target
+                        .value as AdminPost['category'];
+                      void savePostModeration(post, {
+                        category,
+                        requestStatus:
+                          category === 'feature'
+                            ? (post.requestStatus ?? 'received')
+                            : null,
+                      });
                     }}
                     value={post.category}
                   >
@@ -940,19 +1017,11 @@ export default function AdminPage() {
                   {post.category === 'feature' ? (
                     <select
                       aria-label={`${post.title} 처리 상태`}
-                      onChange={async (event) => {
-                        if (!token) return;
-                        await updateAdminPostModeration(
-                          post.id,
-                          {
-                            category: post.category,
-                            isPinned: post.isPinned,
-                            requestStatus: event.target
-                              .value as AdminPost['requestStatus'],
-                          },
-                          token,
-                        );
-                        await loadAll(keyword);
+                      onChange={(event) => {
+                        void savePostModeration(post, {
+                          requestStatus: event.target
+                            .value as AdminPost['requestStatus'],
+                        });
                       }}
                       value={post.requestStatus ?? 'received'}
                     >
@@ -968,18 +1037,10 @@ export default function AdminPage() {
                   <label className="admin-pin-control">
                     <input
                       checked={post.isPinned}
-                      onChange={async (event) => {
-                        if (!token) return;
-                        await updateAdminPostModeration(
-                          post.id,
-                          {
-                            category: post.category,
-                            isPinned: event.target.checked,
-                            requestStatus: post.requestStatus,
-                          },
-                          token,
-                        );
-                        await loadAll(keyword);
+                      onChange={(event) => {
+                        void savePostModeration(post, {
+                          isPinned: event.target.checked,
+                        });
                       }}
                       type="checkbox"
                     />
@@ -1043,16 +1104,28 @@ export default function AdminPage() {
 
       {tab === 'comments' ? (
         <section className="admin-table-card">
-          <h2>댓글 관리</h2>
+          <div className="admin-section-heading">
+            <div>
+              <h2>댓글 관리</h2>
+              <p>댓글 내용과 작성된 게시글을 구분해 확인할 수 있습니다.</p>
+            </div>
+          </div>
           <div className="admin-table">
             {comments.map((comment) => (
-              <div className="admin-row" key={comment.id}>
-                <span>{comment.content}</span>
-                <Link href={`/posts/${comment.postId}`}>
-                  {comment.postTitle}
-                </Link>
-                <span>{comment.authorNickname}</span>
-                <time>{formatDate(comment.createdAt)}</time>
+              <article className="admin-comment-card" key={comment.id}>
+                <div className="admin-comment-body">
+                  <span>댓글</span>
+                  <p>{comment.content}</p>
+                </div>
+                <div className="admin-comment-context">
+                  <span>작성된 게시글</span>
+                  <Link href={`/posts/${comment.postId}`}>
+                    {comment.postTitle}
+                  </Link>
+                  <small>
+                    {comment.authorNickname} · {formatDate(comment.createdAt)}
+                  </small>
+                </div>
                 <button
                   className="btn btn-ghost btn-sm"
                   onClick={async () => {
@@ -1064,8 +1137,11 @@ export default function AdminPage() {
                 >
                   삭제
                 </button>
-              </div>
+              </article>
             ))}
+            {!comments.length ? (
+              <p className="admin-filter-empty">댓글이 없습니다.</p>
+            ) : null}
           </div>
         </section>
       ) : null}
@@ -1558,6 +1634,38 @@ export default function AdminPage() {
               <p className="admin-filter-empty">조건에 맞는 경기가 없습니다.</p>
             ) : null}
           </div>
+          {gamePagination && gamePagination.totalPages > 1 ? (
+            <nav className="cheers-pagination" aria-label="경기 관리 페이지">
+              <button
+                className="btn btn-ghost btn-sm"
+                disabled={gamePagination.page <= 1}
+                onClick={() =>
+                  updateGamePage(Math.max(1, gamePagination.page - 1))
+                }
+                type="button"
+              >
+                이전
+              </button>
+              <span>
+                {gamePagination.page} / {gamePagination.totalPages}
+              </span>
+              <button
+                className="btn btn-ghost btn-sm"
+                disabled={gamePagination.page >= gamePagination.totalPages}
+                onClick={() =>
+                  updateGamePage(
+                    Math.min(
+                      gamePagination.totalPages,
+                      gamePagination.page + 1,
+                    ),
+                  )
+                }
+                type="button"
+              >
+                다음
+              </button>
+            </nav>
+          ) : null}
         </section>
       ) : null}
 

@@ -1,6 +1,13 @@
-const CACHE_NAME = 'yakuku-yaru-v2';
+const CACHE_NAME = 'yakuku-yaru-v3';
 const OFFLINE_URL = '/offline';
-const APP_SHELL_URLS = ['/', '/calendar', '/posts', '/me', OFFLINE_URL, '/icons/icon.svg'];
+const APP_SHELL_URLS = [
+  '/',
+  '/calendar',
+  '/posts',
+  '/me',
+  OFFLINE_URL,
+  '/icons/icon.svg',
+];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -33,14 +40,20 @@ self.addEventListener('fetch', (event) => {
 
   const url = new URL(request.url);
 
+  if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+    return;
+  }
+
+  if (url.origin !== self.location.origin) {
+    return;
+  }
+
   if (url.pathname.startsWith('/api') || url.pathname.startsWith('/uploads')) {
     return;
   }
 
   if (request.mode === 'navigate') {
-    event.respondWith(
-      fetch(request).catch(() => caches.match(OFFLINE_URL)),
-    );
+    event.respondWith(fetch(request).catch(() => caches.match(OFFLINE_URL)));
     return;
   }
 
@@ -52,10 +65,13 @@ self.addEventListener('fetch', (event) => {
 
       return fetch(request)
         .then((response) => {
-          const responseClone = response.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(request, responseClone);
-          });
+          if (response.ok && response.type === 'basic') {
+            const responseClone = response.clone();
+            caches
+              .open(CACHE_NAME)
+              .then((cache) => cache.put(request, responseClone))
+              .catch(() => undefined);
+          }
           return response;
         })
         .catch(() => caches.match(OFFLINE_URL));
