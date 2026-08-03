@@ -4,7 +4,10 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-const apiRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
+const apiRoot = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  '../..',
+);
 const nodeEnv = process.env.NODE_ENV ?? 'development';
 const jwtSecret = process.env.JWT_SECRET?.trim() || 'change-me-in-local-env';
 
@@ -17,7 +20,9 @@ export const env = {
   apiPort: Number(process.env.API_PORT ?? 4000),
   appUrl:
     process.env.APP_URL ??
-    (process.env.APP_DOMAIN ? `https://${process.env.APP_DOMAIN}` : 'http://localhost:3000'),
+    (process.env.APP_DOMAIN
+      ? `https://${process.env.APP_DOMAIN}`
+      : 'http://localhost:3000'),
   jwt: {
     secret: jwtSecret,
     expiresIn: process.env.JWT_EXPIRES_IN ?? '1d',
@@ -40,6 +45,7 @@ export const env = {
     password: process.env.MYSQL_PASSWORD ?? 'yakuku_password',
   },
   kboSync: {
+    userAgent: process.env.KBO_USER_AGENT?.trim() || null,
     enabled:
       process.env.KBO_SYNC_ENABLED === 'true' ||
       (process.env.KBO_SYNC_ENABLED !== 'false' &&

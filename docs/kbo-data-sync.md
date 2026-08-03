@@ -61,6 +61,7 @@ sed "s|PROJECT_DIR|$(pwd)|g" scripts/kbo-sync/crontab.example | crontab -
 | 변수 | 기본값 (prod compose) | 설명 |
 |------|------------------------|------|
 | `KBO_SYNC_ENABLED` | `false` | `true`면 API `node-cron` 사용 |
+| `KBO_USER_AGENT` | 비어 있음 | KBO가 기본 브라우저 호환 프로필을 차단할 때만 운영 환경에서 재정의 |
 | `KBO_SYNC_WEEK_CRON` | `0 6 * * *` | 주간 모드 (KST) |
 | `KBO_SYNC_TODAY_CRON` | `0 * * * *` | 당일 모드 (KST) |
 | `KBO_SYNC_ON_START` | `false` | 기동 직후 week 1회 |
@@ -132,3 +133,5 @@ KBO **스케줄** workflow는 제거했습니다. 배포만 `deploy.yml`을 사�
 - KBO/sports2i 이용약관·서버 부하를 준수하고, 요청 간격을 두세요.
 - `season` 모드는 12회 월 API 호출이므로 연 1회만 사용하세요.
 - HTML/API 구조 변경 시 파서 수정이 필요할 수 있습니다.
+- KBO가 `204 No Content` 또는 빈 본문을 반환하면 공통 클라이언트가 고정된 대체 호환 프로필로 한 번만 재시도합니다. 무작위 User-Agent 회전은 사용하지 않으며, 명시적인 `403` 거부 응답은 재시도하지 않습니다.
+- 두 호환 프로필이 모두 실패하면 배치 로그에 `KBO ... 빈 응답` 오류가 남습니다. 이때 `.env.production`의 `KBO_USER_AGENT`를 현재 브라우저 값으로 바꾸고 API 컨테이너를 재생성하면 다음 배치부터 적용됩니다.

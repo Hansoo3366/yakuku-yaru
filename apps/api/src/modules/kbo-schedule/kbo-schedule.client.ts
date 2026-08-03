@@ -1,6 +1,8 @@
+import { fetchKboJson } from '../../lib/kbo-http.js';
 import type { KboScheduleTable } from './parse-schedule.js';
 
-const KBO_SCHEDULE_PAGE_URL = 'https://www.koreabaseball.com/Schedule/Schedule.aspx';
+const KBO_SCHEDULE_PAGE_URL =
+  'https://www.koreabaseball.com/Schedule/Schedule.aspx';
 const KBO_SCHEDULE_LIST_URL =
   'https://www.koreabaseball.com/ws/Schedule.asmx/GetScheduleList';
 
@@ -23,22 +25,19 @@ export async function fetchKboMonthSchedule(input: FetchKboMonthScheduleInput) {
     teamId: input.teamId ?? '',
   });
 
-  const response = await fetch(KBO_SCHEDULE_LIST_URL, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
-      'X-Requested-With': 'XMLHttpRequest',
-      Referer: KBO_SCHEDULE_PAGE_URL,
-      'User-Agent': 'YakukuYaru/1.0 (+https://yakuku-yaru.today; schedule-sync)',
+  const data = await fetchKboJson<KboScheduleTable>(
+    KBO_SCHEDULE_LIST_URL,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+        'X-Requested-With': 'XMLHttpRequest',
+        Referer: KBO_SCHEDULE_PAGE_URL,
+      },
+      body: body.toString(),
     },
-    body: body.toString(),
-  });
-
-  if (!response.ok) {
-    throw new Error(`KBO 일정 API 요청 실패 (${response.status})`);
-  }
-
-  const data = (await response.json()) as KboScheduleTable;
+    'KBO 일정 API',
+  );
 
   if (!Array.isArray(data.rows)) {
     throw new Error('KBO 일정 API 응답 형식이 올바르지 않습니다.');

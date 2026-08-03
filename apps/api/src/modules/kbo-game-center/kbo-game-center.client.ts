@@ -1,7 +1,10 @@
+import { fetchKboJson } from '../../lib/kbo-http.js';
 import { parseLineupAnalysisConfirmed } from './kbo-lineup-status.js';
 
-const KBO_GAME_CENTER_URL = 'https://www.koreabaseball.com/Schedule/GameCenter/Main.aspx';
-const KBO_GAME_LIST_URL = 'https://www.koreabaseball.com/ws/Main.asmx/GetKboGameList';
+const KBO_GAME_CENTER_URL =
+  'https://www.koreabaseball.com/Schedule/GameCenter/Main.aspx';
+const KBO_GAME_LIST_URL =
+  'https://www.koreabaseball.com/ws/Main.asmx/GetKboGameList';
 const KBO_PITCHER_RECORD_ANALYSIS_URL =
   'https://www.koreabaseball.com/ws/Schedule.asmx/GetPitcherRecordAnalysis';
 const KBO_LINEUP_ANALYSIS_URL =
@@ -135,13 +138,18 @@ function extractPlayerId(value: string | null | undefined) {
 }
 
 function extractImageUrl(value: string | null | undefined) {
-  const match = value?.match(/<img[^>]+src=['"]([^'"]*\/person\/kbo\/[^'"]+)['"]/i);
+  const match = value?.match(
+    /<img[^>]+src=['"]([^'"]*\/person\/kbo\/[^'"]+)['"]/i,
+  );
   return makeAbsoluteUrl(match?.[1]);
 }
 
 function extractClassText(value: string | null | undefined, className: string) {
   const match = value?.match(
-    new RegExp(`<[^>]+class=['"][^'"]*${className}[^'"]*['"][^>]*>([\\s\\S]*?)<\\/[^>]+>`, 'i'),
+    new RegExp(
+      `<[^>]+class=['"][^'"]*${className}[^'"]*['"][^>]*>([\\s\\S]*?)<\\/[^>]+>`,
+      'i',
+    ),
   );
   return stripHtml(match?.[1]);
 }
@@ -219,22 +227,19 @@ function parseLineupRows(value: unknown): KboLineupPlayer[] {
 }
 
 async function postKboJson<T>(url: string, body: URLSearchParams) {
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
-      'X-Requested-With': 'XMLHttpRequest',
-      Referer: KBO_GAME_CENTER_URL,
-      'User-Agent': 'YakukuYaru/1.0 (+https://yakuku-yaru.today; game-center-sync)',
+  return fetchKboJson<T>(
+    url,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+        'X-Requested-With': 'XMLHttpRequest',
+        Referer: KBO_GAME_CENTER_URL,
+      },
+      body: body.toString(),
     },
-    body: body.toString(),
-  });
-
-  if (!response.ok) {
-    throw new Error(`KBO 게임센터 요청 실패 (${response.status})`);
-  }
-
-  return (await response.json()) as T;
+    'KBO 게임센터',
+  );
 }
 
 export async function fetchKboGameCenterList(dateYmd: string) {
@@ -250,7 +255,10 @@ export async function fetchKboGameCenterList(dateYmd: string) {
     date: dateYmd,
   });
 
-  const data = await postKboJson<KboGameCenterResponse>(KBO_GAME_LIST_URL, body);
+  const data = await postKboJson<KboGameCenterResponse>(
+    KBO_GAME_LIST_URL,
+    body,
+  );
 
   if (data.code && data.code !== '100') {
     throw new Error(`KBO 게임센터 응답 실패: ${data.msg ?? data.code}`);

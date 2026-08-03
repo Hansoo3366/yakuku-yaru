@@ -1,3 +1,5 @@
+import { fetchKboText } from '../../lib/kbo-http.js';
+
 export const KBO_TEAM_RANK_PAGE_URL =
   'https://www.koreabaseball.com/Record/TeamRank/TeamRankDaily.aspx';
 
@@ -5,16 +7,15 @@ export const KBO_TEAM_RANK_PAGE_URL =
 export const KBO_REGULAR_SEASON_SERIES_ID = '0';
 
 export async function fetchKboTeamRankDailyPage() {
-  const response = await fetch(KBO_TEAM_RANK_PAGE_URL, {
-    headers: {
-      'User-Agent': 'YakukuYaru/1.0 (+https://yakuku-yaru.today; team-rank-sync)',
-      Accept: 'text/html,application/xhtml+xml',
+  const response = await fetchKboText(
+    KBO_TEAM_RANK_PAGE_URL,
+    {
+      headers: {
+        Accept: 'text/html,application/xhtml+xml',
+      },
     },
-  });
+    'KBO 팀 순위 페이지',
+  );
 
-  if (!response.ok) {
-    throw new Error(`KBO 팀 순위 페이지 요청 실패 (${response.status})`);
-  }
-
-  return response.text();
+  return response.text;
 }

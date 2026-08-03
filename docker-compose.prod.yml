@@ -35,6 +35,7 @@ services:
       API_PORT: 4000
       # KBO 크롤은 호스트 crontab(scripts/kbo-sync/*.sh)에서 실행. API 내장 cron은 기본 끔.
       KBO_SYNC_ENABLED: ${KBO_SYNC_ENABLED:-false}
+      KBO_USER_AGENT: ${KBO_USER_AGENT:-}
       KBO_SYNC_WEEK_CRON: ${KBO_SYNC_WEEK_CRON:-0 6 * * *}
       KBO_SYNC_TODAY_CRON: ${KBO_SYNC_TODAY_CRON:-0 * * * *}
       KBO_SYNC_ON_START: ${KBO_SYNC_ON_START:-false}

@@ -1,3 +1,4 @@
+import { fetchKboText } from '../../lib/kbo-http.js';
 import { parseHitterBasic2Html } from './parse-hitter-basic.js';
 import {
   parsePlayerSearchHtml,
@@ -5,7 +6,8 @@ import {
   type ParsedKboPlayer,
 } from './parse-player-search.js';
 
-const KBO_PLAYER_SEARCH_URL = 'https://www.koreabaseball.com/Player/Search.aspx';
+const KBO_PLAYER_SEARCH_URL =
+  'https://www.koreabaseball.com/Player/Search.aspx';
 const KBO_HITTER_BASIC2_URL =
   'https://www.koreabaseball.com/Record/Player/HitterBasic/Basic2.aspx';
 const FIELD_PREFIX = 'ctl00$ctl00$ctl00$cphContents$cphContents$cphContents$';
@@ -65,36 +67,32 @@ function buildSearchBody(input: {
 }
 
 async function postSearch(body: URLSearchParams) {
-  const response = await fetch(KBO_PLAYER_SEARCH_URL, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded',
-      Referer: KBO_PLAYER_SEARCH_URL,
-      'User-Agent': 'YakukuYaru/1.0 (+https://yakuku-yaru.today; player-sync)',
+  const response = await fetchKboText(
+    KBO_PLAYER_SEARCH_URL,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        Referer: KBO_PLAYER_SEARCH_URL,
+      },
+      body: body.toString(),
     },
-    body: body.toString(),
-  });
+    'KBO 선수 조회',
+  );
 
-  if (!response.ok) {
-    throw new Error(`KBO 선수 조회 요청 실패 (${response.status})`);
-  }
-
-  return response.text();
+  return response.text;
 }
 
 export async function fetchKboPlayersByTeam(teamCode: KboTeamCode) {
-  const initialResponse = await fetch(KBO_PLAYER_SEARCH_URL, {
-    headers: {
-      'User-Agent': 'YakukuYaru/1.0 (+https://yakuku-yaru.today; player-sync)',
-    },
-  });
-
-  if (!initialResponse.ok) {
-    throw new Error(`KBO 선수 조회 페이지 요청 실패 (${initialResponse.status})`);
-  }
-
-  const initialHtml = await initialResponse.text();
-  let pageHtml = await postSearch(buildSearchBody({ html: initialHtml, teamCode }));
+  const initialResponse = await fetchKboText(
+    KBO_PLAYER_SEARCH_URL,
+    undefined,
+    'KBO 선수 조회 페이지',
+  );
+  const initialHtml = initialResponse.text;
+  let pageHtml = await postSearch(
+    buildSearchBody({ html: initialHtml, teamCode }),
+  );
   const totalCount = parsePlayerSearchTotalCount(pageHtml);
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
   const players: ParsedKboPlayer[] = [...parsePlayerSearchHtml(pageHtml)];
@@ -114,20 +112,13 @@ export async function fetchKboPlayersByTeam(teamCode: KboTeamCode) {
 }
 
 export async function fetchKboPlayersBySearchWord(searchWord: string) {
-  const response = await fetch(
+  const response = await fetchKboText(
     `${KBO_PLAYER_SEARCH_URL}?searchWord=${encodeURIComponent(searchWord)}`,
-    {
-      headers: {
-        'User-Agent': 'YakukuYaru/1.0 (+https://yakuku-yaru.today; player-sync)',
-      },
-    },
+    undefined,
+    'KBO 선수 검색',
   );
 
-  if (!response.ok) {
-    throw new Error(`KBO 선수 검색 요청 실패 (${response.status})`);
-  }
-
-  return parsePlayerSearchHtml(await response.text());
+  return parsePlayerSearchHtml(response.text);
 }
 
 function buildHitterBasic2Body(input: { html: string; teamCode: KboTeamCode }) {
@@ -154,8 +145,10 @@ function buildHitterBasic2Body(input: { html: string; teamCode: KboTeamCode }) {
   body.set(`${FIELD_PREFIX}ddlSituationDetail$ddlSituationDetail`, '');
   body.set(
     `${FIELD_PREFIX}hfPage`,
-    extractHiddenField(input.html, 'cphContents_cphContents_cphContents_hfPage') ||
-      '1',
+    extractHiddenField(
+      input.html,
+      'cphContents_cphContents_cphContents_hfPage',
+    ) || '1',
   );
   body.set(
     `${FIELD_PREFIX}hfOrderByCol`,
@@ -166,45 +159,41 @@ function buildHitterBasic2Body(input: { html: string; teamCode: KboTeamCode }) {
   );
   body.set(
     `${FIELD_PREFIX}hfOrderBy`,
-    extractHiddenField(input.html, 'cphContents_cphContents_cphContents_hfOrderBy') ||
-      'DESC',
+    extractHiddenField(
+      input.html,
+      'cphContents_cphContents_cphContents_hfOrderBy',
+    ) || 'DESC',
   );
 
   return body;
 }
 
 export async function fetchKboHitterSeasonStatsByTeam(teamCode: KboTeamCode) {
-  const initialResponse = await fetch(KBO_HITTER_BASIC2_URL, {
-    headers: {
-      'User-Agent': 'YakukuYaru/1.0 (+https://yakuku-yaru.today; player-sync)',
-    },
-  });
-
-  if (!initialResponse.ok) {
-    throw new Error(`KBO 타자 기록 페이지 요청 실패 (${initialResponse.status})`);
-  }
-
-  const initialHtml = await initialResponse.text();
+  const initialResponse = await fetchKboText(
+    KBO_HITTER_BASIC2_URL,
+    undefined,
+    'KBO 타자 기록 페이지',
+  );
+  const initialHtml = initialResponse.text;
   const rawSetCookie = initialResponse.headers.get('set-cookie') ?? '';
   const cookie = rawSetCookie
     .split(',')
     .map((part) => part.split(';')[0]?.trim())
     .filter((part): part is string => Boolean(part))
     .join('; ');
-  const response = await fetch(KBO_HITTER_BASIC2_URL, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded',
-      Referer: KBO_HITTER_BASIC2_URL,
-      'User-Agent': 'YakukuYaru/1.0 (+https://yakuku-yaru.today; player-sync)',
-      ...(cookie ? { Cookie: cookie } : {}),
+  const response = await fetchKboText(
+    KBO_HITTER_BASIC2_URL,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        Referer: KBO_HITTER_BASIC2_URL,
+        ...(cookie ? { Cookie: cookie } : {}),
+      },
+      body: buildHitterBasic2Body({ html: initialHtml, teamCode }).toString(),
     },
-    body: buildHitterBasic2Body({ html: initialHtml, teamCode }).toString(),
-  });
+    'KBO 타자 기록',
+  );
 
-  if (!response.ok) {
-    throw new Error(`KBO 타자 기록 요청 실패 (${response.status})`);
-  }
-
-  return parseHitterBasic2Html(await response.text());
+  return parseHitterBasic2Html(response.text);
 }
