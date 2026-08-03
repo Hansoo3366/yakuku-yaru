@@ -24,6 +24,32 @@ export const errorHandler: ErrorRequestHandler = (error, _req, res, _next) => {
 
   if (
     error instanceof Error &&
+    'code' in error &&
+    error.code === 'ER_DUP_ENTRY'
+  ) {
+    const databaseMessage = `${error.message} ${
+      'sqlMessage' in error ? String(error.sqlMessage) : ''
+    }`;
+
+    if (databaseMessage.includes('uq_users_nickname')) {
+      res.status(409).json({
+        code: 'NICKNAME_ALREADY_EXISTS',
+        message: '이미 사용 중인 닉네임입니다.',
+      });
+      return;
+    }
+
+    if (databaseMessage.includes('uq_users_email')) {
+      res.status(409).json({
+        code: 'EMAIL_ALREADY_EXISTS',
+        message: '이미 사용 중인 이메일입니다.',
+      });
+      return;
+    }
+  }
+
+  if (
+    error instanceof Error &&
     (error.message.includes('이미지만 업로드') ||
       error.message.includes('이미지 저장 용량'))
   ) {

@@ -28,6 +28,7 @@ CREATE TABLE IF NOT EXISTS users (
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
   UNIQUE KEY uq_users_email (email),
+  UNIQUE KEY uq_users_nickname (nickname),
   CONSTRAINT fk_users_favorite_team
     FOREIGN KEY (favorite_team_id) REFERENCES teams(id)
     ON DELETE SET NULL

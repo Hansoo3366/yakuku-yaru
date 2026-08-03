@@ -37,6 +37,13 @@ export type AdminPost = {
   commentCount: number;
 };
 
+export type AdminPagination = {
+  page: number;
+  size: number;
+  total: number;
+  totalPages: number;
+};
+
 export type AdminAttendanceRecord = {
   id: number;
   photoUrl: string | null;
@@ -119,7 +126,11 @@ export function listAdminUsers(token: string, keyword = '') {
   });
 }
 
-export function updateAdminUserRole(userId: number, role: string, token: string) {
+export function updateAdminUserRole(
+  userId: number,
+  role: string,
+  token: string,
+) {
   return request<{ ok: boolean }>(`/admin/users/${userId}/role`, {
     method: 'PATCH',
     body: { role },
@@ -156,10 +167,30 @@ export function clearAdminUserProfileImage(userId: number, token: string) {
   });
 }
 
-export function listAdminPosts(token: string, keyword = '') {
-  return request<{ items: AdminPost[] }>(withKeyword('/admin/posts', keyword), {
-    token,
-  });
+export function listAdminPosts(
+  token: string,
+  input: {
+    keyword?: string;
+    page?: number;
+    size?: number;
+    category?: string;
+    pin?: string;
+  } = {},
+) {
+  const params = new URLSearchParams();
+  if (input.keyword?.trim()) params.set('keyword', input.keyword.trim());
+  if (input.page) params.set('page', String(input.page));
+  if (input.size) params.set('size', String(input.size));
+  if (input.category && input.category !== 'all') {
+    params.set('category', input.category);
+  }
+  if (input.pin && input.pin !== 'all') params.set('pin', input.pin);
+  const query = params.toString();
+
+  return request<{ items: AdminPost[]; pagination: AdminPagination }>(
+    `/admin/posts${query ? `?${query}` : ''}`,
+    { token },
+  );
 }
 
 export function deleteAdminPost(postId: number, token: string) {
@@ -251,7 +282,11 @@ export function createAdminGame(input: AdminGameInput, token: string) {
   });
 }
 
-export function updateAdminGame(gameId: number, input: AdminGameInput, token: string) {
+export function updateAdminGame(
+  gameId: number,
+  input: AdminGameInput,
+  token: string,
+) {
   return request<{ ok: boolean }>(`/admin/games/${gameId}`, {
     method: 'PATCH',
     body: input,

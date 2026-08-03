@@ -27,6 +27,19 @@ async function columnExists(tableName: string, columnName: string) {
   return Number(rows[0]?.count ?? 0) > 0;
 }
 
+async function indexExists(tableName: string, indexName: string) {
+  const [rows] = await db.query<(RowDataPacket & { count: number })[]>(
+    `SELECT COUNT(*) AS count
+     FROM information_schema.statistics
+     WHERE table_schema = ?
+       AND table_name = ?
+       AND index_name = ?`,
+    [env.database.name, tableName, indexName],
+  );
+
+  return Number(rows[0]?.count ?? 0) > 0;
+}
+
 export async function runMigrations() {
   const hasSessionVersion = await columnExists('users', 'session_version');
 
@@ -35,6 +48,34 @@ export async function runMigrations() {
       `ALTER TABLE users
        ADD COLUMN session_version INT UNSIGNED NOT NULL DEFAULT 0
        AFTER password_hash`,
+    );
+  }
+
+  const hasUniqueNicknameIndex = await indexExists(
+    'users',
+    'uq_users_nickname',
+  );
+
+  if (!hasUniqueNicknameIndex) {
+    const [duplicateNicknames] = await db.query<
+      (RowDataPacket & { nickname: string; count: number })[]
+    >(
+      `SELECT nickname, COUNT(*) AS count
+       FROM users
+       GROUP BY nickname
+       HAVING COUNT(*) > 1
+       LIMIT 1`,
+    );
+
+    if (duplicateNicknames.length) {
+      throw new Error(
+        `닉네임 고유 제약을 추가할 수 없습니다. 중복 닉네임을 먼저 정리해주세요: ${duplicateNicknames[0].nickname}`,
+      );
+    }
+
+    await db.execute(
+      `ALTER TABLE users
+       ADD UNIQUE KEY uq_users_nickname (nickname)`,
     );
   }
 

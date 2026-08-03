@@ -115,10 +115,48 @@ export async function clearAdminUserProfileImage(userId: number) {
   return rows[0]?.profileImageUrl ?? null;
 }
 
-export async function listAdminPosts(keyword?: string) {
-  const q = keyword ? `%${keyword}%` : null;
-  const [rows] = await db.query<RowDataPacket[]>(
-    `SELECT
+export async function listAdminPosts(input: {
+  keyword?: string;
+  page: number;
+  size: number;
+  category?: string;
+  isPinned?: boolean;
+}) {
+  const conditions: string[] = [];
+  const params: Array<string | number | boolean> = [];
+
+  if (input.keyword) {
+    const q = `%${input.keyword}%`;
+    conditions.push(
+      '(p.title LIKE ? OR p.content LIKE ? OR u.nickname LIKE ?)',
+    );
+    params.push(q, q, q);
+  }
+
+  if (input.category) {
+    conditions.push('p.category = ?');
+    params.push(input.category);
+  }
+
+  if (typeof input.isPinned === 'boolean') {
+    conditions.push('p.is_pinned = ?');
+    params.push(input.isPinned);
+  }
+
+  const whereClause = conditions.length
+    ? `WHERE ${conditions.join(' AND ')}`
+    : '';
+  const offset = (input.page - 1) * input.size;
+  const [countResult, itemsResult] = await Promise.all([
+    db.query<(RowDataPacket & { count: number })[]>(
+      `SELECT COUNT(*) AS count
+       FROM posts p
+       JOIN users u ON u.id = p.user_id
+       ${whereClause}`,
+      params,
+    ),
+    db.query<RowDataPacket[]>(
+      `SELECT
        p.id,
        p.category,
        p.title,
@@ -133,14 +171,21 @@ export async function listAdminPosts(keyword?: string) {
      FROM posts p
      JOIN users u ON u.id = p.user_id
      LEFT JOIN comments c ON c.post_id = p.id
-     WHERE (? IS NULL OR p.title LIKE ? OR p.content LIKE ? OR u.nickname LIKE ?)
+     ${whereClause}
      GROUP BY p.id, p.category, p.title, p.content, p.is_pinned, p.request_status, p.created_at, u.id, u.nickname, u.profile_image_url
      ORDER BY p.is_pinned DESC, p.created_at DESC
-     LIMIT 100`,
-    [q, q, q, q],
-  );
+     LIMIT ? OFFSET ?`,
+      [...params, input.size, offset],
+    ),
+  ]);
 
-  return rows;
+  const [countRows] = countResult;
+  const [items] = itemsResult;
+
+  return {
+    items,
+    total: Number(countRows[0]?.count ?? 0),
+  };
 }
 
 export async function listAdminAttendanceRecords(keyword?: string) {

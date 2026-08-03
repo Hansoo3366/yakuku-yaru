@@ -37,6 +37,7 @@ import {
   type AdminComment,
   type AdminGame,
   type AdminGameInput,
+  type AdminPagination,
   type AdminPost,
   type AdminReport,
   type AdminSummary,
@@ -127,6 +128,12 @@ type CheerFilterInput = {
   page: number;
   rosterScope: PlayerCheerRosterScope;
   teamId: number | null;
+};
+
+type PostFilterInput = {
+  category: string;
+  page: number;
+  pin: string;
 };
 
 type EditingCheerTarget =
@@ -226,6 +233,9 @@ export default function AdminPage() {
   const [summary, setSummary] = useState<AdminSummary | null>(null);
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [posts, setPosts] = useState<AdminPost[]>([]);
+  const [postPagination, setPostPagination] = useState<AdminPagination | null>(
+    null,
+  );
   const [comments, setComments] = useState<AdminComment[]>([]);
   const [attendanceRecords, setAttendanceRecords] = useState<
     AdminAttendanceRecord[]
@@ -242,6 +252,7 @@ export default function AdminPage() {
   const [userVerificationFilter, setUserVerificationFilter] = useState('all');
   const [postCategoryFilter, setPostCategoryFilter] = useState('all');
   const [postPinFilter, setPostPinFilter] = useState('all');
+  const [postPage, setPostPage] = useState(1);
   const [mediaTypeFilter, setMediaTypeFilter] = useState('all');
   const [reportStatusFilter, setReportStatusFilter] = useState('all');
   const [gameStatusFilter, setGameStatusFilter] = useState('all');
@@ -266,6 +277,11 @@ export default function AdminPage() {
     rosterScope: 'firstTeam',
     teamId: null,
   });
+  const postFilterRef = useRef<PostFilterInput>({
+    category: 'all',
+    page: 1,
+    pin: 'all',
+  });
   const loadRequestIdRef = useRef(0);
   const token = useAuthStore((state) => state.token);
   const hasHydrated = useAuthStore((state) => state.hasHydrated);
@@ -284,6 +300,14 @@ export default function AdminPage() {
   }, []);
 
   useEffect(() => {
+    postFilterRef.current = {
+      category: postCategoryFilter,
+      page: postPage,
+      pin: postPinFilter,
+    };
+  }, [postCategoryFilter, postPage, postPinFilter]);
+
+  useEffect(() => {
     cheerFilterRef.current = {
       keyword: cheerKeyword,
       page: cheerPage,
@@ -293,13 +317,21 @@ export default function AdminPage() {
   }, [cheerKeyword, cheerPage, cheerRosterScope, cheerTeamId]);
 
   const loadAll = useCallback(
-    async (nextKeyword: string, cheerInput?: Partial<CheerFilterInput>) => {
+    async (
+      nextKeyword: string,
+      cheerInput?: Partial<CheerFilterInput>,
+      postInput?: Partial<PostFilterInput>,
+    ) => {
       if (!token) return;
       const requestId = loadRequestIdRef.current + 1;
       loadRequestIdRef.current = requestId;
       const nextCheerInput = {
         ...cheerFilterRef.current,
         ...cheerInput,
+      };
+      const nextPostInput = {
+        ...postFilterRef.current,
+        ...postInput,
       };
       const [
         summaryResponse,
@@ -314,7 +346,13 @@ export default function AdminPage() {
       ] = await Promise.all([
         fetchAdminSummary(token),
         listAdminUsers(token, nextKeyword),
-        listAdminPosts(token, nextKeyword),
+        listAdminPosts(token, {
+          category: nextPostInput.category,
+          keyword: nextKeyword,
+          page: nextPostInput.page,
+          pin: nextPostInput.pin,
+          size: 20,
+        }),
         listAdminComments(token, nextKeyword),
         listAdminAttendanceRecords(token, nextKeyword),
         listAdminReports(token),
@@ -334,6 +372,7 @@ export default function AdminPage() {
       setSummary(summaryResponse);
       setUsers(usersResponse.items);
       setPosts(postsResponse.items);
+      setPostPagination(postsResponse.pagination);
       setComments(commentsResponse.items);
       setAttendanceRecords(attendanceResponse.items);
       setReports(reportsResponse.items);
@@ -372,7 +411,8 @@ export default function AdminPage() {
 
   async function handleSearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    await loadAll(keyword);
+    setPostPage(1);
+    await loadAll(keyword, undefined, { page: 1 });
   }
 
   async function handleCheerSearch(event: FormEvent<HTMLFormElement>) {
@@ -402,6 +442,11 @@ export default function AdminPage() {
       rosterScope: cheerRosterScope,
       teamId: cheerTeamId,
     });
+  }
+
+  async function updatePostPage(nextPage: number) {
+    setPostPage(nextPage);
+    await loadAll(keyword, undefined, { page: nextPage });
   }
 
   function editGame(game: AdminGame) {
@@ -502,12 +547,7 @@ export default function AdminPage() {
           ? Boolean(user.emailVerifiedAt)
           : !user.emailVerifiedAt)),
   );
-  const visiblePosts = posts.filter(
-    (post) =>
-      (postCategoryFilter === 'all' || post.category === postCategoryFilter) &&
-      (postPinFilter === 'all' ||
-        (postPinFilter === 'pinned' ? post.isPinned : !post.isPinned)),
-  );
+  const visiblePosts = posts;
   const visibleAttendanceRecords = attendanceRecords.filter(
     (record) =>
       record.photoUrl &&
@@ -626,9 +666,15 @@ export default function AdminPage() {
               <label>
                 <span>글 종류</span>
                 <select
-                  onChange={(event) =>
-                    setPostCategoryFilter(event.target.value)
-                  }
+                  onChange={(event) => {
+                    const nextCategory = event.target.value;
+                    setPostCategoryFilter(nextCategory);
+                    setPostPage(1);
+                    void loadAll(keyword, undefined, {
+                      category: nextCategory,
+                      page: 1,
+                    });
+                  }}
                   value={postCategoryFilter}
                 >
                   <option value="all">전체 글</option>
@@ -644,7 +690,15 @@ export default function AdminPage() {
               <label>
                 <span>고정 상태</span>
                 <select
-                  onChange={(event) => setPostPinFilter(event.target.value)}
+                  onChange={(event) => {
+                    const nextPin = event.target.value;
+                    setPostPinFilter(nextPin);
+                    setPostPage(1);
+                    void loadAll(keyword, undefined, {
+                      page: 1,
+                      pin: nextPin,
+                    });
+                  }}
                   value={postPinFilter}
                 >
                   <option value="all">전체 상태</option>
@@ -652,7 +706,7 @@ export default function AdminPage() {
                   <option value="unpinned">일반 글</option>
                 </select>
               </label>
-              <b>{visiblePosts.length}건</b>
+              <b>{postPagination?.total ?? visiblePosts.length}건</b>
             </>
           ) : null}
           {tab === 'media' ? (
@@ -952,6 +1006,38 @@ export default function AdminPage() {
               </p>
             ) : null}
           </div>
+          {postPagination && postPagination.totalPages > 1 ? (
+            <nav className="cheers-pagination" aria-label="게시글 관리 페이지">
+              <button
+                className="btn btn-ghost btn-sm"
+                disabled={postPagination.page <= 1}
+                onClick={() =>
+                  updatePostPage(Math.max(1, postPagination.page - 1))
+                }
+                type="button"
+              >
+                이전
+              </button>
+              <span>
+                {postPagination.page} / {postPagination.totalPages}
+              </span>
+              <button
+                className="btn btn-ghost btn-sm"
+                disabled={postPagination.page >= postPagination.totalPages}
+                onClick={() =>
+                  updatePostPage(
+                    Math.min(
+                      postPagination.totalPages,
+                      postPagination.page + 1,
+                    ),
+                  )
+                }
+                type="button"
+              >
+                다음
+              </button>
+            </nav>
+          ) : null}
         </section>
       ) : null}
 

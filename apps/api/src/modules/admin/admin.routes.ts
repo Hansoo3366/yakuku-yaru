@@ -51,6 +51,14 @@ const adminWriteLimit = rateLimit({
   max: 30,
 });
 
+const ADMIN_POST_CATEGORIES = new Set([
+  'review',
+  'free',
+  'info',
+  'feature',
+  'notice',
+]);
+
 adminRouter.use(authenticate, requireAdmin);
 
 function optionalKeyword(value: unknown) {
@@ -377,8 +385,38 @@ adminRouter.delete(
 
 adminRouter.get('/posts', async (req, res, next) => {
   try {
+    const page = optionalPositiveInteger(req.query.page, 1, 'page');
+    const size = Math.min(
+      optionalPositiveInteger(req.query.size, 20, 'size'),
+      50,
+    );
+    const category =
+      typeof req.query.category === 'string' &&
+      ADMIN_POST_CATEGORIES.has(req.query.category)
+        ? req.query.category
+        : undefined;
+    const isPinned =
+      req.query.pin === 'pinned'
+        ? true
+        : req.query.pin === 'unpinned'
+          ? false
+          : undefined;
+    const result = await listAdminPosts({
+      keyword: optionalKeyword(req.query.keyword),
+      page,
+      size,
+      category,
+      isPinned,
+    });
+
     res.json({
-      items: await listAdminPosts(optionalKeyword(req.query.keyword)),
+      items: result.items,
+      pagination: {
+        page,
+        size,
+        total: result.total,
+        totalPages: Math.max(1, Math.ceil(result.total / size)),
+      },
     });
   } catch (error) {
     next(error);
