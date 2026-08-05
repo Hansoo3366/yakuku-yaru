@@ -58,19 +58,12 @@ NEXT_PUBLIC_API_URL=https://YOUR_DOMAIN/api
 APP_URL=https://YOUR_DOMAIN
 APP_DOMAIN=YOUR_DOMAIN
 JWT_SECRET=replace-with-a-long-random-secret
-PROXY_SHARED_SECRET=64-character-hex-secret
 JWT_REMEMBER_EXPIRES_IN=30d
 MYSQL_PASSWORD=replace-with-strong-password
 MYSQL_ROOT_PASSWORD=replace-with-strong-root-password
 ```
 
 `APP_URL`과 `NEXT_PUBLIC_API_URL`은 실제 HTTPS 서비스 도메인과 정확히 일치해야 합니다.
-
-프록시 비밀값은 서버에서 아래 스크립트로 생성합니다. 기존에 올바른 값이 있으면 유지합니다.
-
-```bash
-bash scripts/deploy/setup-security-gateway.sh
-```
 
 ## 4. 컨테이너 실행
 
@@ -294,7 +287,6 @@ APP_DOMAIN=yakuku-yaru.today
 NEXT_PUBLIC_API_URL=https://yakuku-yaru.today/api
 
 JWT_SECRET=replace-with-long-random-secret
-PROXY_SHARED_SECRET=64-character-hex-secret
 JWT_EXPIRES_IN=1d
 JWT_REMEMBER_EXPIRES_IN=30d
 

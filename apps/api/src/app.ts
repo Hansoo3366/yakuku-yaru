@@ -7,7 +7,6 @@ import { env } from './config/env.js';
 import { errorHandler } from './middleware/error-handler.js';
 import { requireTrustedOrigin } from './middleware/request-origin.js';
 import { rateLimit } from './middleware/rate-limit.js';
-import { requireTrustedProxy } from './middleware/proxy-auth.js';
 import { adminRouter } from './modules/admin/admin.routes.js';
 import { attendanceRouter } from './modules/attendance/attendance.routes.js';
 import { commentRouter } from './modules/comments/comment.routes.js';
@@ -41,7 +40,6 @@ export function createApp() {
       },
     }),
   );
-  app.use(requireTrustedProxy);
   app.use(
     cors({
       origin(origin, callback) {

@@ -10,7 +10,6 @@ const apiRoot = path.resolve(
 );
 const nodeEnv = process.env.NODE_ENV ?? 'development';
 const jwtSecret = process.env.JWT_SECRET?.trim() || 'change-me-in-local-env';
-const proxySharedSecret = process.env.PROXY_SHARED_SECRET?.trim() || '';
 
 if (nodeEnv === 'production' && jwtSecret === 'change-me-in-local-env') {
   throw new Error('JWT_SECRET must be set in production');
@@ -18,12 +17,6 @@ if (nodeEnv === 'production' && jwtSecret === 'change-me-in-local-env') {
 
 if (nodeEnv === 'production' && jwtSecret.length < 32) {
   throw new Error('JWT_SECRET must be at least 32 characters in production');
-}
-
-if (nodeEnv === 'production' && !/^[a-f0-9]{64}$/i.test(proxySharedSecret)) {
-  throw new Error(
-    'PROXY_SHARED_SECRET must be a 64-character hexadecimal value in production',
-  );
 }
 
 const appUrl =
@@ -59,7 +52,6 @@ export const env = {
   apiPort: Number(process.env.API_PORT ?? 4000),
   appUrl,
   allowedOrigins,
-  proxySharedSecret,
   jwt: {
     secret: jwtSecret,
     expiresIn: process.env.JWT_EXPIRES_IN ?? '1d',

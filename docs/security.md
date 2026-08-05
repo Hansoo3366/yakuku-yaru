@@ -4,7 +4,7 @@
 
 - Caddy: TLS, 잘못된 SNI 차단, 헤더·본문 읽기 시간 제한
 - Nginx gateway: IP별 웹/API/이미지 요청 속도 제한, 동시 연결 제한, 13MB 본문 제한
-- API: 프록시 공유 비밀값, 허용 Origin·Fetch Metadata 확인, 전역/기능별 rate limit
+- API: 허용 Origin·Fetch Metadata 확인, 전역/기능별 rate limit, JWT 권한 검사
 - Web: 요청별 nonce를 사용하는 CSP, 외부 스크립트·프레임·이미지 출처 제한
 - Uploads: UUID 파일명만 조회, SVG 금지, magic byte 확인, Sharp 디코딩·WebP 재인코딩, 4천만 입력 픽셀 제한, 메타데이터 제거
 
@@ -15,7 +15,6 @@
 ```bash
 cd ~/yakuku-yaru
 git pull
-bash scripts/deploy/setup-security-gateway.sh
 docker compose -f docker-compose.prod.yml --env-file .env.production --profile proxy up -d --build api web gateway caddy
 docker compose -f docker-compose.prod.yml --env-file .env.production --profile proxy ps
 ```
@@ -28,7 +27,7 @@ curl -I https://YOUR_DOMAIN/api/health
 curl -I https://YOUR_DOMAIN/uploads/not-a-valid-file.jpg
 ```
 
-마지막 요청은 `404`가 정상입니다. 서버 IP의 `3000`, `4000`은 외부에서 연결되지 않아야 합니다. 운영 API를 localhost에서 직접 호출해도 프록시 비밀 헤더가 없으므로 `404`가 정상입니다.
+마지막 요청은 `404`가 정상입니다. 서버 IP의 `3000`, `4000`은 loopback에만 바인딩되어 외부에서 연결되지 않아야 합니다. 공개 API는 Caddy와 Nginx gateway를 통해서만 노출합니다.
 
 ## DDoS 경계
 

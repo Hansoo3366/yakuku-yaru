@@ -47,7 +47,6 @@ services:
       APP_DOMAIN: ${APP_DOMAIN:-}
       CORS_ORIGINS: ${CORS_ORIGINS:-}
       JWT_SECRET: ${JWT_SECRET}
-      PROXY_SHARED_SECRET: ${PROXY_SHARED_SECRET}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-1d}
       JWT_REMEMBER_EXPIRES_IN: ${JWT_REMEMBER_EXPIRES_IN:-30d}
       SMTP_HOST: ${SMTP_HOST:-smtp.gmail.com}
@@ -103,8 +102,6 @@ services:
     depends_on:
       - web
       - api
-    environment:
-      PROXY_SHARED_SECRET: ${PROXY_SHARED_SECRET}
     volumes:
       - ./infra/nginx/default.conf.template:/etc/nginx/templates/default.conf.template:ro
     tmpfs:
