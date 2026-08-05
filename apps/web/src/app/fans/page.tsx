@@ -10,6 +10,7 @@ import { FanFollowButton } from '@/components/FanFollowButton';
 import { Skeleton } from '@/components/Skeleton';
 import { useAuthStore } from '@/lib/auth-store';
 import { getAuthorProfileImageSrc } from '@/lib/profile-image';
+import { normalizeTeamColor } from '@/lib/team-color';
 import { useFansQuery, useTeamsQuery } from '@/lib/queries';
 import styles from './fans.module.css';
 
@@ -152,7 +153,10 @@ export default function FansPage() {
             key={fan.id}
             style={
               {
-                '--fan-card-color': fan.favoriteTeam?.primaryColor ?? '#111111',
+                '--fan-card-color': normalizeTeamColor(
+                  fan.favoriteTeam?.primaryColor,
+                  '#111111',
+                ),
               } as CSSProperties
             }
           >

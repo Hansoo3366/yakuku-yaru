@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from 'next';
+import { headers } from 'next/headers';
 import { AppFooter, AppHeader } from '@/components/AppChrome';
 import { AppProviders } from '@/components/AppProviders';
 import { BottomNav } from '@/components/BottomNav';
@@ -12,67 +13,74 @@ const bootScript = `
     var root = document.documentElement;
     root.dataset.authState = 'guest';
     var teamColor = window.localStorage.getItem('yakuku.teamColor');
-    var teamSurface = window.localStorage.getItem('yakuku.teamSurface');
-    var teamContrast = window.localStorage.getItem('yakuku.teamContrast');
-    var teamDisplay = window.localStorage.getItem('yakuku.teamDisplay');
-    var teamDisplayContrast = window.localStorage.getItem('yakuku.teamDisplayContrast');
     if (teamColor) {
-      if (/^#[0-9a-f]{6}$/i.test(teamColor)) {
-        var toLuminance = function (hex) {
-          var channels = [1, 3, 5].map(function (offset) {
-            var value = parseInt(hex.slice(offset, offset + 2), 16) / 255;
-            return value <= 0.04045
-              ? value / 12.92
-              : Math.pow((value + 0.055) / 1.055, 2.4);
-          });
-          return channels[0] * 0.2126 + channels[1] * 0.7152 + channels[2] * 0.0722;
-        };
-        var getContrastColor = function (background) {
-          var backgroundLuminance = toLuminance(background);
-          var darkLuminance = toLuminance('#111111');
-          var lightContrast = 1.05 / (backgroundLuminance + 0.05);
-          var darkContrast =
-            (Math.max(backgroundLuminance, darkLuminance) + 0.05) /
-            (Math.min(backgroundLuminance, darkLuminance) + 0.05);
-          return darkContrast > lightContrast ? '#111111' : '#ffffff';
-        };
-
-        if (!teamContrast) {
-          teamContrast = getContrastColor(teamColor);
-          window.localStorage.setItem('yakuku.teamContrast', teamContrast);
-        }
-
-        var displayChannels = [1, 3, 5].map(function (offset) {
-          var channel = parseInt(teamColor.slice(offset, offset + 2), 16);
-          return Math.round(channel * 0.95 + 255 * 0.05)
-            .toString(16)
-            .padStart(2, '0');
+      if (!/^#[0-9a-f]{6}$/i.test(teamColor)) {
+        [
+          'yakuku.teamColor',
+          'yakuku.teamSurface',
+          'yakuku.teamContrast',
+          'yakuku.teamDisplay',
+          'yakuku.teamDisplayContrast'
+        ].forEach(function (key) {
+          window.localStorage.removeItem(key);
         });
-        teamDisplay = '#' + displayChannels.join('');
-        teamDisplayContrast = getContrastColor(teamDisplay);
-        window.localStorage.setItem('yakuku.teamDisplay', teamDisplay);
-        window.localStorage.setItem(
-          'yakuku.teamDisplayContrast',
-          teamDisplayContrast
-        );
+        return;
       }
+
+      var toLuminance = function (hex) {
+        var channels = [1, 3, 5].map(function (offset) {
+          var value = parseInt(hex.slice(offset, offset + 2), 16) / 255;
+          return value <= 0.04045
+            ? value / 12.92
+            : Math.pow((value + 0.055) / 1.055, 2.4);
+        });
+        return channels[0] * 0.2126 + channels[1] * 0.7152 + channels[2] * 0.0722;
+      };
+      var getContrastColor = function (background) {
+        var backgroundLuminance = toLuminance(background);
+        var darkLuminance = toLuminance('#111111');
+        var lightContrast = 1.05 / (backgroundLuminance + 0.05);
+        var darkContrast =
+          (Math.max(backgroundLuminance, darkLuminance) + 0.05) /
+          (Math.min(backgroundLuminance, darkLuminance) + 0.05);
+        return darkContrast > lightContrast ? '#111111' : '#ffffff';
+      };
+      var toHex = function (channels) {
+        return '#' + channels.map(function (channel) {
+          return Math.round(channel).toString(16).padStart(2, '0');
+        }).join('');
+      };
+      var sourceChannels = [1, 3, 5].map(function (offset) {
+        return parseInt(teamColor.slice(offset, offset + 2), 16);
+      });
+      var teamSurface = '#000000';
+      for (var percentage = 100; percentage >= 0; percentage -= 1) {
+        var candidate = toHex(sourceChannels.map(function (channel) {
+          return channel * (percentage / 100);
+        }));
+        if (1.05 / (toLuminance(candidate) + 0.05) >= 7) {
+          teamSurface = candidate;
+          break;
+        }
+      }
+      var teamContrast = getContrastColor(teamColor);
+      var teamDisplay = toHex(sourceChannels.map(function (channel) {
+        return channel * 0.95 + 255 * 0.05;
+      }));
+      var teamDisplayContrast = getContrastColor(teamDisplay);
+
       root.style.setProperty('--team-color', teamColor);
       root.style.setProperty('--team-color-soft', teamColor + '1f');
       root.style.setProperty('--team-color-strong', teamColor + 'cc');
-      root.style.setProperty(
-        '--team-color-ink',
-        teamSurface || 'color-mix(in srgb, ' + teamColor + ' 58%, #111827 42%)'
-      );
-      root.style.setProperty(
-        '--team-color-surface',
-        teamSurface || 'color-mix(in srgb, ' + teamColor + ' 58%, #111827 42%)'
-      );
-      root.style.setProperty('--team-color-contrast', teamContrast || '#ffffff');
-      root.style.setProperty('--team-color-display', teamDisplay || teamColor);
-      root.style.setProperty(
-        '--team-color-display-contrast',
-        teamDisplayContrast || teamContrast || '#ffffff'
-      );
+      root.style.setProperty('--team-color-ink', teamSurface);
+      root.style.setProperty('--team-color-surface', teamSurface);
+      root.style.setProperty('--team-color-contrast', teamContrast);
+      root.style.setProperty('--team-color-display', teamDisplay);
+      root.style.setProperty('--team-color-display-contrast', teamDisplayContrast);
+      window.localStorage.setItem('yakuku.teamSurface', teamSurface);
+      window.localStorage.setItem('yakuku.teamContrast', teamContrast);
+      window.localStorage.setItem('yakuku.teamDisplay', teamDisplay);
+      window.localStorage.setItem('yakuku.teamDisplayContrast', teamDisplayContrast);
     }
   } catch (error) {
     document.documentElement.dataset.authState = 'guest';
@@ -166,6 +174,11 @@ const structuredData = {
     },
   ],
 };
+
+const serializedStructuredData = JSON.stringify(structuredData).replace(
+  /</g,
+  '\\u003c',
+);
 
 export const metadata: Metadata = {
   metadataBase: new URL(getSiteUrl()),
@@ -290,22 +303,26 @@ export const viewport: Viewport = {
   themeColor: '#0f6b4f',
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const nonce = (await headers()).get('x-nonce') ?? undefined;
+
   return (
     <html lang="ko">
       <head>
         <script
+          nonce={nonce}
           dangerouslySetInnerHTML={{ __html: bootScript }}
           // 첫 paint 전에 팀 컬러를 root에 미리 세팅하여
           // 디폴트 테마 색이 잠깐 보였다 사라지는 깜빡임을 방지합니다.
         />
         <script
+          nonce={nonce}
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+          dangerouslySetInnerHTML={{ __html: serializedStructuredData }}
         />
       </head>
       <body>

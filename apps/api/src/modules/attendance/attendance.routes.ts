@@ -514,8 +514,12 @@ attendanceRouter.post(
         throw new HttpError(400, 'INVALID_INPUT', '사진 파일을 선택해주세요.');
       }
 
-      await assertUploadedImageFile(req.file);
-      await assertUserUploadQuota(req.user?.id ?? 0, record.photoUrl);
+      await assertUploadedImageFile(req.file, 1600);
+      await assertUserUploadQuota(
+        req.user?.id ?? 0,
+        record.photoUrl,
+        req.file.size,
+      );
 
       const updatedRecord = await updateAttendancePhoto({
         id: record.id,

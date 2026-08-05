@@ -3,6 +3,7 @@ import { authenticate } from '../../middleware/authenticate.js';
 import { requireAdmin } from '../../middleware/require-admin.js';
 import { rateLimit } from '../../middleware/rate-limit.js';
 import { HttpError } from '../../utils/http-error.js';
+import { normalizeExternalHttpUrl } from '../../utils/external-url.js';
 import { deleteUploadedFile } from '../../utils/upload-file.js';
 import { deleteComment } from '../comments/comment.repository.js';
 import {
@@ -255,10 +256,7 @@ function parseGameInput(body: Record<string, unknown>) {
     homeScore: nullableNumber(body.homeScore),
     awayScore: nullableNumber(body.awayScore),
     status,
-    ticketUrl:
-      typeof body.ticketUrl === 'string' && body.ticketUrl.trim()
-        ? body.ticketUrl.trim()
-        : null,
+    ticketUrl: normalizeExternalHttpUrl(body.ticketUrl, '예매 링크'),
     ticketOpenAt:
       typeof body.ticketOpenAt === 'string' && body.ticketOpenAt.trim()
         ? body.ticketOpenAt.trim()

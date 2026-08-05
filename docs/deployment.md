@@ -7,12 +7,13 @@
 ```txt
 Cloud Server
   ├─ caddy  HTTPS reverse proxy
+  ├─ gateway Nginx rate/connection limiter
   ├─ web    Next.js production server
   ├─ api    Express API server
   └─ mysql  MySQL 8.4
 ```
 
-`web`과 `api` 포트는 서버의 loopback에만 바인딩하고, 외부 사용자는 Caddy를 통해서만 접근합니다.
+`web`과 `api` 포트는 서버의 loopback에만 바인딩하고, 외부 사용자는 Caddy를 통해서만 접근합니다. 도메인 요청은 `Caddy → gateway → web/api` 순서로 전달됩니다.
 
 ```txt
 127.0.0.1:3000       Web (서버 내부 확인용)
@@ -57,12 +58,19 @@ NEXT_PUBLIC_API_URL=https://YOUR_DOMAIN/api
 APP_URL=https://YOUR_DOMAIN
 APP_DOMAIN=YOUR_DOMAIN
 JWT_SECRET=replace-with-a-long-random-secret
+PROXY_SHARED_SECRET=64-character-hex-secret
 JWT_REMEMBER_EXPIRES_IN=30d
 MYSQL_PASSWORD=replace-with-strong-password
 MYSQL_ROOT_PASSWORD=replace-with-strong-root-password
 ```
 
 `APP_URL`과 `NEXT_PUBLIC_API_URL`은 실제 HTTPS 서비스 도메인과 정확히 일치해야 합니다.
+
+프록시 비밀값은 서버에서 아래 스크립트로 생성합니다. 기존에 올바른 값이 있으면 유지합니다.
+
+```bash
+bash scripts/deploy/setup-security-gateway.sh
+```
 
 ## 4. 컨테이너 실행
 
@@ -96,7 +104,7 @@ http://127.0.0.1:4000/api/health
 ```txt
 https://yakuku-yaru.today
 https://yakuku-yaru.today/api/health
-https://yakuku-yaru.today/uploads/<uploaded-file-name>
+https://yakuku-yaru.today/uploads/<uuid-image-file-name>
 ```
 
 ## 8. 업데이트 배포
@@ -273,6 +281,8 @@ DEPLOY_COMPOSE_PROFILES=proxy
 
 Google Cloud 방화벽에서도 `3000`, `4000` 포트는 닫고 `80`, `443`만 외부에 열어둡니다.
 
+애플리케이션 요청 제한은 대규모 회선 DDoS를 완전히 막지 못합니다. Cloudflare 프록시 또는 Google Cloud Load Balancer + Cloud Armor 구성과 원본 방화벽 제한은 [security.md](./security.md)를 참고합니다.
+
 ## 10-1. 운영 환경 변수
 
 `.env.production`에는 최소 아래 값이 필요합니다.
@@ -284,6 +294,7 @@ APP_DOMAIN=yakuku-yaru.today
 NEXT_PUBLIC_API_URL=https://yakuku-yaru.today/api
 
 JWT_SECRET=replace-with-long-random-secret
+PROXY_SHARED_SECRET=64-character-hex-secret
 JWT_EXPIRES_IN=1d
 JWT_REMEMBER_EXPIRES_IN=30d
 

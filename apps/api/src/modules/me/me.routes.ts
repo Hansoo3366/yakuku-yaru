@@ -245,8 +245,12 @@ meRouter.post(
         );
       }
 
-      await assertUploadedImageFile(req.file);
-      await assertUserUploadQuota(userId, previousUser.profile_image_url);
+      await assertUploadedImageFile(req.file, 512);
+      await assertUserUploadQuota(
+        userId,
+        previousUser.profile_image_url,
+        req.file.size,
+      );
 
       const user = await updateUserProfileImage(
         userId,

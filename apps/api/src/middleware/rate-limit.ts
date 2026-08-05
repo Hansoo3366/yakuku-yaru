@@ -14,6 +14,8 @@ type RateLimitBucket = {
 };
 
 const buckets = new Map<string, RateLimitBucket>();
+const MAX_BUCKETS = 50_000;
+let nextCleanupAt = 0;
 
 function getClientKey(scope: string, req: Parameters<RequestHandler>[0]) {
   const userKey = req.user ? `user:${req.user.id}` : `ip:${req.ip}`;
@@ -21,12 +23,20 @@ function getClientKey(scope: string, req: Parameters<RequestHandler>[0]) {
 }
 
 function cleanupExpiredBuckets(now: number) {
-  if (buckets.size < 1000) return;
+  if (now < nextCleanupAt && buckets.size < MAX_BUCKETS) return;
+
+  nextCleanupAt = now + 60_000;
 
   for (const [key, bucket] of buckets) {
     if (bucket.resetAt <= now) {
       buckets.delete(key);
     }
+  }
+
+  while (buckets.size >= MAX_BUCKETS) {
+    const oldestKey = buckets.keys().next().value as string | undefined;
+    if (!oldestKey) break;
+    buckets.delete(oldestKey);
   }
 }
 

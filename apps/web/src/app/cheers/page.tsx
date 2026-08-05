@@ -9,7 +9,10 @@ import { PlayerCheerDialog } from '@/components/PlayerCheerDialog';
 import type { CheerDialogItem } from '@/components/PlayerCheerDialog';
 import { PlayerPhoto } from '@/components/PlayerPhoto';
 import { getTeamLogoSrc } from '@/lib/team-logo';
-import { getContrastingTextColor } from '@/lib/team-color';
+import {
+  getContrastingTextColor,
+  normalizeTeamColor,
+} from '@/lib/team-color';
 import type {
   PlayerCheer,
   PlayerCheerRosterScope,
@@ -128,6 +131,7 @@ export default function CheersPage() {
   const selectedTeam = selectedTeamId
     ? (teams.find((team) => team.id === selectedTeamId) ?? null)
     : null;
+  const selectedTeamColor = normalizeTeamColor(selectedTeam?.primaryColor);
   const selectedTeamCheer = selectedTeamId
     ? (teamCheersById.get(selectedTeamId) ?? null)
     : null;
@@ -271,6 +275,7 @@ export default function CheersPage() {
           </button>
 
           {teams.map((team) => {
+            const teamColor = normalizeTeamColor(team.primaryColor);
             return (
               <button
                 aria-pressed={selectedTeamId === team.id}
@@ -283,9 +288,9 @@ export default function CheersPage() {
                   resetListState();
                 }}
                 style={
-                  team.primaryColor
+                  teamColor
                     ? ({
-                        '--team-tab-color': team.primaryColor,
+                        '--team-tab-color': teamColor,
                       } as CSSProperties)
                     : undefined
                 }
@@ -303,12 +308,12 @@ export default function CheersPage() {
         <section
           className="cheers-team-feature"
           style={
-            selectedTeam.primaryColor
+            selectedTeamColor
               ? ({
-                  '--team-tab-color': selectedTeam.primaryColor,
-                  '--team-tab-surface': selectedTeam.primaryColor,
+                  '--team-tab-color': selectedTeamColor,
+                  '--team-tab-surface': selectedTeamColor,
                   '--team-tab-contrast': getContrastingTextColor(
-                    selectedTeam.primaryColor,
+                    selectedTeamColor,
                   ),
                 } as CSSProperties)
               : undefined

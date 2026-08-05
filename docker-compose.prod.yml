@@ -47,6 +47,7 @@ services:
       APP_DOMAIN: ${APP_DOMAIN:-}
       CORS_ORIGINS: ${CORS_ORIGINS:-}
       JWT_SECRET: ${JWT_SECRET}
+      PROXY_SHARED_SECRET: ${PROXY_SHARED_SECRET}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-1d}
       JWT_REMEMBER_EXPIRES_IN: ${JWT_REMEMBER_EXPIRES_IN:-30d}
       SMTP_HOST: ${SMTP_HOST:-smtp.gmail.com}
@@ -88,14 +89,35 @@ services:
     ports:
       - '127.0.0.1:${WEB_PORT:-3000}:3000'
 
+  gateway:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - SETGID
+      - SETUID
+    depends_on:
+      - web
+      - api
+    environment:
+      PROXY_SHARED_SECRET: ${PROXY_SHARED_SECRET}
+    volumes:
+      - ./infra/nginx/default.conf.template:/etc/nginx/templates/default.conf.template:ro
+    tmpfs:
+      - /var/cache/nginx
+      - /var/run
+
   caddy:
     image: caddy:2.9-alpine
     profiles:
       - proxy
     restart: unless-stopped
     depends_on:
-      - web
-      - api
+      - gateway
     environment:
       APP_DOMAIN: ${APP_DOMAIN}
     ports:

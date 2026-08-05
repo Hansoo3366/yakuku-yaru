@@ -3,11 +3,14 @@ import crypto from 'node:crypto';
 import { promises as fs } from 'node:fs';
 import type { Request } from 'express';
 import multer from 'multer';
+import sharp from 'sharp';
 import { env } from '../../config/env.js';
+import { HttpError } from '../../utils/http-error.js';
 
 const ATTENDANCE_PHOTO_MAX_BYTES = 12 * 1024 * 1024;
 const PROFILE_PHOTO_MAX_BYTES = 1024 * 1024;
 const USER_UPLOAD_QUOTA_BYTES = 100 * 1024 * 1024;
+const MAX_INPUT_PIXELS = 40_000_000;
 
 const IMAGE_EXTENSION_BY_MIME_TYPE: Record<string, string> = {
   'image/avif': '.avif',
@@ -98,7 +101,10 @@ function matchesDeclaredImageType(buffer: Buffer, mimeType: string) {
   return false;
 }
 
-export async function assertUploadedImageFile(file: Express.Multer.File) {
+export async function assertUploadedImageFile(
+  file: Express.Multer.File,
+  maxDimension: number,
+) {
   const handle = await fs.open(file.path, 'r');
 
   try {
@@ -108,16 +114,74 @@ export async function assertUploadedImageFile(file: Express.Multer.File) {
     if (
       !matchesDeclaredImageType(buffer.subarray(0, bytesRead), file.mimetype)
     ) {
-      throw new Error('지원하는 형식의 이미지만 업로드할 수 있습니다.');
+      throw new HttpError(
+        400,
+        'INVALID_FILE_TYPE',
+        '지원하는 형식의 이미지만 업로드할 수 있습니다.',
+      );
     }
   } finally {
     await handle.close();
+  }
+
+  const parsedPath = path.parse(file.path);
+  const outputFilename = `${parsedPath.name}.webp`;
+  const outputPath = path.join(parsedPath.dir, outputFilename);
+  const temporaryPath = path.join(
+    parsedPath.dir,
+    `.processing-${crypto.randomUUID()}.webp`,
+  );
+
+  try {
+    const image = sharp(file.path, {
+      failOn: 'warning',
+      limitInputPixels: MAX_INPUT_PIXELS,
+    });
+    const metadata = await image.metadata();
+
+    if (!metadata.width || !metadata.height) {
+      throw new Error('이미지 크기를 확인할 수 없습니다.');
+    }
+
+    await image
+      .rotate()
+      .resize({
+        width: maxDimension,
+        height: maxDimension,
+        fit: 'inside',
+        withoutEnlargement: true,
+      })
+      .webp({ effort: 4, quality: 84 })
+      .toFile(temporaryPath);
+
+    await fs.rename(temporaryPath, outputPath);
+
+    if (outputPath !== file.path) {
+      await fs.unlink(file.path);
+    }
+
+    const stat = await fs.stat(outputPath);
+    file.filename = outputFilename;
+    file.path = outputPath;
+    file.mimetype = 'image/webp';
+    file.size = stat.size;
+  } catch (error) {
+    await fs.unlink(temporaryPath).catch(() => undefined);
+    if (error instanceof HttpError) {
+      throw error;
+    }
+    throw new HttpError(
+      400,
+      'INVALID_IMAGE',
+      '손상되었거나 처리할 수 없는 이미지입니다.',
+    );
   }
 }
 
 export async function assertUserUploadQuota(
   userId: number,
   replacingAssetUrl?: string | null,
+  uploadedFileBytes = 0,
 ) {
   const prefix = `${userId}-`;
   const replacingFilename = replacingAssetUrl
@@ -138,7 +202,7 @@ export async function assertUserUploadQuota(
   );
   const totalBytes = sizes.reduce((sum, size) => sum + size, 0);
 
-  if (totalBytes > USER_UPLOAD_QUOTA_BYTES) {
+  if (totalBytes + uploadedFileBytes > USER_UPLOAD_QUOTA_BYTES) {
     throw new Error('사용자별 이미지 저장 용량을 초과했습니다.');
   }
 }

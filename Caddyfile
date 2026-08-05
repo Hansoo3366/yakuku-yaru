@@ -1,17 +1,17 @@
+{
+	servers {
+		timeouts {
+			read_body 2m
+			read_header 10s
+			write 2m
+			idle 2m
+		}
+		max_header_size 32KB
+		strict_sni_host on
+	}
+}
+
 {$APP_DOMAIN} {
 	encode zstd gzip
-
-	@api path /api/*
-	reverse_proxy @api api:4000
-
-	@api_docs path /api-docs*
-	reverse_proxy @api_docs api:4000
-
-	@openapi path /api-docs.json
-	reverse_proxy @openapi api:4000
-
-	@uploads path /uploads/*
-	reverse_proxy @uploads api:4000
-
-	reverse_proxy web:3000
+	reverse_proxy gateway:8080
 }

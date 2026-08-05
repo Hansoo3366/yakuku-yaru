@@ -13,6 +13,7 @@ import {
 import {
   getAccessibleTeamSurface,
   getContrastingTextColor,
+  normalizeTeamColor,
 } from '@/lib/team-color';
 
 export type CheerDialogItem = {
@@ -161,7 +162,7 @@ export function PlayerCheerDialog({ cheer, player, onClose }: Props) {
 
   const hasCheer = Boolean(item.cheerId);
   const youtubeId = item.youtubeId ?? extractYoutubeId(item.youtubeUrl);
-  const accentColor = item.accentColor || '#183b66';
+  const accentColor = normalizeTeamColor(item.accentColor, '#183b66')!;
   const dialogStyle = {
     '--cheer-dialog-accent': accentColor,
     '--cheer-dialog-surface': getAccessibleTeamSurface(accentColor),

@@ -1,6 +1,7 @@
 import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
+  poweredByHeader: false,
   reactStrictMode: true,
   async headers() {
     return [
@@ -15,10 +16,6 @@ const nextConfig: NextConfig = {
             value: 'camera=(), microphone=(), geolocation=()',
           },
           { key: 'Cross-Origin-Opener-Policy', value: 'same-origin' },
-          {
-            key: 'Content-Security-Policy',
-            value: "frame-ancestors 'none'; base-uri 'self'; object-src 'none'",
-          },
           {
             key: 'Strict-Transport-Security',
             value: 'max-age=31536000',

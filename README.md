@@ -13,7 +13,7 @@
 | Database | MySQL |
 | Auth | JWT, bcrypt, email verification |
 | API Docs | Swagger / OpenAPI |
-| Infra | Docker Compose, Google Cloud Compute Engine, Caddy |
+| Infra | Docker Compose, Google Cloud Compute Engine, Caddy, Nginx gateway |
 | App Experience | PWA |
 
 ## Study Requirements Mapping
@@ -135,7 +135,7 @@ npm run sync:kbo-game-center:dev --workspace @yakuku-yaru/api -- --mode=today
 - Next.js web container
 - Express API container
 - MySQL 8.4 container
-- Caddy HTTPS reverse proxy
+- Caddy HTTPS reverse proxy + Nginx 요청/연결 제한 gateway
 - GitHub Actions SSH 자동 배포
 
 현재는 Caddy reverse proxy를 통해 `80/443` 포트와 HTTPS 중심으로 접근합니다. `3000`, `4000` 포트는 외부 직접 접근을 닫고 내부 컨테이너 통신용으로만 사용하는 것을 권장합니다.

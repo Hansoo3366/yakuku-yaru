@@ -113,6 +113,7 @@ jobs:
             fi
             git fetch origin main
             git reset --hard origin/main
+            bash scripts/deploy/setup-security-gateway.sh .env.production
             export API_IMAGE="${{ env.API_IMAGE }}"
             export WEB_IMAGE="${{ env.WEB_IMAGE }}"
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin

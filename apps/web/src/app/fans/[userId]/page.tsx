@@ -13,6 +13,7 @@ import { Skeleton } from '@/components/Skeleton';
 import { useAuthStore } from '@/lib/auth-store';
 import { formatKoreanDateShort } from '@/lib/date-format';
 import { getAuthorProfileImageSrc } from '@/lib/profile-image';
+import { normalizeTeamColor } from '@/lib/team-color';
 import { useFanProfileQuery } from '@/lib/queries';
 import styles from '../fans.module.css';
 
@@ -50,7 +51,10 @@ export default function FanProfilePage() {
     );
   }
 
-  const teamColor = fan.favoriteTeam?.primaryColor ?? '#ffffff';
+  const teamColor = normalizeTeamColor(
+    fan.favoriteTeam?.primaryColor,
+    '#111111',
+  );
 
   return (
     <main className={`app-shell with-bottom-nav ${styles.page}`}>

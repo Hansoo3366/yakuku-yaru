@@ -5,6 +5,7 @@ import {
   getAccessibleTeamSurface,
   getContrastingTextColor,
   getLightenedTeamColor,
+  normalizeTeamColor,
 } from '@/lib/team-color';
 
 export const TEAM_COLOR_STORAGE_KEY = 'yakuku.teamColor';
@@ -17,15 +18,17 @@ export function applyTeamTheme(primaryColor: string | null | undefined) {
   if (typeof document === 'undefined') return;
   const root = document.documentElement;
 
-  if (primaryColor) {
-    const accessibleSurface = getAccessibleTeamSurface(primaryColor);
-    const contrastingText = getContrastingTextColor(primaryColor);
-    const displayColor = getLightenedTeamColor(primaryColor);
+  const safeColor = normalizeTeamColor(primaryColor);
+
+  if (safeColor) {
+    const accessibleSurface = getAccessibleTeamSurface(safeColor);
+    const contrastingText = getContrastingTextColor(safeColor);
+    const displayColor = getLightenedTeamColor(safeColor);
     const displayContrastingText = getContrastingTextColor(displayColor);
 
-    root.style.setProperty('--team-color', primaryColor);
-    root.style.setProperty('--team-color-soft', `${primaryColor}1f`);
-    root.style.setProperty('--team-color-strong', `${primaryColor}cc`);
+    root.style.setProperty('--team-color', safeColor);
+    root.style.setProperty('--team-color-soft', `${safeColor}1f`);
+    root.style.setProperty('--team-color-strong', `${safeColor}cc`);
     root.style.setProperty('--team-color-ink', accessibleSurface);
     root.style.setProperty('--team-color-surface', accessibleSurface);
     root.style.setProperty('--team-color-contrast', contrastingText);
@@ -35,7 +38,7 @@ export function applyTeamTheme(primaryColor: string | null | undefined) {
       displayContrastingText,
     );
     try {
-      window.localStorage.setItem(TEAM_COLOR_STORAGE_KEY, primaryColor);
+      window.localStorage.setItem(TEAM_COLOR_STORAGE_KEY, safeColor);
       window.localStorage.setItem(TEAM_SURFACE_STORAGE_KEY, accessibleSurface);
       window.localStorage.setItem(TEAM_CONTRAST_STORAGE_KEY, contrastingText);
       window.localStorage.setItem(TEAM_DISPLAY_STORAGE_KEY, displayColor);

@@ -31,11 +31,23 @@ function toHexColor(color: Rgb) {
     .join('')}`;
 }
 
+export function normalizeTeamColor(
+  value: string | null | undefined,
+  fallback: string | null = null,
+) {
+  if (!value) {
+    return fallback;
+  }
+
+  const color = parseHexColor(value);
+  return color ? toHexColor(color) : fallback;
+}
+
 export function getLightenedTeamColor(primaryColor: string, whiteRatio = 0.05) {
   const source = parseHexColor(primaryColor);
 
   if (!source) {
-    return primaryColor;
+    return '#111111';
   }
 
   const ratio = Math.min(1, Math.max(0, whiteRatio));
@@ -103,7 +115,7 @@ export function getAccessibleTeamSurface(
   const source = parseHexColor(primaryColor);
 
   if (!source) {
-    return primaryColor;
+    return '#111111';
   }
 
   for (let percentage = 100; percentage >= 0; percentage -= 1) {
