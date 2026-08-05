@@ -75,7 +75,7 @@ bash scripts/deploy/setup-security-gateway.sh
 ## 4. 컨테이너 실행
 
 ```bash
-docker compose --env-file .env.production -f docker-compose.prod.yml up -d --build
+docker compose --env-file .env.production -f docker-compose.prod.yml --profile proxy up -d --build
 ```
 
 ## 5. 상태 확인
@@ -111,7 +111,7 @@ https://yakuku-yaru.today/uploads/<uuid-image-file-name>
 
 ```bash
 git pull
-docker compose --env-file .env.production -f docker-compose.prod.yml up -d --build
+docker compose --env-file .env.production -f docker-compose.prod.yml --profile proxy up -d --build
 ```
 
 기존 업로드 중 DB에서 더 이상 참조하지 않는 파일은 먼저 dry run으로 확인한 뒤 정리합니다.
@@ -311,7 +311,7 @@ SMTP_FROM="야크크 야르 <your-gmail@gmail.com>"
 GitHub Actions 배포에서는 이미지를 Actions에서 빌드하므로 서버에서 `--build`를 붙이지 않습니다.
 
 ```bash
-docker compose --env-file .env.production -f docker-compose.prod.yml --profile proxy up -d --no-build api web caddy
+docker compose --env-file .env.production -f docker-compose.prod.yml --profile proxy up -d --no-build api web gateway caddy
 ```
 
 ## 11. 데이터 보존

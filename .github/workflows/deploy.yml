@@ -108,9 +108,6 @@ jobs:
           script: |
             set -e
             cd ${{ secrets.DEPLOY_PATH }}
-            if [ -n "${{ secrets.DEPLOY_COMPOSE_PROFILES }}" ]; then
-              export COMPOSE_PROFILES="${{ secrets.DEPLOY_COMPOSE_PROFILES }}"
-            fi
             git fetch origin main
             git reset --hard origin/main
             bash scripts/deploy/setup-security-gateway.sh .env.production
@@ -121,5 +118,15 @@ jobs:
             docker image prune -af
             docker builder prune -af
             docker compose -f docker-compose.prod.yml --env-file .env.production pull api web
-            docker compose -f docker-compose.prod.yml --env-file .env.production up -d --no-build
+            docker compose -f docker-compose.prod.yml --env-file .env.production --profile proxy up -d --no-build
+            docker compose -f docker-compose.prod.yml --env-file .env.production --profile proxy exec -T caddy caddy validate --config /etc/caddy/Caddyfile
+            healthy=0
+            for attempt in $(seq 1 12); do
+              if docker compose -f docker-compose.prod.yml --env-file .env.production --profile proxy exec -T gateway wget -qO- http://127.0.0.1:8080/api/health; then
+                healthy=1
+                break
+              fi
+              sleep 5
+            done
+            test "$healthy" = 1
             docker image prune -f

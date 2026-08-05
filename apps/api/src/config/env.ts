@@ -27,7 +27,7 @@ if (nodeEnv === 'production' && !/^[a-f0-9]{64}$/i.test(proxySharedSecret)) {
 }
 
 const appUrl =
-  process.env.APP_URL ??
+  process.env.APP_URL?.trim() ||
   (process.env.APP_DOMAIN
     ? `https://${process.env.APP_DOMAIN}`
     : 'http://localhost:3000');

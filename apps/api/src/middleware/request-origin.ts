@@ -4,6 +4,25 @@ import { HttpError } from '../utils/http-error.js';
 
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 
+function normalizeOrigin(value: string | undefined) {
+  if (!value) return null;
+
+  try {
+    return new URL(value.trim()).origin;
+  } catch {
+    return null;
+  }
+}
+
+function requestPublicOrigin(req: Parameters<RequestHandler>[0]) {
+  const forwardedProto = req.header('x-forwarded-proto')?.split(',')[0]?.trim();
+  const forwardedHost = req.header('x-forwarded-host')?.split(',')[0]?.trim();
+  const protocol = forwardedProto || req.protocol;
+  const host = forwardedHost || req.header('host');
+
+  return host ? normalizeOrigin(`${protocol}://${host}`) : null;
+}
+
 export const requireTrustedOrigin: RequestHandler = (req, _res, next) => {
   const fetchSite = req.header('sec-fetch-site');
 
@@ -19,16 +38,33 @@ export const requireTrustedOrigin: RequestHandler = (req, _res, next) => {
     return;
   }
 
-  const origin = req.header('origin');
+  const origin = normalizeOrigin(req.header('origin'));
+  const publicOrigin = requestPublicOrigin(req);
 
-  if (origin && env.allowedOrigins.includes(origin)) {
+  if (
+    origin &&
+    (env.allowedOrigins.includes(origin) || origin === publicOrigin)
+  ) {
     next();
     return;
   }
 
-  if (!origin && env.nodeEnv !== 'production') {
-    next();
-    return;
+  if (!origin) {
+    const refererOrigin = normalizeOrigin(req.header('referer'));
+    const hasTrustedReferer =
+      refererOrigin !== null &&
+      (env.allowedOrigins.includes(refererOrigin) ||
+        refererOrigin === publicOrigin);
+
+    if (
+      env.nodeEnv !== 'production' ||
+      hasTrustedReferer ||
+      fetchSite === 'same-origin' ||
+      fetchSite === 'same-site'
+    ) {
+      next();
+      return;
+    }
   }
 
   next(
