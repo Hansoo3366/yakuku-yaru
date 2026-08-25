@@ -61,4 +61,37 @@ const ambiguous = resolveLineupPlayerSearchMatches({
 
 assert.equal(ambiguous.activeMatch, null);
 
+const samsungPitcher = player({
+  isRetired: false,
+  kboPlayerId: '62360',
+  name: '김태훈',
+  teamShortName: '삼성',
+});
+samsungPitcher.position = '투수';
+const samsungHitter = player({
+  isRetired: false,
+  kboPlayerId: '65040',
+  name: '김태훈',
+  teamShortName: '삼성',
+});
+samsungHitter.position = '외야수';
+
+const hitterResolvedByPosition = resolveLineupPlayerSearchMatches({
+  matches: [samsungPitcher, samsungHitter],
+  name: '김태훈',
+  teamShortName: '삼성',
+  fieldPosition: '우익수',
+});
+
+assert.equal(hitterResolvedByPosition.activeMatch?.kboPlayerId, '65040');
+
+const pitcherResolvedByPosition = resolveLineupPlayerSearchMatches({
+  matches: [samsungPitcher, samsungHitter],
+  name: '김태훈',
+  teamShortName: '삼성',
+  fieldPosition: '투수',
+});
+
+assert.equal(pitcherResolvedByPosition.activeMatch?.kboPlayerId, '62360');
+
 console.log('lineup-player-match.test.ts: ok');

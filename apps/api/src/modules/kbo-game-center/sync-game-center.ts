@@ -131,15 +131,12 @@ async function enrichLineupPlayersWithSearchIds(input: {
     input.searchCache.set(cacheKey, searchPromise);
 
     const matches = await searchPromise.catch(() => []);
-    const { activeMatch, retiredMatches } = resolveLineupPlayerSearchMatches({
+    const { activeMatch } = resolveLineupPlayerSearchMatches({
       matches,
       name: player.name,
       teamShortName,
+      fieldPosition: player.fieldPosition,
     });
-
-    for (const retiredMatch of retiredMatches) {
-      await upsertPlayer(retiredMatch, input.teamIdsByShortName);
-    }
 
     if (!activeMatch) {
       enrichedPlayers.push(player);
