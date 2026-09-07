@@ -178,6 +178,9 @@ export function AppFooter() {
             <Link href="/privacy">개인정보 처리방침</Link>
             <Link href="/terms">이용약관</Link>
             <Link href="/community-guidelines">커뮤니티 운영정책</Link>
+            <a href="/api-docs/" rel="noreferrer" target="_blank">
+              API 문서
+            </a>
             <a href={`mailto:${SERVICE_CONTACT_EMAIL}`}>문의</a>
           </nav>
           <p>
