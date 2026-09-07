@@ -19,6 +19,15 @@ type TermGroup = {
   terms: Term[];
 };
 
+type QuestionGroup = {
+  label: string;
+  title: string;
+  questions: Array<{
+    question: string;
+    answer: string;
+  }>;
+};
+
 const requestFlow = [
   'Browser',
   'Caddy',
@@ -249,6 +258,136 @@ const groups: TermGroup[] = [
   },
 ];
 
+const questionGroups: QuestionGroup[] = [
+  {
+    label: 'BACKEND',
+    title: 'JWT 인증',
+    questions: [
+      {
+        question: 'JWT 토큰에는 어떤 정보를 포함하셨나요?',
+        answer:
+          'userId, email, sessionVersion을 담습니다. JWT 라이브러리가 발급·만료 시간(iat, exp), 발급자(iss), 대상(aud)도 추가하며 비밀번호와 프로필은 제외합니다.',
+      },
+    ],
+  },
+  {
+    label: 'DATABASE',
+    title: '테이블 관계',
+    questions: [
+      {
+        question: '테이블 간 관계를 어떤 기준으로 설계하셨나요?',
+        answer:
+          '실제 업무의 소유 관계와 1:N·N:M 카디널리티를 기준으로 나눴습니다. users–posts–comments는 foreign key로 연결하고, 동행자처럼 N:M 관계는 연결 테이블로 분리했으며, 이메일과 경기별 관람 기록은 unique key로 중복을 막습니다.',
+      },
+    ],
+  },
+  {
+    label: 'FRONTEND / STORE',
+    title: '상태관리',
+    questions: [
+      {
+        question: '상태 관리는 어떤 라이브러리를 사용하셨나요?',
+        answer:
+          '공유 클라이언트 상태는 Zustand, 서버 데이터는 TanStack Query, 현재 컴포넌트의 UI 값은 React state로 구분합니다.',
+      },
+      {
+        question: '어떤 데이터들을 상태 관리로 관리하셨나요?',
+        answer:
+          'Zustand에는 로그인 사용자·세션 초기화·캘린더 필터, Query 캐시에는 팀·경기·게시글·댓글, React state에는 폼·팝업·페이지·이미지 미리보기를 담습니다.',
+      },
+      {
+        question: '상태관리 라이브러리를 선택한 이유는 무엇인가요?',
+        answer:
+          'Zustand는 설정과 boilerplate가 적고 필요한 Store 조각만 구독하기 쉬워 공유 UI 상태에 사용합니다. 서버 데이터는 캐시·재요청이 필요해 TanStack Query로 분리하여 전역 Store의 중복 저장을 피합니다.',
+      },
+    ],
+  },
+  {
+    label: 'FRONTEND / API',
+    title: 'API 연동',
+    questions: [
+      {
+        question: 'API 요청은 어떤 방식으로 호출하셨나요?',
+        answer:
+          '브라우저 fetch를 generic 함수 request<T>로 감싸 호출합니다. 조회는 주로 TanStack Query hook을 통하고, 쓰기는 화면 이벤트에서 Domain API를 호출한 뒤 관련 query를 invalidate합니다.',
+      },
+      {
+        question: 'API 호출 로직은 어떤 위치에서 관리하고 있나요?',
+        answer:
+          '공통 HTTP 처리는 src/lib/api.ts, 업무별 함수는 auth-api.ts·post-api.ts·attendance-api.ts, 조회 설정은 src/lib/queries.ts에 나눠 관리합니다.',
+      },
+      {
+        question: '공통 API 요청 처리를 위해 어떤 구조를 사용하셨나요?',
+        answer:
+          'Page → Query hook → Domain API → request<T> 순서로 나눕니다. request<T>가 base URL·method·JSON·cookie·ApiError·204 응답을 공통 처리합니다.',
+      },
+      {
+        question: 'API 요청 시 인증 토큰은 어떻게 전달하셨나요?',
+        answer:
+          'JWT는 yakuku_session HttpOnly cookie에 보관하고 request<T>의 credentials: include로 브라우저가 자동 전송합니다. 프론트 JavaScript는 토큰 값을 읽거나 localStorage에 저장하지 않습니다.',
+      },
+    ],
+  },
+  {
+    label: 'FRONTEND / ERROR',
+    title: '에러 처리',
+    questions: [
+      {
+        question: '프론트엔드에서 API 에러는 어떻게 처리하셨나요?',
+        answer:
+          '화면이 ApiError를 catch해 message를 폼과 화면의 안내로 표시하고, status와 code에 따라 이메일 인증·로그인 화면 이동 같은 후속 행동을 결정합니다.',
+      },
+      {
+        question: '공통 에러 처리를 위해 어떤 구조를 사용하셨나요?',
+        answer:
+          '백엔드는 code·message 형식으로 응답하고, 공통 request<T>가 이를 status·code·message를 갖는 ApiError로 변환합니다. 각 화면은 같은 에러 타입을 사용합니다.',
+      },
+    ],
+  },
+  {
+    label: 'FRONTEND / LOGIN',
+    title: '로그인',
+    questions: [
+      {
+        question: '로그인 상태 확인은 어떤 방식으로 처리하셨나요?',
+        answer:
+          '앱 초기화 후 TanStack Query가 /auth/me를 호출합니다. API가 HttpOnly cookie의 JWT를 검증해 사용자를 돌려주면 로그인 상태로 판단합니다.',
+      },
+      {
+        question: '로그인 상태는 어디에 저장하셨나요?',
+        answer:
+          '실제 JWT는 브라우저의 HttpOnly cookie, 화면이 사용하는 사용자 정보는 Zustand와 TanStack Query 캐시에 둡니다. Zustand에는 JWT 문자열을 저장하지 않습니다.',
+      },
+      {
+        question: '페이지 새로고침 시 로그인 상태는 어떻게 유지되나요?',
+        answer:
+          '새로고침해도 HttpOnly cookie가 남아 있습니다. hydrate()가 쿠키 인증을 시도할 준비를 하고 /auth/me를 다시 호출해 사용자 정보를 복구합니다. 유지의 근거는 Zustand가 아니라 cookie입니다.',
+      },
+      {
+        question: '인증이 필요한 페이지 접근은 어떻게 제어하셨나요?',
+        answer:
+          'useAuthGuard가 세션 초기화 후 비로그인 상태면 로그인 화면으로 이동시킵니다. 이것은 UX 제어이고, 실제 보안은 Express authenticate middleware가 API에서 보장합니다.',
+      },
+      {
+        question: '토큰이 만료되면 어떻게 실행되고 있나요?',
+        answer:
+          '/auth/me 또는 보호 API가 401을 반환하면 프론트가 사용자·세션 상태를 제거하고 보호 페이지에서 로그인 화면으로 이동합니다. 비밀번호 재설정 후에는 sessionVersion 불일치로 기존 JWT도 거부됩니다.',
+      },
+    ],
+  },
+  {
+    label: 'FRONTEND / SIGN UP',
+    title: '회원가입',
+    questions: [
+      {
+        question: '메일 인증은 어떤 방식으로 하셨나요?',
+        answer:
+          'Nodemailer가 Gmail SMTP로 6자리 인증번호를 보냅니다. DB에 3분 만료로 저장하고 30초 재전송 대기·최대 4회를 적용하며, 검증 성공 시 email_verified_at을 기록해 로그인을 허용합니다.',
+      },
+    ],
+  },
+];
+
 function Flow({ items }: { items: string[] }) {
   return (
     <ol className={styles.flowList}>
@@ -274,8 +413,8 @@ export default function PresentationGuidePage() {
           </div>
           <p>
             각 기술이 원래 해결하는 문제와 이 프로젝트에서의 적용을 연결해
-            정리했습니다. 발표 직전에는 위의 두 흐름과 용어를 함께 확인하면
-            됩니다.
+            정리했습니다. 하단에서는 평가 질문과 현재 코드 기준 답변을 바로
+            확인할 수 있습니다.
           </p>
         </div>
       </header>
@@ -298,6 +437,10 @@ export default function PresentationGuidePage() {
             {group.title}
           </a>
         ))}
+        <a href="#questions">
+          <span>06</span>
+          예상 질문
+        </a>
       </nav>
 
       <div className={styles.termGroups}>
@@ -324,6 +467,34 @@ export default function PresentationGuidePage() {
           </section>
         ))}
       </div>
+
+      <section className={styles.qaSection} id="questions">
+        <header>
+          <span>06 / EVALUATION Q&amp;A</span>
+          <div>
+            <p>발표 예상 질문</p>
+            <h2>질문에서 구현으로</h2>
+          </div>
+        </header>
+        <div className={styles.qaGroups}>
+          {questionGroups.map((group) => (
+            <article className={styles.qaGroup} key={group.label}>
+              <header>
+                <span>{group.label}</span>
+                <h3>{group.title}</h3>
+              </header>
+              <dl>
+                {group.questions.map((item) => (
+                  <div key={item.question}>
+                    <dt>{item.question}</dt>
+                    <dd>{item.answer}</dd>
+                  </div>
+                ))}
+              </dl>
+            </article>
+          ))}
+        </div>
+      </section>
 
       <aside className={styles.finalCheck}>
         <strong>구분해서 말하기</strong>
