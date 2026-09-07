@@ -300,7 +300,7 @@
 
 - [x] Docker production 설정
 - [x] Cloud Server 배포
-- [x] Swagger URL 확인
+- [x] 로컬·운영 환경 Swagger URL 구성
 - [x] GitHub repository 정리
 - [x] GitHub Actions 자동 배포
 - [x] README에 실행/검증 URL 정리
@@ -311,7 +311,7 @@
 
 - [x] 제출 가능한 GitHub Repository가 있다.
 - [x] 배포 URL이 있다.
-- [x] Swagger API 문서 URL이 있다.
+- [x] 로컬·운영 환경에서 Swagger API 문서를 확인할 수 있다.
 
 ## 11. Admin and Operations
 

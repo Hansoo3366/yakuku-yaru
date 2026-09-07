@@ -6,30 +6,30 @@
 
 ## Tech Stack
 
-| Area | Stack |
-| --- | --- |
-| Frontend | Next.js, TypeScript, custom CSS |
-| Backend | Node.js, Express.js |
-| Database | MySQL |
-| Auth | JWT, bcrypt, email verification |
-| API Docs | Swagger / OpenAPI |
-| Infra | Docker Compose, Google Cloud Compute Engine, Caddy, Nginx gateway |
-| App Experience | PWA |
+| Area           | Stack                                                             |
+| -------------- | ----------------------------------------------------------------- |
+| Frontend       | Next.js, TypeScript, custom CSS                                   |
+| Backend        | Node.js, Express.js                                               |
+| Database       | MySQL                                                             |
+| Auth           | JWT, bcrypt, email verification                                   |
+| API Docs       | Swagger / OpenAPI                                                 |
+| Infra          | Docker Compose, Google Cloud Compute Engine, Caddy, Nginx gateway |
+| App Experience | PWA                                                               |
 
 ## Study Requirements Mapping
 
-| 과제 요구사항 | 구현 내용 |
-| --- | --- |
-| 로그인 | 이메일/비밀번호 기반 JWT 로그인 |
-| 회원가입 | 이메일 중복 검사, Gmail SMTP 인증번호, 비밀번호 암호화 |
-| 게시판 | 후기 게시판 CRUD, 검색, 페이징 |
-| 댓글 | 댓글 작성/조회/삭제, 댓글 알림 |
-| CRUD | 게시글, 댓글, 직관/집관 기록, 내 팀, 알림, 관리자 데이터 |
-| 페이징 | 게시글 목록 페이지네이션 |
-| 파일 업로드 | 직관 사진, 프로필 사진 업로드 및 WebP 최적화 |
-| DB 관계 | 사용자, 팀, 경기, 선수, 기록, 동행자, 게시글, 댓글, 알림 |
-| Swagger | REST API 문서화 |
-| Docker | Web/API/MySQL/Caddy 프로덕션 구성 |
+| 과제 요구사항 | 구현 내용                                                |
+| ------------- | -------------------------------------------------------- |
+| 로그인        | 이메일/비밀번호 기반 JWT 로그인                          |
+| 회원가입      | 이메일 중복 검사, Gmail SMTP 인증번호, 비밀번호 암호화   |
+| 게시판        | 후기 게시판 CRUD, 검색, 페이징                           |
+| 댓글          | 댓글 작성/조회/삭제, 댓글 알림                           |
+| CRUD          | 게시글, 댓글, 직관/집관 기록, 내 팀, 알림, 관리자 데이터 |
+| 페이징        | 게시글 목록 페이지네이션                                 |
+| 파일 업로드   | 직관 사진, 프로필 사진 업로드 및 WebP 최적화             |
+| DB 관계       | 사용자, 팀, 경기, 선수, 기록, 동행자, 게시글, 댓글, 알림 |
+| Swagger       | REST API 문서화                                          |
+| Docker        | Web/API/MySQL/Nginx/Caddy 프로덕션 구성                  |
 
 ## Core Features
 
@@ -73,6 +73,7 @@
 - [Docker Setup](docs/docker-setup.md)
 - [Deployment](docs/deployment.md)
 - [Evaluation Notes](docs/evaluation-notes.md)
+- [Terms and Technology](docs/terms-and-technology.md)
 - [Development Plan](docs/development-plan.md)
 - [Work Order](docs/work-order.md)
 
@@ -96,14 +97,14 @@ npm run dev:api
 
 기본 주소:
 
-| Service | URL |
-| --- | --- |
-| Web | `http://localhost:3000` |
-| API health | `http://localhost:4000/api/health` |
-| Swagger | `http://localhost:4000/api-docs` |
-| OpenAPI JSON | `http://localhost:4000/api-docs.json` |
-| PWA manifest | `http://localhost:3000/manifest.webmanifest` |
-| Offline fallback | `http://localhost:3000/offline` |
+| Service          | URL                                          |
+| ---------------- | -------------------------------------------- |
+| Web              | `http://localhost:3000`                      |
+| API health       | `http://localhost:4000/api/health`           |
+| Swagger          | `http://localhost:4000/api-docs`             |
+| OpenAPI JSON     | `http://localhost:4000/api-docs.json`        |
+| PWA manifest     | `http://localhost:3000/manifest.webmanifest` |
+| Offline fallback | `http://localhost:3000/offline`              |
 
 ## KBO Sync
 
@@ -121,12 +122,14 @@ npm run sync:kbo-game-center:dev --workspace @yakuku-yaru/api -- --mode=today
 
 현재 Google Cloud Compute Engine VM에 Docker Compose 기반으로 배포합니다.
 
-| Service | URL |
-| --- | --- |
-| Web | `https://yakuku-yaru.today` |
-| API health | `https://yakuku-yaru.today/api/health` |
-| Swagger | `https://yakuku-yaru.today/api-docs` |
-| OpenAPI JSON | `https://yakuku-yaru.today/api-docs.json` |
+| Service    | URL                                       |
+| ---------- | ----------------------------------------- |
+| Web        | `https://yakuku-yaru.today`               |
+| API health | `https://yakuku-yaru.today/api/health`    |
+| Swagger    | `https://yakuku-yaru.today/api-docs`      |
+| OpenAPI    | `https://yakuku-yaru.today/api-docs.json` |
+
+Swagger UI와 OpenAPI JSON은 로컬과 운영 환경에서 모두 제공합니다. Swagger의 API 서버 경로는 현재 host 기준의 `/api`를 사용합니다.
 
 배포 구조:
 

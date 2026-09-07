@@ -3,12 +3,12 @@ export const openApiDocument = {
   info: {
     title: 'Yakuku Yaru API',
     version: '0.1.0',
-    description: '야구 직관 기록 PWA REST API',
+    description: '야구 직관 기록 웹 서비스 REST API',
   },
   servers: [
     {
-      url: 'http://localhost:4000/api',
-      description: 'Local API server',
+      url: '/api',
+      description: 'Current host API server',
     },
   ],
   tags: [
@@ -157,8 +157,16 @@ export const openApiDocument = {
         tags: ['Posts'],
         summary: 'List posts with pagination',
         parameters: [
-          { name: 'page', in: 'query', schema: { type: 'integer', default: 1 } },
-          { name: 'size', in: 'query', schema: { type: 'integer', default: 10 } },
+          {
+            name: 'page',
+            in: 'query',
+            schema: { type: 'integer', default: 1 },
+          },
+          {
+            name: 'size',
+            in: 'query',
+            schema: { type: 'integer', default: 10 },
+          },
           { name: 'keyword', in: 'query', schema: { type: 'string' } },
         ],
         responses: {
@@ -350,7 +358,9 @@ export const openApiDocument = {
             description: 'Notification list',
             content: {
               'application/json': {
-                schema: { $ref: '#/components/schemas/NotificationListResponse' },
+                schema: {
+                  $ref: '#/components/schemas/NotificationListResponse',
+                },
               },
             },
           },
@@ -374,8 +384,18 @@ export const openApiDocument = {
         tags: ['Baseball'],
         summary: 'List games by date range and optional team',
         parameters: [
-          { name: 'from', in: 'query', required: true, schema: { type: 'string', format: 'date' } },
-          { name: 'to', in: 'query', required: true, schema: { type: 'string', format: 'date' } },
+          {
+            name: 'from',
+            in: 'query',
+            required: true,
+            schema: { type: 'string', format: 'date' },
+          },
+          {
+            name: 'to',
+            in: 'query',
+            required: true,
+            schema: { type: 'string', format: 'date' },
+          },
           { name: 'teamId', in: 'query', schema: { type: 'integer' } },
         ],
         responses: {
@@ -451,8 +471,16 @@ export const openApiDocument = {
         summary: 'List my attendance records',
         security: [{ bearerAuth: [] }],
         parameters: [
-          { name: 'from', in: 'query', schema: { type: 'string', format: 'date' } },
-          { name: 'to', in: 'query', schema: { type: 'string', format: 'date' } },
+          {
+            name: 'from',
+            in: 'query',
+            schema: { type: 'string', format: 'date' },
+          },
+          {
+            name: 'to',
+            in: 'query',
+            schema: { type: 'string', format: 'date' },
+          },
         ],
         responses: {
           '200': {
@@ -757,7 +785,10 @@ export const openApiDocument = {
         properties: {
           enabled: { type: 'boolean' },
           reminder: {
-            oneOf: [{ $ref: '#/components/schemas/GameReminder' }, { type: 'null' }],
+            oneOf: [
+              { $ref: '#/components/schemas/GameReminder' },
+              { type: 'null' },
+            ],
           },
         },
       },

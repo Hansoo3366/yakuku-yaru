@@ -1,5 +1,9 @@
 import cors from 'cors';
-import express from 'express';
+import express, {
+  type NextFunction,
+  type Request,
+  type Response,
+} from 'express';
 import helmet from 'helmet';
 import swaggerUi from 'swagger-ui-express';
 import { openApiDocument } from './config/openapi.js';
@@ -88,12 +92,18 @@ export function createApp() {
     );
   });
 
-  if (env.nodeEnv !== 'production') {
-    app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(openApiDocument));
-    app.get('/api-docs.json', (_req, res) => {
-      res.json(openApiDocument);
-    });
-  }
+  app.use(
+    '/api-docs',
+    (_req: Request, res: Response, next: NextFunction) => {
+      res.removeHeader('Content-Security-Policy');
+      next();
+    },
+    swaggerUi.serve,
+    swaggerUi.setup(openApiDocument),
+  );
+  app.get('/api-docs.json', (_req, res) => {
+    res.json(openApiDocument);
+  });
 
   app.use('/api/auth', authRouter);
   app.use('/api/admin', adminRouter);

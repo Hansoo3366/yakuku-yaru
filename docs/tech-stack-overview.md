@@ -9,26 +9,30 @@ Yakuku Yaru는 KBO 팬을 위한 기록 웹앱으로,
 
 ```txt
 Client (Browser / PWA 성격)
-  -> Next.js Web (apps/web)
-      -> Express API (apps/api)
-          -> MySQL 8.4
+  -> Caddy HTTPS proxy
+      -> Nginx gateway
+          -> Next.js Web (apps/web)
+          -> Express API (apps/api)
+              -> MySQL 8.4
 ```
 
 외부 데이터는 KBO 페이지/엔드포인트를 크롤링/파싱하여 API 서버가 DB에 적재합니다.
 
 ## 3. 프론트엔드 스택
 
-- **Next.js 15**
+- **Next.js 16.3**
 - **React 19**
 - **TypeScript**
 - 스타일링: 프로젝트 단일 CSS 설계(`globals.css` + 페이지별 CSS)
 - 데이터 통신: `fetch` 기반 API 모듈(`src/lib/*-api.ts`)
 - 서버 상태 관리: **TanStack Query**
 - 클라이언트 세션 상태: **Zustand**
+- 인증 상태 복원: httpOnly cookie + `/auth/me` + 메모리 세션 마커
 - 폼 상태/검증: **React Hook Form + Zod**
 - 날짜 포맷: **date-fns**
 
 핵심 화면:
+
 - 캘린더(월간/주간, 필터, 승률 인사이트)
 - 경기 상세(스코어보드, 선발/라인업, 예매/알림, 구장 메모)
 - 게시판(검색/리스트/상세/댓글)
@@ -60,12 +64,14 @@ Client (Browser / PWA 성격)
   - `notifications`, `game_reminders`
 
 특징:
+
 - `games`는 KBO 외부 ID와 내부 키를 함께 관리
 - `team_standings`에 순위/승률/최근 10경기/연속 기록 저장
 
 ## 6. 데이터 동기화(ETL)
 
 KBO 소스에서 서버가 주기적으로 동기화:
+
 - 일정/결과
 - 팀 순위
 - 선수
@@ -79,9 +85,11 @@ KBO 소스에서 서버가 주기적으로 동기화:
   - `web` (Next.js)
   - `api` (Express)
   - `mysql` (MySQL 8.4)
+  - `gateway` (Nginx 경로 분기와 요청 제한)
   - `caddy` (리버스 프록시/HTTPS, 선택 프로필)
 - 운영 환경 변수: `.env.production`
-- 배포 자동화: GitHub Actions 기반 VM 배포 워크플로우
+- 배포 자동화: GitHub Actions에서 이미지 빌드 → GHCR push → SSH로 VM 접속 → Compose pull/up
+- Swagger/OpenAPI: 로컬과 운영 환경의 `/api-docs`, `/api-docs.json`에서 제공
 
 ## 8. 개발 생산성 도구
 

@@ -13,17 +13,20 @@
 ```json
 {
   "userId": 1,
-  "email": "user@example.com"
+  "email": "user@example.com",
+  "sessionVersion": 0
 }
 ```
 
-토큰에는 민감한 정보나 비밀번호를 넣지 않습니다. API 요청 시 브라우저가 쿠키를 함께 보내고, 프론트엔드는 토큰 값을 직접 읽거나 저장하지 않습니다.
+JWT 라이브러리가 발급 시각(`iat`), 만료 시각(`exp`), 발급자(`iss`), 대상(`aud`)도 추가합니다. 토큰에는 비밀번호나 프로필 같은 민감정보를 넣지 않습니다. API 요청 시 브라우저가 쿠키를 함께 보내고, 프론트엔드는 토큰 값을 직접 읽거나 저장하지 않습니다.
 
 ```txt
 Cookie: yakuku_session=<httpOnly JWT>
 ```
 
-백엔드의 `authenticate` middleware가 쿠키 토큰을 검증하고 `req.user`에 사용자 정보를 넣습니다. 기존 Bearer 헤더도 호환 경로로 유지합니다.
+백엔드의 `authenticate` middleware는 JWT의 서명·만료·발급자·대상을 검사하고, 토큰의 `sessionVersion`을 DB의 `users.session_version`과 비교합니다. 검증이 끝나면 `req.user`에 사용자 정보를 넣습니다. 기존 Bearer 헤더도 호환 경로로 유지합니다.
+
+비밀번호 재설정 시 `users.session_version`을 증가시킵니다. 그 결과 이전 버전이 들어 있는 기존 JWT는 다음 인증 요청부터 거부됩니다. 일반 로그아웃은 현재 브라우저의 쿠키만 삭제하며 세션 버전을 올리지는 않습니다.
 
 ### 비밀번호 저장
 
@@ -83,7 +86,7 @@ Cookie: yakuku_session=<httpOnly JWT>
 
 관리 대상:
 
-- access token: API가 httpOnly cookie로 설정
+- access token: API가 `yakuku_session` httpOnly cookie로 설정하며 프론트 JS에서는 값을 읽지 않음
 - 로그인 사용자 정보: Zustand store + TanStack Query의 `/auth/me` 캐시
 - 팀/경기/직관 기록/순위/게시글/댓글: TanStack Query 캐시
 - 캘린더 보기/필터: Zustand store
@@ -96,9 +99,9 @@ Cookie: yakuku_session=<httpOnly JWT>
 
 로그인 성공 시 API가 httpOnly cookie로 access token을 설정합니다.
 
-새로고침 후에는 앱 provider가 쿠키 세션 확인용 메모리 토큰을 Zustand에 세팅하고, `/auth/me`는 쿠키 인증과 TanStack Query 캐시를 통해 공유합니다.
+새로고침 후에는 앱 provider가 `cookie-session`이라는 메모리 마커를 Zustand에 세팅합니다. 이 값은 JWT도 아니고 외부 라이브러리도 아니며, 쿠키 인증을 시도하기 위한 내부 표시입니다. 이후 TanStack Query가 `/auth/me`를 호출하고 브라우저가 실제 httpOnly 쿠키를 전송합니다.
 
-토큰이 없거나 `/auth/me`가 실패하면 로그인 페이지로 이동합니다.
+`/auth/me`가 성공하면 사용자 정보를 Zustand와 Query 캐시에 반영합니다. 실패하면 세션 상태를 제거하고, `useAuthGuard`가 인증 화면의 이동을 제어합니다. 새로고침 후 로그인이 유지되는 근거는 Zustand가 아니라 브라우저에 남아 있는 httpOnly 쿠키입니다.
 
 ### API 호출 구조
 
@@ -110,9 +113,12 @@ Cookie: yakuku_session=<httpOnly JWT>
 
 - base URL 관리
 - JSON request/response 처리
-- Authorization header 주입
+- `credentials: 'include'`를 통한 쿠키 전송
+- 실제 Bearer token을 전달한 호환 요청에서만 Authorization header 주입
 - 에러 응답을 `ApiError`로 변환
 - `204 No Content` 응답 처리
+
+`request<T>`의 `T`는 TypeScript가 성공 응답 형태를 추론하도록 돕는 제네릭이며, 런타임 응답 검증 기능은 아닙니다.
 
 도메인별 API 함수:
 
@@ -180,16 +186,19 @@ production 환경에서 service worker를 등록합니다. 개발 중 service wo
 
 - Web: `https://yakuku-yaru.today`
 - API health: `https://yakuku-yaru.today/api/health`
-- Swagger: `https://yakuku-yaru.today/api-docs`
+- Swagger: 로컬 `http://localhost:4000/api-docs`, 운영 `https://yakuku-yaru.today/api-docs`에서 제공
 
 구성:
 
 - `caddy`: HTTPS reverse proxy
+- `gateway`: Nginx 경로 분기·요청/연결 제한
 - `web`: Next.js production server
 - `api`: Express API server
 - `mysql`: MySQL 8.4
 
-GitHub Actions는 `main` 브랜치 push 시 VM에 SSH로 접속해 최신 코드를 반영하고 Docker Compose를 다시 실행합니다.
+요청은 `Browser → Caddy → Nginx gateway → Next.js 또는 Express → MySQL` 순서로 흐릅니다. `/api`, `/api-docs`, `/uploads`는 Express로, 나머지 경로는 Next.js로 전달됩니다.
+
+GitHub Actions는 `main` 브랜치 push 시 Web/API Docker 이미지를 빌드해 GHCR에 push합니다. 이후 SSH로 VM에 접속해 이미지를 pull하고 `docker compose up -d --no-build`로 컨테이너를 교체한 뒤 `/api/health`를 확인합니다. 작은 VM에서 빌드하지 않도록 이미지 빌드와 실행 위치를 분리했습니다.
 
 현재는 단일 VM 구조이므로 배포 중 짧은 다운타임이 발생할 수 있습니다. 무중단 배포가 필요하면 Caddy 기반 blue-green 배포 또는 Load Balancer와 다중 인스턴스 구조로 확장할 수 있습니다.
 

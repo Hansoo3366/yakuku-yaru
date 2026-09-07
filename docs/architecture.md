@@ -23,15 +23,19 @@ Browser / Installed PWA
   | HTTPS
   v
 Caddy reverse proxy
-  |---------------------> Next.js web
-  | /api, /api-docs ----> Express API
+  |
+  v
+Nginx gateway
+  | / ------------------> Next.js web
+  | /api ---------------> Express API
+  | /api-docs ----------> Express Swagger UI / OpenAPI JSON
   | /uploads -----------> Express static uploads
-                         |
-                         v
-                       MySQL 8.4
+                            |
+                            v
+                          MySQL 8.4
 ```
 
-운영 환경은 Google Cloud Compute Engine VM 한 대에서 Docker Compose로 실행합니다.
+운영 환경은 Google Cloud Compute Engine VM 한 대에서 Docker Compose로 실행합니다. Caddy는 HTTPS 인증서와 외부 진입점을 담당하고, Nginx gateway는 경로 분기와 IP별 요청·연결 제한을 담당합니다.
 
 ## External Data Flow
 
@@ -54,7 +58,7 @@ KBO 공식 공개 API가 없으므로, KBO 일정/결과 페이지와 경기센�
 - Next.js App Router 화면 제공
 - TanStack Query 기반 서버 데이터 캐싱과 중복 호출 방지
 - Zustand 기반 로그인 세션 전역 상태 관리
-- 로그인 토큰 저장과 인증 상태 복원
+- httpOnly cookie를 직접 읽지 않고 메모리 마커와 `/auth/me`로 인증 상태 복원
 - 캘린더, 경기 상세, 직관/집관 기록, 게시판, 마이페이지, 관리자 UI
 - 팀 로고와 팀 컬러 기반 테마 적용
 - PWA manifest, service worker, offline fallback
@@ -70,7 +74,7 @@ KBO 공식 공개 API가 없으므로, KBO 일정/결과 페이지와 경기센�
 - 게시판/댓글/직관 기록/동행자 권한 검증
 - 업로드 파일 형식/용량 제한, WebP 최적화, static serving
 - KBO 일정/선수/경기센터/순위 동기화 스크립트
-- Swagger/OpenAPI 문서 제공
+- 로컬과 운영 환경에서 Swagger UI와 OpenAPI JSON 제공
 - rate limit 적용
 
 ## Database Responsibilities
@@ -85,10 +89,12 @@ KBO 공식 공개 API가 없으므로, KBO 일정/결과 페이지와 경기센�
 1. 사용자가 이메일과 비밀번호로 회원가입한다.
 2. API가 이메일 인증번호를 발송하고 인증 토큰을 저장한다.
 3. 사용자가 인증번호를 확인하면 `email_verified_at`을 기록한다.
-4. 로그인 성공 시 JWT를 발급한다.
-5. 프론트엔드는 토큰을 저장하고 인증 API 요청에 `Authorization: Bearer <token>` 헤더를 보낸다.
-6. API 인증 미들웨어가 토큰을 검증하고 요청 사용자 정보를 주입한다.
-7. 관리자 API는 추가로 `users.role = 'admin'`을 검사한다.
+4. 로그인 성공 시 API가 `userId`, `email`, `sessionVersion`을 포함한 JWT를 발급한다.
+5. API는 JWT를 `yakuku_session` httpOnly cookie로 설정하고, 프론트엔드는 실제 토큰 값을 저장하거나 읽지 않는다.
+6. 새로고침 시 Zustand가 쿠키 확인용 `cookie-session` 메모리 마커를 설정하고 TanStack Query가 `/auth/me`를 호출한다.
+7. 공통 `request<T>`가 `credentials: 'include'`로 브라우저 쿠키를 API 요청에 포함한다.
+8. `authenticate` 미들웨어가 JWT와 DB의 `session_version`을 검증하고 `req.user`를 설정한다.
+9. 관리자 API는 추가로 `users.role = 'admin'`을 검사한다.
 
 ## Deployment
 
@@ -98,13 +104,16 @@ GitHub push
   v
 GitHub Actions
   |
-  | SSH
+  | Docker build + GHCR push
+  v
+GitHub Container Registry
+  |
+  | SSH deploy: image pull + compose up --no-build
   v
 Google Cloud VM
   |
-  | git pull + docker compose build/up
   v
-Caddy + Web + API + MySQL containers
+Caddy + Nginx + Web + API + MySQL containers
 ```
 
 현재 구조는 단일 VM 배포입니다. 비용과 학습 목적에는 적합하지만, 배포 중 짧은 중단이 있을 수 있습니다. 무중단 배포가 필요해지면 로드밸런서, 다중 인스턴스, managed DB, object storage 분리를 검토합니다.
@@ -114,6 +123,7 @@ Caddy + Web + API + MySQL containers
 - `web`: Next.js frontend
 - `api`: Express backend and upload static serving
 - `mysql`: MySQL database
+- `gateway`: Nginx path router and rate/connection limiter
 - `caddy`: HTTPS reverse proxy and automatic TLS
 
 ## Key Design Decisions

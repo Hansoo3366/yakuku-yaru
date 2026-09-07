@@ -128,4 +128,13 @@ jobs:
               sleep 5
             done
             test "$healthy" = 1
+            swagger_ready=0
+            for attempt in $(seq 1 12); do
+              if docker compose -f docker-compose.prod.yml --env-file .env.production --profile proxy exec -T gateway wget -qO- http://127.0.0.1:8080/api-docs.json > /dev/null; then
+                swagger_ready=1
+                break
+              fi
+              sleep 5
+            done
+            test "$swagger_ready" = 1
             docker image prune -f
