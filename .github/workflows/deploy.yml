@@ -118,6 +118,8 @@ jobs:
             docker builder prune -af
             docker compose -f docker-compose.prod.yml --env-file .env.production pull api web
             docker compose -f docker-compose.prod.yml --env-file .env.production --profile proxy up -d --no-build
+            docker compose -f docker-compose.prod.yml --env-file .env.production --profile proxy up -d --no-build --force-recreate gateway
+            docker compose -f docker-compose.prod.yml --env-file .env.production --profile proxy exec -T gateway nginx -t
             docker compose -f docker-compose.prod.yml --env-file .env.production --profile proxy exec -T caddy caddy validate --config /etc/caddy/Caddyfile
             healthy=0
             for attempt in $(seq 1 12); do
