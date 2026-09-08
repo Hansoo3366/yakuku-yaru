@@ -17,24 +17,28 @@ import {
 import {
   ArrowLeft,
   ArrowRight,
+  Bell,
   BookOpenText,
   Boxes,
+  CalendarDays,
+  Camera,
   Check,
   Cloud,
   Cookie,
-  Database,
   Eraser,
-  FileCode2,
   GitBranch,
   KeyRound,
-  Layers3,
+  ListChecks,
   MailCheck,
   Maximize2,
   MessageSquareText,
-  MonitorCog,
-  Network,
-  Server,
   ShieldCheck,
+  Sparkles,
+  Ticket,
+  Timer,
+  Trophy,
+  UserPlus,
+  Users,
   Workflow,
 } from 'lucide-react';
 import styles from './presentation.module.css';
@@ -61,100 +65,123 @@ const slides: Slide[] = [
             <span>팬 커뮤니티</span>
           </div>
         </div>
-        <span aria-hidden="true" className={styles.openingMark}>
-          KBO
-        </span>
         <div className={styles.openingMeta}>
-          <span>Build &amp; Understand</span>
+          <span>야구를 보고 · 기록하고 · 함께 이야기하는 곳</span>
           <span>Next.js · Express · MySQL · Docker · GCP</span>
         </div>
       </div>
     ),
   },
   {
-    id: 'tech-stack',
-    eyebrow: '01 · TECH STACK',
-    title: '기술별 담당 영역',
+    id: 'overview',
+    eyebrow: '01 · OVERVIEW',
+    title: '무엇을 만들었나',
     content: (
-      <div className={styles.requirementsGrid}>
-        {[
-          ['Frontend', 'Next.js 16.3 · React 19 · TypeScript', MonitorCog],
-          ['Backend API', 'Node.js · Express 4.22 · Swagger', Server],
-          ['Database', 'MySQL 8.4 · Foreign/Unique Key', Database],
-          ['Gateway', 'Caddy HTTPS · Nginx 경로 분기', Network],
-          ['실행 환경', 'Docker Compose · 5개 container', Boxes],
-          ['Cloud / 배포', 'GCP VM · Actions · GHCR · SSH', Cloud],
-        ].map(([label, value, Icon]) => {
-          const ItemIcon = Icon as typeof Server;
-          return (
-            <div className={styles.requirement} key={String(label)}>
-              <ItemIcon aria-hidden="true" />
-              <div>
+      <div className={styles.serviceLayout}>
+        <div className={styles.serviceGrid}>
+          {[
+            [
+              CalendarDays,
+              '캘린더',
+              '월·주 단위 경기 일정과 내 관람 기록을 한 화면에',
+            ],
+            [Ticket, '경기 상세', '선발 투수·라인업·예매 링크와 구장 정보'],
+            [
+              Camera,
+              '직관·집관 기록',
+              '경기마다 한 번, 사진과 메모로 남기는 관람 기록',
+            ],
+            [Users, '동행자 태그', '함께 간 팬을 검색해 태그하고 수락·거절'],
+            [
+              Trophy,
+              '승률과 명예 칭호',
+              '내 기록으로 승률을 계산해 칭호를 자동으로 부여',
+            ],
+            [
+              MessageSquareText,
+              '팬 라운지',
+              '카테고리별 게시글과 댓글, 검색과 페이지 나누기',
+            ],
+            [
+              UserPlus,
+              '팬 찾기·팔로우',
+              '다른 팬의 공개 프로필과 기록을 보고 팔로우',
+            ],
+            [Bell, '알림', '댓글·태그·팔로우·신고 등 서비스 안 알림'],
+          ].map(([Icon, label, detail]) => {
+            const CardIcon = Icon as typeof CalendarDays;
+            return (
+              <div className={styles.serviceCard} key={label as string}>
+                <CardIcon aria-hidden="true" />
                 <strong>{label as string}</strong>
-                <span>{value as string}</span>
+                <span>{detail as string}</span>
               </div>
-              <Check aria-label="구현 완료" className={styles.check} />
+            );
+          })}
+        </div>
+        <div className={styles.overviewCheck}>
+          {[
+            ['필수 로직', '로그인 · 회원가입 · 게시판 · 댓글 · 페이징'],
+            ['선택 구현', '파일 업로드 · 게시글 검색 · 사용자 프로필'],
+            [
+              '함께 구성',
+              '자동 배포 · API 문서 · 관리자 화면 · 경기 데이터 수집',
+            ],
+          ].map(([label, items]) => (
+            <div key={label}>
+              <span>{label}</span>
+              <p>{items}</p>
             </div>
-          );
-        })}
-        <div className={styles.requirementSummary}>
-          실행 위치: GCP VM · 실행 단위: Docker container · 앱: Next.js /
-          Express · 저장소: MySQL
+          ))}
         </div>
       </div>
     ),
   },
   {
-    id: 'architecture',
-    eyebrow: '02 · ARCHITECTURE',
-    title: '시스템 구성과 요청 흐름',
+    id: 'signup',
+    eyebrow: '02 · AUTH / SIGN UP',
+    title: '회원가입과 이메일 인증',
     content: (
-      <div className={styles.architecture}>
-        <div className={styles.archNode}>
-          <MonitorCog aria-hidden="true" />
-          <strong>Browser</strong>
-          <span>HTTPS 요청</span>
+      <div className={styles.signupFlow}>
+        <div>
+          <span>01</span>
+          <strong>중복 확인</strong>
+          <p>
+            가입 화면에서 이메일·닉네임을 먼저 확인, 최종은 데이터베이스가 거절
+          </p>
         </div>
-        <ArrowRight aria-hidden="true" className={styles.archArrow} />
-        <div className={styles.archNode}>
-          <ShieldCheck aria-hidden="true" />
-          <strong>Caddy</strong>
-          <span>인증서 · HTTPS</span>
+        <div>
+          <span>02</span>
+          <strong>비밀번호 변환</strong>
+          <p>되돌릴 수 없는 형태로 바꿔 저장, 평문은 남지 않음</p>
         </div>
-        <ArrowRight aria-hidden="true" className={styles.archArrow} />
-        <div className={styles.archNode}>
-          <Network aria-hidden="true" />
-          <strong>Nginx</strong>
-          <span>경로 분기 · 요청 제한</span>
+        <div>
+          <span>03</span>
+          <strong>인증번호 발급</strong>
+          <p>6자리 · 3분 안에 입력 · 재전송은 30초 대기 · 최대 4회</p>
         </div>
-        <ArrowRight aria-hidden="true" className={styles.archArrow} />
-        <div className={`${styles.archNode} ${styles.archNodeAccent}`}>
-          <Server aria-hidden="true" />
-          <strong>Next.js / Express</strong>
-          <span>UI 또는 REST API</span>
+        <div>
+          <span>04</span>
+          <strong>메일 전송</strong>
+          <p>메일 서버를 통해 인증번호 발송</p>
         </div>
-        <ArrowRight aria-hidden="true" className={styles.archArrow} />
-        <div className={styles.archNode}>
-          <Database aria-hidden="true" />
-          <strong>MySQL 8.4</strong>
-          <span>관계 · 트랜잭션</span>
+        <div>
+          <span>05</span>
+          <strong>인증 완료</strong>
+          <p>확인된 계정만 로그인 가능, 미인증은 인증 화면으로</p>
         </div>
-        <div className={styles.archFooter}>
-          <span>GCP VM · Docker Compose</span>
-          <span>/ → Next.js · /api → Express</span>
-          <span>Express → MySQL</span>
-        </div>
+        <MailCheck aria-hidden="true" className={styles.signupIcon} />
       </div>
     ),
   },
   {
     id: 'jwt',
-    eyebrow: '03 · BACKEND',
-    title: 'JWT 인증 구조',
+    eyebrow: '03 · AUTH / TOKEN',
+    title: '토큰에 무엇을 담고, 어떻게 전달하나',
     content: (
       <div className={styles.splitLayout}>
         <div className={styles.codePanel}>
-          <span className={styles.codeLabel}>JWT PAYLOAD</span>
+          <span className={styles.codeLabel}>TOKEN PAYLOAD</span>
           <pre>{`{
   "userId": 27,
   "email": "user@example.com",
@@ -162,27 +189,38 @@ const slides: Slide[] = [
   "iat": 1788390000,
   "exp": 1788476400
 }`}</pre>
-          <p>비밀번호·프로필 등 민감정보 미포함</p>
+          <p>
+            누구인지 판단할 최소 정보만 담습니다. 화면에 보여줄 닉네임·프로필은
+            토큰이 아니라 별도로 서버에 요청해 받습니다
+          </p>
         </div>
         <div className={styles.explainStack}>
           <div>
-            <Cookie aria-hidden="true" />
+            <ShieldCheck aria-hidden="true" />
             <p>
-              로그인 성공 시 JWT를 <strong>HttpOnly 쿠키</strong>로 전달
+              토큰은 <strong>서명</strong>되어 있어, 중간에 내용을 바꾸면 검증
+              단계에서 걸러집니다
             </p>
           </div>
           <div>
-            <ShieldCheck aria-hidden="true" />
+            <Timer aria-hidden="true" />
             <p>
-              <strong>authenticate 미들웨어</strong>가 서명·만료·발급 대상·세션
-              버전을 검증
+              <strong>유효기간</strong>은 일반 로그인 1일 · 로그인 상태 유지 선택
+              시 30일입니다
+            </p>
+          </div>
+          <div>
+            <Cookie aria-hidden="true" />
+            <p>
+              일반 로그인은 <strong>세션 쿠키</strong> · 로그인 상태 유지는 브라우저
+              종료 후에도 30일 유지
             </p>
           </div>
           <div>
             <KeyRound aria-hidden="true" />
             <p>
-              비밀번호 재설정 시 sessionVersion 증가 →{' '}
-              <strong>기존 토큰 거부</strong>
+              비밀번호를 바꾸면 <strong>세션 버전</strong>을 올려, 그 전에
+              발급된 토큰을 전부 무효로 만듭니다
             </p>
           </div>
         </div>
@@ -191,271 +229,489 @@ const slides: Slide[] = [
   },
   {
     id: 'login-state',
-    eyebrow: '04 · FRONTEND',
-    title: '로그인 상태 유지',
+    eyebrow: '04 · AUTH / SESSION',
+    title: '로그인 상태 확인과 보호',
     content: (
       <div className={styles.timeline}>
-        {[
-          ['1', '로그인', 'API가 yakuku_session 쿠키 설정'],
-          ['2', '초기화', 'hydrate()가 cookie-session 메모리 마커 설정'],
-          ['3', '상태 확인', 'TanStack Query가 /auth/me로 실제 쿠키 검증'],
-          ['4', '인증 유지', "fetch의 credentials: 'include'로 쿠키 전송"],
-          ['5', '만료 처리', '/auth/me 실패 → 세션 제거 → 보호 페이지 이동'],
-        ].map(([number, label, detail]) => (
-          <div className={styles.timelineItem} key={number}>
-            <span>{number}</span>
-            <strong>{label}</strong>
-            <p>{detail}</p>
-          </div>
-        ))}
+        <div className={styles.timelineSteps}>
+          {[
+            ['1', '앱 시작', '인증 확인을 시작하고 확인 중 상태를 표시'],
+            [
+              '2',
+              '서버에 확인',
+              '지금 쿠키로 로그인된 사용자인지 서버에 물어봄',
+            ],
+            ['3', '성공', '사용자 정보를 받아 캐시와 전역 Store에 나눠 보관'],
+            [
+              '4',
+              '실패 또는 만료',
+              '상태를 비우고, 로그인해야 하는 화면이면 로그인 화면으로',
+            ],
+          ].map(([number, label, detail]) => (
+            <div className={styles.timelineItem} key={number}>
+              <span>{number}</span>
+              <strong>{label}</strong>
+              <p>{detail}</p>
+            </div>
+          ))}
+        </div>
         <div className={styles.timelineAnswer}>
-          실제 인증 기준: HttpOnly 쿠키 + /auth/me · useAuthGuard는 화면 이동
-          제어
+          토큰 자체는 브라우저 쿠키에 있어 새로고침해도 남아 있고, 그래서 다시
+          물어보면 로그인 상태가 복구됩니다 · 화면에서 버튼을 숨기는 것은 사용자
+          경험일 뿐, 데이터 검사는 서버가 다시 합니다
+        </div>
+      </div>
+    ),
+  },
+  {
+    id: 'api',
+    eyebrow: '05 · DATA / API',
+    title: 'API 요청은 한 경로로 모은다',
+    content: (
+      <div className={styles.apiBoard}>
+        <div className={styles.apiSimpleFlow} aria-label="API 요청 처리 흐름">
+          {[
+            [
+              '01',
+              '화면에서 시작',
+              '게시글 목록을 열거나 댓글 등록 버튼을 누르면 필요한 기능 함수를 호출',
+              '목록 조회 · 댓글 등록',
+            ],
+            [
+              '02',
+              '기능 이름으로 요청',
+              '화면은 서버 주소를 직접 만들지 않고 게시글·인증·관람 함수만 사용',
+              'getPosts() · createComment()',
+            ],
+            [
+              '03',
+              '요청 준비를 한곳에서',
+              '서버 주소 결합 · JSON 변환 · 로그인 쿠키 첨부 · 실패 응답 변환',
+              'src/lib/api.ts · request<T>()',
+            ],
+            [
+              '04',
+              '서버 처리 후 응답',
+              '로그인과 입력값 검증 → DB 조회·변경 → 화면에 JSON 결과 반환',
+              'Express → Repository → MySQL',
+            ],
+          ].map(([number, label, detail, code], index) => (
+            <div className={styles.apiSimpleItem} key={number}>
+              <div className={styles.apiSimpleNode}>
+                <span>{number}</span>
+                <strong>{label}</strong>
+                <p>{detail}</p>
+                <code>{code}</code>
+              </div>
+              {index < 3 ? <i aria-hidden="true">→</i> : null}
+            </div>
+          ))}
+        </div>
+
+        <div className={styles.apiAnswerGrid}>
+          {[
+            ['호출 방식', '브라우저 fetch', '공통 request 함수로 감싸서 사용'],
+            [
+              '관리 위치',
+              '기능별 API 파일',
+              'post-api · auth-api · attendance-api',
+            ],
+            [
+              '공통 처리',
+              'src/lib/api.ts',
+              '주소 · JSON · 쿠키 · ApiError 처리',
+            ],
+            [
+              '토큰 전달',
+              'HttpOnly 쿠키',
+              '브라우저가 요청마다 자동 첨부',
+            ],
+          ].map(([question, answer, detail]) => (
+            <div key={question}>
+              <span>{question}</span>
+              <strong>{answer}</strong>
+              <p>{detail}</p>
+            </div>
+          ))}
         </div>
       </div>
     ),
   },
   {
     id: 'state',
-    eyebrow: '05 · FRONTEND',
+    eyebrow: '06 · DATA / STATE',
     title: '상태관리 역할 분리',
     content: (
       <div className={styles.stateBands}>
         <div>
           <span className={styles.stateIndex}>SERVER STATE</span>
           <strong>TanStack Query</strong>
-          <p>사용자·팀·경기·게시글·댓글 조회, 캐시와 중복 요청 관리</p>
+          <p>
+            서버에서 받아오는 데이터 — 사용자, 팀, 경기, 게시글, 댓글, 팬. 언제
+            다시 불러올지와 캐시를 라이브러리에 맡깁니다
+          </p>
         </div>
         <div>
           <span className={styles.stateIndex}>GLOBAL CLIENT STATE</span>
           <strong>Zustand</strong>
-          <p>로그인 사용자, 세션 확인 상태, 캘린더 필터</p>
+          <p>
+            여러 화면이 함께 보는 클라이언트 값 — 로그인 사용자, 세션 확인 여부,
+            캘린더의 보기 방식과 필터
+          </p>
         </div>
         <div>
           <span className={styles.stateIndex}>LOCAL UI STATE</span>
           <strong>React state</strong>
-          <p>페이지 번호, 폼 입력, 팝업, 이미지 미리보기</p>
+          <p>
+            그 화면에서만 쓰는 값 — 페이지 번호, 폼 입력, 팝업 열림, 이미지
+            미리보기
+          </p>
         </div>
         <p className={styles.stateReason}>
-          서버 데이터의 전역 Store 중복 저장 방지 · 동기화 지점 최소화
+          서버 데이터는 캐시에, 화면이 공유할 값만 전역 Store에 — 서버 데이터를
+          Store에 다시 담지 않아 둘이 어긋날 지점 자체를 없앱니다
         </p>
       </div>
     ),
   },
   {
-    id: 'api',
-    eyebrow: '06 · FRONTEND',
-    title: 'API 연동과 공통 에러 처리',
+    id: 'error-handling',
+    eyebrow: '07 · DATA / ERROR',
+    title: '실패 응답을 ApiError로 통일한다',
     content: (
-      <div className={styles.apiLayout}>
-        <div className={styles.apiFlow}>
+      <div className={styles.errorSimple}>
+        <div className={styles.errorSimpleFlow} aria-label="공통 에러 처리 흐름">
           {[
-            ['Page', '쓰기 이벤트·화면 메시지'],
-            ['Query hook', '조회·캐시·재요청'],
-            ['Domain API', '기능별 URL·응답 타입'],
-            ['request<T>', 'base URL · JSON · cookie · 204'],
-            ['Express route', '검증 · 비즈니스 로직 · 응답'],
-          ].map(([name, detail], index) => (
-            <div className={styles.apiStep} key={name}>
-              <span>{String(index + 1).padStart(2, '0')}</span>
-              <strong>{name}</strong>
-              <p>{detail}</p>
+            [
+              '01 · SERVER',
+              '서버 실패 응답',
+              'HTTP 403',
+              '{ code: “EMAIL_NOT_VERIFIED”, message: “이메일 인증이 필요합니다.” }',
+            ],
+            [
+              '02 · REQUEST',
+              '공통 함수가 변환',
+              '!response.ok → throw ApiError',
+              'status · code · message를 하나의 오류 객체에 그대로 담습니다',
+            ],
+            [
+              '03 · SCREEN',
+              '화면에서 사용',
+              'catch (error)',
+              'code로 다음 행동을 정하고 message를 사용자에게 표시합니다',
+            ],
+          ].map(([eyebrow, title, code, detail], index) => (
+            <div className={styles.errorSimpleItem} key={eyebrow}>
+              <div className={styles.errorSimpleNode}>
+                <span>{eyebrow}</span>
+                <strong>{title}</strong>
+                <code>{code}</code>
+                <p>{detail}</p>
+              </div>
+              {index < 2 ? <i aria-hidden="true">→</i> : null}
             </div>
           ))}
         </div>
-        <div className={styles.errorPanel}>
-          <span>공통 에러 포맷</span>
-          <pre>{`{
-  "code": "AUTH_REQUIRED",
-  "message": "로그인이 필요합니다."
-}`}</pre>
+
+        <div className={styles.errorWhy}>
+          <span>WHY APIERROR?</span>
+          <strong>fetch는 400·500 응답을 자동으로 오류로 던지지 않음</strong>
           <p>
-            공통 client에서 <code>ApiError</code>로 변환 · code/status 기준 안내
+            공통 함수에서 한 번 변환하면 각 화면이 response.ok 확인과 오류 JSON
+            해석을 반복하지 않고 같은 방식으로 처리할 수 있습니다.
           </p>
         </div>
-      </div>
-    ),
-  },
-  {
-    id: 'swagger',
-    eyebrow: '07 · API DOCUMENTATION',
-    title: 'Swagger UI로 API 계약 확인',
-    content: (
-      <div className={styles.swaggerLayout}>
-        <div className={styles.swaggerEndpoints}>
-          {[
-            ['GET', '/health', 'API·DB 상태 확인'],
-            ['POST', '/auth/login', '로그인·JWT 쿠키 발급'],
-            ['GET', '/posts', 'page·size·keyword 조회'],
-            ['PATCH', '/posts/{postId}', '작성자의 게시글 수정'],
-            ['DELETE', '/comments/{commentId}', '작성자의 댓글 삭제'],
-          ].map(([method, path, detail]) => (
-            <div className={styles.swaggerEndpoint} key={`${method}-${path}`}>
-              <span className={styles.swaggerMethod} data-method={method}>
-                {method}
-              </span>
-              <code>{path}</code>
-              <p>{detail}</p>
-            </div>
-          ))}
-        </div>
-        <aside className={styles.swaggerAside}>
-          <span>OPENAPI 3.0</span>
-          <strong>Yakuku Yaru API</strong>
-          <ul>
-            <li>method·URL·parameter 확인</li>
-            <li>request·response schema 확인</li>
-            <li>Try it out으로 직접 요청</li>
-          </ul>
-          <code>yakuku-yaru.today/api-docs</code>
-          <p>로컬과 운영에서 같은 OpenAPI 문서 제공</p>
-          <FileCode2 aria-hidden="true" />
-        </aside>
-      </div>
-    ),
-  },
-  {
-    id: 'signup',
-    eyebrow: '08 · SIGN UP',
-    title: '회원가입과 이메일 인증',
-    content: (
-      <div className={styles.signupFlow}>
-        <div>
-          <span>01</span>
-          <strong>중복 검사</strong>
-          <p>이메일·닉네임 unique 제약과 API 검사</p>
-        </div>
-        <div>
-          <span>02</span>
-          <strong>비밀번호 해시</strong>
-          <p>bcryptjs cost 12 hash만 DB에 저장</p>
-        </div>
-        <div>
-          <span>03</span>
-          <strong>인증번호 발급</strong>
-          <p>6자리·3분 만료·30초 대기·최대 4회</p>
-        </div>
-        <div>
-          <span>04</span>
-          <strong>Gmail SMTP</strong>
-          <p>Nodemailer로 인증번호 전송</p>
-        </div>
-        <div>
-          <span>05</span>
-          <strong>인증 완료</strong>
-          <p>email_verified_at 기록 후 로그인 허용</p>
-        </div>
-        <MailCheck aria-hidden="true" className={styles.signupIcon} />
+
+        <section className={styles.errorOutcome}>
+          <header>
+            <span>변환 후 화면이 받는 값</span>
+            <strong>ApiError</strong>
+          </header>
+          <div className={styles.errorResultGrid}>
+            {[
+              ['status', '403', '요청 실패 종류 확인'],
+              ['code', 'EMAIL_NOT_VERIFIED', '이메일 인증 화면으로 이동'],
+              ['message', '이메일 인증이 필요합니다.', '사용자 안내로 바로 표시'],
+            ].map(([field, value, action]) => (
+              <div key={field}>
+                <code>{field}</code>
+                <strong>{value}</strong>
+                <p>{action}</p>
+              </div>
+            ))}
+          </div>
+        </section>
       </div>
     ),
   },
   {
     id: 'database',
-    eyebrow: '09 · DATABASE',
-    title: '주요 테이블 관계',
+    eyebrow: '08 · DATABASE',
+    title: '관계는 소유자와 개수를 기준으로 설계했다',
     content: (
-      <div className={styles.dbLayout}>
-        <div className={styles.relationships}>
-          <div className={styles.entityStrong}>users</div>
-          <span>1 : N</span>
-          <div>posts</div>
-          <span>1 : N</span>
-          <div>comments</div>
-          <div className={styles.relationshipBranch}>
-            <b>users</b> 1 : N <b>attendance_records</b> N : 1 <b>games</b>
+      <div className={styles.dbSimple}>
+        <div className={styles.dbRelationBoard} aria-label="핵심 데이터베이스 관계도">
+          <div className={styles.dbRelationRow}>
+            <span>팬 라운지</span>
+            <div className={styles.dbRelationNode}>
+              <strong>사용자</strong>
+              <small>users</small>
+              <div className={styles.dbNodeKeys}>
+                <span data-key="primary">
+                  <b>기본키</b>
+                  <code>users.id</code>
+                </span>
+                <span data-key="candidate">
+                  <b>후보키</b>
+                  <code>users.email · users.nickname</code>
+                </span>
+              </div>
+            </div>
+            <b>1 : N</b>
+            <div className={`${styles.dbRelationNode} ${styles.dbRelationAccent}`}>
+              <strong>게시글</strong>
+              <small>posts</small>
+              <div className={styles.dbNodeKeys}>
+                <span data-key="primary">
+                  <b>기본키</b>
+                  <code>posts.id</code>
+                </span>
+                <span data-key="foreign">
+                  <b>외래키</b>
+                  <code>posts.user_id → users.id</code>
+                </span>
+              </div>
+            </div>
+            <b>1 : N</b>
+            <div className={styles.dbRelationNode}>
+              <strong>댓글</strong>
+              <small>comments</small>
+              <div className={styles.dbNodeKeys}>
+                <span data-key="primary">
+                  <b>기본키</b>
+                  <code>comments.id</code>
+                </span>
+                <span data-key="foreign">
+                  <b>외래키</b>
+                  <code>post_id → posts.id · user_id → users.id</code>
+                </span>
+              </div>
+            </div>
           </div>
-          <div className={styles.relationshipBranch}>
-            <b>games</b> N : 1 <b>home_team / away_team</b>
+
+          <div className={styles.dbRelationRow}>
+            <span>직관 기록</span>
+            <div className={styles.dbRelationNode}>
+              <strong>사용자</strong>
+              <small>users</small>
+              <div className={styles.dbNodeKeys}>
+                <span data-key="primary">
+                  <b>기본키</b>
+                  <code>users.id</code>
+                </span>
+                <span data-key="candidate">
+                  <b>후보키</b>
+                  <code>users.email · users.nickname</code>
+                </span>
+              </div>
+            </div>
+            <b>1 : N</b>
+            <div className={`${styles.dbRelationNode} ${styles.dbRelationAccent}`}>
+              <strong>직관 기록</strong>
+              <small>attendance_records</small>
+              <div className={styles.dbNodeKeys}>
+                <span data-key="primary">
+                  <b>기본키</b>
+                  <code>attendance_records.id</code>
+                </span>
+                <span data-key="foreign">
+                  <b>외래키</b>
+                  <code>user_id → users.id · game_id → games.id</code>
+                </span>
+              </div>
+            </div>
+            <b>N : 1</b>
+            <div className={styles.dbRelationNode}>
+              <strong>경기</strong>
+              <small>games</small>
+              <div className={styles.dbNodeKeys}>
+                <span data-key="primary">
+                  <b>기본키</b>
+                  <code>games.id</code>
+                </span>
+              </div>
+            </div>
           </div>
-        </div>
-        <div className={styles.dbNotes}>
-          <p>
-            <strong>Foreign Key</strong>
-            잘못된 참조 방지
-          </p>
-          <p>
-            <strong>Unique Key</strong>
-            이메일·닉네임·경기별 중복 기록 방지
-          </p>
-          <p>
-            <strong>다대다 분리</strong>
-            동행자는 attendance_companions 연결 테이블로 관리
-          </p>
+
+          <div className={styles.dbRelationRow}>
+            <span>동행 연결</span>
+            <div className={styles.dbRelationNode}>
+              <strong>직관 기록</strong>
+              <small>attendance_records</small>
+              <div className={styles.dbNodeKeys}>
+                <span data-key="primary">
+                  <b>기본키</b>
+                  <code>attendance_records.id</code>
+                </span>
+              </div>
+            </div>
+            <b>1 : N</b>
+            <div className={`${styles.dbRelationNode} ${styles.dbRelationAccent}`}>
+              <strong>동행자 연결</strong>
+              <small>attendance_companions</small>
+              <div className={styles.dbNodeKeys}>
+                <span data-key="primary">
+                  <b>기본키</b>
+                  <code>attendance_companions.id</code>
+                </span>
+                <span data-key="foreign">
+                  <b>외래키</b>
+                  <code>attendance_record_id → attendance_records.id</code>
+                </span>
+                <span data-key="foreign">
+                  <b>외래키</b>
+                  <code>user_id → users.id</code>
+                </span>
+                <span className={styles.dbNodeState}>
+                  <b>응답</b>
+                  <code>대기 · 수락 · 거절</code>
+                </span>
+              </div>
+            </div>
+            <b>N : 1</b>
+            <div className={styles.dbRelationNode}>
+              <strong>동행자</strong>
+              <small>users</small>
+              <div className={styles.dbNodeKeys}>
+                <span data-key="primary">
+                  <b>기본키</b>
+                  <code>users.id</code>
+                </span>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     ),
   },
   {
-    id: 'crud',
-    eyebrow: '10 · BOARD & COMMENTS',
-    title: '게시글·댓글 권한 처리',
+    id: 'board',
+    eyebrow: '09 · BOARD & PAGING',
+    title: '게시판·댓글 권한과 페이징',
     content: (
-      <div className={styles.crudLayout}>
-        <div className={styles.crudMethod}>
-          <span>CREATE</span>
-          <span>READ</span>
-          <span>UPDATE</span>
-          <span>DELETE</span>
-        </div>
-        <div className={styles.crudStatements}>
-          <p>
-            <MessageSquareText aria-hidden="true" /> 로그인 사용자만 게시글·댓글
-            작성
-          </p>
-          <p>
-            <ShieldCheck aria-hidden="true" /> 게시글 수정·삭제와 댓글 삭제 전
-            작성자 ID 비교
-          </p>
-          <p>
-            <Layers3 aria-hidden="true" /> 화면의 버튼을 숨겨도, 최종 권한
-            검사는 반드시 API에서 수행
-          </p>
-        </div>
-      </div>
-    ),
-  },
-  {
-    id: 'paging',
-    eyebrow: '11 · PAGING',
-    title: '게시글 페이징',
-    content: (
-      <div className={styles.pagingLayout}>
-        <div className={styles.pagingNumber}>
-          <strong>10</strong>
-          <span>items per request</span>
-        </div>
-        <div className={styles.pagingEvidence}>
-          <div>
-            <code>LIMIT 10 OFFSET 10</code>
-            <p>현재 페이지 구간만 서버에서 조회</p>
+      <div className={styles.boardVisual}>
+        <section className={styles.boardPanel}>
+          <header>
+            <ListChecks aria-hidden="true" />
+            <div>
+              <span>ACCESS CONTROL</span>
+              <strong>작성자 기준 권한 확인</strong>
+            </div>
+          </header>
+          <div className={styles.permissionFlow} aria-label="게시글 권한 확인 흐름">
+            <div>
+              <small>요청</small>
+              <strong>수정 · 삭제</strong>
+            </div>
+            <i>→</i>
+            <div>
+              <small>API 서버</small>
+              <strong>로그인 ID = 작성자 ID</strong>
+            </div>
+            <i>→</i>
+            <div>
+              <small>결과</small>
+              <strong>일치하면 허용</strong>
+              <span>다르면 403 거부</span>
+            </div>
           </div>
-          <div
-            className={styles.paginationDemo}
-            aria-label="페이지네이션 응답 예시"
-          >
-            <span>page 2</span>
-            <span>size 10</span>
-            <span>total 47</span>
-            <strong>totalPages 5</strong>
+          <div className={styles.boardRules}>
+            {[
+              ['작성', '로그인한 사용자'],
+              ['수정 · 삭제', '본인 게시글·댓글'],
+              ['관리자', '별도 관리자 API'],
+            ].map(([label, detail]) => (
+              <div key={label}>
+                <Check aria-hidden="true" />
+                <strong>{label}</strong>
+                <span>{detail}</span>
+              </div>
+            ))}
           </div>
-          <p>응답 메타데이터 기반 페이지 UI 구성</p>
-        </div>
+          <footer>화면에서 버튼을 숨겨도 API 서버에서 작성자 여부를 다시 확인</footer>
+        </section>
+
+        <section className={styles.boardPanel}>
+          <header>
+            <Sparkles aria-hidden="true" />
+            <div>
+              <span>PAGED LIST</span>
+              <strong>필요한 구간만 목록 조회</strong>
+            </div>
+          </header>
+          <div className={styles.pagingFlow} aria-label="게시글 3페이지 조회 예시">
+            <div>
+              <small>화면 요청</small>
+              <code>page 3 · size 10</code>
+            </div>
+            <i>→</i>
+            <div>
+              <small>DB 조회</small>
+              <code>LIMIT 10 · OFFSET 20</code>
+            </div>
+            <i>→</i>
+            <div>
+              <small>API 응답</small>
+              <code>목록 10개 · 전체 개수</code>
+            </div>
+          </div>
+          <div className={styles.pagingResponse}>
+            <span>items</span>
+            <strong>게시글 10개</strong>
+            <span>total</span>
+            <strong>전체 게시글 수</strong>
+            <span>totalPages</span>
+            <strong>화면에 그릴 페이지 수</strong>
+          </div>
+          <div className={styles.boardRules}>
+            {[
+              ['검색', '제목·내용 키워드'],
+              ['필터', '카테고리·조회 범위'],
+              ['상한', '요청당 최대 개수 제한'],
+            ].map(([label, detail]) => (
+              <div key={label}>
+                <Check aria-hidden="true" />
+                <strong>{label}</strong>
+                <span>{detail}</span>
+              </div>
+            ))}
+          </div>
+          <footer>팬 라운지 목록은 한 번에 10개씩 받고 화면에서 페이지 구성</footer>
+        </section>
       </div>
     ),
   },
   {
     id: 'deployment',
-    eyebrow: '12 · DEPLOYMENT',
-    title: 'Docker와 GitHub Actions 자동 배포',
+    eyebrow: '10 · DEPLOYMENT',
+    title: '자동 배포',
     content: (
       <div className={styles.deployLayout}>
         <div className={styles.deployRail}>
           {[
-            [GitBranch, 'GitHub push', 'main 브랜치'],
-            [Boxes, 'Actions build', 'Web / API 이미지'],
-            [Cloud, 'GHCR push', 'commit SHA 태그'],
-            [Workflow, 'SSH deploy', 'Compose pull / up'],
-            [ShieldCheck, 'Health check', '/api/health 확인'],
+            [GitBranch, 'GitHub push', 'main 브랜치에 반영되면 시작'],
+            [Boxes, 'GitHub Actions 빌드', 'Web·API Docker 이미지 생성'],
+            [
+              Cloud,
+              '이미지 저장소',
+              'GHCR(GitHub Container Registry)에 Web·API Docker 이미지 보관',
+            ],
+            [
+              Workflow,
+              '서버 배포',
+              'GCP VM이 새 이미지를 내려받아 기존 컨테이너 교체',
+            ],
+            [ShieldCheck, '배포 확인', '서비스가 실제 응답하는지 반복 확인'],
           ].map(([Icon, title, detail]) => {
             const StepIcon = Icon as typeof GitBranch;
             return (
@@ -467,42 +723,169 @@ const slides: Slide[] = [
             );
           })}
         </div>
-        <div className={styles.deployProof}>
-          <p>
-            <FileCode2 aria-hidden="true" /> Swagger UI
-            <strong>yakuku-yaru.today/api-docs</strong>
-          </p>
-          <p>
-            <Cloud aria-hidden="true" /> Production
-            <strong>yakuku-yaru.today</strong>
-          </p>
-          <p>
-            <Boxes aria-hidden="true" /> Containers
-            <strong>VM에서는 pull · up --no-build</strong>
-          </p>
+        <div className={styles.deployContainers}>
+          <header>
+            <div>
+              <span>RUNNING CONTAINERS</span>
+              <small>서버 안에서 역할별로 분리해 실행</small>
+            </div>
+            <strong>5개</strong>
+          </header>
+          {[
+            ['caddy', '외부 요청을 HTTPS로 안전하게 받고 gateway로 전달'],
+            ['gateway', '주소에 따라 Web·API로 나누고 과도한 요청을 제한'],
+            ['web', '브라우저에 캘린더·팬 라운지 등 화면을 제공'],
+            ['api', '로그인·게시글·직관 기록을 처리하고 DB와 연결'],
+            ['mysql', '회원·선수·경기·게시글 등 서비스 데이터를 저장'],
+          ].map(([name, role]) => (
+            <div key={name}>
+              <code>{name}</code>
+              <span>{role}</span>
+            </div>
+          ))}
         </div>
       </div>
     ),
   },
   {
-    id: 'closing',
-    eyebrow: '13 · SUMMARY',
-    title: '구현 범위 요약',
+    id: 'limits-ops',
+    eyebrow: '11 · LIMITATIONS / OPS',
+    title: '운영 구조에서 남은 과제',
     content: (
-      <div className={styles.closingLayout}>
-        <div>
-          <strong>인증</strong>
-          <p>JWT 발급 → HttpOnly 쿠키 → Middleware 검증</p>
-        </div>
-        <div>
-          <strong>데이터</strong>
-          <p>Next.js → Express REST API → MySQL</p>
-        </div>
-        <div>
-          <strong>배포</strong>
-          <p>GitHub Actions → GHCR → GCP VM</p>
-        </div>
-        <span className={styles.qa}>Q&amp;A</span>
+      <div className={styles.opsLimits}>
+        <section className={styles.opsLimitCard}>
+          <header>
+            <span>DEPLOY</span>
+            <strong>한 대의 서버에서 교체</strong>
+          </header>
+          <div className={styles.deployLimitDiagram} aria-label="현재 배포 흐름">
+            <span>사용자</span>
+            <i>→</i>
+            <span>GCP VM 1대</span>
+            <i>↻</i>
+            <span>Web · API 교체</span>
+          </div>
+          <p>
+            현재는 한 서버 안에서 실행 중인 Web·API를 새 버전으로 바로 교체합니다.
+            교체 순간에는 짧은 중단이 생길 수 있고, 실패해도 이전 버전으로 자동
+            복귀하지 않습니다.
+          </p>
+          <footer>
+            <ArrowRight aria-hidden="true" />
+            <div>
+              <b>개선 방안</b>
+              <span>
+                새 버전을 옆에 먼저 실행 → 정상 응답 확인 → 사용자 연결 전환 ·
+                실패하면 기존 버전 유지
+              </span>
+            </div>
+          </footer>
+        </section>
+
+        <section className={styles.opsLimitCard}>
+          <header>
+            <span>RATE LIMIT</span>
+            <strong>서버가 늘어나면 요청 횟수가 나뉨</strong>
+          </header>
+          <div className={styles.memoryLimitDiagram} aria-label="메모리 기반 요청 제한">
+            <div>
+              <small>현재 · API 서버 1대</small>
+              <code>사용자 A · 요청 10회</code>
+            </div>
+            <span>서버 A에는 6회</span>
+            <span>서버 B에는 4회</span>
+          </div>
+          <p>
+            지금은 API 서버가 1대라 정확합니다. 서버가 여러 대가 되면 같은 사용자의
+            요청 기록이 서버마다 따로 저장되어 실제 총 10회를 6회와 4회로 나누어
+            인식할 수 있습니다.
+          </p>
+          <footer>
+            <ArrowRight aria-hidden="true" />
+            <div>
+              <b>개선 방안</b>
+              <span>
+                모든 API 서버가 함께 보는 공용 저장소 Redis에 사용자 A의 총 10회를
+                기록 → 어느 서버가 요청을 받아도 같은 횟수 확인
+              </span>
+            </div>
+          </footer>
+        </section>
+
+      </div>
+    ),
+  },
+  {
+    id: 'limits-data',
+    eyebrow: '12 · LIMITATIONS / QUALITY',
+    title: '품질과 데이터 조회에서 남은 과제',
+    content: (
+      <div className={styles.dataLimits}>
+        <section className={styles.dataLimitCard}>
+          <header>
+            <span>CI GATE</span>
+            <strong>배포 전 자동 검사 부족</strong>
+            <b>현재 BUILD → DEPLOY</b>
+          </header>
+          <div className={styles.ciLimitDiagram} aria-label="현재 자동 배포 검사 단계">
+            <span>push</span>
+            <i>→</i>
+            <span>Docker build</span>
+            <i>→</i>
+            <span>deploy</span>
+            <b>lint · test 단계 없음</b>
+          </div>
+          <p>
+            현재는 Docker 이미지가 만들어지면 바로 배포됩니다. 코드 검사나 주요
+            기능 테스트의 통과 여부를 배포 조건으로 확인하는 단계가 없습니다.
+          </p>
+          <footer>
+            <ArrowRight aria-hidden="true" />
+            <div>
+              <b>개선 방안</b>
+              <span>
+                push → 코드 검사 → 로그인·게시글 테스트 → 모두 통과한 경우에만
+                이미지 생성·배포
+              </span>
+            </div>
+          </footer>
+        </section>
+
+        <section className={styles.dataLimitCard}>
+          <header>
+            <span>OFFSET PAGING</span>
+            <strong>뒤 페이지일수록 확인할 데이터 증가</strong>
+            <b>/posts 10개 · /fans 18명</b>
+          </header>
+          <div className={styles.offsetLimitDiagram} aria-label="OFFSET 증가 예시">
+            {[
+              ['1페이지', 'OFFSET 0', '10개 반환'],
+              ['10페이지', 'OFFSET 90', '앞의 90개 통과 후 10개'],
+              ['100페이지', 'OFFSET 990', '앞의 990개 통과 후 10개'],
+            ].map(([page, offset, result]) => (
+              <div key={page}>
+                <span>{page}</span>
+                <code>{offset}</code>
+                <p>{result}</p>
+              </div>
+            ))}
+          </div>
+          <p>
+            팬 라운지는 한 번에 10개, 팬 찾기는 18명씩 받습니다. 페이지 번호가
+            커질수록 MySQL이 앞의 데이터를 더 많이 확인하고 건너뛴 뒤 필요한
+            결과만 반환합니다.
+          </p>
+          <footer>
+            <ArrowRight aria-hidden="true" />
+            <div>
+              <b>개선 방안</b>
+              <span>
+                “마지막으로 본 게시글의 작성 시각·ID 이후 10개” 요청 → 앞의 990개를
+                다시 건너뛰지 않고 다음 결과부터 조회
+              </span>
+            </div>
+          </footer>
+        </section>
       </div>
     ),
   },
@@ -574,6 +957,7 @@ export default function PresentationPage() {
       if (boundedIndex === slideIndex) return;
 
       clearCanvas();
+      window.history.replaceState(null, '', `#${slides[boundedIndex].id}`);
       startTransition(() => {
         addTransitionType(
           boundedIndex > slideIndex ? 'deck-forward' : 'deck-back',
@@ -594,6 +978,15 @@ export default function PresentationPage() {
 
   useEffect(() => {
     document.body.classList.add('presentation-mode');
+    const requestedSlide = window.location.hash.slice(1);
+    const requestedIndex = slides.findIndex(
+      (slide) => slide.id === requestedSlide,
+    );
+
+    if (requestedIndex >= 0) {
+      setSlideIndex(requestedIndex);
+    }
+
     return () => {
       document.body.classList.remove('presentation-mode');
       cancelAnnotationFade();
@@ -667,6 +1060,7 @@ export default function PresentationPage() {
 
   function handlePointerDown(event: ReactPointerEvent<HTMLElement>) {
     if (event.button !== 0 || isControl(event.target)) return;
+    event.preventDefault();
     showAnnotations();
     const { x, y } = getPoint(event);
     drawingRef.current = {
