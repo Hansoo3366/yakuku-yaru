@@ -38,8 +38,19 @@ import {
   validateNickname,
   validatePassword,
 } from '../../utils/user-input.js';
-import { clearAuthCookie, setAuthCookie } from './auth-cookie.js';
+import {
+  clearAuthCookies,
+  readCookieHeader,
+  REFRESH_COOKIE_NAME,
+  setAuthCookies,
+} from './auth-cookie.js';
 import { findTeamById } from '../teams/team.repository.js';
+import {
+  createRefreshSession,
+  revokeAllRefreshSessionsForUser,
+  revokeRefreshSession,
+  rotateRefreshSession,
+} from './refresh-session.repository.js';
 
 export const authRouter = Router();
 
@@ -55,6 +66,13 @@ const loginRateLimit = rateLimit({
   windowMs: 5 * 60 * 1000,
   max: 15,
   message: '로그인 요청이 너무 많습니다. 잠시 후 다시 시도해주세요.',
+});
+
+const refreshRateLimit = rateLimit({
+  scope: 'auth:refresh',
+  windowMs: 5 * 60 * 1000,
+  max: 60,
+  message: '세션 갱신 요청이 너무 많습니다. 잠시 후 다시 시도해주세요.',
 });
 
 const verifyEmailRateLimit = rateLimit({
@@ -276,18 +294,33 @@ authRouter.post('/login', loginRateLimit, async (req, res, next) => {
       );
     }
 
-    const accessToken = signAccessToken(
-      {
-        userId: user.id,
-        email: user.email,
-        sessionVersion: Number(user.session_version),
-      },
-      {
-        rememberMe: Boolean(rememberMe),
-      },
+    const shouldRemember = Boolean(rememberMe);
+    const sessionVersion = Number(user.session_version);
+    const previousRefreshToken = readCookieHeader(
+      req.header('cookie'),
+      REFRESH_COOKIE_NAME,
     );
 
-    setAuthCookie(res, accessToken, { rememberMe: Boolean(rememberMe) });
+    if (previousRefreshToken) {
+      await revokeRefreshSession(previousRefreshToken);
+    }
+
+    const accessToken = signAccessToken({
+      userId: user.id,
+      sessionVersion,
+    });
+    const refreshSession = await createRefreshSession({
+      userId: user.id,
+      sessionVersion,
+      rememberMe: shouldRemember,
+    });
+
+    setAuthCookies(res, {
+      accessToken,
+      refreshToken: refreshSession.token,
+      rememberMe: refreshSession.rememberMe,
+      refreshExpiresAt: refreshSession.expiresAt,
+    });
 
     res.json({
       user: toPublicUser(user),
@@ -297,9 +330,65 @@ authRouter.post('/login', loginRateLimit, async (req, res, next) => {
   }
 });
 
-authRouter.post('/logout', (_req, res) => {
-  clearAuthCookie(res);
-  res.status(204).send();
+authRouter.post('/refresh', refreshRateLimit, async (req, res, next) => {
+  try {
+    const refreshToken = readCookieHeader(
+      req.header('cookie'),
+      REFRESH_COOKIE_NAME,
+    );
+
+    if (!refreshToken) {
+      clearAuthCookies(res);
+      throw new HttpError(
+        401,
+        'REFRESH_TOKEN_INVALID',
+        '로그인 세션이 만료되었습니다.',
+      );
+    }
+
+    const rotatedSession = await rotateRefreshSession(refreshToken);
+
+    if (!rotatedSession) {
+      clearAuthCookies(res);
+      throw new HttpError(
+        401,
+        'REFRESH_TOKEN_INVALID',
+        '로그인 세션이 만료되었습니다.',
+      );
+    }
+
+    const accessToken = signAccessToken({
+      userId: rotatedSession.userId,
+      sessionVersion: rotatedSession.sessionVersion,
+    });
+
+    setAuthCookies(res, {
+      accessToken,
+      refreshToken: rotatedSession.token,
+      rememberMe: rotatedSession.rememberMe,
+      refreshExpiresAt: rotatedSession.expiresAt,
+    });
+    res.status(204).send();
+  } catch (error) {
+    next(error);
+  }
+});
+
+authRouter.post('/logout', async (req, res, next) => {
+  const refreshToken = readCookieHeader(
+    req.header('cookie'),
+    REFRESH_COOKIE_NAME,
+  );
+  clearAuthCookies(res);
+
+  try {
+    if (refreshToken) {
+      await revokeRefreshSession(refreshToken);
+    }
+    res.status(204).send();
+  } catch (error) {
+    next(error);
+  }
 });
 
 authRouter.get('/me', authenticate, async (req, res, next) => {
@@ -390,6 +479,7 @@ authRouter.post(
 
       const passwordHash = await hashPassword(normalizedPassword);
       await updateUserPassword(resetToken.user_id, passwordHash);
+      await revokeAllRefreshSessionsForUser(resetToken.user_id);
       await markPasswordResetTokenUsed(resetToken.id);
 
       res.json({

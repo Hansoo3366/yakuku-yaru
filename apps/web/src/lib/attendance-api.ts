@@ -1,4 +1,4 @@
-import { request } from './api';
+import { fetchWithAuthRetry, request } from './api';
 import { shouldSendAuthorizationHeader } from './auth';
 import type { AttendanceHonorTitle } from './attendance-score';
 
@@ -109,7 +109,6 @@ export type AttendanceStats = {
   titles?: AttendanceHonorTitle[];
 };
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api';
 export const ATTENDANCE_PHOTO_ACCEPT =
   'image/jpeg,image/png,image/webp,image/heic,image/heif,image/avif,image/gif';
 const ATTENDANCE_PHOTO_MAX_BYTES = 20 * 1024 * 1024;
@@ -230,14 +229,19 @@ export function fetchAttendanceStats(
 
   const query = params.toString();
 
-  return request<AttendanceStats>(`/attendance-records/stats/me${query ? `?${query}` : ''}`, {
-    token,
-  });
+  return request<AttendanceStats>(
+    `/attendance-records/stats/me${query ? `?${query}` : ''}`,
+    {
+      token,
+    },
+  );
 }
 
 async function optimizeAttendancePhoto(photo: File) {
   if (!ATTENDANCE_PHOTO_ALLOWED_TYPES.has(photo.type)) {
-    throw new Error('JPG, PNG, WebP, HEIC, AVIF, GIF 이미지만 업로드할 수 있어요.');
+    throw new Error(
+      'JPG, PNG, WebP, HEIC, AVIF, GIF 이미지만 업로드할 수 있어요.',
+    );
   }
 
   if (photo.size > ATTENDANCE_PHOTO_MAX_BYTES) {
@@ -290,15 +294,14 @@ export async function uploadAttendancePhoto(
   const formData = new FormData();
   formData.set('photo', optimizedPhoto);
 
-  const response = await fetch(
-    `${API_URL}/attendance-records/${recordId}/photo`,
+  const response = await fetchWithAuthRetry(
+    `/attendance-records/${recordId}/photo`,
     {
       method: 'POST',
       headers: shouldSendAuthorizationHeader(token)
         ? { Authorization: `Bearer ${token}` }
         : undefined,
       body: formData,
-      credentials: 'include',
     },
   );
 

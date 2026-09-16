@@ -140,13 +140,13 @@ const groups: TermGroup[] = [
         name: 'JWT',
         meaning:
           '헤더·페이로드·서명을 점으로 이어 붙인 서명된 문자열. 서버가 세션을 기억하지 않아도 "누가 발급했는지"를 증명할 수 있어 상태 없는 인증을 가능하게 합니다.',
-        role: 'src/utils/jwt.ts가 HS256으로 서명하고 페이로드에 userId, email, sessionVersion을 담습니다. iss는 yakuku-yaru-api, aud는 yakuku-yaru-web, 만료는 기본 1일이고 rememberMe면 30일입니다.',
+        role: 'src/utils/jwt.ts가 15분짜리 Access Token을 HS256으로 서명합니다. 페이로드에는 userId, sessionVersion, tokenType만 담고, iss는 yakuku-yaru-api, aud는 yakuku-yaru-web으로 제한합니다.',
       },
       {
         name: 'HttpOnly cookie',
         meaning:
           'JavaScript가 document.cookie로 읽을 수 없고 브라우저가 같은 도메인 요청에 자동으로 붙여 보내는 쿠키. XSS가 토큰을 훔쳐 가는 경로를 브라우저 단계에서 막습니다.',
-        role: "src/modules/auth/auth-cookie.ts가 yakuku_session 이름으로 httpOnly: true, sameSite: 'lax', 운영에서만 secure로 설정합니다. 프론트엔드 코드 어디에도 JWT 문자열이 없습니다.",
+        role: 'yakuku_access와 yakuku_refresh를 각각 HttpOnly, SameSite=Lax, 운영 Secure 쿠키로 설정합니다. 프론트엔드 JavaScript는 두 토큰 문자열을 읽지 않습니다.',
       },
       {
         name: 'SameSite=Lax',
@@ -158,7 +158,7 @@ const groups: TermGroup[] = [
         name: 'authenticate',
         meaning:
           '보호 API 앞에 세우는 미들웨어. 토큰을 찾아 서명·만료를 검증하고, 통과한 사용자만 req.user에 넣습니다.',
-        role: 'src/middleware/authenticate.ts. Authorization: Bearer 헤더와 yakuku_session 쿠키를 둘 다 보고, 성공하면 users.session_version을 DB에서 다시 읽어 토큰의 sessionVersion과 비교합니다. 실패는 401 AUTH_REQUIRED 또는 401 INVALID_TOKEN.',
+        role: 'src/middleware/authenticate.ts. Authorization: Bearer 헤더와 yakuku_access 쿠키를 보고, 성공하면 users.session_version을 DB에서 다시 읽어 Access Token의 sessionVersion과 비교합니다. 실패는 401 AUTH_REQUIRED 또는 401 INVALID_TOKEN.',
       },
       {
         name: 'optionalAuthenticate',
@@ -170,7 +170,13 @@ const groups: TermGroup[] = [
         name: 'sessionVersion',
         meaning:
           'users 테이블의 정수 컬럼. 서버가 "이 버전 이전에 발급된 토큰은 모두 무효"라고 선언하는 장치입니다. JWT는 한 번 발급하면 스스로 취소할 수 없으므로 이 값을 둡니다.',
-        role: '비밀번호 재설정 성공 시 1 증가시킵니다. authenticate가 매 요청 DB 값과 토큰 값을 비교하므로 기존에 발급된 모든 JWT가 즉시 거부됩니다. 로그아웃은 쿠키만 지우고 버전은 올리지 않습니다.',
+        role: '비밀번호 재설정 성공 시 1 증가시킵니다. 기존 Access Token이 즉시 거부되고, refresh_sessions의 사용자 세션도 전부 폐기해 새 Access Token 발급까지 막습니다.',
+      },
+      {
+        name: 'Refresh Token rotation',
+        meaning:
+          'Access Token이 만료됐을 때 로그인 상태를 연장하는 일회용 토큰. 한 번 쓸 때마다 새 값으로 교체해 탈취한 옛 토큰의 재사용을 감지합니다.',
+        role: 'refresh_sessions에는 원문 대신 SHA-256 해시, 사용자, 토큰 묶음, 만료·교체·폐기 시각을 저장합니다. 일반 로그인은 7일, 로그인 상태 유지는 30일이며 재사용 감지 시 같은 묶음을 모두 폐기합니다.',
       },
       {
         name: 'cookie-session marker',
@@ -199,8 +205,8 @@ const groups: TermGroup[] = [
       {
         name: 'clearSession()',
         meaning:
-          '클라이언트 쪽 인증 상태를 비우는 함수. 서버에 요청하지 않고 store와 DOM 마커만 정리합니다.',
-        role: "src/lib/auth-store.ts. window에 'yakuku:auth:logout' CustomEvent를 뿌려 다른 컴포넌트가 반응하게 하고, /auth/me가 401을 받았을 때 화면이 직접 호출합니다.",
+          '로그아웃 API를 호출해 서버의 Refresh Token 묶음을 폐기하고, 클라이언트 store와 DOM 마커도 정리하는 함수입니다.',
+        role: "src/lib/auth-store.ts. 서버가 두 쿠키를 지운 뒤 window에 'yakuku:auth:logout' 이벤트를 보내 보호 화면도 로그인 화면으로 이동시킵니다.",
       },
     ],
   },
@@ -789,11 +795,6 @@ const limitations = [
     'Redis 같은 공유 스토어로 교체',
   ],
   [
-    'refresh token 없음',
-    'access token 하나만 씁니다. rememberMe면 만료를 1일에서 30일로 늘리는 방식이고, 무효화는 sessionVersion으로 대신합니다.',
-    'refresh token + rotation 도입',
-  ],
-  [
     'useMutation 미사용',
     '쓰기 성공 후 9개 파일 21곳에서 invalidateQueries를 직접 호출합니다. 일관성은 유지되지만 낙관적 업데이트와 에러 처리 중앙화가 안 됩니다.',
     'useMutation으로 성공·실패 처리를 한곳에 모으기',
@@ -831,7 +832,7 @@ const distinctions = [
     'cookie-session',
     '메모리에 있는 마커 문자열',
     'HttpOnly cookie',
-    '실제 JWT가 들어 있는 곳',
+    'Access·Refresh Token이 들어 있는 곳',
   ],
   [
     'Zustand',
@@ -841,15 +842,15 @@ const distinctions = [
   ],
   [
     'request<T>',
-    'JSON 요청만 담당',
+    'JSON 요청과 공통 401 처리',
     '이미지 업로드',
-    'FormData라 raw fetch를 따로 사용',
+    'FormData지만 같은 재발급 helper 사용',
   ],
   [
     '로그아웃',
-    '쿠키만 삭제 — sessionVersion은 그대로',
+    '현재 Refresh Token 묶음 폐기',
     '비밀번호 재설정',
-    'sessionVersion 증가로 모든 토큰 무효화',
+    'sessionVersion 증가 + 모든 세션 폐기',
   ],
   ['401', '누구인지 모름 — 다시 로그인', '403', '누구인지는 앎 — 권한이 없음'],
   [
@@ -886,7 +887,7 @@ const questionGroups: QuestionGroup[] = [
       {
         question: 'JWT 토큰에는 어떤 정보를 포함하셨나요?',
         answer:
-          'userId, email, sessionVersion 세 개를 담습니다. jsonwebtoken이 발급 시간(iat), 만료 시간(exp), 발급자(iss: yakuku-yaru-api), 대상(aud: yakuku-yaru-web)을 추가합니다. 비밀번호와 닉네임·프로필 이미지는 넣지 않습니다. 토큰은 base64로 인코딩만 되어 있어 누구나 내용을 읽을 수 있으므로, 화면에 뿌릴 정보는 /auth/me 응답으로 따로 받습니다.',
+          'Access Token에는 userId, sessionVersion, tokenType 세 개만 담습니다. jsonwebtoken이 발급 시간(iat), 만료 시간(exp), 발급자(iss), 대상(aud)을 추가합니다. 표시용 닉네임과 프로필은 /auth/me 응답으로 따로 받습니다. Refresh Token은 JWT가 아닌 임의 문자열이고 DB에는 원문 대신 SHA-256 해시만 저장합니다.',
         followUps: [
           {
             question: '왜 프로필 정보를 토큰에 넣지 않나요?',
@@ -901,7 +902,12 @@ const questionGroups: QuestionGroup[] = [
           {
             question: '토큰은 어디에 담아서 전달하나요?',
             answer:
-              'yakuku_session이라는 HttpOnly 쿠키에 담습니다. authenticate는 Authorization: Bearer 헤더도 함께 보지만, 브라우저 화면은 쿠키 경로만 씁니다.',
+              'Access Token은 yakuku_access, Refresh Token은 yakuku_refresh라는 별도 HttpOnly 쿠키에 담습니다. Access 쿠키는 /api, Refresh 쿠키는 /api/auth 경로로 제한해 필요한 요청에만 전송합니다.',
+          },
+          {
+            question: '처음에는 왜 JWT 하나만 사용했나요?',
+            answer:
+              '초기 구현은 발급·검증·쿠키 삭제만으로 끝나는 단일 JWT 구조를 선택해 개발 범위를 줄였습니다. 다만 장기 JWT는 탈취됐을 때 만료 전까지 사용될 수 있다는 한계가 있어, 현재는 15분 Access Token과 DB에서 폐기·회전할 수 있는 Refresh Token으로 분리했습니다.',
           },
         ],
         paths: [
@@ -914,7 +920,7 @@ const questionGroups: QuestionGroup[] = [
         question:
           'JWT를 한 번 발급하면 취소할 수 없는데, 로그아웃이나 비밀번호 변경은 어떻게 처리하나요?',
         answer:
-          'users.session_version 컬럼을 씁니다. authenticate가 매 요청 토큰의 sessionVersion과 DB 값을 비교하므로, 비밀번호 재설정 성공 시 버전을 1 올리면 그 전에 발급된 모든 토큰이 즉시 거부됩니다. 로그아웃은 쿠키만 지우고 버전은 올리지 않습니다 — 같은 브라우저에서 다시 로그인하면 되니까요.',
+          '로그아웃은 현재 Refresh Token과 같은 family를 DB에서 폐기하고 두 쿠키를 삭제합니다. 비밀번호 재설정은 users.session_version을 올려 기존 Access Token을 즉시 거부하고, 해당 사용자의 Refresh 세션도 모두 폐기해 재발급까지 막습니다.',
         followUps: [
           {
             question: '그럼 매 요청 DB를 한 번 더 보는 것 아닌가요?',
@@ -1104,7 +1110,7 @@ const questionGroups: QuestionGroup[] = [
       {
         question: 'API 요청 시 인증 토큰은 어떻게 전달하셨나요?',
         answer:
-          'JWT는 yakuku_session HttpOnly 쿠키에 보관하고, request<T>가 모든 요청에 credentials: include를 붙여 브라우저가 자동으로 전송하게 합니다. 프론트엔드 JavaScript는 토큰 값을 읽지도 않고 localStorage에 저장하지도 않습니다. 서버 쪽 cors도 credentials: true와 명시적 origin allowlist로 설정되어 있어야 쿠키가 실제로 전달됩니다.',
+          'Access Token과 Refresh Token을 각각 HttpOnly 쿠키에 보관하고, request<T>가 모든 요청에 credentials: include를 붙여 브라우저가 자동 전송하게 합니다. 프론트엔드 JavaScript는 토큰 값을 읽거나 localStorage에 저장하지 않습니다. 서버 쪽 cors도 credentials: true와 명시적 origin allowlist를 함께 사용합니다.',
         followUps: [
           {
             question: 'localStorage에 넣는 방식과 비교하면 어떤 차이가 있나요?',
@@ -1137,7 +1143,7 @@ const questionGroups: QuestionGroup[] = [
           {
             question: '전역 401 인터셉터가 있나요?',
             answer:
-              '없습니다. request<T>는 ApiError를 던지기만 하고 자동 리다이렉트는 하지 않습니다. 로그아웃 처리는 각 화면이나 /auth/me를 보는 쪽에서 clearSession()을 직접 호출합니다. 전역 인터셉터가 있으면 "인증 없이도 보이는 화면"까지 강제로 로그아웃되는 문제가 있어 이렇게 뒀습니다.',
+              'request<T>가 공통으로 401을 감지합니다. 로그인 같은 인증 API는 제외하고 /auth/refresh를 한 번 호출하며, 여러 요청이 동시에 실패해도 재발급 요청은 하나만 공유합니다. 성공하면 원래 요청을 한 번 재시도하고, 재발급도 401이면 전역 로그인 상태를 정리합니다.',
           },
           {
             question: 'Query의 에러와 화면 이벤트의 에러가 다르게 처리되나요?',
@@ -1204,7 +1210,7 @@ const questionGroups: QuestionGroup[] = [
       {
         question: '로그인 상태는 어디에 저장하셨나요?',
         answer:
-          '실제 JWT는 브라우저의 HttpOnly 쿠키 yakuku_session에 있고, 화면이 쓰는 사용자 정보는 TanStack Query 캐시와 Zustand auth-store에 있습니다. auth-store의 token 필드에는 JWT가 아니라 cookie-session이라는 마커 문자열이 들어갑니다. localStorage와 sessionStorage는 쓰지 않으며, 예전에 쓰던 localStorage 토큰은 hydrate()가 지웁니다.',
+          'Access Token은 yakuku_access, Refresh Token은 yakuku_refresh HttpOnly 쿠키에 있고, 화면이 쓰는 사용자 정보는 TanStack Query 캐시와 Zustand auth-store에 있습니다. auth-store의 token 필드에는 JWT가 아니라 cookie-session 마커만 들어갑니다. localStorage와 sessionStorage는 사용하지 않습니다.',
         followUps: [
           {
             question: 'cookie-session 마커가 왜 필요한가요?',
@@ -1248,12 +1254,12 @@ const questionGroups: QuestionGroup[] = [
       {
         question: '토큰이 만료되면 어떻게 실행되고 있나요?',
         answer:
-          '/auth/me나 보호 API가 401을 반환하면 화면이 clearSession()으로 store의 사용자와 마커를 비우고, useAuthGuard가 보호 화면에서 로그인 페이지로 이동시킵니다. 만료(exp 경과)뿐 아니라 비밀번호 재설정 후 sessionVersion 불일치, 서명 오류도 같은 401 경로로 처리됩니다. refresh token은 없어서 만료 시 재로그인이 필요합니다.',
+          'Access Token은 15분 뒤 만료됩니다. 보호 API가 401을 반환하면 request<T>가 Refresh Token으로 /auth/refresh를 호출합니다. 서버는 토큰을 DB에서 검증하고 새 Refresh Token으로 회전한 뒤 Access Token을 재발급합니다. 프론트는 원래 요청을 한 번 다시 보내며, 재발급이 실패한 경우에만 로그인 상태를 비웁니다.',
         followUps: [
           {
             question: '작성 중이던 폼이 있으면 어떻게 되나요?',
             answer:
-              '401을 받으면 로그인 화면으로 이동하므로 입력값은 사라집니다. 이 부분은 개선 여지가 있고, 다음 단계에서는 이동 전에 로그인 후 돌아올 경로를 담아두거나 refresh token으로 만료 자체를 늦추는 방향을 생각합니다.',
+              'Access Token 만료만 원인이면 백그라운드에서 재발급하고 같은 요청을 다시 보내므로 폼 화면을 유지합니다. Refresh Token까지 만료되거나 폐기된 경우에는 로그인 화면으로 이동하므로, 그 경우 때의 입력 복구는 별도 개선 과제입니다.',
           },
           {
             question: '401과 403은 어떻게 구분해서 쓰나요?',

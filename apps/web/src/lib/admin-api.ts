@@ -307,3 +307,67 @@ export function updateAdminGame(
     token,
   });
 }
+
+export const ADMIN_SYNC_JOB_TYPES = [
+  'schedule-today',
+  'schedule-week',
+  'schedule-month',
+  'schedule-season',
+  'game-center-today',
+  'game-center-week',
+  'game-center-month',
+  'live',
+  'standings',
+  'projection',
+  'players',
+] as const;
+
+export type AdminSyncJobType = (typeof ADMIN_SYNC_JOB_TYPES)[number];
+
+export type AdminSyncJobStatus =
+  | 'queued'
+  | 'running'
+  | 'succeeded'
+  | 'failed';
+
+export type AdminSyncJob = {
+  id: string;
+  type: AdminSyncJobType;
+  status: AdminSyncJobStatus;
+  params: AdminSyncJobParams;
+  startedAt: string | null;
+  finishedAt: string | null;
+  createdAt: string;
+  summary: unknown | null;
+  error: string | null;
+};
+
+export type AdminSyncJobParams = {
+  date?: string;
+  year?: number;
+  month?: number;
+};
+
+export function startAdminSyncJob(
+  type: AdminSyncJobType,
+  token: string,
+  params: AdminSyncJobParams = {},
+) {
+  return request<{ job: AdminSyncJob }>('/admin/sync-jobs', {
+    method: 'POST',
+    body: { type, ...params },
+    token,
+  });
+}
+
+export function fetchCurrentAdminSyncJob(token: string) {
+  return request<{ job: AdminSyncJob | null }>('/admin/sync-jobs/current', {
+    token,
+  });
+}
+
+export function fetchAdminSyncJob(jobId: string, token: string) {
+  return request<{ job: AdminSyncJob }>(`/admin/sync-jobs/${jobId}`, {
+    token,
+  });
+}

@@ -1,4 +1,4 @@
-import { shouldSendAuthorizationHeader } from '@/lib/auth';
+import { notifyAuthExpired, shouldSendAuthorizationHeader } from '@/lib/auth';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api';
 const ASSET_URL = API_URL.replace(/\/api\/?$/, '');
@@ -22,7 +22,99 @@ type RequestOptions = {
   method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
   body?: unknown;
   token?: string | null;
+  refreshOnUnauthorized?: boolean;
 };
+
+let refreshPromise: Promise<boolean> | null = null;
+
+function canRefreshForPath(path: string) {
+  return path === '/auth/me' || !path.startsWith('/auth/');
+}
+
+async function refreshAccessToken() {
+  try {
+    const response = await fetch(`${API_URL}/auth/refresh`, {
+      method: 'POST',
+      credentials: 'include',
+    });
+
+    if (response.status === 401 || response.status === 403) {
+      notifyAuthExpired();
+    }
+
+    return response.ok;
+  } catch {
+    return false;
+  }
+}
+
+async function ensureFreshAccessToken() {
+  if (!refreshPromise) {
+    refreshPromise = refreshAccessToken().finally(() => {
+      refreshPromise = null;
+    });
+  }
+
+  return refreshPromise;
+}
+
+async function recoverFromUnauthorized(makeRequest: () => Promise<Response>) {
+  const refreshAndRetry = async () => {
+    const responseAfterWaiting = await makeRequest();
+
+    if (responseAfterWaiting.status !== 401) {
+      return responseAfterWaiting;
+    }
+
+    if (await ensureFreshAccessToken()) {
+      return makeRequest();
+    }
+
+    return responseAfterWaiting;
+  };
+
+  if ('locks' in navigator) {
+    return navigator.locks.request(
+      'yakuku-auth-refresh',
+      { mode: 'exclusive' },
+      refreshAndRetry,
+    );
+  }
+
+  if (await ensureFreshAccessToken()) {
+    return makeRequest();
+  }
+
+  return null;
+}
+
+export async function fetchWithAuthRetry(
+  path: string,
+  init: RequestInit,
+  options: { refreshOnUnauthorized?: boolean } = {},
+) {
+  const makeRequest = () =>
+    fetch(`${API_URL}${path}`, {
+      ...init,
+      credentials: 'include',
+    });
+  let response = await makeRequest();
+  const shouldRefresh =
+    response.status === 401 &&
+    options.refreshOnUnauthorized !== false &&
+    canRefreshForPath(path) &&
+    typeof window !== 'undefined';
+
+  if (shouldRefresh) {
+    const recoveredResponse = await recoverFromUnauthorized(makeRequest);
+
+    if (recoveredResponse) {
+      response = recoveredResponse;
+    }
+  }
+
+  return response;
+}
 
 export async function request<T>(path: string, options: RequestOptions = {}) {
   const headers = new Headers();
@@ -33,12 +125,17 @@ export async function request<T>(path: string, options: RequestOptions = {}) {
     headers.set('Authorization', `Bearer ${options.token}`);
   }
 
-  const response = await fetch(`${API_URL}${path}`, {
-    method: options.method ?? 'GET',
-    headers,
-    body: options.body ? JSON.stringify(options.body) : undefined,
-    credentials: 'include',
-  });
+  const response = await fetchWithAuthRetry(
+    path,
+    {
+      method: options.method ?? 'GET',
+      headers,
+      body: options.body ? JSON.stringify(options.body) : undefined,
+    },
+    {
+      refreshOnUnauthorized: options.refreshOnUnauthorized,
+    },
+  );
 
   if (!response.ok) {
     const error = (await response.json().catch(() => ({

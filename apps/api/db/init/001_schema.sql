@@ -34,6 +34,32 @@ CREATE TABLE IF NOT EXISTS users (
     ON DELETE SET NULL
 );
 
+CREATE TABLE IF NOT EXISTS refresh_sessions (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  user_id BIGINT UNSIGNED NOT NULL,
+  family_id CHAR(36) NOT NULL,
+  token_hash CHAR(64) NOT NULL,
+  session_version INT UNSIGNED NOT NULL,
+  remember_me BOOLEAN NOT NULL DEFAULT FALSE,
+  expires_at DATETIME NOT NULL,
+  rotated_at DATETIME NULL,
+  revoked_at DATETIME NULL,
+  replaced_by_session_id BIGINT UNSIGNED NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_refresh_sessions_token_hash (token_hash),
+  KEY idx_refresh_sessions_user_id (user_id),
+  KEY idx_refresh_sessions_family_id (family_id),
+  KEY idx_refresh_sessions_expires_at (expires_at),
+  KEY idx_refresh_sessions_replacement (replaced_by_session_id),
+  CONSTRAINT fk_refresh_sessions_user
+    FOREIGN KEY (user_id) REFERENCES users(id)
+    ON DELETE CASCADE,
+  CONSTRAINT fk_refresh_sessions_replacement
+    FOREIGN KEY (replaced_by_session_id) REFERENCES refresh_sessions(id)
+    ON DELETE SET NULL
+);
+
 CREATE TABLE IF NOT EXISTS email_verification_tokens (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   user_id BIGINT UNSIGNED NOT NULL,

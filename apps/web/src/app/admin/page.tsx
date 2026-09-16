@@ -22,12 +22,15 @@ import {
   deleteAdminPost,
   deleteAdminUser,
   fetchAdminSummary,
+  fetchAdminSyncJob,
+  fetchCurrentAdminSyncJob,
   listAdminAttendanceRecords,
   listAdminComments,
   listAdminGames,
   listAdminPosts,
   listAdminReports,
   listAdminUsers,
+  startAdminSyncJob,
   updateAdminGame,
   updateAdminPostModeration,
   updateAdminReport,
@@ -41,6 +44,9 @@ import {
   type AdminPost,
   type AdminReport,
   type AdminSummary,
+  type AdminSyncJob,
+  type AdminSyncJobParams,
+  type AdminSyncJobType,
   type AdminUser,
 } from '@/lib/admin-api';
 import { getAssetUrl } from '@/lib/api';
@@ -70,7 +76,8 @@ type AdminTab =
   | 'media'
   | 'reports'
   | 'games'
-  | 'cheers';
+  | 'cheers'
+  | 'sync';
 
 const ADMIN_TAB_LABELS: Record<AdminTab, string> = {
   users: '사용자',
@@ -80,6 +87,7 @@ const ADMIN_TAB_LABELS: Record<AdminTab, string> = {
   reports: '신고',
   games: '경기',
   cheers: '응원가',
+  sync: '데이터 갱신',
 };
 
 const ADMIN_TABS: AdminTab[] = [
@@ -90,6 +98,68 @@ const ADMIN_TABS: AdminTab[] = [
   'reports',
   'games',
   'cheers',
+  'sync',
+];
+
+const ADMIN_SYNC_JOB_LABELS: Record<AdminSyncJobType, string> = {
+  'schedule-today': '당일 일정/스코어',
+  'schedule-week': '주간 일정',
+  'schedule-month': '월간 일정',
+  'schedule-season': '시즌 전체 일정',
+  'game-center-today': '당일 선발/라인업',
+  'game-center-week': '주간 선발/라인업',
+  'game-center-month': '월간 선발/라인업',
+  live: '라이브 (당일 일정+선발)',
+  standings: '팀 순위',
+  projection: '시즌 예상 순위',
+  players: '선수 마스터',
+};
+
+const ADMIN_SYNC_JOB_STATUS_LABELS: Record<AdminSyncJob['status'], string> = {
+  queued: '대기 중',
+  running: '실행 중',
+  succeeded: '완료',
+  failed: '실패',
+};
+
+type AdminSyncScope = 'date' | 'month' | 'year' | 'none';
+
+const ADMIN_SYNC_SECTIONS: {
+  id: AdminSyncScope;
+  title: string;
+  description: string;
+  types: AdminSyncJobType[];
+}[] = [
+  {
+    id: 'date',
+    title: '날짜 지정',
+    description: '비우면 오늘(KST) 기준입니다. 주간은 해당 날짜 전후 구간을 갱신합니다.',
+    types: [
+      'schedule-today',
+      'schedule-week',
+      'game-center-today',
+      'game-center-week',
+      'live',
+    ],
+  },
+  {
+    id: 'month',
+    title: '연·월 지정',
+    description: '특정 달 전체를 갱신합니다. 둘 다 비우면 이번 달입니다.',
+    types: ['schedule-month', 'game-center-month'],
+  },
+  {
+    id: 'year',
+    title: '연도 지정',
+    description: '시즌 단위 작업입니다. 비우면 올해입니다.',
+    types: ['schedule-season', 'projection'],
+  },
+  {
+    id: 'none',
+    title: '기간 없음',
+    description: '기준일을 고를 수 없는 작업입니다. 누르면 바로 실행됩니다.',
+    types: ['standings', 'players'],
+  },
 ];
 
 const SUMMARY_LABELS: Record<keyof AdminSummary, string> = {
@@ -161,6 +231,18 @@ function toInput(form: GameForm): AdminGameInput {
 
 function formatDate(value: string) {
   return formatKoreanDateTimeShort(value);
+}
+
+function formatSyncParams(params: AdminSyncJobParams | undefined) {
+  if (!params) {
+    return '';
+  }
+
+  const parts: string[] = [];
+  if (params.date) parts.push(`날짜 ${params.date}`);
+  if (params.year != null) parts.push(`${params.year}년`);
+  if (params.month != null) parts.push(`${params.month}월`);
+  return parts.join(' · ');
 }
 
 function CheerFormFields({
@@ -272,6 +354,11 @@ export default function AdminPage() {
     useState<PlayerCheerRosterScope>('firstTeam');
   const [message, setMessage] = useState('');
   const [postError, setPostError] = useState('');
+  const [syncJob, setSyncJob] = useState<AdminSyncJob | null>(null);
+  const [isStartingSync, setIsStartingSync] = useState(false);
+  const [syncDate, setSyncDate] = useState('');
+  const [syncYear, setSyncYear] = useState('');
+  const [syncMonth, setSyncMonth] = useState('');
   const [currentUserId, setCurrentUserId] = useState<number | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -312,6 +399,111 @@ export default function AdminPage() {
     window.addEventListener('hashchange', syncTabWithHash);
     return () => window.removeEventListener('hashchange', syncTabWithHash);
   }, []);
+
+  useEffect(() => {
+    if (!token || !isAdmin || tab !== 'sync') {
+      return;
+    }
+
+    let cancelled = false;
+
+    void fetchCurrentAdminSyncJob(token)
+      .then((result) => {
+        if (!cancelled) {
+          setSyncJob(result.job);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setSyncJob(null);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isAdmin, tab, token]);
+
+  useEffect(() => {
+    if (
+      !token ||
+      !isAdmin ||
+      tab !== 'sync' ||
+      !syncJob ||
+      (syncJob.status !== 'queued' && syncJob.status !== 'running')
+    ) {
+      return;
+    }
+
+    const timer = window.setInterval(() => {
+      void fetchAdminSyncJob(syncJob.id, token)
+        .then((result) => {
+          setSyncJob(result.job);
+        })
+        .catch(() => {
+          // keep last known status if a poll fails
+        });
+    }, 2000);
+
+    return () => window.clearInterval(timer);
+  }, [isAdmin, syncJob, tab, token]);
+
+  async function handleStartSyncJob(
+    type: AdminSyncJobType,
+    scope: AdminSyncScope,
+  ) {
+    if (!token || isStartingSync) {
+      return;
+    }
+
+    const isBusy =
+      syncJob?.status === 'queued' || syncJob?.status === 'running';
+
+    if (isBusy) {
+      setPostError('이미 실행 중인 동기화 작업이 있습니다.');
+      return;
+    }
+
+    const params: AdminSyncJobParams = {};
+
+    if (scope === 'date' && syncDate.trim()) {
+      params.date = syncDate.trim();
+    }
+
+    if (scope === 'month') {
+      if (syncYear.trim()) params.year = Number(syncYear);
+      if (syncMonth.trim()) params.month = Number(syncMonth);
+      if (params.month != null && params.year == null) {
+        setPostError('월을 지정하려면 연도도 함께 입력하세요.');
+        return;
+      }
+    }
+
+    if (scope === 'year' && syncYear.trim()) {
+      params.year = Number(syncYear);
+    }
+
+    setIsStartingSync(true);
+    setPostError('');
+    setMessage('');
+
+    try {
+      const result = await startAdminSyncJob(type, token, params);
+      setSyncJob(result.job);
+      const scopeLabel = formatSyncParams(result.job.params);
+      setMessage(
+        `${ADMIN_SYNC_JOB_LABELS[type]} 동기화를 시작했습니다.${scopeLabel ? ` (${scopeLabel})` : ''}`,
+      );
+    } catch (error) {
+      setPostError(
+        error instanceof Error
+          ? error.message
+          : '동기화 작업을 시작하지 못했습니다.',
+      );
+    } finally {
+      setIsStartingSync(false);
+    }
+  }
 
   useEffect(() => {
     gameFilterRef.current = {
@@ -681,18 +873,27 @@ export default function AdminPage() {
             </button>
           ))}
         </div>
-        <input
-          aria-label="관리 데이터 검색"
-          onChange={(event) => setKeyword(event.target.value)}
-          placeholder="유저, 게시글, 댓글 검색"
-          value={keyword}
-        />
-        <button className="btn btn-secondary" type="submit">
-          검색
-        </button>
+        {tab === 'sync' ? (
+          <p className="admin-sync-toolbar-note">
+            기간을 고를 수 있는 작업과 없는 작업을 구분해 두었습니다. 한 번에
+            하나만 실행됩니다.
+          </p>
+        ) : (
+          <>
+            <input
+              aria-label="관리 데이터 검색"
+              onChange={(event) => setKeyword(event.target.value)}
+              placeholder="유저, 게시글, 댓글 검색"
+              value={keyword}
+            />
+            <button className="btn btn-secondary" type="submit">
+              검색
+            </button>
+          </>
+        )}
       </form>
 
-      {tab !== 'comments' && tab !== 'cheers' ? (
+      {tab !== 'comments' && tab !== 'cheers' && tab !== 'sync' ? (
         <section className="admin-filter-rail" aria-label="현재 목록 필터">
           <div>
             <span>FILTER</span>
@@ -1666,6 +1867,160 @@ export default function AdminPage() {
               </button>
             </nav>
           ) : null}
+        </section>
+      ) : null}
+
+      {tab === 'sync' ? (
+        <section className="admin-table-card">
+          <div className="admin-section-heading">
+            <div>
+              <h2>KBO 데이터 갱신</h2>
+              <p>
+                서버 cron과 같은 sync 함수를 실행합니다. 시즌/선수 동기화는 수
+                분이 걸릴 수 있으며, 호스트 cron과 겹치지 않게 실행하세요.
+              </p>
+            </div>
+          </div>
+
+          <div
+            aria-live="polite"
+            className={`admin-sync-status admin-sync-status--${syncJob?.status ?? 'idle'}`}
+          >
+            {syncJob ? (
+              <>
+                <div>
+                  <span>최근 작업</span>
+                  <strong>
+                    {ADMIN_SYNC_JOB_LABELS[syncJob.type]} ·{' '}
+                    {ADMIN_SYNC_JOB_STATUS_LABELS[syncJob.status]}
+                  </strong>
+                </div>
+                {formatSyncParams(syncJob.params) ? (
+                  <p>범위 {formatSyncParams(syncJob.params)}</p>
+                ) : (
+                  <p>범위 기본값</p>
+                )}
+                <p>
+                  시작{' '}
+                  {syncJob.startedAt
+                    ? formatDate(syncJob.startedAt)
+                    : '대기 중'}
+                  {syncJob.finishedAt
+                    ? ` · 종료 ${formatDate(syncJob.finishedAt)}`
+                    : null}
+                </p>
+                {syncJob.error ? (
+                  <p className="form-error" role="alert">
+                    {syncJob.error}
+                  </p>
+                ) : null}
+                {syncJob.summary != null ? (
+                  <pre className="admin-sync-summary">
+                    {JSON.stringify(syncJob.summary, null, 2)}
+                  </pre>
+                ) : null}
+              </>
+            ) : (
+              <p>아직 실행한 동기화 작업이 없습니다.</p>
+            )}
+          </div>
+
+          <div className="admin-sync-sections">
+            {ADMIN_SYNC_SECTIONS.map((section) => {
+              const isBusy =
+                isStartingSync ||
+                syncJob?.status === 'queued' ||
+                syncJob?.status === 'running';
+
+              return (
+                <section
+                  className="admin-sync-section"
+                  key={section.id}
+                >
+                  <div className="admin-sync-section-copy">
+                    <h3>{section.title}</h3>
+                    <p>{section.description}</p>
+                  </div>
+                  <div className="admin-sync-controls">
+                    {section.id === 'date' ? (
+                      <label className="admin-sync-field">
+                        <span>기준 날짜</span>
+                        <input
+                          onChange={(event) => setSyncDate(event.target.value)}
+                          type="date"
+                          value={syncDate}
+                        />
+                      </label>
+                    ) : null}
+                    {section.id === 'month' ? (
+                      <>
+                        <label className="admin-sync-field">
+                          <span>연도</span>
+                          <input
+                            inputMode="numeric"
+                            max={2100}
+                            min={2000}
+                            onChange={(event) =>
+                              setSyncYear(event.target.value)
+                            }
+                            placeholder="2026"
+                            type="number"
+                            value={syncYear}
+                          />
+                        </label>
+                        <label className="admin-sync-field">
+                          <span>월</span>
+                          <select
+                            onChange={(event) =>
+                              setSyncMonth(event.target.value)
+                            }
+                            value={syncMonth}
+                          >
+                            <option value="">이번 달</option>
+                            {Array.from({ length: 12 }, (_, index) => {
+                              const month = index + 1;
+                              return (
+                                <option key={month} value={String(month)}>
+                                  {month}월
+                                </option>
+                              );
+                            })}
+                          </select>
+                        </label>
+                      </>
+                    ) : null}
+                    {section.id === 'year' ? (
+                      <label className="admin-sync-field">
+                        <span>연도</span>
+                        <input
+                          inputMode="numeric"
+                          max={2100}
+                          min={2000}
+                          onChange={(event) => setSyncYear(event.target.value)}
+                          placeholder="올해"
+                          type="number"
+                          value={syncYear}
+                        />
+                      </label>
+                    ) : null}
+                    {section.types.map((type) => (
+                      <button
+                        className="btn btn-secondary"
+                        disabled={isBusy}
+                        key={type}
+                        onClick={() =>
+                          void handleStartSyncJob(type, section.id)
+                        }
+                        type="button"
+                      >
+                        {ADMIN_SYNC_JOB_LABELS[type]}
+                      </button>
+                    ))}
+                  </div>
+                </section>
+              );
+            })}
+          </div>
         </section>
       ) : null}
 

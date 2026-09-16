@@ -64,7 +64,7 @@ export const openApiDocument = {
     '/auth/login': {
       post: {
         tags: ['Auth'],
-        summary: 'Login and issue JWT',
+        summary: 'Login and issue access and refresh cookies',
         requestBody: {
           required: true,
           content: {
@@ -75,7 +75,7 @@ export const openApiDocument = {
         },
         responses: {
           '200': {
-            description: 'JWT issued',
+            description: 'Session cookies issued',
             content: {
               'application/json': {
                 schema: { $ref: '#/components/schemas/AuthResponse' },
@@ -84,6 +84,32 @@ export const openApiDocument = {
           },
           '401': {
             description: 'Invalid credentials',
+          },
+        },
+      },
+    },
+    '/auth/refresh': {
+      post: {
+        tags: ['Auth'],
+        summary: 'Rotate the refresh token and issue a new access token',
+        responses: {
+          '204': {
+            description: 'Session cookies renewed',
+          },
+          '401': {
+            description:
+              'Refresh token is missing, expired, revoked, or reused',
+          },
+        },
+      },
+    },
+    '/auth/logout': {
+      post: {
+        tags: ['Auth'],
+        summary: 'Revoke the current refresh-token family and clear cookies',
+        responses: {
+          '204': {
+            description: 'Logged out',
           },
         },
       },

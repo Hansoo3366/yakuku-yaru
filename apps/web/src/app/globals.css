@@ -5100,6 +5100,138 @@ img {
   font-size: var(--text-lg);
 }
 
+.admin-sync-toolbar-note {
+  color: var(--color-muted);
+  font-size: var(--text-sm);
+  grid-column: 2 / -1;
+  margin: 0;
+}
+
+.admin-sync-status {
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-sm);
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-4);
+}
+
+.admin-sync-status span {
+  color: var(--color-muted);
+  display: block;
+  font-size: var(--text-xs);
+  font-weight: var(--weight-bold);
+  margin-bottom: 4px;
+  text-transform: uppercase;
+}
+
+.admin-sync-status strong {
+  color: var(--color-night-navy);
+}
+
+.admin-sync-status--running,
+.admin-sync-status--queued {
+  border-color: color-mix(in srgb, var(--team-color) 45%, var(--color-line));
+  background: color-mix(in srgb, var(--team-color) 8%, var(--color-white));
+}
+
+.admin-sync-status--failed {
+  border-color: color-mix(in srgb, #c0392b 40%, var(--color-line));
+}
+
+.admin-sync-summary {
+  background: var(--color-surface-soft);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
+  margin: 0;
+  max-height: 240px;
+  overflow: auto;
+  padding: var(--space-3);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.admin-sync-sections {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.admin-sync-section {
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-sm);
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+}
+
+.admin-sync-section-copy h3 {
+  color: var(--color-night-navy);
+  font-size: var(--text-sm);
+  margin: 0 0 2px;
+}
+
+.admin-sync-section-copy p {
+  color: var(--color-muted);
+  font-size: var(--text-xs);
+  margin: 0;
+}
+
+.admin-sync-controls {
+  align-items: end;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.admin-sync-field {
+  display: grid;
+  gap: 4px;
+}
+
+.admin-sync-field span {
+  color: var(--color-muted);
+  font-size: 11px;
+  font-weight: var(--weight-bold);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.admin-sync-field input,
+.admin-sync-field select {
+  background: var(--color-white);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-sm);
+  min-height: 40px;
+  padding: 0 10px;
+  width: auto;
+}
+
+.admin-sync-field input[type='date'] {
+  width: 148px;
+}
+
+.admin-sync-field input[type='number'] {
+  width: 96px;
+}
+
+.admin-sync-field select {
+  width: 104px;
+}
+
+.admin-sync-controls .btn {
+  min-height: 40px;
+}
+
+@media (max-width: 720px) {
+  .admin-sync-field input,
+  .admin-sync-field select {
+    width: 100%;
+  }
+
+  .admin-sync-field {
+    flex: 1 1 140px;
+  }
+}
+
 .admin-table,
 .admin-game-form {
   display: grid;

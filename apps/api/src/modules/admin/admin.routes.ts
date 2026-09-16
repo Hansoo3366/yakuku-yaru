@@ -43,6 +43,13 @@ import {
   updateAdminGame,
   updateUserRole,
 } from './admin.repository.js';
+import {
+  getCurrentSyncJob,
+  getSyncJob,
+  isAdminSyncJobType,
+  parseAdminSyncJobParams,
+  startSyncJob,
+} from './sync-job.runner.js';
 
 export const adminRouter = Router();
 
@@ -763,6 +770,78 @@ adminRouter.patch('/games/:gameId', adminWriteLimit, async (req, res, next) => {
       ...parseGameInput(req.body ?? {}),
     });
     res.json({ ok: true });
+  } catch (error) {
+    next(error);
+  }
+});
+
+adminRouter.post('/sync-jobs', adminWriteLimit, async (req, res, next) => {
+  try {
+    const type = req.body?.type;
+
+    if (!isAdminSyncJobType(type)) {
+      throw new HttpError(
+        400,
+        'INVALID_INPUT',
+        '올바른 동기화 유형이 필요합니다.',
+      );
+    }
+
+    let params;
+    try {
+      params = parseAdminSyncJobParams(req.body ?? {});
+    } catch (error) {
+      const code = error instanceof Error ? error.message : 'INVALID_INPUT';
+      const messages: Record<string, string> = {
+        INVALID_DATE: '날짜는 YYYY-MM-DD 형식이어야 합니다.',
+        INVALID_YEAR: '연도는 2000~2100 사이여야 합니다.',
+        INVALID_MONTH: '월은 1~12 사이여야 합니다.',
+        YEAR_REQUIRED_FOR_MONTH: '월을 지정하려면 연도도 함께 필요합니다.',
+      };
+      throw new HttpError(
+        400,
+        'INVALID_INPUT',
+        messages[code] ?? '동기화 파라미터가 올바르지 않습니다.',
+      );
+    }
+
+    const result = startSyncJob(type, params);
+
+    if (!result.ok) {
+      throw new HttpError(
+        409,
+        'SYNC_JOB_BUSY',
+        '이미 실행 중인 동기화 작업이 있습니다.',
+      );
+    }
+
+    res.status(202).json({ job: result.job });
+  } catch (error) {
+    next(error);
+  }
+});
+
+adminRouter.get('/sync-jobs/current', async (_req, res, next) => {
+  try {
+    res.json({ job: getCurrentSyncJob() });
+  } catch (error) {
+    next(error);
+  }
+});
+
+adminRouter.get('/sync-jobs/:jobId', async (req, res, next) => {
+  try {
+    const job = getSyncJob(String(req.params.jobId));
+
+    if (!job) {
+      throw new HttpError(
+        404,
+        'SYNC_JOB_NOT_FOUND',
+        '동기화 작업을 찾을 수 없습니다.',
+      );
+    }
+
+    res.json({ job });
   } catch (error) {
     next(error);
   }

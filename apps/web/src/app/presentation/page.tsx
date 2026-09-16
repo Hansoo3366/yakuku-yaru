@@ -184,10 +184,10 @@ const slides: Slide[] = [
           <span className={styles.codeLabel}>TOKEN PAYLOAD</span>
           <pre>{`{
   "userId": 27,
-  "email": "user@example.com",
   "sessionVersion": 3,
+  "tokenType": "access",
   "iat": 1788390000,
-  "exp": 1788476400
+  "exp": 1788390900
 }`}</pre>
           <p>
             누구인지 판단할 최소 정보만 담습니다. 화면에 보여줄 닉네임·프로필은
@@ -205,22 +205,22 @@ const slides: Slide[] = [
           <div>
             <Timer aria-hidden="true" />
             <p>
-              <strong>유효기간</strong>은 일반 로그인 1일 · 로그인 상태 유지 선택
-              시 30일입니다
+              <strong>Access Token</strong>은 15분만 사용하고, 만료되면 서버가
+              새 토큰을 발급합니다
             </p>
           </div>
           <div>
             <Cookie aria-hidden="true" />
             <p>
-              일반 로그인은 <strong>세션 쿠키</strong> · 로그인 상태 유지는 브라우저
-              종료 후에도 30일 유지
+              <strong>Refresh Token</strong>은 일반 7일 · 로그인 상태 유지 30일,
+              두 토큰 모두 HttpOnly 쿠키로 전달합니다
             </p>
           </div>
           <div>
             <KeyRound aria-hidden="true" />
             <p>
-              비밀번호를 바꾸면 <strong>세션 버전</strong>을 올려, 그 전에
-              발급된 토큰을 전부 무효로 만듭니다
+              재발급할 때마다 Refresh Token을 <strong>교체</strong>하고,
+              재사용이 감지되면 같은 로그인 세션을 전부 끊습니다
             </p>
           </div>
         </div>
@@ -241,11 +241,11 @@ const slides: Slide[] = [
               '서버에 확인',
               '지금 쿠키로 로그인된 사용자인지 서버에 물어봄',
             ],
-            ['3', '성공', '사용자 정보를 받아 캐시와 전역 Store에 나눠 보관'],
+            ['3', 'Access 만료', 'Refresh Token으로 새 토큰을 한 번만 요청'],
             [
               '4',
-              '실패 또는 만료',
-              '상태를 비우고, 로그인해야 하는 화면이면 로그인 화면으로',
+              '자동 복구',
+              '성공하면 원래 요청 재시도 · 실패하면 로그인 상태 정리',
             ],
           ].map(([number, label, detail]) => (
             <div className={styles.timelineItem} key={number}>
@@ -256,9 +256,9 @@ const slides: Slide[] = [
           ))}
         </div>
         <div className={styles.timelineAnswer}>
-          토큰 자체는 브라우저 쿠키에 있어 새로고침해도 남아 있고, 그래서 다시
-          물어보면 로그인 상태가 복구됩니다 · 화면에서 버튼을 숨기는 것은 사용자
-          경험일 뿐, 데이터 검사는 서버가 다시 합니다
+          짧은 Access Token으로 탈취 피해 시간을 줄이고 · 긴 Refresh Token은
+          DB에서 해시·회전·폐기 이력을 관리합니다 · 비밀번호 변경 시 모든
+          Refresh 세션도 함께 폐기합니다
         </div>
       </div>
     ),
@@ -321,11 +321,7 @@ const slides: Slide[] = [
               'src/lib/api.ts',
               '주소 · JSON · 쿠키 · ApiError 처리',
             ],
-            [
-              '토큰 전달',
-              'HttpOnly 쿠키',
-              '브라우저가 요청마다 자동 첨부',
-            ],
+            ['토큰 전달', 'HttpOnly 쿠키', '브라우저가 요청마다 자동 첨부'],
           ].map(([question, answer, detail]) => (
             <div key={question}>
               <span>{question}</span>
@@ -380,7 +376,10 @@ const slides: Slide[] = [
     title: '실패 응답을 ApiError로 통일한다',
     content: (
       <div className={styles.errorSimple}>
-        <div className={styles.errorSimpleFlow} aria-label="공통 에러 처리 흐름">
+        <div
+          className={styles.errorSimpleFlow}
+          aria-label="공통 에러 처리 흐름"
+        >
           {[
             [
               '01 · SERVER',
@@ -431,7 +430,11 @@ const slides: Slide[] = [
             {[
               ['status', '403', '요청 실패 종류 확인'],
               ['code', 'EMAIL_NOT_VERIFIED', '이메일 인증 화면으로 이동'],
-              ['message', '이메일 인증이 필요합니다.', '사용자 안내로 바로 표시'],
+              [
+                'message',
+                '이메일 인증이 필요합니다.',
+                '사용자 안내로 바로 표시',
+              ],
             ].map(([field, value, action]) => (
               <div key={field}>
                 <code>{field}</code>
@@ -450,7 +453,10 @@ const slides: Slide[] = [
     title: '관계는 소유자와 개수를 기준으로 설계했다',
     content: (
       <div className={styles.dbSimple}>
-        <div className={styles.dbRelationBoard} aria-label="핵심 데이터베이스 관계도">
+        <div
+          className={styles.dbRelationBoard}
+          aria-label="핵심 데이터베이스 관계도"
+        >
           <div className={styles.dbRelationRow}>
             <span>팬 라운지</span>
             <div className={styles.dbRelationNode}>
@@ -468,7 +474,9 @@ const slides: Slide[] = [
               </div>
             </div>
             <b>1 : N</b>
-            <div className={`${styles.dbRelationNode} ${styles.dbRelationAccent}`}>
+            <div
+              className={`${styles.dbRelationNode} ${styles.dbRelationAccent}`}
+            >
               <strong>게시글</strong>
               <small>posts</small>
               <div className={styles.dbNodeKeys}>
@@ -516,7 +524,9 @@ const slides: Slide[] = [
               </div>
             </div>
             <b>1 : N</b>
-            <div className={`${styles.dbRelationNode} ${styles.dbRelationAccent}`}>
+            <div
+              className={`${styles.dbRelationNode} ${styles.dbRelationAccent}`}
+            >
               <strong>직관 기록</strong>
               <small>attendance_records</small>
               <div className={styles.dbNodeKeys}>
@@ -556,7 +566,9 @@ const slides: Slide[] = [
               </div>
             </div>
             <b>1 : N</b>
-            <div className={`${styles.dbRelationNode} ${styles.dbRelationAccent}`}>
+            <div
+              className={`${styles.dbRelationNode} ${styles.dbRelationAccent}`}
+            >
               <strong>동행자 연결</strong>
               <small>attendance_companions</small>
               <div className={styles.dbNodeKeys}>
@@ -608,7 +620,10 @@ const slides: Slide[] = [
               <strong>작성자 기준 권한 확인</strong>
             </div>
           </header>
-          <div className={styles.permissionFlow} aria-label="게시글 권한 확인 흐름">
+          <div
+            className={styles.permissionFlow}
+            aria-label="게시글 권한 확인 흐름"
+          >
             <div>
               <small>요청</small>
               <strong>수정 · 삭제</strong>
@@ -638,7 +653,9 @@ const slides: Slide[] = [
               </div>
             ))}
           </div>
-          <footer>화면에서 버튼을 숨겨도 API 서버에서 작성자 여부를 다시 확인</footer>
+          <footer>
+            화면에서 버튼을 숨겨도 API 서버에서 작성자 여부를 다시 확인
+          </footer>
         </section>
 
         <section className={styles.boardPanel}>
@@ -649,7 +666,10 @@ const slides: Slide[] = [
               <strong>필요한 구간만 목록 조회</strong>
             </div>
           </header>
-          <div className={styles.pagingFlow} aria-label="게시글 3페이지 조회 예시">
+          <div
+            className={styles.pagingFlow}
+            aria-label="게시글 3페이지 조회 예시"
+          >
             <div>
               <small>화면 요청</small>
               <code>page 3 · size 10</code>
@@ -686,7 +706,9 @@ const slides: Slide[] = [
               </div>
             ))}
           </div>
-          <footer>팬 라운지 목록은 한 번에 10개씩 받고 화면에서 페이지 구성</footer>
+          <footer>
+            팬 라운지 목록은 한 번에 10개씩 받고 화면에서 페이지 구성
+          </footer>
         </section>
       </div>
     ),
@@ -758,7 +780,10 @@ const slides: Slide[] = [
             <span>DEPLOY</span>
             <strong>한 대의 서버에서 교체</strong>
           </header>
-          <div className={styles.deployLimitDiagram} aria-label="현재 배포 흐름">
+          <div
+            className={styles.deployLimitDiagram}
+            aria-label="현재 배포 흐름"
+          >
             <span>사용자</span>
             <i>→</i>
             <span>GCP VM 1대</span>
@@ -766,9 +791,9 @@ const slides: Slide[] = [
             <span>Web · API 교체</span>
           </div>
           <p>
-            현재는 한 서버 안에서 실행 중인 Web·API를 새 버전으로 바로 교체합니다.
-            교체 순간에는 짧은 중단이 생길 수 있고, 실패해도 이전 버전으로 자동
-            복귀하지 않습니다.
+            현재는 한 서버 안에서 실행 중인 Web·API를 새 버전으로 바로
+            교체합니다. 교체 순간에는 짧은 중단이 생길 수 있고, 실패해도 이전
+            버전으로 자동 복귀하지 않습니다.
           </p>
           <footer>
             <ArrowRight aria-hidden="true" />
@@ -787,7 +812,10 @@ const slides: Slide[] = [
             <span>RATE LIMIT</span>
             <strong>서버가 늘어나면 요청 횟수가 나뉨</strong>
           </header>
-          <div className={styles.memoryLimitDiagram} aria-label="메모리 기반 요청 제한">
+          <div
+            className={styles.memoryLimitDiagram}
+            aria-label="메모리 기반 요청 제한"
+          >
             <div>
               <small>현재 · API 서버 1대</small>
               <code>사용자 A · 요청 10회</code>
@@ -796,22 +824,21 @@ const slides: Slide[] = [
             <span>서버 B에는 4회</span>
           </div>
           <p>
-            지금은 API 서버가 1대라 정확합니다. 서버가 여러 대가 되면 같은 사용자의
-            요청 기록이 서버마다 따로 저장되어 실제 총 10회를 6회와 4회로 나누어
-            인식할 수 있습니다.
+            지금은 API 서버가 1대라 정확합니다. 서버가 여러 대가 되면 같은
+            사용자의 요청 기록이 서버마다 따로 저장되어 실제 총 10회를 6회와
+            4회로 나누어 인식할 수 있습니다.
           </p>
           <footer>
             <ArrowRight aria-hidden="true" />
             <div>
               <b>개선 방안</b>
               <span>
-                모든 API 서버가 함께 보는 공용 저장소 Redis에 사용자 A의 총 10회를
-                기록 → 어느 서버가 요청을 받아도 같은 횟수 확인
+                모든 API 서버가 함께 보는 공용 저장소 Redis에 사용자 A의 총
+                10회를 기록 → 어느 서버가 요청을 받아도 같은 횟수 확인
               </span>
             </div>
           </footer>
         </section>
-
       </div>
     ),
   },
@@ -827,7 +854,10 @@ const slides: Slide[] = [
             <strong>배포 전 자동 검사 부족</strong>
             <b>현재 BUILD → DEPLOY</b>
           </header>
-          <div className={styles.ciLimitDiagram} aria-label="현재 자동 배포 검사 단계">
+          <div
+            className={styles.ciLimitDiagram}
+            aria-label="현재 자동 배포 검사 단계"
+          >
             <span>push</span>
             <i>→</i>
             <span>Docker build</span>
@@ -857,7 +887,10 @@ const slides: Slide[] = [
             <strong>뒤 페이지일수록 확인할 데이터 증가</strong>
             <b>/posts 10개 · /fans 18명</b>
           </header>
-          <div className={styles.offsetLimitDiagram} aria-label="OFFSET 증가 예시">
+          <div
+            className={styles.offsetLimitDiagram}
+            aria-label="OFFSET 증가 예시"
+          >
             {[
               ['1페이지', 'OFFSET 0', '10개 반환'],
               ['10페이지', 'OFFSET 90', '앞의 90개 통과 후 10개'],
@@ -880,8 +913,8 @@ const slides: Slide[] = [
             <div>
               <b>개선 방안</b>
               <span>
-                “마지막으로 본 게시글의 작성 시각·ID 이후 10개” 요청 → 앞의 990개를
-                다시 건너뛰지 않고 다음 결과부터 조회
+                “마지막으로 본 게시글의 작성 시각·ID 이후 10개” 요청 → 앞의
+                990개를 다시 건너뛰지 않고 다음 결과부터 조회
               </span>
             </div>
           </footer>

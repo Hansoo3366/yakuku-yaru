@@ -4,8 +4,8 @@ import { env } from '../config/env.js';
 
 export type AccessTokenPayload = {
   userId: number;
-  email: string;
   sessionVersion: number;
+  tokenType: 'access';
 };
 
 const JWT_ALGORITHM = 'HS256';
@@ -13,16 +13,13 @@ const JWT_ISSUER = 'yakuku-yaru-api';
 const JWT_AUDIENCE = 'yakuku-yaru-web';
 
 export function signAccessToken(
-  payload: AccessTokenPayload,
-  options: { rememberMe?: boolean } = {},
+  payload: Omit<AccessTokenPayload, 'tokenType'>,
 ) {
   const signOptions: SignOptions = {
-    expiresIn: (options.rememberMe
-      ? env.jwt.rememberExpiresIn
-      : env.jwt.expiresIn) as SignOptions['expiresIn'],
+    expiresIn: env.jwt.accessExpiresIn as SignOptions['expiresIn'],
   };
 
-  return jwt.sign(payload, env.jwt.secret, {
+  return jwt.sign({ ...payload, tokenType: 'access' }, env.jwt.secret, {
     ...signOptions,
     algorithm: JWT_ALGORITHM,
     audience: JWT_AUDIENCE,
@@ -31,9 +28,19 @@ export function signAccessToken(
 }
 
 export function verifyAccessToken(token: string) {
-  return jwt.verify(token, env.jwt.secret, {
+  const payload = jwt.verify(token, env.jwt.secret, {
     algorithms: [JWT_ALGORITHM],
     audience: JWT_AUDIENCE,
     issuer: JWT_ISSUER,
   }) as AccessTokenPayload;
+
+  if (
+    payload.tokenType !== 'access' ||
+    !Number.isInteger(payload.userId) ||
+    !Number.isInteger(Number(payload.sessionVersion))
+  ) {
+    throw new Error('Invalid access token payload');
+  }
+
+  return payload;
 }

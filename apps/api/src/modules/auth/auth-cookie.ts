@@ -1,52 +1,78 @@
 import type { Response } from 'express';
 import { env } from '../../config/env.js';
+import { durationToMs } from '../../utils/duration.js';
 
-export const AUTH_COOKIE_NAME = 'yakuku_session';
+export const ACCESS_COOKIE_NAME = 'yakuku_access';
+export const REFRESH_COOKIE_NAME = 'yakuku_refresh';
+const LEGACY_AUTH_COOKIE_NAME = 'yakuku_session';
 
-function getCookieMaxAgeMs(value: string) {
-  const normalizedValue = value.trim();
-  const match = normalizedValue.match(/^(\d+)([smhd])$/i);
+const sharedCookieOptions = {
+  httpOnly: true,
+  sameSite: 'lax' as const,
+  secure: env.nodeEnv === 'production',
+};
 
-  if (!match) {
-    return 24 * 60 * 60 * 1000;
-  }
-
-  const amount = Number(match[1]);
-  const unit = match[2].toLowerCase();
-  const multipliers: Record<string, number> = {
-    s: 1000,
-    m: 60 * 1000,
-    h: 60 * 60 * 1000,
-    d: 24 * 60 * 60 * 1000,
-  };
-
-  return amount * multipliers[unit];
+export function setAccessCookie(res: Response, token: string) {
+  res.cookie(ACCESS_COOKIE_NAME, token, {
+    ...sharedCookieOptions,
+    maxAge: durationToMs(env.jwt.accessExpiresIn),
+    path: '/api',
+  });
 }
 
-export function setAuthCookie(
+export function setRefreshCookie(
   res: Response,
   token: string,
-  options: { rememberMe?: boolean } = {},
+  options: { rememberMe: boolean; expiresAt: Date },
 ) {
-  res.cookie(AUTH_COOKIE_NAME, token, {
-    httpOnly: true,
+  res.cookie(REFRESH_COOKIE_NAME, token, {
+    ...sharedCookieOptions,
     maxAge: options.rememberMe
-      ? getCookieMaxAgeMs(env.jwt.rememberExpiresIn)
+      ? Math.max(0, options.expiresAt.getTime() - Date.now())
       : undefined,
-    sameSite: 'lax',
-    secure: env.nodeEnv === 'production',
+    path: '/api/auth',
   });
 }
 
-export function clearAuthCookie(res: Response) {
-  res.clearCookie(AUTH_COOKIE_NAME, {
-    httpOnly: true,
-    sameSite: 'lax',
-    secure: env.nodeEnv === 'production',
+export function setAuthCookies(
+  res: Response,
+  input: {
+    accessToken: string;
+    refreshToken: string;
+    rememberMe: boolean;
+    refreshExpiresAt: Date;
+  },
+) {
+  setAccessCookie(res, input.accessToken);
+  setRefreshCookie(res, input.refreshToken, {
+    rememberMe: input.rememberMe,
+    expiresAt: input.refreshExpiresAt,
+  });
+  res.clearCookie(LEGACY_AUTH_COOKIE_NAME, {
+    ...sharedCookieOptions,
+    path: '/',
   });
 }
 
-export function readCookieHeader(cookieHeader: string | undefined, name: string) {
+export function clearAuthCookies(res: Response) {
+  res.clearCookie(ACCESS_COOKIE_NAME, {
+    ...sharedCookieOptions,
+    path: '/api',
+  });
+  res.clearCookie(REFRESH_COOKIE_NAME, {
+    ...sharedCookieOptions,
+    path: '/api/auth',
+  });
+  res.clearCookie(LEGACY_AUTH_COOKIE_NAME, {
+    ...sharedCookieOptions,
+    path: '/',
+  });
+}
+
+export function readCookieHeader(
+  cookieHeader: string | undefined,
+  name: string,
+) {
   if (!cookieHeader) {
     return null;
   }

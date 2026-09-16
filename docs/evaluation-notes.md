@@ -6,27 +6,27 @@
 
 ### JWT 인증 구현
 
-로그인 성공 시 백엔드가 access token을 발급하고 httpOnly cookie로 내려줍니다.
+로그인 성공 시 백엔드가 15분 Access Token과 7일 또는 30일 Refresh Token을 별도 httpOnly cookie로 내려줍니다.
 
 토큰 payload:
 
 ```json
 {
   "userId": 1,
-  "email": "user@example.com",
-  "sessionVersion": 0
+  "sessionVersion": 0,
+  "tokenType": "access"
 }
 ```
 
 JWT 라이브러리가 발급 시각(`iat`), 만료 시각(`exp`), 발급자(`iss`), 대상(`aud`)도 추가합니다. 토큰에는 비밀번호나 프로필 같은 민감정보를 넣지 않습니다. API 요청 시 브라우저가 쿠키를 함께 보내고, 프론트엔드는 토큰 값을 직접 읽거나 저장하지 않습니다.
 
 ```txt
-Cookie: yakuku_session=<httpOnly JWT>
+Cookie: yakuku_access=<httpOnly JWT>; yakuku_refresh=<httpOnly opaque token>
 ```
 
 백엔드의 `authenticate` middleware는 JWT의 서명·만료·발급자·대상을 검사하고, 토큰의 `sessionVersion`을 DB의 `users.session_version`과 비교합니다. 검증이 끝나면 `req.user`에 사용자 정보를 넣습니다. 기존 Bearer 헤더도 호환 경로로 유지합니다.
 
-비밀번호 재설정 시 `users.session_version`을 증가시킵니다. 그 결과 이전 버전이 들어 있는 기존 JWT는 다음 인증 요청부터 거부됩니다. 일반 로그아웃은 현재 브라우저의 쿠키만 삭제하며 세션 버전을 올리지는 않습니다.
+Access Token 만료 시 공통 요청 함수가 `/auth/refresh`를 한 번 호출합니다. 서버는 DB의 해시와 상태를 확인하고 Refresh Token을 새 값으로 회전합니다. 이전 토큰 재사용이 감지되면 같은 token family를 모두 폐기합니다. 비밀번호 재설정은 `users.session_version`을 증가시키고 모든 Refresh 세션도 폐기하며, 로그아웃은 현재 family를 폐기합니다.
 
 ### 비밀번호 저장
 
@@ -86,7 +86,7 @@ Cookie: yakuku_session=<httpOnly JWT>
 
 관리 대상:
 
-- access token: API가 `yakuku_session` httpOnly cookie로 설정하며 프론트 JS에서는 값을 읽지 않음
+- 인증 토큰: API가 `yakuku_access`, `yakuku_refresh` httpOnly cookie로 설정하며 프론트 JS에서는 값을 읽지 않음
 - 로그인 사용자 정보: Zustand store + TanStack Query의 `/auth/me` 캐시
 - 팀/경기/직관 기록/순위/게시글/댓글: TanStack Query 캐시
 - 캘린더 보기/필터: Zustand store
@@ -97,7 +97,7 @@ Cookie: yakuku_session=<httpOnly JWT>
 
 ### 로그인 상태 유지
 
-로그인 성공 시 API가 httpOnly cookie로 access token을 설정합니다.
+로그인 성공 시 API가 httpOnly cookie로 Access Token과 Refresh Token을 설정합니다.
 
 새로고침 후에는 앱 provider가 `cookie-session`이라는 메모리 마커를 Zustand에 세팅합니다. 이 값은 JWT도 아니고 외부 라이브러리도 아니며, 쿠키 인증을 시도하기 위한 내부 표시입니다. 이후 TanStack Query가 `/auth/me`를 호출하고 브라우저가 실제 httpOnly 쿠키를 전송합니다.
 
@@ -114,6 +114,8 @@ Cookie: yakuku_session=<httpOnly JWT>
 - base URL 관리
 - JSON request/response 처리
 - `credentials: 'include'`를 통한 쿠키 전송
+- 401 응답 시 Refresh Token 회전 요청과 원래 요청 1회 재시도
+- 같은 브라우저의 동시 갱신 요청을 하나로 묶어 token reuse 오탐 방지
 - 실제 Bearer token을 전달한 호환 요청에서만 Authorization header 주입
 - 에러 응답을 `ApiError`로 변환
 - `204 No Content` 응답 처리

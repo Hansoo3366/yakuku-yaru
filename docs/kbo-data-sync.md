@@ -98,6 +98,28 @@ npm run sync:kbo-players:dev
 npm run sync:kbo-game-center:dev -- --mode=today
 ```
 
+## 관리자 UI 수동 갱신
+
+`/admin` → **데이터 갱신** 탭에서 동일한 sync 함수를 웹으로 실행할 수 있습니다.
+
+| Method | Path | 설명 |
+|--------|------|------|
+| `POST` | `/api/admin/sync-jobs` | `{ type }`으로 잡 시작 (202). 이미 실행 중이면 409 |
+| `GET` | `/api/admin/sync-jobs/current` | 실행 중 잡 또는 최근 완료 잡 |
+| `GET` | `/api/admin/sync-jobs/:jobId` | 단건 상태 조회 |
+
+`type` 예: `schedule-today`, `schedule-week`, `schedule-month`, `schedule-season`, `game-center-today`, `game-center-week`, `game-center-month`, `live`, `standings`, `projection`, `players`.
+
+선택 파라미터:
+
+| 필드 | 형식 | 용도 |
+|------|------|------|
+| `date` | `YYYY-MM-DD` | 당일/주간/라이브/경기센터 기준일 |
+| `year` | 2000~2100 | 시즌·월간·예상 순위 연도 |
+| `month` | 1~12 | 월간 동기화 (연도와 함께) |
+
+비우면 오늘/현재 기준으로 동작합니다. 상태는 인메모리이며 API 프로세스가 재시작되면 사라집니다. 한 번에 하나의 잡만 실행됩니다. 호스트 cron의 `flock`과 별개이므로 **크론 실행 시각과 겹치지 않게** 버튼을 누르세요.
+
 ## GitHub Actions
 
 KBO **스케줄** workflow는 제거했습니다. 배포만 `deploy.yml`을 사용합니다.
@@ -126,7 +148,7 @@ KBO **스케줄** workflow는 제거했습니다. 배포만 `deploy.yml`을 사�
 - 캘린더: 시간, 팀, 스코어, 취소 사유, 선발 투수
 - 경기 상세: 선발 투수 프로필, ERA, WHIP, WAR, QS, 라인업
 - 홈/마이페이지: 내 팀 경기와 직관 인사이트
-- 관리자: 경기 데이터 점검과 수동 수정
+- 관리자: 경기 데이터 점검과 수동 수정, `/admin` 데이터 갱신 탭에서 sync 실행
 
 ## 주의
 

@@ -2,7 +2,7 @@ import type { RequestHandler } from 'express';
 import { verifyAccessToken } from '../utils/jwt.js';
 import { HttpError } from '../utils/http-error.js';
 import {
-  AUTH_COOKIE_NAME,
+  ACCESS_COOKIE_NAME,
   readCookieHeader,
 } from '../modules/auth/auth-cookie.js';
 import { findUserSessionStateById } from '../modules/users/user.repository.js';
@@ -22,7 +22,10 @@ declare global {
 export const authenticate: RequestHandler = async (req, _res, next) => {
   const authorization = req.header('authorization');
   const [scheme, token] = authorization?.split(' ') ?? [];
-  const cookieToken = readCookieHeader(req.header('cookie'), AUTH_COOKIE_NAME);
+  const cookieToken = readCookieHeader(
+    req.header('cookie'),
+    ACCESS_COOKIE_NAME,
+  );
   const accessToken = scheme === 'Bearer' && token ? token : cookieToken;
 
   if (!accessToken) {
@@ -55,7 +58,10 @@ export const authenticate: RequestHandler = async (req, _res, next) => {
 export const optionalAuthenticate: RequestHandler = async (req, _res, next) => {
   const authorization = req.header('authorization');
   const [scheme, token] = authorization?.split(' ') ?? [];
-  const cookieToken = readCookieHeader(req.header('cookie'), AUTH_COOKIE_NAME);
+  const cookieToken = readCookieHeader(
+    req.header('cookie'),
+    ACCESS_COOKIE_NAME,
+  );
   const accessToken = scheme === 'Bearer' && token ? token : cookieToken;
 
   if (!accessToken) {

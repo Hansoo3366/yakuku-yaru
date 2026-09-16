@@ -89,12 +89,13 @@ KBO 공식 공개 API가 없으므로, KBO 일정/결과 페이지와 경기센�
 1. 사용자가 이메일과 비밀번호로 회원가입한다.
 2. API가 이메일 인증번호를 발송하고 인증 토큰을 저장한다.
 3. 사용자가 인증번호를 확인하면 `email_verified_at`을 기록한다.
-4. 로그인 성공 시 API가 `userId`, `email`, `sessionVersion`을 포함한 JWT를 발급한다.
-5. API는 JWT를 `yakuku_session` httpOnly cookie로 설정하고, 프론트엔드는 실제 토큰 값을 저장하거나 읽지 않는다.
+4. 로그인 성공 시 API가 `userId`, `sessionVersion`, `tokenType`을 포함한 15분 Access Token을 발급한다.
+5. API는 Access Token과 임의 문자열 Refresh Token을 별도 httpOnly cookie로 설정하고, Refresh Token의 SHA-256 hash만 DB에 저장한다.
 6. 새로고침 시 Zustand가 쿠키 확인용 `cookie-session` 메모리 마커를 설정하고 TanStack Query가 `/auth/me`를 호출한다.
 7. 공통 `request<T>`가 `credentials: 'include'`로 브라우저 쿠키를 API 요청에 포함한다.
-8. `authenticate` 미들웨어가 JWT와 DB의 `session_version`을 검증하고 `req.user`를 설정한다.
-9. 관리자 API는 추가로 `users.role = 'admin'`을 검사한다.
+8. `authenticate` 미들웨어가 Access Token과 DB의 `session_version`을 검증하고 `req.user`를 설정한다.
+9. Access Token 만료 시 공통 요청 함수가 Refresh Token을 회전하고 원래 요청을 한 번 재시도한다.
+10. 관리자 API는 추가로 `users.role = 'admin'`을 검사한다.
 
 ## Deployment
 

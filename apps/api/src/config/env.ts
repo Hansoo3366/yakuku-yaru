@@ -54,8 +54,10 @@ export const env = {
   allowedOrigins,
   jwt: {
     secret: jwtSecret,
-    expiresIn: process.env.JWT_EXPIRES_IN ?? '1d',
-    rememberExpiresIn: process.env.JWT_REMEMBER_EXPIRES_IN ?? '30d',
+    accessExpiresIn: process.env.JWT_ACCESS_EXPIRES_IN ?? '15m',
+    refreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN ?? '7d',
+    refreshRememberExpiresIn:
+      process.env.JWT_REFRESH_REMEMBER_EXPIRES_IN ?? '30d',
   },
   uploadDir: path.resolve(apiRoot, process.env.UPLOAD_DIR ?? 'uploads'),
   smtp: {

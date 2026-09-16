@@ -58,12 +58,16 @@ NEXT_PUBLIC_API_URL=https://YOUR_DOMAIN/api
 APP_URL=https://YOUR_DOMAIN
 APP_DOMAIN=YOUR_DOMAIN
 JWT_SECRET=replace-with-a-long-random-secret
-JWT_REMEMBER_EXPIRES_IN=30d
+JWT_ACCESS_EXPIRES_IN=15m
+JWT_REFRESH_EXPIRES_IN=7d
+JWT_REFRESH_REMEMBER_EXPIRES_IN=30d
 MYSQL_PASSWORD=replace-with-strong-password
 MYSQL_ROOT_PASSWORD=replace-with-strong-root-password
 ```
 
 `APP_URL`과 `NEXT_PUBLIC_API_URL`은 실제 HTTPS 서비스 도메인과 정확히 일치해야 합니다.
+
+인증 토큰 분리 배포에서는 API가 시작될 때 `refresh_sessions` 테이블을 자동 생성합니다. 별도 SQL 실행은 필요하지 않습니다. 기존 `yakuku_session` 쿠키는 새 인증 구조에서 사용하지 않으므로 배포 후 사용자는 최초 한 번 다시 로그인합니다.
 
 ## 4. 컨테이너 실행
 
@@ -201,11 +205,11 @@ ssh-keygen -lf ~/.ssh/github_actions_yakuku_yaru.pub
 
 #### B. GitHub Secrets (Repository → Settings → Secrets → Actions)
 
-| Secret | 값 |
-|--------|-----|
-| `DEPLOY_USER` | 서버 `whoami` 결과 (예: `hanso3366`) |
-| `DEPLOY_HOST` | GCP VM **외부 IP** (내부 IP 아님) |
-| `DEPLOY_PATH` | `/home/hanso3366/yakuku-yaru` |
+| Secret           | 값                                                         |
+| ---------------- | ---------------------------------------------------------- |
+| `DEPLOY_USER`    | 서버 `whoami` 결과 (예: `hanso3366`)                       |
+| `DEPLOY_HOST`    | GCP VM **외부 IP** (내부 IP 아님)                          |
+| `DEPLOY_PATH`    | `/home/hanso3366/yakuku-yaru`                              |
 | `DEPLOY_SSH_KEY` | A에서 복사한 private key **전체** (BEGIN~END, 따옴표 없음) |
 
 `DEPLOY_SSH_KEY`는 **Update**로 덮어쓰기. 줄바꿈이 깨지면 Secret을 삭제 후 새로 만드는 편이 낫습니다.
@@ -287,8 +291,9 @@ APP_DOMAIN=yakuku-yaru.today
 NEXT_PUBLIC_API_URL=https://yakuku-yaru.today/api
 
 JWT_SECRET=replace-with-long-random-secret
-JWT_EXPIRES_IN=1d
-JWT_REMEMBER_EXPIRES_IN=30d
+JWT_ACCESS_EXPIRES_IN=15m
+JWT_REFRESH_EXPIRES_IN=7d
+JWT_REFRESH_REMEMBER_EXPIRES_IN=30d
 
 SMTP_HOST=smtp.gmail.com
 SMTP_PORT=465

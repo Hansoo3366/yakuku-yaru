@@ -61,15 +61,15 @@ SQL과 데이터 변환을 담당하는 계층입니다. route가 HTTP 요청과
 
 ### JWT
 
-로그인 사용자를 증명하는 서명된 문자열입니다. 현재 payload에는 `userId`, `email`, `sessionVersion`이 들어가고, 라이브러리가 `iat`, `exp`, `iss`, `aud`를 추가합니다. JWT는 암호화 문서가 아니므로 비밀번호 같은 민감정보를 넣지 않습니다.
+로그인 사용자를 짧게 증명하는 서명된 문자열입니다. Access Token payload에는 `userId`, `sessionVersion`, `tokenType`이 들어가고, 라이브러리가 `iat`, `exp`, `iss`, `aud`를 추가합니다. JWT는 암호화 문서가 아니므로 비밀번호 같은 민감정보를 넣지 않습니다.
 
 ### HttpOnly cookie
 
-JavaScript가 값을 읽을 수 없고 브라우저가 요청에 자동으로 첨부하는 쿠키입니다. API는 JWT를 `yakuku_session` 쿠키로 설정합니다. 새로고침 후 로그인이 유지되는 기준 데이터는 이 쿠키입니다.
+JavaScript가 값을 읽을 수 없고 브라우저가 요청에 자동으로 첨부하는 쿠키입니다. API는 Access Token을 `yakuku_access`, Refresh Token을 `yakuku_refresh` 쿠키로 설정합니다. 두 토큰의 원문은 프론트엔드 코드에 노출되지 않습니다.
 
 ### sessionVersion
 
-기존 JWT를 서버에서 무효화하기 위한 사용자별 숫자입니다. JWT의 값과 DB의 `users.session_version`이 다르면 인증을 거부합니다. 현재는 비밀번호 재설정 시 DB 값을 증가시켜 기존 토큰을 무효화합니다. 일반 로그아웃은 현재 브라우저의 쿠키만 삭제합니다.
+기존 Access Token을 서버에서 무효화하기 위한 사용자별 숫자입니다. 토큰의 값과 DB의 `users.session_version`이 다르면 인증을 거부합니다. 비밀번호 재설정 시 DB 값을 증가시키고 해당 사용자의 Refresh 세션도 모두 폐기합니다. 일반 로그아웃은 현재 Refresh Token family를 폐기합니다.
 
 ### `cookie-session` marker
 

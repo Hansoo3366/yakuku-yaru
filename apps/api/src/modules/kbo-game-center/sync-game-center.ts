@@ -160,6 +160,7 @@ async function enrichLineupPlayersWithSearchIds(input: {
 export async function syncKboGameCenter(input?: {
   mode?: KboGameCenterSyncMode;
   dates?: string[];
+  reference?: Date;
 }) {
   const teamIdsByCode = await listKboTeamIdsByCode();
   const teamIdsByShortName = new Map<string, number>();
@@ -176,7 +177,9 @@ export async function syncKboGameCenter(input?: {
 
   const dates = input?.dates?.length
     ? input.dates
-    : await listKboGameCenterTargetDates(getDateRange(input?.mode ?? 'today'));
+    : await listKboGameCenterTargetDates(
+        getDateRange(input?.mode ?? 'today', input?.reference),
+      );
   let parsed = 0;
   let matched = 0;
   let pitcherUpserts = 0;

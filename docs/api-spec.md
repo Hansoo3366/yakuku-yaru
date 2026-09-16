@@ -2,7 +2,7 @@
 
 Base URL: `/api`
 
-인증이 필요한 API는 로그인 시 발급되는 httpOnly cookie(`yakuku_session`)를 사용합니다. 기존 `Authorization: Bearer <accessToken>` 헤더도 호환됩니다. Swagger UI와 OpenAPI JSON은 로컬에서 각각 `http://localhost:4000/api-docs`, `http://localhost:4000/api-docs.json`으로 제공하고, 운영에서는 `https://yakuku-yaru.today/api-docs`, `https://yakuku-yaru.today/api-docs.json`으로 제공합니다.
+인증이 필요한 API는 15분 Access Token 쿠키(`yakuku_access`)를 사용합니다. 만료 시 Refresh Token 쿠키(`yakuku_refresh`)를 회전해 재발급하며, 기존 `Authorization: Bearer <accessToken>` 헤더도 호환됩니다. Swagger UI와 OpenAPI JSON은 로컬에서 각각 `http://localhost:4000/api-docs`, `http://localhost:4000/api-docs.json`으로 제공하고, 운영에서는 `https://yakuku-yaru.today/api-docs`, `https://yakuku-yaru.today/api-docs.json`으로 제공합니다.
 
 ## Auth
 
@@ -11,6 +11,8 @@ Base URL: `/api`
 | `POST` | `/auth/register`                  | public   | 회원가입. 이메일 인증번호를 발송하고 내 팀을 함께 저장 |
 | `POST` | `/auth/check-registration`        | public   | 이메일/닉네임 중복 및 가입 가능 여부 확인              |
 | `POST` | `/auth/login`                     | public   | JWT 로그인                                             |
+| `POST` | `/auth/refresh`                   | cookie   | Refresh Token 회전 및 Access Token 재발급              |
+| `POST` | `/auth/logout`                    | cookie   | 현재 Refresh 세션 폐기 및 쿠키 삭제                    |
 | `GET`  | `/auth/me`                        | required | 현재 사용자 조회                                       |
 | `POST` | `/auth/verify-email`              | public   | 이메일 인증번호 검증                                   |
 | `POST` | `/auth/resend-verification-email` | public   | 인증번호 재발송                                        |
@@ -181,9 +183,13 @@ Base URL: `/api`
 | `GET`    | `/admin/games`                            | 경기/KBO 데이터 관리 목록 |
 | `POST`   | `/admin/games`                            | 경기 생성                 |
 | `PATCH`  | `/admin/games/:gameId`                    | 경기 운영 데이터 수정     |
+| `POST`   | `/admin/sync-jobs`                        | KBO 동기화 잡 시작 (202)  |
+| `GET`    | `/admin/sync-jobs/current`                | 실행 중/최근 동기화 잡    |
+| `GET`    | `/admin/sync-jobs/:jobId`                 | 동기화 잡 단건 조회       |
 
 `GET /admin/player-cheers`는 `keyword`, `teamId`, `rosterScope`, `page`, `size` query를 지원합니다.
 `PUT /admin/player-cheers/:playerId`는 `title`, `youtubeId`, `lyrics`를 저장합니다.
+`POST /admin/sync-jobs` body는 `{ "type": "...", "date"?: "YYYY-MM-DD", "year"?: number, "month"?: 1-12 }`입니다. 날짜는 당일/주간/라이브 기준일, 연·월은 월간·시즌·예상 순위 범위에 쓰입니다. 이미 실행 중이면 `409 SYNC_JOB_BUSY`입니다.
 
 ## Upload and Security Policy
 

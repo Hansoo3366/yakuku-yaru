@@ -1,4 +1,4 @@
-import { request } from './api';
+import { fetchWithAuthRetry, request } from './api';
 import { shouldSendAuthorizationHeader, type PublicUser } from './auth';
 
 export type AuthResponse = {
@@ -34,6 +34,7 @@ export function login(input: {
 export function logout() {
   return request<void>('/auth/logout', {
     method: 'POST',
+    refreshOnUnauthorized: false,
   });
 }
 
@@ -71,7 +72,9 @@ export function fetchMe(token: string) {
   });
 }
 
-export function verifyEmail(input: { email: string; code: string } | { token: string }) {
+export function verifyEmail(
+  input: { email: string; code: string } | { token: string },
+) {
   return request<{ verified: boolean }>('/auth/verify-email', {
     method: 'POST',
     body: input,
@@ -117,7 +120,6 @@ export function updateNickname(nickname: string, token: string) {
   });
 }
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api';
 export const PROFILE_PHOTO_ACCEPT =
   'image/jpeg,image/png,image/webp,image/heic,image/heif,image/avif,image/gif';
 const PROFILE_PHOTO_MAX_BYTES = 1024 * 1024;
@@ -126,7 +128,9 @@ const PROFILE_PHOTO_ALLOWED_TYPES = new Set(PROFILE_PHOTO_ACCEPT.split(','));
 
 async function optimizeProfilePhoto(photo: File) {
   if (!PROFILE_PHOTO_ALLOWED_TYPES.has(photo.type)) {
-    throw new Error('JPG, PNG, WebP, HEIC, AVIF, GIF 이미지만 업로드할 수 있어요.');
+    throw new Error(
+      'JPG, PNG, WebP, HEIC, AVIF, GIF 이미지만 업로드할 수 있어요.',
+    );
   }
 
   const bitmap = await createImageBitmap(photo);
@@ -171,13 +175,12 @@ export async function uploadProfilePhoto(photo: File, token: string) {
   const formData = new FormData();
   formData.set('photo', optimizedPhoto);
 
-  const response = await fetch(`${API_URL}/users/me/profile-photo`, {
+  const response = await fetchWithAuthRetry('/users/me/profile-photo', {
     method: 'POST',
     headers: shouldSendAuthorizationHeader(token)
       ? { Authorization: `Bearer ${token}` }
       : undefined,
     body: formData,
-    credentials: 'include',
   });
 
   if (!response.ok) {

@@ -6,6 +6,8 @@ import {
   COOKIE_SESSION_TOKEN,
   clearAccessToken,
   clearLegacyStoredAccessToken,
+  notifyAuthExpired,
+  registerAuthExpiredHandler,
   setCookieSessionToken,
   setRootAuthState,
   type PublicUser,
@@ -42,12 +44,16 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
   clearSession: () => {
     void logout().catch(() => undefined);
-    clearAccessToken();
-    applyTeamTheme(null);
-    setRootAuthState('guest');
-    if (typeof window !== 'undefined') {
-      window.dispatchEvent(new CustomEvent(AUTH_LOGOUT_EVENT));
-    }
-    set({ token: null, user: null, hasHydrated: true });
+    notifyAuthExpired();
   },
 }));
+
+registerAuthExpiredHandler(() => {
+  clearAccessToken();
+  applyTeamTheme(null);
+  setRootAuthState('guest');
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent(AUTH_LOGOUT_EVENT));
+  }
+  useAuthStore.setState({ token: null, user: null, hasHydrated: true });
+});

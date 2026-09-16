@@ -17,6 +17,7 @@ export type PublicUser = {
 };
 
 let currentSessionToken: string | null = null;
+let authExpiredHandler: (() => void) | null = null;
 
 export function clearLegacyStoredAccessToken() {
   if (typeof window !== 'undefined') {
@@ -36,8 +37,28 @@ export function clearAccessToken() {
   currentSessionToken = null;
 }
 
-export function shouldSendAuthorizationHeader(token: string | null | undefined) {
+export function shouldSendAuthorizationHeader(
+  token: string | null | undefined,
+) {
   return Boolean(token && token !== COOKIE_SESSION_TOKEN);
+}
+
+export function registerAuthExpiredHandler(handler: () => void) {
+  authExpiredHandler = handler;
+}
+
+export function notifyAuthExpired() {
+  if (authExpiredHandler) {
+    authExpiredHandler();
+    return;
+  }
+
+  clearAccessToken();
+  applyTeamTheme(null);
+  setRootAuthState('guest');
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent(AUTH_LOGOUT_EVENT));
+  }
 }
 
 export function setRootAuthState(state: 'authed' | 'guest') {
@@ -47,11 +68,6 @@ export function setRootAuthState(state: 'authed' | 'guest') {
 }
 
 export function performLogout(router: { replace: (href: string) => void }) {
-  clearAccessToken();
-  applyTeamTheme(null);
-  setRootAuthState('guest');
-  if (typeof window !== 'undefined') {
-    window.dispatchEvent(new CustomEvent(AUTH_LOGOUT_EVENT));
-  }
+  notifyAuthExpired();
   router.replace('/');
 }
