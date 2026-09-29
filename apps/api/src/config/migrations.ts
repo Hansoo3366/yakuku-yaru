@@ -700,7 +700,8 @@ export async function runMigrations() {
        ('창원 NC파크', '마산회원구와 창동 방면 식당을 함께 보기 좋고, 구장 주변 포장 메뉴도 많습니다.', 'NC파크 주차장은 경기일 빠르게 혼잡해질 수 있습니다. 임시 주차장 안내와 셔틀 정보를 확인하세요.', 'https://map.naver.com/p/search/창원%20NC파크'),
        ('고척스카이돔', '고척돔 주변과 구일역, 개봉역 방면 식당을 함께 찾기 좋습니다. 실내 구장이라 우천 시에도 일정 활용도가 높습니다.', '구장 주차 공간이 제한적입니다. 지하철 1호선 구일역 이용을 권장합니다.', 'https://map.naver.com/p/search/고척스카이돔'),
        ('수원 KT위즈파크', '수원종합운동장 주변과 화서역 방면 식당을 함께 보기 좋습니다.', '종합운동장 주차장은 경기일 혼잡합니다. 대중교통과 주변 공영주차장을 함께 확인하세요.', 'https://map.naver.com/p/search/수원%20KT위즈파크'),
-       ('인천 SSG랜더스필드', '문학경기장역 주변 포장 메뉴와 인천터미널 방면 식당을 함께 보기 좋습니다.', '문학경기장 주차장은 경기일 혼잡할 수 있습니다. 지하철 문학경기장역 이용을 권장합니다.', 'https://map.naver.com/p/search/인천%20SSG랜더스필드')
+       ('인천 SSG랜더스필드', '문학경기장역 주변 포장 메뉴와 인천터미널 방면 식당을 함께 보기 좋습니다.', '문학경기장 주차장은 경기일 혼잡할 수 있습니다. 지하철 문학경기장역 이용을 권장합니다.', 'https://map.naver.com/p/search/인천%20SSG랜더스필드'),
+       ('대구 삼성 라이온즈 파크', '대공원역 주변과 수성구 연호동·시지 방면 식당을 함께 보기 좋습니다. 구장 안 먹거리와 치킨 포장 선택지도 많습니다.', '구장 주차장은 경기일 일찍 혼잡해집니다. 대구 도시철도 2호선 대공원역 이용을 권장하고, 차량 이용 시 주변 공영주차장을 함께 확인하세요.', 'https://map.naver.com/p/search/대구%20삼성%20라이온즈%20파크')
      ON DUPLICATE KEY UPDATE
        food_summary = VALUES(food_summary),
        parking_summary = VALUES(parking_summary),
@@ -948,5 +949,19 @@ export async function runMigrations() {
          MODIFY COLUMN parking_memo TEXT NOT NULL`,
       );
     }
+  }
+
+  const hasStadiumNoteIsPublic = await columnExists(
+    'user_stadium_notes',
+    'is_public',
+  );
+
+  if (!hasStadiumNoteIsPublic) {
+    // 구장 정보 페이지에서 다른 팬 메모를 모아 보여준다. 기본 공개, 작성자가 비공개 전환 가능.
+    await db.execute(
+      `ALTER TABLE user_stadium_notes
+       ADD COLUMN is_public BOOLEAN NOT NULL DEFAULT TRUE AFTER parking_memo,
+       ADD KEY idx_user_stadium_notes_public (stadium, is_public, updated_at)`,
+    );
   }
 }

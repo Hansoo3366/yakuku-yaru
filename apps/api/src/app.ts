@@ -22,6 +22,7 @@ import { playerCheerRouter } from './modules/player-cheers/player-cheer.routes.j
 import { postRouter } from './modules/posts/post.routes.js';
 import { reminderRouter } from './modules/reminders/reminder.routes.js';
 import { reportRouter } from './modules/reports/report.routes.js';
+import { stadiumRouter } from './modules/stadium-notes/stadium.routes.js';
 import { teamRouter } from './modules/teams/team.routes.js';
 import { userRouter } from './modules/users/user.routes.js';
 import { healthRouter } from './routes/health.js';
@@ -119,6 +120,7 @@ export function createApp() {
   app.use('/api/attendance-records', attendanceRouter);
   app.use('/api/reminders', reminderRouter);
   app.use('/api/reports', reportRouter);
+  app.use('/api/stadiums', stadiumRouter);
 
   app.use(errorHandler);
 

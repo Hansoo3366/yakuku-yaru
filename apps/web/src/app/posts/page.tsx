@@ -88,6 +88,7 @@ export default function PostsPage() {
             팬 라운지
           </Link>
           <Link href="/fans">팬 찾기</Link>
+          <Link href="/stadiums">구장 정보</Link>
         </nav>
         <header className={styles.hero}>
           <div className={styles.heroCopy}>

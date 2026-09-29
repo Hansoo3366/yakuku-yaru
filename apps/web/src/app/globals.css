@@ -4473,6 +4473,29 @@ img {
   white-space: nowrap;
 }
 
+.stadium-seat-map__inline {
+  background: #f3f3f0;
+  border: 0;
+  cursor: zoom-in;
+  display: grid;
+  gap: 10px;
+  padding: 16px;
+  width: 100%;
+}
+
+.stadium-seat-map__inline img {
+  margin: 0 auto;
+  max-height: 420px;
+  object-fit: contain;
+  width: 100%;
+}
+
+.stadium-seat-map__inline span {
+  color: #707070;
+  font-size: 12px;
+  font-weight: 700;
+}
+
 @media (max-width: 720px) {
   .stadium-personal-notes .section-heading {
     align-items: stretch;

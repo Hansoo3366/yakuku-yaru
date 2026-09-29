@@ -334,6 +334,40 @@ export const openApiDocument = {
         },
       },
     },
+    '/stadiums': {
+      get: {
+        tags: ['Baseball'],
+        summary: 'List stadiums with guide and public fan note count',
+        responses: {
+          '200': {
+            description: 'Stadium list',
+          },
+        },
+      },
+    },
+    '/stadiums/{stadium}': {
+      get: {
+        tags: ['Baseball'],
+        summary: 'Get stadium guide and public fan notes',
+        parameters: [
+          {
+            name: 'stadium',
+            in: 'path',
+            required: true,
+            schema: { type: 'string' },
+            description: '구장 이름 (예: 잠실야구장)',
+          },
+        ],
+        responses: {
+          '200': {
+            description: 'Stadium guide and public notes',
+          },
+          '404': {
+            description: 'Stadium not found',
+          },
+        },
+      },
+    },
     '/users/me/favorite-team': {
       patch: {
         tags: ['Baseball'],

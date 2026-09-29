@@ -4,6 +4,7 @@ import { AppFooter, AppHeader } from '@/components/AppChrome';
 import { AppProviders } from '@/components/AppProviders';
 import { BottomNav } from '@/components/BottomNav';
 import { ServiceWorkerRegister } from '@/components/ServiceWorkerRegister';
+import { SiteGuide } from '@/components/SiteGuide';
 import { getAbsoluteUrl, getSiteUrl } from '@/lib/site-url';
 import './globals.css';
 
@@ -332,6 +333,7 @@ export default async function RootLayout({
           <BottomNav />
           <AppFooter />
           <ServiceWorkerRegister />
+          <SiteGuide />
         </AppProviders>
       </body>
     </html>

@@ -37,7 +37,8 @@ export function BottomNav() {
       {visibleNavItems.map((item) => {
         const Icon = item.icon;
         const isActive =
-          item.href === '/posts' && pathname.startsWith('/fans')
+          item.href === '/posts' &&
+          (pathname.startsWith('/fans') || pathname.startsWith('/stadiums'))
             ? true
             : 'exact' in item && item.exact
               ? pathname === item.href

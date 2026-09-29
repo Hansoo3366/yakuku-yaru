@@ -1,0 +1,407 @@
+.page {
+  --stadium-black: #111111;
+  --stadium-dugout: #f3f3f0;
+  --stadium-muted: #707070;
+  gap: 0;
+  max-width: 1120px;
+  padding-top: clamp(20px, 4vw, 42px);
+}
+
+.backLink {
+  color: #858585;
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 800;
+  margin-bottom: 14px;
+}
+
+.backLink:hover {
+  color: #111111;
+}
+
+.hero {
+  align-items: end;
+  background: var(--stadium-black);
+  color: #ffffff;
+  display: grid;
+  gap: 24px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  min-height: 200px;
+  padding: clamp(28px, 5vw, 50px);
+  position: relative;
+}
+
+.hero::before {
+  background: var(--stadium-bar, var(--team-color, #ffffff));
+  content: '';
+  height: 14px;
+  inset: 0 0 auto;
+  position: absolute;
+}
+
+.eyebrow {
+  color: rgba(255, 255, 255, 0.58);
+  display: block;
+  font-family: ui-monospace, 'SFMono-Regular', Consolas, monospace;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  margin-bottom: 14px;
+  text-transform: uppercase;
+}
+
+.hero h1 {
+  color: #ffffff;
+  font-size: var(--type-page-title);
+  font-weight: 900;
+  letter-spacing: -0.045em;
+  line-height: 1.12;
+}
+
+.hero p {
+  color: rgba(255, 255, 255, 0.66);
+  font-size: 13px;
+  line-height: 1.65;
+  margin-top: 14px;
+  max-width: 52ch;
+}
+
+.heroActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.heroActions a {
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 800;
+  padding: 8px 12px;
+}
+
+.heroActions a:hover {
+  background: #ffffff;
+  color: var(--stadium-black);
+}
+
+.heroCount {
+  align-items: baseline;
+  display: flex;
+  font-family: ui-monospace, 'SFMono-Regular', Consolas, monospace;
+  gap: 7px;
+}
+
+.heroCount strong {
+  font-size: var(--type-data-large);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.heroCount span {
+  color: rgba(255, 255, 255, 0.58);
+  font-size: 11px;
+}
+
+/* 목록 */
+.grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  padding-top: 28px;
+}
+
+.card {
+  background: var(--stadium-dugout);
+  color: inherit;
+  display: grid;
+  gap: 10px;
+  min-height: 180px;
+  padding: 20px;
+  position: relative;
+  transition:
+    background 180ms ease,
+    transform 180ms ease;
+}
+
+.card::before {
+  background: var(--stadium-bar, #111111);
+  content: '';
+  height: 10px;
+  inset: 0 0 auto;
+  position: absolute;
+}
+
+.card:hover {
+  background: #ebebe6;
+  transform: translateY(-2px);
+}
+
+.cardHead {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+}
+
+.teamLogos {
+  display: flex;
+  flex-shrink: 0;
+  gap: 4px;
+}
+
+.teamLogos img {
+  background: #ffffff;
+  height: 34px;
+  object-fit: contain;
+  padding: 4px;
+  width: 34px;
+}
+
+.heroTitle {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.heroTitle .teamLogos img {
+  height: 40px;
+  width: 40px;
+}
+
+.heroTeams {
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 12px;
+  font-weight: 700;
+  margin-top: 8px;
+}
+
+.card h2 {
+  font-size: 18px;
+  font-weight: 900;
+  letter-spacing: -0.03em;
+}
+
+.card p {
+  color: var(--stadium-muted);
+  display: -webkit-box;
+  font-size: 13px;
+  line-height: 1.6;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
+.cardMeta {
+  align-self: end;
+  color: var(--stadium-muted);
+  display: flex;
+  font-size: 12px;
+  gap: 10px;
+  justify-content: space-between;
+}
+
+.cardMeta strong {
+  color: var(--stadium-black);
+}
+
+/* 상세 */
+.seatMap {
+  padding-top: 24px;
+}
+
+.toolbar {
+  display: grid;
+  gap: 16px;
+  padding: 34px 0 20px;
+}
+
+.toolbarTop {
+  align-items: center;
+  display: grid;
+  gap: 20px;
+  grid-template-columns: minmax(0, 1fr) minmax(240px, 360px);
+}
+
+.toolbarTitle strong {
+  display: block;
+  font-size: var(--type-section-title);
+  font-weight: 900;
+  letter-spacing: -0.035em;
+}
+
+.toolbarTitle span {
+  color: var(--stadium-muted);
+  display: block;
+  font-size: 12px;
+  margin-top: 3px;
+}
+
+.search {
+  background: var(--stadium-dugout);
+  display: flex;
+  min-height: 46px;
+}
+
+.search:focus-within {
+  box-shadow: inset 0 0 0 2px var(--stadium-surface, var(--stadium-black));
+}
+
+.search input {
+  background: transparent;
+  border: 0;
+  flex: 1;
+  min-width: 0;
+  outline: 0;
+  padding: 0 15px;
+}
+
+.filters {
+  display: flex;
+  gap: 7px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  scrollbar-width: none;
+}
+
+.filters::-webkit-scrollbar {
+  display: none;
+}
+
+.filter {
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid var(--color-line, #e5e7eb);
+  color: #555555;
+  display: inline-flex;
+  flex: 0 0 auto;
+  font-size: 12px;
+  font-weight: 700;
+  gap: 6px;
+  min-height: 36px;
+  padding: 0 13px;
+}
+
+.filter small {
+  color: #9a9a9a;
+  font-family: ui-monospace, 'SFMono-Regular', Consolas, monospace;
+  font-size: 11px;
+}
+
+.filter:hover,
+.filter.isActive {
+  background: var(--stadium-surface, var(--stadium-black));
+  border-color: var(--stadium-surface, var(--stadium-black));
+  color: #ffffff;
+}
+
+.filter.isActive small,
+.filter:hover small {
+  color: rgba(255, 255, 255, 0.66);
+}
+
+.filter:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+
+.filter:disabled:hover {
+  background: #ffffff;
+  border-color: var(--color-line, #e5e7eb);
+  color: #555555;
+}
+
+.notes {
+  display: grid;
+  gap: 12px;
+}
+
+.note {
+  background: #ffffff;
+  border: 1px solid var(--color-line, #e5e7eb);
+  display: grid;
+  gap: 14px;
+  padding: 18px 20px;
+}
+
+.noteAuthor {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+}
+
+.noteAuthor img {
+  border-radius: 12px;
+  height: 36px;
+  object-fit: cover;
+  width: 36px;
+}
+
+.noteAuthor a {
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.noteAuthor small {
+  color: var(--stadium-muted);
+  display: block;
+  font-size: 11px;
+}
+
+.noteBody {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.noteField h3 {
+  color: var(--stadium-muted);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  margin-bottom: 4px;
+}
+
+.noteField p {
+  font-size: 14px;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.noteField mark {
+  background: color-mix(in srgb, var(--stadium-color, #f59e0b) 16%, #ffffff);
+  border-radius: 3px;
+  box-shadow: inset 0 -2px 0 var(--stadium-color, #f59e0b);
+  color: inherit;
+  font-weight: 800;
+  padding: 0 2px;
+}
+
+.empty {
+  padding: 24px 0;
+}
+
+.myNote {
+  padding-top: 36px;
+}
+
+@media (max-width: 900px) {
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .hero,
+  .toolbarTop,
+  .noteBody {
+    grid-template-columns: 1fr;
+  }
+
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}

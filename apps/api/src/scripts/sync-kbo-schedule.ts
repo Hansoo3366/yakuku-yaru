@@ -1,3 +1,4 @@
+import { installCrashAlerts } from '../lib/error-alert.js';
 import { runMigrations } from '../config/migrations.js';
 import {
   runKboSyncMode,
@@ -35,6 +36,8 @@ function parseArgs(argv: string[]) {
 }
 
 const { mode, seasonYear, months } = parseArgs(process.argv.slice(2));
+
+installCrashAlerts('kbo-sync:schedule');
 
 await runMigrations();
 

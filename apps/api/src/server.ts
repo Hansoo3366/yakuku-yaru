@@ -2,6 +2,9 @@ import { createApp } from './app.js';
 import { env } from './config/env.js';
 import { runMigrations } from './config/migrations.js';
 import { startKboScheduleSyncJob } from './jobs/kbo-schedule-sync.job.js';
+import { installCrashAlerts } from './lib/error-alert.js';
+
+installCrashAlerts('api');
 
 await runMigrations();
 

@@ -1,6 +1,8 @@
 export const queryKeys = {
   me: (token: string | null | undefined) => ['me', token] as const,
   teams: () => ['teams'] as const,
+  stadiums: () => ['stadiums'] as const,
+  stadium: (stadium: string) => ['stadium', stadium] as const,
   teamStandings: (seasonYear?: number) => ['team-standings', seasonYear] as const,
   seasonProjection: (seasonYear?: number) =>
     ['season-projection', seasonYear] as const,

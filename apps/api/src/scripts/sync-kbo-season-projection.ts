@@ -1,3 +1,4 @@
+import { installCrashAlerts } from '../lib/error-alert.js';
 import { runMigrations } from '../config/migrations.js';
 import { generateKboSeasonProjection } from '../modules/kbo-season-projection/generate-season-projection.js';
 
@@ -13,6 +14,8 @@ function readNumberArg(name: string) {
 
   return Number.isFinite(parsed) ? parsed : undefined;
 }
+
+installCrashAlerts('kbo-sync:projection');
 
 await runMigrations();
 

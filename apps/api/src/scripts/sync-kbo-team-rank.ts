@@ -1,5 +1,8 @@
+import { installCrashAlerts } from '../lib/error-alert.js';
 import { runMigrations } from '../config/migrations.js';
 import { syncKboTeamRank } from '../modules/kbo-team-rank/sync-team-rank.js';
+
+installCrashAlerts('kbo-sync:standings');
 
 await runMigrations();
 

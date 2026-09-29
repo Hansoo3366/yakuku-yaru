@@ -53,6 +53,7 @@ export default function FansPage() {
         >
           팬 찾기
         </Link>
+        <Link href="/stadiums">구장 정보</Link>
       </nav>
       <header className={styles.hero}>
         <div>

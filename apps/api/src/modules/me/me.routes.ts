@@ -158,10 +158,11 @@ meRouter.put(
   profileUpdateRateLimit,
   async (req, res, next) => {
     try {
-      const { stadium, foodMemo, parkingMemo } = req.body as {
+      const { stadium, foodMemo, parkingMemo, isPublic } = req.body as {
         stadium?: string;
         foodMemo?: string;
         parkingMemo?: string;
+        isPublic?: boolean;
       };
       const normalizedStadium =
         typeof stadium === 'string' ? normalizeStadiumName(stadium) : null;
@@ -198,6 +199,8 @@ meRouter.put(
         stadium: normalizedStadium,
         foodMemo: normalizedFoodMemo,
         parkingMemo: normalizedParkingMemo,
+        // 값을 보내지 않은 구버전 클라이언트는 기본 공개로 저장한다.
+        isPublic: isPublic !== false,
       });
 
       res.json({ note });

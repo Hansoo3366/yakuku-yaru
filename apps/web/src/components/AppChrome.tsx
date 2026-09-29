@@ -12,6 +12,7 @@ import { useTeamTheme } from '@/lib/team-theme';
 import { getProfileImageSrc } from '@/lib/profile-image';
 import { NotificationBell } from '@/components/NotificationBell';
 import { SERVICE_CONTACT_EMAIL } from '@/lib/service-contact';
+import { openSiteGuide } from '@/lib/site-guide';
 
 const primaryLinks: Array<{
   href: string;
@@ -23,6 +24,7 @@ const primaryLinks: Array<{
   { href: '/cheers', label: '응원가' },
   { href: '/posts', label: '팬 라운지' },
   { href: '/fans', label: '팬 찾기' },
+  { href: '/stadiums', label: '구장 정보' },
   { href: '/me', label: '마이페이지' },
 ];
 
@@ -118,6 +120,13 @@ export function AppHeader() {
         </nav>
 
         <div className="account-actions">
+          <button
+            className="account-link account-guide"
+            onClick={openSiteGuide}
+            type="button"
+          >
+            가이드
+          </button>
           <div className="auth-only-authed">
             <NotificationBell userId={user?.id ?? null} />
             <Link className="account-link account-name" href="/me">
@@ -171,6 +180,7 @@ export function AppFooter() {
           <Link href="/cheers">응원가</Link>
           <Link href="/posts">팬 라운지</Link>
           <Link href="/fans">팬 찾기</Link>
+          <Link href="/stadiums">구장 정보</Link>
           {user ? <Link href="/me">마이페이지</Link> : null}
         </nav>
         <div className="site-footer-legal">
@@ -181,6 +191,13 @@ export function AppFooter() {
             <a href="/api-docs/" rel="noreferrer" target="_blank">
               API 문서
             </a>
+            <button
+              className="site-footer-guide"
+              onClick={openSiteGuide}
+              type="button"
+            >
+              사이트 가이드
+            </button>
             <a href={`mailto:${SERVICE_CONTACT_EMAIL}`}>문의</a>
           </nav>
           <p>

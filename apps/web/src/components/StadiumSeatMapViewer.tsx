@@ -6,6 +6,8 @@ import { getStadiumSeatMap, type StadiumSeatMap } from '@/lib/stadium-seat-map';
 
 type Props = {
   stadium: string;
+  /** inline: 배치도 이미지를 바로 보여주고 누르면 크게 보기 */
+  variant?: 'button' | 'inline';
 };
 
 function StadiumSeatMapModal({
@@ -78,7 +80,7 @@ function StadiumSeatMapModal({
   );
 }
 
-export function StadiumSeatMapViewer({ stadium }: Props) {
+export function StadiumSeatMapViewer({ stadium, variant = 'button' }: Props) {
   const seatMap = getStadiumSeatMap(stadium);
   const [isOpen, setIsOpen] = useState(false);
   const closeModal = useCallback(() => setIsOpen(false), []);
@@ -89,13 +91,26 @@ export function StadiumSeatMapViewer({ stadium }: Props) {
 
   return (
     <>
-      <button
-        className="btn btn-secondary stadium-seat-map__open"
-        onClick={() => setIsOpen(true)}
-        type="button"
-      >
-        좌석 배치도
-      </button>
+      {variant === 'inline' ? (
+        <button
+          aria-label={`${seatMap.label} 크게 보기`}
+          className="stadium-seat-map__inline"
+          onClick={() => setIsOpen(true)}
+          type="button"
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element -- 구장 좌석 배치도 정적 이미지 */}
+          <img alt={seatMap.label} src={seatMap.src} />
+          <span>{seatMap.label} · 눌러서 크게 보기</span>
+        </button>
+      ) : (
+        <button
+          className="btn btn-secondary stadium-seat-map__open"
+          onClick={() => setIsOpen(true)}
+          type="button"
+        >
+          좌석 배치도
+        </button>
+      )}
       {isOpen ? (
         <StadiumSeatMapModal
           onClose={closeModal}

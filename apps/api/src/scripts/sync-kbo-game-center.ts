@@ -1,3 +1,4 @@
+import { installCrashAlerts } from '../lib/error-alert.js';
 import { syncLog } from '../lib/sync-log.js';
 import { runMigrations } from '../config/migrations.js';
 import {
@@ -32,6 +33,8 @@ function parseArgs(argv: string[]) {
 }
 
 const { mode, dates } = parseArgs(process.argv.slice(2));
+
+installCrashAlerts('kbo-sync:game-center');
 
 await runMigrations();
 

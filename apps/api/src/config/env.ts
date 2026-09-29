@@ -68,6 +68,19 @@ export const env = {
     password: process.env.SMTP_PASSWORD ?? '',
     from: process.env.SMTP_FROM ?? process.env.SMTP_USER ?? '',
   },
+  errorAlert: {
+    /** 기본값: production에서만 켬 */
+    enabled:
+      process.env.ERROR_ALERT_ENABLED === 'true' ||
+      (process.env.ERROR_ALERT_ENABLED !== 'false' && nodeEnv === 'production'),
+    /** 쉼표로 여러 명 지정 가능. 비우면 SMTP_USER로 발송 */
+    recipients: (process.env.ERROR_ALERT_EMAIL || process.env.SMTP_USER || '')
+      .split(',')
+      .map((email) => email.trim())
+      .filter(Boolean),
+    /** 같은 오류는 이 시간 동안 1번만 메일 발송 (기본 10분) */
+    cooldownMs: Number(process.env.ERROR_ALERT_COOLDOWN_MS ?? 10 * 60 * 1000),
+  },
   database: {
     host: process.env.MYSQL_HOST ?? 'localhost',
     port: Number(process.env.MYSQL_PORT ?? 3306),

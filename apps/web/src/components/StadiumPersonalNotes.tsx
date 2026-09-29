@@ -1,13 +1,17 @@
 'use client';
 
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { ApiError } from '@/lib/api';
 import { useAuthStore } from '@/lib/auth-store';
 import {
   fetchUserStadiumNote,
+  getStadiumPath,
   saveUserStadiumNote,
 } from '@/lib/stadium-note-api';
+import { queryKeys } from '@/lib/query-keys';
 import { StadiumSeatMapViewer } from '@/components/StadiumSeatMapViewer';
 import { validateStadiumNoteClient } from '@/lib/user-input';
 import { formatKoreanDateTimeShort } from '@/lib/date-format';
@@ -27,6 +31,7 @@ function formatUpdatedAt(value: string | null) {
 export function StadiumPersonalNotes({ stadium }: Props) {
   const [foodMemo, setFoodMemo] = useState('');
   const [parkingMemo, setParkingMemo] = useState('');
+  const [isPublic, setIsPublic] = useState(true);
   const [updatedAt, setUpdatedAt] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -34,6 +39,9 @@ export function StadiumPersonalNotes({ stadium }: Props) {
   const [errorMessage, setErrorMessage] = useState('');
   const token = useAuthStore((state) => state.token);
   const hasHydrated = useAuthStore((state) => state.hasHydrated);
+  const queryClient = useQueryClient();
+  const stadiumPath = getStadiumPath(stadium);
+  const isOnStadiumPage = usePathname() === stadiumPath;
 
   useEffect(() => {
     if (!hasHydrated) {
@@ -55,6 +63,7 @@ export function StadiumPersonalNotes({ stadium }: Props) {
 
         setFoodMemo(response.note?.foodMemo ?? '');
         setParkingMemo(response.note?.parkingMemo ?? '');
+        setIsPublic(response.note?.isPublic ?? true);
         setUpdatedAt(response.note?.updatedAt ?? null);
       })
       .catch(() => {
@@ -92,11 +101,16 @@ export function StadiumPersonalNotes({ stadium }: Props) {
 
     try {
       const response = await saveUserStadiumNote(
-        { stadium, foodMemo, parkingMemo },
+        { stadium, foodMemo, parkingMemo, isPublic },
         token,
       );
       setFoodMemo(response.note?.foodMemo ?? '');
       setParkingMemo(response.note?.parkingMemo ?? '');
+      setIsPublic(response.note?.isPublic ?? isPublic);
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.stadium(stadium),
+      });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.stadiums() });
       setUpdatedAt(response.note?.updatedAt ?? null);
       setStatusMessage(
         response.note ? '구장 메모를 저장했어요.' : '구장 메모를 비웠어요.',
@@ -120,12 +134,17 @@ export function StadiumPersonalNotes({ stadium }: Props) {
             <h2>구장 메모</h2>
             <p>{stadium}</p>
           </div>
-          <StadiumSeatMapViewer stadium={stadium} />
+          {isOnStadiumPage ? null : <StadiumSeatMapViewer stadium={stadium} />}
         </div>
         <p className="score-input-hint">
           로그인하면 맛집·주차 메모를 저장할 수 있어요. 같은 구장의 다른
           경기에서도 이어서 볼 수 있습니다. <Link href="/login">로그인</Link>
         </p>
+        {isOnStadiumPage ? null : (
+          <Link className="btn btn-secondary btn-sm" href={stadiumPath}>
+            다른 팬들의 구장 메모 보기
+          </Link>
+        )}
       </section>
     );
   }
@@ -137,16 +156,20 @@ export function StadiumPersonalNotes({ stadium }: Props) {
           <h2>구장 메모</h2>
           <p>
             {stadium} — 나만의 맛집·주차 정보입니다. 이 구장의 다른 경기에서도
-            같은 내용이 보입니다.
+            같은 내용이 보이고, 공개하면 구장 정보 페이지에 함께 모여요.
+            {isOnStadiumPage ? null : (
+              <>
+                {' '}
+                <Link href={stadiumPath}>다른 팬 메모 보기 →</Link>
+              </>
+            )}
           </p>
         </div>
-        <StadiumSeatMapViewer stadium={stadium} />
+        {isOnStadiumPage ? null : <StadiumSeatMapViewer stadium={stadium} />}
       </div>
 
       {isLoading ? (
-        <p className="muted stadium-note-loading">
-          메모 불러오는 중…
-        </p>
+        <p className="muted stadium-note-loading">메모 불러오는 중…</p>
       ) : (
         <div className="form-grid">
           <div className="field">
@@ -190,6 +213,16 @@ export function StadiumPersonalNotes({ stadium }: Props) {
               value={parkingMemo}
             />
           </div>
+
+          <label className="checkbox-field">
+            <input
+              checked={isPublic}
+              name="stadiumNoteIsPublic"
+              onChange={(event) => setIsPublic(event.target.checked)}
+              type="checkbox"
+            />
+            구장 정보 페이지에 공개 (닉네임과 함께 표시돼요)
+          </label>
 
           {updatedAt ? (
             <span className="field-hint">

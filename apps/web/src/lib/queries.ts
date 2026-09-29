@@ -22,6 +22,7 @@ import {
   listTeamCheers,
 } from '@/lib/player-cheer-api';
 import { queryKeys } from '@/lib/query-keys';
+import { fetchStadium, listStadiums } from '@/lib/stadium-note-api';
 
 export function useMeQuery(token: string | null | undefined) {
   return useQuery({
@@ -36,6 +37,22 @@ export function useTeamsQuery() {
     queryKey: queryKeys.teams(),
     queryFn: listTeams,
     staleTime: 1000 * 60 * 60,
+  });
+}
+
+export function useStadiumsQuery() {
+  return useQuery({
+    queryKey: queryKeys.stadiums(),
+    queryFn: listStadiums,
+    staleTime: 1000 * 60,
+  });
+}
+
+export function useStadiumQuery(stadium: string) {
+  return useQuery({
+    queryKey: queryKeys.stadium(stadium),
+    queryFn: () => fetchStadium(stadium),
+    staleTime: 1000 * 30,
   });
 }
 

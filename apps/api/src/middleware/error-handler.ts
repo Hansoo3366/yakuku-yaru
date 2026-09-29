@@ -1,8 +1,9 @@
 import type { ErrorRequestHandler } from 'express';
 import multer from 'multer';
+import { notifyError } from '../lib/error-alert.js';
 import { HttpError } from '../utils/http-error.js';
 
-export const errorHandler: ErrorRequestHandler = (error, _req, res, _next) => {
+export const errorHandler: ErrorRequestHandler = (error, req, res, _next) => {
   if (error instanceof HttpError) {
     res.status(error.statusCode).json({
       code: error.code,
@@ -63,6 +64,20 @@ export const errorHandler: ErrorRequestHandler = (error, _req, res, _next) => {
   }
 
   console.error(error);
+
+  // 쿼리스트링에는 토큰 등이 섞일 수 있어 경로만 남긴다.
+  const path = req.originalUrl.split('?')[0];
+  notifyError({
+    source: 'api',
+    title: `500 ${req.method} ${path}`,
+    error,
+    context: {
+      요청: `${req.method} ${path}`,
+      사용자ID: req.user?.id,
+      IP: req.ip,
+      'User-Agent': req.header('user-agent'),
+    },
+  });
 
   res.status(500).json({
     code: 'INTERNAL_SERVER_ERROR',

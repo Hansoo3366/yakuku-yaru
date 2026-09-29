@@ -1,5 +1,6 @@
 import cron from 'node-cron';
 import { env } from '../config/env.js';
+import { notifyError } from '../lib/error-alert.js';
 import { generateKboSeasonProjection } from '../modules/kbo-season-projection/generate-season-projection.js';
 import { syncKboTeamRank } from '../modules/kbo-team-rank/sync-team-rank.js';
 import { runKboSyncMode } from '../modules/kbo-schedule/sync-modes.js';
@@ -73,6 +74,11 @@ export function startKboScheduleSyncJob() {
       () => {
         void runGuarded('week').catch((error) => {
           console.error('[kbo-sync] 주간(일일) 동기화 실패', error);
+          notifyError({
+            source: 'kbo-sync:cron',
+            title: '주간(일일) 동기화 실패',
+            error,
+          });
         });
       },
       { timezone: KST_TIME_ZONE },
@@ -90,6 +96,11 @@ export function startKboScheduleSyncJob() {
       () => {
         void runGuarded('today').catch((error) => {
           console.error('[kbo-sync] 당일(시간) 동기화 실패', error);
+          notifyError({
+            source: 'kbo-sync:cron',
+            title: '당일(시간) 동기화 실패',
+            error,
+          });
         });
       },
       { timezone: KST_TIME_ZONE },
@@ -107,6 +118,11 @@ export function startKboScheduleSyncJob() {
       () => {
         void runProjectionGuarded().catch((error) => {
           console.error('[kbo-projection] 시즌 예상 순위 저장 실패', error);
+          notifyError({
+            source: 'kbo-projection:cron',
+            title: '시즌 예상 순위 저장 실패',
+            error,
+          });
         });
       },
       { timezone: KST_TIME_ZONE },
@@ -121,6 +137,11 @@ export function startKboScheduleSyncJob() {
     setTimeout(() => {
       void runGuarded('week').catch((error) => {
         console.error('[kbo-sync] 시작 시 주간 동기화 실패', error);
+        notifyError({
+          source: 'kbo-sync:cron',
+          title: '시작 시 주간 동기화 실패',
+          error,
+        });
       });
     }, delayMs);
     console.log(`[kbo-sync] API 기동 ${delayMs / 1000}초 후 주간 동기화 1회 예정`);

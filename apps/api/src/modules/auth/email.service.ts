@@ -1,5 +1,5 @@
-import nodemailer from 'nodemailer';
 import { env } from '../../config/env.js';
+import { createSmtpTransport, isSmtpConfigured } from '../../lib/mailer.js';
 
 export function getVerificationUrl(token: string) {
   return `${env.appUrl.replace(/\/$/, '')}/verify-email?token=${encodeURIComponent(token)}`;
@@ -14,20 +14,12 @@ export async function sendVerificationEmail(input: {
   nickname: string;
   code: string;
 }) {
-  if (!env.smtp.user || !env.smtp.password || !env.smtp.from) {
+  if (!isSmtpConfigured()) {
     console.warn('SMTP is not configured. Skipping verification email.');
     return false;
   }
 
-  const transporter = nodemailer.createTransport({
-    host: env.smtp.host,
-    port: env.smtp.port,
-    secure: env.smtp.secure,
-    auth: {
-      user: env.smtp.user,
-      pass: env.smtp.password,
-    },
-  });
+  const transporter = createSmtpTransport();
 
   await transporter.sendMail({
     from: env.smtp.from,
@@ -52,21 +44,13 @@ export async function sendPasswordResetEmail(input: {
   nickname: string;
   token: string;
 }) {
-  if (!env.smtp.user || !env.smtp.password || !env.smtp.from) {
+  if (!isSmtpConfigured()) {
     console.warn('SMTP is not configured. Skipping password reset email.');
     return false;
   }
 
   const resetUrl = getPasswordResetUrl(input.token);
-  const transporter = nodemailer.createTransport({
-    host: env.smtp.host,
-    port: env.smtp.port,
-    secure: env.smtp.secure,
-    auth: {
-      user: env.smtp.user,
-      pass: env.smtp.password,
-    },
-  });
+  const transporter = createSmtpTransport();
 
   await transporter.sendMail({
     from: env.smtp.from,
