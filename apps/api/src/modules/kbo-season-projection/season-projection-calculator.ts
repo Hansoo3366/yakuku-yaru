@@ -181,11 +181,30 @@ function hasFinalScore(game: Game) {
   return typeof game.homeScore === 'number' && typeof game.awayScore === 'number';
 }
 
-function isUnplayedRegularSeasonGame(game: Game) {
-  return game.status !== 'finished' && !hasFinalScore(game);
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** 순위 기준일(KST) 다음 날 0시. 이보다 앞선 경기는 순위표에 이미 반영된 경기다. */
+function getRankDateCutoff(rankDate: string) {
+  return Date.parse(`${rankDate}T00:00:00+09:00`) + DAY_MS;
 }
 
-function buildTeamInputs(standings: SeasonProjectionInput, games: Game[]) {
+function getGameTime(game: Game) {
+  return new Date(game.gameDate).getTime();
+}
+
+function isUnplayedScheduledGame(game: Game) {
+  return (
+    game.status !== 'finished' &&
+    game.status !== 'cancelled' &&
+    !hasFinalScore(game)
+  );
+}
+
+function buildTeamInputs(
+  standings: SeasonProjectionInput,
+  games: Game[],
+  rankDateCutoff: number,
+) {
   const runTotals = new Map<
     number,
     { runsFor: number; runsAgainst: number; scoredGames: number }
@@ -200,7 +219,12 @@ function buildTeamInputs(standings: SeasonProjectionInput, games: Game[]) {
   }
 
   for (const game of games) {
-    if (game.status !== 'finished' || !hasFinalScore(game)) {
+    // 순위표와 같은 범위(기준일까지의 정규시즌)만 득실점에 넣는다. 포스트시즌 점수는 섞지 않는다.
+    if (
+      game.status !== 'finished' ||
+      !hasFinalScore(game) ||
+      getGameTime(game) >= rankDateCutoff
+    ) {
       continue;
     }
 
@@ -243,15 +267,50 @@ function buildTeamInputs(standings: SeasonProjectionInput, games: Game[]) {
   return teams;
 }
 
-function buildRemainingGames(games: Game[]) {
-  return games
-    .filter(isUnplayedRegularSeasonGame)
-    .map(
-      (game): RemainingGame => ({
-        awayTeamId: game.awayTeam.id,
-        homeTeamId: game.homeTeam.id,
-      }),
-    );
+/**
+ * 정규시즌 잔여 경기. 일정표에는 우천 취소 경기(재편성 경기가 따로 생긴다)와
+ * 정규시즌 뒤의 포스트시즌 경기도 들어 있으므로, 기준일 이후의 예정 경기를 날짜순으로 보며
+ * 팀마다 "144 - 이미 치른 경기"까지만 센다.
+ */
+function buildRemainingGames(
+  games: Game[],
+  teams: TeamInput[],
+  rankDateCutoff: number,
+) {
+  const openSlots = new Map(
+    teams.map((team) => [
+      team.id,
+      Math.max(
+        0,
+        KBO_REGULAR_SEASON_GAMES - (team.wins + team.losses + team.draws),
+      ),
+    ]),
+  );
+  const remaining: RemainingGame[] = [];
+  const upcoming = games
+    .filter(
+      (game) =>
+        isUnplayedScheduledGame(game) && getGameTime(game) >= rankDateCutoff,
+    )
+    .sort((a, b) => getGameTime(a) - getGameTime(b));
+
+  for (const game of upcoming) {
+    const awaySlots = openSlots.get(game.awayTeam.id) ?? 0;
+    const homeSlots = openSlots.get(game.homeTeam.id) ?? 0;
+
+    if (awaySlots <= 0 || homeSlots <= 0) {
+      continue;
+    }
+
+    openSlots.set(game.awayTeam.id, awaySlots - 1);
+    openSlots.set(game.homeTeam.id, homeSlots - 1);
+    remaining.push({
+      awayTeamId: game.awayTeam.id,
+      homeTeamId: game.homeTeam.id,
+    });
+  }
+
+  return remaining;
 }
 
 function buildScheduleAdjustedWinRates(
@@ -615,7 +674,8 @@ export function calculateSeasonProjection(
     return null;
   }
 
-  const teams = buildTeamInputs(standings, games);
+  const rankDateCutoff = getRankDateCutoff(standings.rankDate);
+  const teams = buildTeamInputs(standings, games, rankDateCutoff);
 
   if (!teams) {
     return null;
@@ -639,7 +699,7 @@ export function calculateSeasonProjection(
       ];
     }),
   );
-  const remainingGames = buildRemainingGames(games);
+  const remainingGames = buildRemainingGames(games, teams, rankDateCutoff);
   const knownGamesByTeamId = inferProjectionGamesByTeamId(teams, remainingGames);
   const projectedGames = KBO_REGULAR_SEASON_GAMES;
   const leagueAverageProjectedWinRate =

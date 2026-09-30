@@ -40,12 +40,15 @@ jobs:
       - name: Test
         run: npm test
 
-  build-and-deploy:
-    name: Build and Deploy
-    needs: verify
+  # 이미지 빌드는 검사와 동시에 돌린다. 배포는 둘 다 성공해야 시작한다.
+  build:
+    name: Build Images
     runs-on: ubuntu-latest
     env:
       REGISTRY: ghcr.io
+    outputs:
+      api_image: ${{ steps.names.outputs.api_image }}
+      web_image: ${{ steps.names.outputs.web_image }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -78,12 +81,15 @@ jobs:
           rm -f /tmp/deploy_key /tmp/deploy_key.pub
 
       - name: Prepare image names
+        id: names
         run: |
           OWNER_LC="${GITHUB_REPOSITORY_OWNER,,}"
-          echo "API_IMAGE=ghcr.io/${OWNER_LC}/yakuku-yaru-api:${GITHUB_SHA}" >> "$GITHUB_ENV"
-          echo "WEB_IMAGE=ghcr.io/${OWNER_LC}/yakuku-yaru-web:${GITHUB_SHA}" >> "$GITHUB_ENV"
-          echo "API_IMAGE_LATEST=ghcr.io/${OWNER_LC}/yakuku-yaru-api:latest" >> "$GITHUB_ENV"
-          echo "WEB_IMAGE_LATEST=ghcr.io/${OWNER_LC}/yakuku-yaru-web:latest" >> "$GITHUB_ENV"
+          API_IMAGE="ghcr.io/${OWNER_LC}/yakuku-yaru-api:${GITHUB_SHA}"
+          WEB_IMAGE="ghcr.io/${OWNER_LC}/yakuku-yaru-web:${GITHUB_SHA}"
+          echo "API_IMAGE=${API_IMAGE}" >> "$GITHUB_ENV"
+          echo "WEB_IMAGE=${WEB_IMAGE}" >> "$GITHUB_ENV"
+          echo "api_image=${API_IMAGE}" >> "$GITHUB_OUTPUT"
+          echo "web_image=${WEB_IMAGE}" >> "$GITHUB_OUTPUT"
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -101,9 +107,7 @@ jobs:
           context: .
           file: apps/api/Dockerfile
           push: true
-          tags: |
-            ${{ env.API_IMAGE }}
-            ${{ env.API_IMAGE_LATEST }}
+          tags: ${{ env.API_IMAGE }}
           cache-from: type=gha,scope=api
           cache-to: type=gha,mode=max,scope=api
 
@@ -113,14 +117,33 @@ jobs:
           context: .
           file: apps/web/Dockerfile
           push: true
-          tags: |
-            ${{ env.WEB_IMAGE }}
-            ${{ env.WEB_IMAGE_LATEST }}
+          tags: ${{ env.WEB_IMAGE }}
           build-args: |
             NEXT_PUBLIC_API_URL=${{ secrets.NEXT_PUBLIC_API_URL }}
             NEXT_PUBLIC_CONTACT_EMAIL=${{ vars.NEXT_PUBLIC_CONTACT_EMAIL }}
           cache-from: type=gha,scope=web
           cache-to: type=gha,mode=max,scope=web
+
+  deploy:
+    name: Deploy
+    needs: [verify, build]
+    runs-on: ubuntu-latest
+    env:
+      API_IMAGE: ${{ needs.build.outputs.api_image }}
+      WEB_IMAGE: ${{ needs.build.outputs.web_image }}
+    steps:
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # 검사를 통과한 이미지에만 latest 를 붙인다.
+      - name: Tag images as latest
+        run: |
+          docker buildx imagetools create -t "${API_IMAGE%:*}:latest" "$API_IMAGE"
+          docker buildx imagetools create -t "${WEB_IMAGE%:*}:latest" "$WEB_IMAGE"
 
       - name: Deploy with Docker Compose
         uses: appleboy/ssh-action@v1.2.0
@@ -139,9 +162,6 @@ jobs:
             export API_IMAGE="${{ env.API_IMAGE }}"
             export WEB_IMAGE="${{ env.WEB_IMAGE }}"
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
-            docker container prune -f
-            docker image prune -af
-            docker builder prune -af
             docker compose -f docker-compose.prod.yml --env-file .env.production pull api web
             docker compose -f docker-compose.prod.yml --env-file .env.production --profile proxy up -d --no-build
             docker compose -f docker-compose.prod.yml --env-file .env.production --profile proxy up -d --no-build --force-recreate gateway
@@ -165,4 +185,6 @@ jobs:
               sleep 5
             done
             test "$swagger_ready" = 1
-            docker image prune -f
+            # 새 버전이 뜬 뒤에 이전 이미지를 정리한다. (배포 전에 지우면 공통 레이어까지 다시 받게 된다)
+            docker container prune -f
+            docker image prune -af
