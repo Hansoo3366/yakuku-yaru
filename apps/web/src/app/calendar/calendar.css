@@ -45,13 +45,6 @@
   width: 100%;
 }
 
-.calendar-filter-rail .filter-group {
-  align-items: stretch;
-  flex-direction: column;
-  gap: 6px;
-  width: 100%;
-}
-
 .calendar-filter-rail .filter-group-label {
   color: var(--color-night-navy);
   flex: 0 0 auto;
@@ -60,16 +53,6 @@
   letter-spacing: -0.01em;
   line-height: 1.25;
   text-transform: none;
-}
-
-.calendar-filter-rail .filter-pill {
-  flex: 1 1 auto;
-  font-size: var(--text-xs);
-  font-weight: var(--weight-bold);
-  height: 30px;
-  justify-content: center;
-  min-width: 0;
-  padding: 0 10px;
 }
 
 .calendar-filter-rail .calendar-filter-legend-block {
@@ -345,7 +328,6 @@
   overflow: hidden;
   overflow-wrap: anywhere;
   white-space: normal;
-  word-break: break-word;
 }
 
 .calendar-event[data-outcome='scheduled'] {
@@ -410,18 +392,8 @@
     flex-wrap: wrap;
   }
 
-  .calendar-filter-rail .filter-group {
-    flex: 1 1 200px;
-    flex-direction: row;
-    flex-wrap: wrap;
-  }
-
   .calendar-filter-rail .filter-group-label {
     flex: 0 0 100%;
-  }
-
-  .calendar-filter-rail .filter-pill {
-    flex: 0 1 auto;
   }
 
   .calendar-filter-rail .calendar-filter-legend-block {
@@ -1664,18 +1636,8 @@ html[data-auth-state='guest'] .app-shell--calendar {
     grid-template-columns: 1fr;
   }
 
-  .calendar-filter-dock .filter-group {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 5px;
-  }
-
   .calendar-filter-dock .filter-group-label {
     grid-column: 1 / -1;
-  }
-
-  .calendar-filter-dock .filter-pill {
-    justify-content: center;
   }
 }
 

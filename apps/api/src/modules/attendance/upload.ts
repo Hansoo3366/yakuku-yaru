@@ -41,7 +41,9 @@ function imageFileFilter(
 ) {
   if (!IMAGE_EXTENSION_BY_MIME_TYPE[file.mimetype]) {
     callback(
-      new Error(
+      new HttpError(
+        400,
+        'INVALID_FILE_TYPE',
         'JPG, PNG, WebP, HEIC, AVIF, GIF 이미지만 업로드할 수 있습니다.',
       ),
     );
@@ -203,7 +205,11 @@ export async function assertUserUploadQuota(
   const totalBytes = sizes.reduce((sum, size) => sum + size, 0);
 
   if (totalBytes + uploadedFileBytes > USER_UPLOAD_QUOTA_BYTES) {
-    throw new Error('사용자별 이미지 저장 용량을 초과했습니다.');
+    throw new HttpError(
+      400,
+      'UPLOAD_QUOTA_EXCEEDED',
+      '사용자별 이미지 저장 용량을 초과했습니다.',
+    );
   }
 }
 

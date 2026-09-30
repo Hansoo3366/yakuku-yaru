@@ -5,6 +5,8 @@ import { db } from '../../config/database.js';
 export const EMAIL_VERIFICATION_EXPIRY_MINUTES = 3;
 export const EMAIL_VERIFICATION_RESEND_COOLDOWN_SECONDS = 30;
 export const EMAIL_VERIFICATION_MAX_SENDS = 4;
+/** 발송 횟수 제한은 이 기간 안의 발송만 센다. 지나면 다시 요청할 수 있다. */
+export const EMAIL_VERIFICATION_SEND_WINDOW_MINUTES = 60;
 
 type EmailVerificationTokenRow = RowDataPacket & {
   id: number;
@@ -82,8 +84,9 @@ export async function countEmailVerificationSends(userId: number) {
   const [rows] = await db.query<SendCountRow[]>(
     `SELECT COUNT(*) AS send_count
      FROM email_verification_tokens
-     WHERE user_id = ?`,
-    [userId],
+     WHERE user_id = ?
+       AND created_at > DATE_SUB(CURRENT_TIMESTAMP, INTERVAL ? MINUTE)`,
+    [userId, EMAIL_VERIFICATION_SEND_WINDOW_MINUTES],
   );
 
   return Number(rows[0]?.send_count ?? 0);
@@ -115,20 +118,6 @@ export async function getLatestEmailVerificationToken(userId: number) {
   return rows[0] ?? null;
 }
 
-export async function findUsableEmailVerificationToken(token: string) {
-  const [rows] = await db.query<EmailVerificationTokenRow[]>(
-    `SELECT id, user_id, token, expires_at, used_at, created_at
-     FROM email_verification_tokens
-     WHERE token = ?
-       AND used_at IS NULL
-       AND expires_at > CURRENT_TIMESTAMP
-     LIMIT 1`,
-    [token],
-  );
-
-  return rows[0] ?? null;
-}
-
 export async function findUsableEmailVerificationTokenByEmailAndCode(
   email: string,
   code: string,
@@ -148,11 +137,11 @@ export async function findUsableEmailVerificationTokenByEmailAndCode(
   return rows[0] ?? null;
 }
 
-export async function markEmailVerificationTokenUsed(tokenId: number) {
+/** 인증이 끝난 사용자의 코드는 더 쓸 일이 없으므로 모두 지운다. */
+export async function deleteEmailVerificationTokensForUser(userId: number) {
   await db.execute(
-    `UPDATE email_verification_tokens
-     SET used_at = CURRENT_TIMESTAMP
-     WHERE id = ?`,
-    [tokenId],
+    `DELETE FROM email_verification_tokens
+     WHERE user_id = ?`,
+    [userId],
   );
 }

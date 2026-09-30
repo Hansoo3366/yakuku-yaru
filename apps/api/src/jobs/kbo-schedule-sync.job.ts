@@ -147,13 +147,3 @@ export function startKboScheduleSyncJob() {
     console.log(`[kbo-sync] API 기동 ${delayMs / 1000}초 후 주간 동기화 1회 예정`);
   }
 }
-
-export async function runKboScheduleSync() {
-  return runKboSyncMode('week');
-}
-
-export async function runKboSeasonProjectionSync() {
-  return generateKboSeasonProjection({
-    simulations: env.kboSync.projectionSimulations,
-  });
-}

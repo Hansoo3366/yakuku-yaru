@@ -198,12 +198,3 @@ export async function listTeamStandings(seasonYear: number, seriesId = '0') {
     })) satisfies TeamStandingRow[],
   };
 }
-
-export async function countTeamStandingsSnapshots() {
-  const [rows] = await db.query<(RowDataPacket & { count: number })[]>(
-    `SELECT COUNT(DISTINCT CONCAT(season_year, ':', rank_date, ':', series_id)) AS count
-     FROM team_standings`,
-  );
-
-  return Number(rows[0]?.count ?? 0);
-}

@@ -39,6 +39,25 @@ export const db = mysql.createPool({
   connectionLimit: 10,
 });
 
+/** 연결 하나에서 트랜잭션으로 실행한다. 콜백이 던지면 롤백하고 에러를 그대로 다시 던진다. */
+export async function withTransaction<T>(
+  work: (connection: mysql.PoolConnection) => Promise<T>,
+) {
+  const connection = await db.getConnection();
+
+  try {
+    await connection.beginTransaction();
+    const result = await work(connection);
+    await connection.commit();
+    return result;
+  } catch (error) {
+    await connection.rollback();
+    throw error;
+  } finally {
+    connection.release();
+  }
+}
+
 export async function checkDatabaseConnection() {
   const [rows] = await db.query('SELECT 1 AS ok');
 

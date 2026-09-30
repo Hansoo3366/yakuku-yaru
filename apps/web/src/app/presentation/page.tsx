@@ -158,7 +158,7 @@ const slides: Slide[] = [
         <div>
           <span>03</span>
           <strong>인증번호 발급</strong>
-          <p>6자리 · 3분 안에 입력 · 재전송은 30초 대기 · 최대 4회</p>
+          <p>6자리 · 3분 안에 입력 · 재전송은 30초 대기 · 1시간 최대 4회</p>
         </div>
         <div>
           <span>04</span>

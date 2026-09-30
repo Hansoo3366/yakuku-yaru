@@ -3,53 +3,43 @@
 import type { AttendanceResult } from '@/lib/attendance-score';
 
 type Props = {
-  myTeamScore: string;
-  opponentScore: string;
-  result: AttendanceResult | null;
-  resultManuallySet: boolean;
-  scoreLocked: boolean;
+  /** KBO 공식 스코어. 경기가 끝나 확인되기 전에는 null */
+  scores: {
+    myTeamScore: number;
+    opponentScore: number;
+    result: AttendanceResult;
+  } | null;
   lockHint?: string;
-  onMyTeamScoreChange: (value: string) => void;
-  onOpponentScoreChange: (value: string) => void;
-  onPickResult: (value: AttendanceResult) => void;
 };
 
+const RESULT_LABELS: Record<AttendanceResult, string> = {
+  win: '승리',
+  lose: '패배',
+  draw: '무승부',
+};
+
+/** 직관 기록의 점수는 직접 입력하지 않고 공식 스코어만 보여준다. 저장은 서버가 경기 결과로 맞춘다. */
 export function AttendanceScoreSection({
-  myTeamScore,
-  opponentScore,
-  result,
-  resultManuallySet,
-  scoreLocked,
+  scores,
   lockHint = '경기 종료 후 KBO 공식 스코어가 확인되면 자동으로 맞춰집니다.',
-  onMyTeamScoreChange,
-  onOpponentScoreChange,
-  onPickResult,
 }: Props) {
   return (
     <section className="card stack">
       <div className="section-heading" style={{ marginBottom: 0 }}>
         <div>
           <h2>스코어와 결과</h2>
-          <p>
-            {scoreLocked
-              ? '점수는 직접 입력하지 않고 공식 경기 스코어만 반영합니다.'
-              : '점수를 입력하면 결과는 자동으로 추정해요. 수동 선택도 가능합니다.'}
-          </p>
+          <p>점수는 직접 입력하지 않고 공식 경기 스코어만 반영합니다.</p>
         </div>
       </div>
-      <div
-        className={`score-input-group${scoreLocked ? ' score-input-group--locked' : ''}`}
-      >
+      <div className="score-input-group score-input-group--locked">
         <label className="score-input-cell">
           <span>내 팀</span>
           <input
-            disabled={scoreLocked}
-            inputMode="numeric"
-            min="0"
-            onChange={(event) => onMyTeamScoreChange(event.target.value)}
+            disabled
             placeholder="0"
+            readOnly
             type="number"
-            value={myTeamScore}
+            value={scores?.myTeamScore ?? ''}
           />
         </label>
         <span aria-hidden="true" className="score-divider">
@@ -58,13 +48,11 @@ export function AttendanceScoreSection({
         <label className="score-input-cell">
           <span>상대</span>
           <input
-            disabled={scoreLocked}
-            inputMode="numeric"
-            min="0"
-            onChange={(event) => onOpponentScoreChange(event.target.value)}
+            disabled
             placeholder="0"
+            readOnly
             type="number"
-            value={opponentScore}
+            value={scores?.opponentScore ?? ''}
           />
         </label>
       </div>
@@ -75,27 +63,20 @@ export function AttendanceScoreSection({
       >
         {(['win', 'lose', 'draw'] as const).map((value) => (
           <button
-            aria-checked={result === value}
-            className={`choice-button ${result === value ? 'is-selected' : ''}`}
+            aria-checked={scores?.result === value}
+            className={`choice-button ${scores?.result === value ? 'is-selected' : ''}`}
             data-result={value}
-            disabled={scoreLocked}
+            disabled
             key={value}
-            onClick={() => onPickResult(value)}
             role="radio"
             type="button"
           >
             <span className="dot" aria-hidden="true" />
-            {value === 'win' ? '승리' : value === 'lose' ? '패배' : '무승부'}
+            {RESULT_LABELS[value]}
           </button>
         ))}
       </div>
-      {scoreLocked ? (
-        <p className="score-input-hint">{lockHint}</p>
-      ) : !resultManuallySet && result ? (
-        <p className="score-input-hint">
-          스코어로 자동 계산된 결과예요. 변경하면 수동 선택으로 고정됩니다.
-        </p>
-      ) : null}
+      <p className="score-input-hint">{lockHint}</p>
     </section>
   );
 }

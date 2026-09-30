@@ -5,7 +5,10 @@ SET FOREIGN_KEY_CHECKS = 0;
 
 TRUNCATE TABLE attendance_companions;
 TRUNCATE TABLE attendance_records;
+TRUNCATE TABLE attendance_viewer_preferences;
 TRUNCATE TABLE game_reminders;
+TRUNCATE TABLE game_lineups;
+TRUNCATE TABLE game_starting_pitchers;
 TRUNCATE TABLE games;
 
 SET FOREIGN_KEY_CHECKS = 1;

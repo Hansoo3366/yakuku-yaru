@@ -125,10 +125,6 @@ export function listTeamCheers() {
   return request<{ items: TeamCheer[] }>('/player-cheers/teams');
 }
 
-export function fetchTeamCheer(teamId: number) {
-  return request<{ item: TeamCheer }>(`/player-cheers/teams/${teamId}`);
-}
-
 export function listAdminPlayerCheers(
   token: string,
   input: {

@@ -414,8 +414,6 @@ export async function listAttendanceRecords(input: {
   from?: string;
   to?: string;
 }) {
-  await reconcileAttendanceScoresForUser(input.userId);
-
   const params: Array<number | string> = [input.userId, input.userId];
   const dateFilter =
     input.from && input.to ? 'AND g.game_date >= ? AND g.game_date < ?' : '';
@@ -574,6 +572,7 @@ function storageOutcomeTeamId(record: AttendanceRecord) {
   });
 }
 
+/** 저장된 스코어·결과를 경기 결과와 응원팀 기준에 맞춘다. 실제로 고쳤으면 true. */
 async function reconcileAttendanceRecord(record: AttendanceRecord) {
   if (record.game.status === 'cancelled') {
     const needsClear =
@@ -583,7 +582,7 @@ async function reconcileAttendanceRecord(record: AttendanceRecord) {
       record.isScoreModified;
 
     if (!needsClear) {
-      return;
+      return false;
     }
 
     await db.execute(
@@ -595,7 +594,7 @@ async function reconcileAttendanceRecord(record: AttendanceRecord) {
        WHERE id = ?`,
       [record.id],
     );
-    return;
+    return true;
   }
 
   const outcomeTeamId = storageOutcomeTeamId(record);
@@ -609,7 +608,7 @@ async function reconcileAttendanceRecord(record: AttendanceRecord) {
       record.isScoreModified;
 
     if (!needsUpdate) {
-      return;
+      return false;
     }
 
     await db.execute(
@@ -626,13 +625,13 @@ async function reconcileAttendanceRecord(record: AttendanceRecord) {
         record.id,
       ],
     );
-    return;
+    return true;
   }
 
   const outcome = resolveAttendanceOutcome(record, outcomeTeamId);
 
   if (!outcome || outcome === record.result) {
-    return;
+    return false;
   }
 
   await db.execute(
@@ -641,14 +640,43 @@ async function reconcileAttendanceRecord(record: AttendanceRecord) {
      WHERE id = ?`,
     [outcome, record.id],
   );
+  return true;
 }
 
-async function reconcileAttendanceScoresForUser(userId: number) {
+/**
+ * 저장된 스코어·결과는 조회 때가 아니라 기준이 바뀌는 시점에 맞춘다.
+ * - 경기 스코어·상태 갱신(KBO 동기화, 관리자 수정): reconcileAttendanceRecordsForGame
+ * - 사용자 응원팀 변경: reconcileAttendanceScoresForUser
+ * - 기록 저장·수정: 저장 시 buildAttendanceScoreFields 로 계산
+ */
+export async function reconcileAttendanceScoresForUser(userId: number) {
   const records = await listOwnerAttendanceRecordsForStats(userId);
+  let updated = 0;
 
   for (const record of records) {
-    await reconcileAttendanceRecord(record);
+    if (await reconcileAttendanceRecord(record)) {
+      updated += 1;
+    }
   }
+
+  return updated;
+}
+
+export async function reconcileAttendanceRecordsForGame(gameId: number) {
+  const [rows] = await db.query<AttendanceRecordRow[]>(
+    `${attendanceSelectSql()}
+     WHERE ar.game_id = ?`,
+    [gameId],
+  );
+  let updated = 0;
+
+  for (const row of rows) {
+    if (await reconcileAttendanceRecord(toAttendanceRecord(row))) {
+      updated += 1;
+    }
+  }
+
+  return updated;
 }
 
 export async function reconcileAttendanceRecordById(recordId: number) {
@@ -683,24 +711,13 @@ export async function getAttendanceStats(
   const favoriteTeamId = getFavoriteTeamIdFromUser(user);
   const range =
     input?.from && input.to ? { from: input.from, to: input.to } : getCurrentYearAttendanceRange();
-
-  await reconcileAttendanceScoresForUser(userId);
-
+  // 목록에는 내가 쓴 기록과 동행으로 수락한 기록만 들어 있다.
   const records = await listAttendanceRecords({ userId, ...range });
-  const statsRecords = records.filter(
-    (record) =>
-      record.viewerRelation === 'owner' ||
-      record.viewerRelation === 'companion',
-  );
-  const uniqueStatsRecords = dedupeAttendanceRecordsByGame(statsRecords);
+  const uniqueStatsRecords = dedupeAttendanceRecordsByGame(records);
   const countable = uniqueStatsRecords.filter((record) =>
     countsTowardWinRateForRecord({
       game: record.game,
       favoriteTeamId,
-      cheeredTeamId: record.cheeredTeamId ?? null,
-      viewerCheeredTeamId: record.viewerCheeredTeamId ?? null,
-      viewerRelation: record.viewerRelation,
-      ownerFavoriteTeamId: record.ownerFavoriteTeamId ?? null,
     }),
   );
 

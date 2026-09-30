@@ -1,10 +1,6 @@
 import { env } from '../../config/env.js';
 import { createSmtpTransport, isSmtpConfigured } from '../../lib/mailer.js';
 
-export function getVerificationUrl(token: string) {
-  return `${env.appUrl.replace(/\/$/, '')}/verify-email?token=${encodeURIComponent(token)}`;
-}
-
 export function getPasswordResetUrl(token: string) {
   return `${env.appUrl.replace(/\/$/, '')}/reset-password?token=${encodeURIComponent(token)}`;
 }

@@ -99,7 +99,12 @@ export function StadiumSeatMapViewer({ stadium, variant = 'button' }: Props) {
           type="button"
         >
           {/* eslint-disable-next-line @next/next/no-img-element -- 구장 좌석 배치도 정적 이미지 */}
-          <img alt={seatMap.label} src={seatMap.src} />
+          <img
+            alt={seatMap.label}
+            decoding="async"
+            loading="lazy"
+            src={seatMap.src}
+          />
           <span>{seatMap.label} · 눌러서 크게 보기</span>
         </button>
       ) : (

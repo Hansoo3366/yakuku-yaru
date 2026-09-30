@@ -204,23 +204,3 @@ export function resolveOutcomeTeamId(input: {
 
   return resolveCheeredTeamId(input.game, input.cheeredTeamId);
 }
-
-/** DB·KBO 동기화 기준 팀 (작성자 기록) */
-export function resolveStorageOutcomeTeamId(input: {
-  game: GameTeamsLike;
-  ownerFavoriteTeamId: number | null | undefined;
-  ownerFavoriteTeamShortName?: string | null;
-  cheeredTeamId?: number | null;
-}) {
-  const ownerTeamInGame = resolveFavoriteTeamIdInGame(
-    input.game,
-    input.ownerFavoriteTeamId,
-    input.ownerFavoriteTeamShortName,
-  );
-
-  if (ownerTeamInGame != null) {
-    return ownerTeamInGame;
-  }
-
-  return resolveCheeredTeamId(input.game, input.cheeredTeamId);
-}

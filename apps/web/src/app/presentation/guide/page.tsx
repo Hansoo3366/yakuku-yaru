@@ -316,7 +316,7 @@ const groups: TermGroup[] = [
         name: 'email_verification_tokens',
         meaning:
           '이메일로 보낸 인증번호와 만료 시각을 담아두는 테이블. 사용자가 입력한 번호가 실제로 발급된 번호인지 대조합니다.',
-        role: '6자리 코드를 3분 만료로 저장하고 30초 재전송 대기·최대 4회 발송 제한을 겁니다. users(id)에 ON DELETE CASCADE라 회원이 사라지면 함께 정리됩니다.',
+        role: '6자리 코드를 3분 만료로 저장하고 30초 재전송 대기·1시간에 최대 4회 발송 제한을 겁니다. 코드는 사용자끼리 겹칠 수 있어 전역 unique를 두지 않고 이메일+코드로 찾습니다. users(id)에 ON DELETE CASCADE라 회원이 사라지면 함께 정리됩니다.',
       },
       {
         name: 'email_verified_at',
@@ -380,10 +380,10 @@ const groups: TermGroup[] = [
         role: 'content_reports.target_id는 target_type(post·comment·user·attendance)과 짝을 이뤄 대상을 정합니다. FK가 없으므로 삭제된 대상을 코드가 직접 처리해야 합니다.',
       },
       {
-        name: 'information_schema 마이그레이션',
+        name: '버전 마이그레이션 (schema_migrations)',
         meaning:
-          '마이그레이션 프레임워크 없이 MySQL의 메타 테이블을 직접 조회해 "이미 있는가"를 확인하는 방식입니다.',
-        role: 'src/config/migrations.ts의 runMigrations()가 API 부팅마다 tableExists()·columnExists()·indexExists()로 확인한 뒤 필요한 DDL만 실행합니다. 버전 테이블이 없어 멱등성으로 대체합니다.',
+          '적용한 마이그레이션 id를 테이블에 기록해 각 변경을 한 번만 실행하는 방식입니다.',
+        role: 'src/config/migrations.ts의 runMigrations()가 schema_migrations에 없는 항목만 순서대로 실행하고 기록합니다. API와 동기화 스크립트가 동시에 떠도 MySQL GET_LOCK으로 한 번에 하나만 적용합니다. 도입 전 내용은 0001_baseline 하나로 묶었고, 그 안의 단계는 information_schema로 존재 여부를 확인해 기존 DB에서도 안전합니다.',
       },
       {
         name: 'db/init 스크립트',
@@ -969,12 +969,17 @@ const questionGroups: QuestionGroup[] = [
       {
         question: '스키마 관리는 어떻게 하고 있나요?',
         answer:
-          '두 경로를 함께 씁니다. apps/api/db/init/001_schema.sql이 MySQL 볼륨 최초 생성 시 docker-entrypoint-initdb.d에서 한 번 실행되어 테이블 20개를 만듭니다. 그와 별개로 src/config/migrations.ts의 runMigrations()가 API 부팅마다 information_schema를 조회해 tableExists·columnExists·indexExists를 확인한 뒤 필요한 DDL만 실행합니다. 마이그레이션 프레임워크와 버전 테이블이 없어 멱등성으로 대체한 구조입니다.',
+          '두 경로를 함께 씁니다. apps/api/db/init/001_schema.sql이 MySQL 볼륨 최초 생성 시 docker-entrypoint-initdb.d에서 한 번 실행되어 테이블 20개를 만듭니다. 이후 변경은 src/config/migrations.ts에 id를 붙인 마이그레이션으로 쌓고, runMigrations()가 schema_migrations 테이블에 없는 것만 실행한 뒤 기록합니다. 평소 부팅에서는 조회 한 번으로 끝납니다.',
         followUps: [
           {
-            question: '그 방식의 문제는 무엇인가요?',
+            question: '처음부터 버전 관리를 했나요?',
             answer:
-              '테이블 5개(player_cheers, team_standings, season_projection_*)는 migrations.ts에만 있어서, init 스크립트만 돌리고 API를 띄우지 않은 DB는 스키마가 불완전합니다. 버전 테이블이 없어 "어디까지 적용됐는지"를 추적하지도 못합니다. 다음 단계에서는 버전 테이블을 두는 마이그레이션 도구로 옮기는 게 맞습니다.',
+              '아니요. 처음에는 부팅마다 information_schema로 존재 여부를 확인하는 멱등 방식이었고, 일회성 데이터 보정과 시드까지 매번 다시 돌아 관리자가 고친 구장 가이드가 재시작 때 덮어써지는 문제가 있었습니다. 그 내용을 0001_baseline으로 묶어 한 번만 실행되게 하고, 이후 변경부터 새 id로 추가합니다. 여러 프로세스가 동시에 시작하는 경우는 MySQL GET_LOCK으로 직렬화합니다.',
+          },
+          {
+            question: '남은 문제는 무엇인가요?',
+            answer:
+              '테이블 5개(player_cheers, team_standings, season_projection_*)는 migrations.ts에만 있어서, init 스크립트만 돌리고 API를 띄우지 않은 DB는 스키마가 불완전합니다. 스키마 원본이 두 곳이라, 장기적으로는 001_schema.sql을 migrations 쪽으로 합쳐 한 곳에서 관리하는 게 맞습니다.',
           },
         ],
         paths: [
@@ -1281,7 +1286,7 @@ const questionGroups: QuestionGroup[] = [
       {
         question: '메일 인증은 어떤 방식으로 하셨나요?',
         answer:
-          'Nodemailer가 Gmail SMTP로 6자리 인증번호를 보냅니다. 번호는 email_verification_tokens 테이블에 3분 만료로 저장하고, 30초 재전송 대기·최대 4회 발송 제한을 겁니다. 검증에 성공하면 users.email_verified_at을 기록하고, 그 전에는 로그인해도 403 EMAIL_NOT_VERIFIED로 인증 화면으로 보냅니다.',
+          'Nodemailer가 Gmail SMTP로 6자리 인증번호를 보냅니다. 번호는 email_verification_tokens 테이블에 3분 만료로 저장하고, 30초 재전송 대기·1시간에 최대 4회 발송 제한을 겁니다. 검증은 이메일과 번호를 함께 받아 그 사용자의 번호만 찾습니다. 성공하면 users.email_verified_at을 기록하고 그 사용자의 번호를 모두 지우며, 그 전에는 로그인해도 403 EMAIL_NOT_VERIFIED로 인증 화면으로 보냅니다.',
         followUps: [
           {
             question: '왜 링크가 아니라 번호인가요?',
@@ -1304,7 +1309,6 @@ const questionGroups: QuestionGroup[] = [
           'apps/api/src/modules/auth/email-verification.ts',
           'apps/api/src/modules/auth/email.service.ts',
           'apps/web/src/app/register/page.tsx',
-          'apps/web/src/app/verify-email/page.tsx',
         ],
       },
       {

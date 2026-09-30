@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
-import { headers } from 'next/headers';
+import { cookies, headers } from 'next/headers';
+import { SIGNED_IN_COOKIE_NAME } from '@/lib/auth-cookie-name';
 import { AppFooter, AppHeader } from '@/components/AppChrome';
 import { AppProviders } from '@/components/AppProviders';
 import { BottomNav } from '@/components/BottomNav';
@@ -12,7 +13,9 @@ const bootScript = `
 (function () {
   try {
     var root = document.documentElement;
-    root.dataset.authState = 'guest';
+    root.dataset.authState = /(?:^|;\\s*)${SIGNED_IN_COOKIE_NAME}=/.test(document.cookie)
+      ? 'authed'
+      : 'guest';
     var teamColor = window.localStorage.getItem('yakuku.teamColor');
     if (teamColor) {
       if (!/^#[0-9a-f]{6}$/i.test(teamColor)) {
@@ -268,7 +271,7 @@ export const metadata: Metadata = {
       'KBO 경기 일정과 프로야구 일정표, 팀 순위, 시즌 예상 순위, 가을야구 확률, 포스트시즌 예측, 직관 기록과 응원가를 함께 확인하세요.',
     images: [
       {
-        url: getAbsoluteUrl('/main_kv.png'),
+        url: getAbsoluteUrl('/main_kv.jpg'),
         width: 1200,
         height: 630,
         alt: '야크크 야르 KBO 직관 기록 서비스',
@@ -280,7 +283,7 @@ export const metadata: Metadata = {
     title: '야크크 야르 - KBO 일정·시즌 예상 순위·가을야구 확률',
     description:
       'KBO 일정, 프로야구 일정표, 야구 캘린더, 시즌 예상 순위, 가을야구 확률과 직관 기록을 함께 확인하세요.',
-    images: [getAbsoluteUrl('/main_kv.png')],
+    images: [getAbsoluteUrl('/main_kv.jpg')],
   },
   appleWebApp: {
     capable: true,
@@ -290,9 +293,9 @@ export const metadata: Metadata = {
   icons: {
     icon: [
       { url: '/favicon.ico?v=2', sizes: 'any' },
-      { url: '/icon.png?v=2', type: 'image/png', sizes: '1254x1254' },
+      { url: '/icon.png?v=3', type: 'image/png', sizes: '512x512' },
     ],
-    apple: '/apple-icon.png?v=2',
+    apple: '/apple-icon.png?v=3',
     shortcut: '/favicon.ico?v=2',
   },
   manifest: '/manifest.webmanifest',
@@ -310,9 +313,15 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const nonce = (await headers()).get('x-nonce') ?? undefined;
+  const initialSignedIn = (await cookies()).has(SIGNED_IN_COOKIE_NAME);
 
   return (
-    <html lang="ko">
+    <html
+      data-auth-state={initialSignedIn ? 'authed' : 'guest'}
+      lang="ko"
+      // 부트 스크립트와 인증 흐름이 렌더 뒤에 data-auth-state·팀 컬러를 바꾼다.
+      suppressHydrationWarning
+    >
       <head>
         <script
           nonce={nonce}
@@ -327,7 +336,7 @@ export default async function RootLayout({
         />
       </head>
       <body>
-        <AppProviders>
+        <AppProviders initialSignedIn={initialSignedIn}>
           <AppHeader />
           {children}
           <BottomNav />

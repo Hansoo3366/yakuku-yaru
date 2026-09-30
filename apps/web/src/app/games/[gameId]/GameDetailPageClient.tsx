@@ -34,6 +34,7 @@ import {
 } from '@/lib/attendance-game';
 import { getAttendanceTicketView } from '@/lib/attendance-score';
 import { getAssetUrl } from '@/lib/api';
+import { formatDateInput } from '@/lib/calendar-range';
 import { StatTerm } from '@/components/StatGlossary';
 import { StadiumPersonalNotes } from '@/components/StadiumPersonalNotes';
 import { useAuthStore } from '@/lib/auth-store';
@@ -529,7 +530,22 @@ export function GameDetailPageClient({ gameId }: { gameId: number }) {
   const token = useAuthStore((state) => state.token);
   const gameQuery = useGameQuery(gameId);
   const meQuery = useMeQuery(token);
-  const attendanceRecordsQuery = useAttendanceRecordsQuery({}, token);
+  const gameDate = gameQuery.data?.game.gameDate ?? null;
+  // 이 경기의 기록만 필요하므로 경기일 앞뒤 하루만 불러온다. (시간대 차이로 날짜가 밀려도 포함되게 여유를 둔다)
+  const gameDayRange = useMemo(() => {
+    if (!gameDate) return null;
+    const day = new Date(gameDate);
+    const from = new Date(day);
+    const to = new Date(day);
+    from.setDate(day.getDate() - 1);
+    to.setDate(day.getDate() + 2);
+    return { from: formatDateInput(from), to: formatDateInput(to) };
+  }, [gameDate]);
+  const attendanceRecordsQuery = useAttendanceRecordsQuery(
+    gameDayRange ?? {},
+    token,
+    { enabled: gameDayRange !== null },
+  );
   const teamCheersQuery = useTeamCheersQuery();
   const [selectedPlayerCheer, setSelectedPlayerCheer] =
     useState<PlayerCheer | null>(null);
@@ -598,12 +614,9 @@ export function GameDetailPageClient({ gameId }: { gameId: number }) {
 
     try {
       await updateAttendanceViewerPreference(gameId, { cheeredTeamId: teamId }, token);
-      void queryClient.invalidateQueries({
-        queryKey: queryKeys.attendanceRecords({}, token),
-      });
-      void queryClient.invalidateQueries({
-        queryKey: queryKeys.attendanceStats(token),
-      });
+      // 캘린더·홈 등 기간별로 캐시된 기록과 통계도 모두 갱신한다.
+      void queryClient.invalidateQueries({ queryKey: ['attendance-records'] });
+      void queryClient.invalidateQueries({ queryKey: ['attendance-stats'] });
     } finally {
       setSavingCheeredTeam(false);
     }

@@ -68,13 +68,6 @@ export function resolveAttendanceScoresFromGame(
   return null;
 }
 
-export function isScoreInputLocked(
-  game: GameForAttendanceScore,
-  favoriteTeamId: number | null,
-) {
-  return resolveAttendanceScoresFromGame(game, favoriteTeamId) !== null;
-}
-
 export type AttendanceRecordForOutcome = {
   myTeamScore: number | null;
   opponentScore: number | null;

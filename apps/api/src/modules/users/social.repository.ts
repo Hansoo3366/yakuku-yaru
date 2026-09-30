@@ -71,7 +71,12 @@ function toFanSummary(row: FanSummaryRow, viewerUserId: number | null): FanSumma
   };
 }
 
-const summarySelect = `
+/**
+ * 통계 집계는 비싸므로 이미 고른 사용자(`u.id IN (?)`)에 대해서만 돌린다.
+ * 파생 테이블마다 같은 id 목록으로 먼저 걸러 전체 테이블을 집계하지 않게 한다.
+ * 파라미터 순서: ids, ids, from, to, ids ×5, viewerUserId, ids
+ */
+const summarySelectForIds = `
   SELECT
     u.id,
     u.nickname,
@@ -104,11 +109,13 @@ const summarySelect = `
     FROM (
       SELECT ar.user_id, ar.game_id, ar.watch_type, ar.created_at
       FROM attendance_records ar
+      WHERE ar.user_id IN (?)
       UNION ALL
       SELECT ac.user_id, ar.game_id, ar.watch_type, ac.created_at
       FROM attendance_companions ac
       JOIN attendance_records ar ON ar.id = ac.attendance_record_id
       WHERE ac.status = 'accepted'
+        AND ac.user_id IN (?)
     ) participation
     JOIN games g ON g.id = participation.game_id
     WHERE g.game_date >= ? AND g.game_date < ?
@@ -117,6 +124,7 @@ const summarySelect = `
   LEFT JOIN (
     SELECT user_id, COUNT(*) AS post_count, MAX(created_at) AS last_post_at
     FROM posts
+    WHERE user_id IN (?)
     GROUP BY user_id
   ) post_stats ON post_stats.user_id = u.id
   LEFT JOIN (
@@ -126,31 +134,66 @@ const summarySelect = `
       FROM attendance_records ar
       JOIN attendance_companions ac ON ac.attendance_record_id = ar.id
       WHERE ac.status = 'accepted'
+        AND ar.user_id IN (?)
       UNION ALL
       SELECT ac.user_id, ar.user_id AS connected_user_id
       FROM attendance_records ar
       JOIN attendance_companions ac ON ac.attendance_record_id = ar.id
       WHERE ac.status = 'accepted'
+        AND ac.user_id IN (?)
     ) connections
     GROUP BY connections.user_id
   ) connection_stats ON connection_stats.user_id = u.id
   LEFT JOIN (
     SELECT followed_user_id, COUNT(*) AS follower_count
     FROM user_follows
+    WHERE followed_user_id IN (?)
     GROUP BY followed_user_id
   ) follower_stats ON follower_stats.followed_user_id = u.id
   LEFT JOIN (
     SELECT follower_user_id, COUNT(*) AS following_count
     FROM user_follows
+    WHERE follower_user_id IN (?)
     GROUP BY follower_user_id
   ) following_stats ON following_stats.follower_user_id = u.id
   LEFT JOIN user_follows viewer_follow
     ON viewer_follow.follower_user_id = ?
-   AND viewer_follow.followed_user_id = u.id`;
+   AND viewer_follow.followed_user_id = u.id
+  WHERE u.id IN (?)`;
 
 function currentSeasonRange() {
   const year = new Date().getFullYear();
   return [`${year}-01-01`, `${year + 1}-01-01`] as const;
+}
+
+async function listFanSummariesByIds(
+  userIds: number[],
+  viewerUserId: number | null,
+) {
+  if (!userIds.length) {
+    return [];
+  }
+
+  const [from, to] = currentSeasonRange();
+  const [rows] = await db.query<FanSummaryRow[]>(summarySelectForIds, [
+    userIds,
+    userIds,
+    from,
+    to,
+    userIds,
+    userIds,
+    userIds,
+    userIds,
+    userIds,
+    viewerUserId ?? 0,
+    userIds,
+  ]);
+  const byId = new Map(rows.map((row) => [Number(row.id), row]));
+
+  return userIds.flatMap((id) => {
+    const row = byId.get(id);
+    return row ? [toFanSummary(row, viewerUserId)] : [];
+  });
 }
 
 export async function discoverFans(input: {
@@ -177,8 +220,33 @@ export async function discoverFans(input: {
 
   const whereClause = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
   const offset = (input.page - 1) * input.size;
-  const [rows] = await db.query<FanSummaryRow[]>(
-    `${summarySelect}
+
+  // 1단계: 정렬 기준(마지막 활동 시각)만 사용자별 인덱스 조회로 계산해 이번 페이지 id 를 고른다.
+  const pageQuery = db.query<(RowDataPacket & { id: number })[]>(
+    `SELECT u.id,
+       GREATEST(
+         u.updated_at,
+         COALESCE((
+           SELECT MAX(ar.created_at)
+           FROM attendance_records ar
+           JOIN games g ON g.id = ar.game_id
+           WHERE ar.user_id = u.id
+             AND g.game_date >= ? AND g.game_date < ?
+         ), u.created_at),
+         COALESCE((
+           SELECT MAX(ac.created_at)
+           FROM attendance_companions ac
+           JOIN attendance_records ar ON ar.id = ac.attendance_record_id
+           JOIN games g ON g.id = ar.game_id
+           WHERE ac.user_id = u.id
+             AND ac.status = 'accepted'
+             AND g.game_date >= ? AND g.game_date < ?
+         ), u.created_at),
+         COALESCE((
+           SELECT MAX(p.created_at) FROM posts p WHERE p.user_id = u.id
+         ), u.created_at)
+       ) AS last_active_at
+     FROM users u
      ${whereClause}
      ORDER BY
        CASE
@@ -188,16 +256,22 @@ export async function discoverFans(input: {
        last_active_at DESC,
        u.id DESC
      LIMIT ? OFFSET ?`,
-    [from, to, viewerUserId, ...filterParams, viewerUserId, input.size, offset],
+    [from, to, from, to, ...filterParams, viewerUserId, input.size, offset],
   );
-
-  const [countRows] = await db.query<(RowDataPacket & { total: number })[]>(
+  const countQuery = db.query<(RowDataPacket & { total: number })[]>(
     `SELECT COUNT(*) AS total FROM users u ${whereClause}`,
     filterParams,
   );
+  const [[pageRows], [countRows]] = await Promise.all([pageQuery, countQuery]);
+
+  // 2단계: 고른 사용자만 통계를 집계한다.
+  const items = await listFanSummariesByIds(
+    pageRows.map((row) => Number(row.id)),
+    input.viewerUserId,
+  );
 
   return {
-    items: rows.map((row) => toFanSummary(row, input.viewerUserId)),
+    items,
     total: Number(countRows[0]?.total ?? 0),
   };
 }
@@ -206,15 +280,12 @@ export async function findFanSummaryById(input: {
   userId: number;
   viewerUserId: number | null;
 }) {
-  const [from, to] = currentSeasonRange();
-  const [rows] = await db.query<FanSummaryRow[]>(
-    `${summarySelect}
-     WHERE u.id = ?
-     LIMIT 1`,
-    [from, to, input.viewerUserId ?? 0, input.userId],
+  const [summary] = await listFanSummariesByIds(
+    [input.userId],
+    input.viewerUserId,
   );
 
-  return rows[0] ? toFanSummary(rows[0], input.viewerUserId) : null;
+  return summary ?? null;
 }
 
 export async function countSharedAttendanceGames(input: {

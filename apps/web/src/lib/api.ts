@@ -1,4 +1,4 @@
-import { notifyAuthExpired, shouldSendAuthorizationHeader } from '@/lib/auth';
+import { notifyAuthExpired } from '@/lib/auth';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api';
 const ASSET_URL = API_URL.replace(/\/api\/?$/, '');
@@ -120,10 +120,6 @@ export async function request<T>(path: string, options: RequestOptions = {}) {
   const headers = new Headers();
 
   headers.set('Content-Type', 'application/json');
-
-  if (shouldSendAuthorizationHeader(options.token)) {
-    headers.set('Authorization', `Bearer ${options.token}`);
-  }
 
   const response = await fetchWithAuthRetry(
     path,

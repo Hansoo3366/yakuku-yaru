@@ -118,7 +118,7 @@ function playerCheerSelectSql() {
           SELECT gl2.team_id, MAX(g2.game_date) AS game_date
           FROM game_lineups gl2
           JOIN games g2 ON g2.id = gl2.game_id
-          WHERE YEAR(g2.game_date) = YEAR(CURDATE())
+          WHERE g2.game_date >= MAKEDATE(YEAR(CURDATE()), 1) AND g2.game_date < MAKEDATE(YEAR(CURDATE()) + 1, 1)
           GROUP BY gl2.team_id
         ) latest_lineup
           ON latest_lineup.team_id = gl.team_id
@@ -136,7 +136,7 @@ function playerCheerSelectSql() {
           SELECT gsp2.team_id, MAX(g2.game_date) AS game_date
           FROM game_starting_pitchers gsp2
           JOIN games g2 ON g2.id = gsp2.game_id
-          WHERE YEAR(g2.game_date) = YEAR(CURDATE())
+          WHERE g2.game_date >= MAKEDATE(YEAR(CURDATE()), 1) AND g2.game_date < MAKEDATE(YEAR(CURDATE()) + 1, 1)
           GROUP BY gsp2.team_id
         ) latest_pitcher
           ON latest_pitcher.team_id = gsp.team_id
@@ -171,7 +171,7 @@ function recentLineupJoinSql() {
           SELECT gl2.team_id, MAX(g2.game_date) AS game_date
           FROM game_lineups gl2
           JOIN games g2 ON g2.id = gl2.game_id
-          WHERE YEAR(g2.game_date) = YEAR(CURDATE())
+          WHERE g2.game_date >= MAKEDATE(YEAR(CURDATE()), 1) AND g2.game_date < MAKEDATE(YEAR(CURDATE()) + 1, 1)
           GROUP BY gl2.team_id
         ) latest_lineup
           ON latest_lineup.team_id = gl.team_id
@@ -189,7 +189,7 @@ function recentLineupJoinSql() {
           SELECT gsp2.team_id, MAX(g2.game_date) AS game_date
           FROM game_starting_pitchers gsp2
           JOIN games g2 ON g2.id = gsp2.game_id
-          WHERE YEAR(g2.game_date) = YEAR(CURDATE())
+          WHERE g2.game_date >= MAKEDATE(YEAR(CURDATE()), 1) AND g2.game_date < MAKEDATE(YEAR(CURDATE()) + 1, 1)
           GROUP BY gsp2.team_id
         ) latest_pitcher
           ON latest_pitcher.team_id = gsp.team_id
@@ -242,7 +242,7 @@ function buildPlayerCheerFilters(input: PlayerCheerListInput) {
         FROM game_lineups gl
         JOIN games g ON g.id = gl.game_id
         WHERE gl.player_id = p.id
-          AND YEAR(g.game_date) = YEAR(CURDATE())
+          AND g.game_date >= MAKEDATE(YEAR(CURDATE()), 1) AND g.game_date < MAKEDATE(YEAR(CURDATE()) + 1, 1)
         LIMIT 1
       )
       OR EXISTS (
@@ -250,7 +250,7 @@ function buildPlayerCheerFilters(input: PlayerCheerListInput) {
         FROM game_starting_pitchers gsp
         JOIN games g ON g.id = gsp.game_id
         WHERE gsp.player_id = p.id
-          AND YEAR(g.game_date) = YEAR(CURDATE())
+          AND g.game_date >= MAKEDATE(YEAR(CURDATE()), 1) AND g.game_date < MAKEDATE(YEAR(CURDATE()) + 1, 1)
         LIMIT 1
       )
     )`);
@@ -304,28 +304,31 @@ export async function listPlayerCheers(input: PlayerCheerListInput) {
   const { filters, params } = buildPlayerCheerFilters(input);
   const whereSql = filters.join(' AND ');
 
-  const [countRows] = await db.query<Array<RowDataPacket & { total: number }>>(
-    `SELECT COUNT(*) AS total
-     ${playerCheerCountFromSql()}
-     WHERE ${whereSql}`,
-    params,
-  );
+  // 세 쿼리는 서로 독립적이라 동시에 보낸다.
+  const [[countRows], [rows], teamStats] = await Promise.all([
+    db.query<Array<RowDataPacket & { total: number }>>(
+      `SELECT COUNT(*) AS total
+       ${playerCheerCountFromSql()}
+       WHERE ${whereSql}`,
+      params,
+    ),
+    db.query<PlayerCheerRow[]>(
+      `${playerCheerSelectSql()}
+       WHERE ${whereSql}
+       ORDER BY
+         t.id ASC,
+         CASE WHEN rl.battingOrder IS NULL THEN 1 ELSE 0 END ASC,
+         rl.battingOrder ASC,
+         CASE WHEN rl.lineupRole LIKE 'pitcher%' THEN 0 ELSE 1 END ASC,
+         p.position ASC,
+         CAST(NULLIF(p.back_number, '') AS UNSIGNED) ASC,
+         p.name ASC
+       LIMIT ? OFFSET ?`,
+      [...params, size, offset],
+    ),
+    listPlayerCheerTeamStats(input),
+  ]);
   const total = Number(countRows[0]?.total ?? 0);
-
-  const [rows] = await db.query<PlayerCheerRow[]>(
-    `${playerCheerSelectSql()}
-     WHERE ${whereSql}
-     ORDER BY
-       t.id ASC,
-       CASE WHEN rl.battingOrder IS NULL THEN 1 ELSE 0 END ASC,
-       rl.battingOrder ASC,
-       CASE WHEN rl.lineupRole LIKE 'pitcher%' THEN 0 ELSE 1 END ASC,
-       p.position ASC,
-       CAST(NULLIF(p.back_number, '') AS UNSIGNED) ASC,
-       p.name ASC
-     LIMIT ? OFFSET ?`,
-    [...params, size, offset],
-  );
 
   return {
     items: rows,
@@ -336,7 +339,7 @@ export async function listPlayerCheers(input: PlayerCheerListInput) {
       totalPages: Math.max(1, Math.ceil(total / size)),
     },
     stats: {
-      teams: await listPlayerCheerTeamStats(input),
+      teams: teamStats,
     },
   };
 }

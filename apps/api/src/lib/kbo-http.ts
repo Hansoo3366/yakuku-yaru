@@ -5,6 +5,12 @@ const DEFAULT_KBO_USER_AGENTS = [
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:141.0) Gecko/20100101 Firefox/141.0',
 ] as const;
 
+/**
+ * 응답 본문까지 받는 데 허용하는 시간. KBO 서버가 응답을 멈추면 동기화 잠금이 풀리지 않아
+ * 이후 모든 동기화가 막히므로 반드시 끊는다.
+ */
+export const KBO_REQUEST_TIMEOUT_MS = 20_000;
+
 type KboTextResponse = {
   text: string;
   headers: Headers;
@@ -45,11 +51,28 @@ export async function fetchKboText(
   let lastFailure = `${label} 요청 실패`;
 
   for (let index = 0; index < userAgents.length; index += 1) {
-    const response = await fetch(url, {
-      ...init,
-      headers: buildKboHeaders(init, userAgents[index]),
-    });
-    const text = await response.text();
+    const timeoutSignal = AbortSignal.timeout(KBO_REQUEST_TIMEOUT_MS);
+    let response: Response;
+    let text: string;
+
+    try {
+      response = await fetch(url, {
+        ...init,
+        headers: buildKboHeaders(init, userAgents[index]),
+        signal: init?.signal
+          ? AbortSignal.any([init.signal, timeoutSignal])
+          : timeoutSignal,
+      });
+      text = await response.text();
+    } catch (error) {
+      if (timeoutSignal.aborted) {
+        throw new Error(
+          `${label} 요청 시간 초과 (${KBO_REQUEST_TIMEOUT_MS / 1000}초)`,
+        );
+      }
+
+      throw error;
+    }
 
     if (response.ok && response.status !== 204 && text.trim()) {
       return {

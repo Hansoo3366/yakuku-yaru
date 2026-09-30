@@ -15,6 +15,7 @@ export default function robots(): MetadataRoute.Robots {
         '/offline',
         '/posts/new',
         '/posts/*/edit',
+        '/presentation',
         '/register',
         '/reset-password',
         '/verify-email',

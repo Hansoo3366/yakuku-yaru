@@ -11,14 +11,13 @@ import {
   markNotificationsRead,
   type AppNotification,
 } from '@/lib/notification-api';
-import {
-  fetchAttendanceRecord,
-  respondAttendanceCompanion,
-} from '@/lib/attendance-api';
+import { respondAttendanceCompanion } from '@/lib/attendance-api';
 import {
   formatKoreanDateShort,
   formatTimeAgo as formatRelativeTimeAgo,
 } from '@/lib/date-format';
+
+const NOTIFICATION_POLL_INTERVAL_MS = 30_000;
 
 type RespondedRecords = Record<number, 'accepted' | 'rejected'>;
 
@@ -65,54 +64,54 @@ export function NotificationBell({ userId }: NotificationBellProps) {
         setNotifications(response.items);
         setUnreadCount(response.unreadCount);
 
-        const tagged = response.items.filter(
-          (item): item is typeof item & { attendanceRecordId: number } =>
-            item.type === 'attendance_tagged' &&
-            item.attendanceRecordId !== null,
-        );
-        if (!tagged.length) {
-          setRespondedRecords({});
-          return;
-        }
-        const uniqueIds = Array.from(
-          new Set(tagged.map((item) => item.attendanceRecordId)),
-        );
-        const entries = await Promise.all(
-          uniqueIds.map(async (recordId) => {
-            try {
-              const recordResponse = await fetchAttendanceRecord(
-                recordId,
-                sessionToken,
-              );
-              const me = recordResponse.record.companions.find(
-                (companion) => companion.userId === userId,
-              );
-              if (!me || me.status === 'pending') return null;
-              return [recordId, me.status] as const;
-            } catch {
-              return null;
-            }
-          }),
-        );
-        if (cancelled) return;
+        // 동행 태그 수락 상태는 알림 목록 응답에 함께 온다.
         const next: RespondedRecords = {};
-        for (const entry of entries) {
-          if (entry) next[entry[0]] = entry[1];
+        for (const item of response.items) {
+          if (
+            item.type === 'attendance_tagged' &&
+            item.attendanceRecordId !== null &&
+            (item.companionStatus === 'accepted' ||
+              item.companionStatus === 'rejected')
+          ) {
+            next[item.attendanceRecordId] = item.companionStatus;
+          }
         }
         setRespondedRecords(next);
       } catch {
-        /* noop */
+        // 다음 주기에 다시 시도한다. 배지는 마지막으로 받은 값을 유지한다.
       }
     }
 
-    void loadNotifications();
-    const intervalId = window.setInterval(() => {
+    // 탭이 보이는 동안만 주기적으로 확인하고, 다시 보이면 곧바로 새로 받는다.
+    let intervalId: number | null = null;
+    function startPolling() {
+      if (intervalId !== null) return;
+      intervalId = window.setInterval(() => {
+        void loadNotifications();
+      }, NOTIFICATION_POLL_INTERVAL_MS);
+    }
+    function stopPolling() {
+      if (intervalId === null) return;
+      window.clearInterval(intervalId);
+      intervalId = null;
+    }
+    function handleVisibilityChange() {
+      if (document.hidden) {
+        stopPolling();
+        return;
+      }
       void loadNotifications();
-    }, 30000);
+      startPolling();
+    }
+
+    void loadNotifications();
+    if (!document.hidden) startPolling();
+    document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
       cancelled = true;
-      window.clearInterval(intervalId);
+      stopPolling();
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [token, userId]);
 

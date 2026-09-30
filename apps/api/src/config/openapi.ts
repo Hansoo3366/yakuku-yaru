@@ -142,13 +142,28 @@ export const openApiDocument = {
     '/auth/verify-email': {
       post: {
         tags: ['Auth'],
-        summary: 'Verify email token',
+        summary: 'Verify email with the 6-digit code',
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['email', 'code'],
+                properties: {
+                  email: { type: 'string', format: 'email' },
+                  code: { type: 'string', example: '123456' },
+                },
+              },
+            },
+          },
+        },
         responses: {
           '200': {
             description: 'Email verified',
           },
           '400': {
-            description: 'Invalid token',
+            description: 'Invalid or expired code',
           },
         },
       },

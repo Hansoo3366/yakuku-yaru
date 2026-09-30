@@ -18,8 +18,11 @@ import {
 } from '../player-cheers/player-cheer.repository.js';
 import { deletePost } from '../posts/post.repository.js';
 import { updatePostModeration } from '../posts/post.repository.js';
-import { deleteAttendanceRecord } from '../attendance/attendance.repository.js';
-import { findAttendanceRecordById } from '../attendance/attendance.repository.js';
+import {
+  deleteAttendanceRecord,
+  findAttendanceRecordById,
+  reconcileAttendanceRecordsForGame,
+} from '../attendance/attendance.repository.js';
 import {
   listAdminReports,
   updateContentReport,
@@ -765,10 +768,13 @@ adminRouter.post('/games', adminWriteLimit, async (req, res, next) => {
 
 adminRouter.patch('/games/:gameId', adminWriteLimit, async (req, res, next) => {
   try {
+    const gameId = Number(req.params.gameId);
+
     await updateAdminGame({
-      id: Number(req.params.gameId),
+      id: gameId,
       ...parseGameInput(req.body ?? {}),
     });
+    await reconcileAttendanceRecordsForGame(gameId);
     res.json({ ok: true });
   } catch (error) {
     next(error);

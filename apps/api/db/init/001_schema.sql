@@ -68,7 +68,6 @@ CREATE TABLE IF NOT EXISTS email_verification_tokens (
   used_at DATETIME NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
-  UNIQUE KEY uq_email_verification_tokens_token (token),
   KEY idx_email_verification_tokens_user_id (user_id),
   CONSTRAINT fk_email_verification_tokens_user
     FOREIGN KEY (user_id) REFERENCES users(id)
@@ -333,6 +332,7 @@ CREATE TABLE IF NOT EXISTS notifications (
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
   KEY idx_notifications_user_read (user_id, read_at, created_at),
+  KEY idx_notifications_user_created (user_id, created_at),
   KEY idx_notifications_attendance_record_id (attendance_record_id),
   KEY idx_notifications_post_id (post_id),
   CONSTRAINT fk_notifications_user
@@ -377,6 +377,8 @@ CREATE TABLE IF NOT EXISTS posts (
   KEY idx_posts_created_at (created_at),
   KEY idx_posts_category_pinned_created (category, is_pinned, created_at),
   KEY idx_posts_user_id (user_id),
+  KEY idx_posts_pinned_created (is_pinned, created_at),
+  KEY idx_posts_user_pinned_created (user_id, is_pinned, created_at),
   CONSTRAINT fk_posts_user
     FOREIGN KEY (user_id) REFERENCES users(id)
     ON DELETE CASCADE

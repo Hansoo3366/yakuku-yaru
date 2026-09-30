@@ -6,9 +6,8 @@ import { HttpError } from '../../utils/http-error.js';
 import { signAccessToken } from '../../utils/jwt.js';
 import { comparePassword, hashPassword } from '../../utils/password.js';
 import {
-  findUsableEmailVerificationToken,
+  deleteEmailVerificationTokensForUser,
   findUsableEmailVerificationTokenByEmailAndCode,
-  markEmailVerificationTokenUsed,
 } from './email-verification.repository.js';
 import {
   getEmailVerificationStatus,
@@ -22,7 +21,7 @@ import {
 import {
   createPasswordResetToken,
   findUsablePasswordResetToken,
-  markPasswordResetTokenUsed,
+  claimPasswordResetToken,
 } from './password-reset.repository.js';
 import {
   createUser,
@@ -40,6 +39,7 @@ import {
 } from '../../utils/user-input.js';
 import {
   clearAuthCookies,
+  ensureSignedInCookie,
   readCookieHeader,
   REFRESH_COOKIE_NAME,
   setAuthCookies,
@@ -399,6 +399,7 @@ authRouter.get('/me', authenticate, async (req, res, next) => {
       throw new HttpError(404, 'USER_NOT_FOUND', '사용자를 찾을 수 없습니다.');
     }
 
+    ensureSignedInCookie(req, res);
     res.json({
       user: toPublicUser(user),
     });
@@ -468,19 +469,25 @@ authRouter.post(
 
       const normalizedPassword = validatePassword(password);
       const resetToken = await findUsablePasswordResetToken(token);
+      const invalidTokenError = new HttpError(
+        400,
+        'INVALID_RESET_TOKEN',
+        '유효하지 않거나 만료된 재설정 링크입니다. 비밀번호 찾기를 다시 요청해주세요.',
+      );
 
       if (!resetToken) {
-        throw new HttpError(
-          400,
-          'INVALID_RESET_TOKEN',
-          '유효하지 않거나 만료된 재설정 링크입니다. 비밀번호 찾기를 다시 요청해주세요.',
-        );
+        throw invalidTokenError;
       }
 
       const passwordHash = await hashPassword(normalizedPassword);
+
+      // 토큰을 먼저 선점해야 같은 링크로 동시에 두 번 재설정되지 않는다.
+      if (!(await claimPasswordResetToken(resetToken.id))) {
+        throw invalidTokenError;
+      }
+
       await updateUserPassword(resetToken.user_id, passwordHash);
       await revokeAllRefreshSessionsForUser(resetToken.user_id);
-      await markPasswordResetTokenUsed(resetToken.id);
 
       res.json({
         reset: true,
@@ -549,42 +556,35 @@ authRouter.post(
   verifyEmailRateLimit,
   async (req, res, next) => {
     try {
-      const { token, email, code } = req.body as {
-        token?: string;
+      const { email, code } = req.body as {
         email?: string;
         code?: string;
       };
 
-      let verificationToken = null;
-
-      if (email && code) {
-        const normalizedEmail = validateEmail(email);
-        const normalizedCode = String(code).trim().replace(/\D/g, '');
-
-        if (normalizedCode.length !== 6) {
-          throw new HttpError(
-            400,
-            'INVALID_INPUT',
-            '6자리 인증번호를 입력해주세요.',
-          );
-        }
-
-        verificationToken =
-          await findUsableEmailVerificationTokenByEmailAndCode(
-            normalizedEmail,
-            normalizedCode,
-          );
-      } else if (token) {
-        verificationToken = await findUsableEmailVerificationToken(
-          token.trim(),
-        );
-      } else {
+      if (!email || !code) {
         throw new HttpError(
           400,
           'INVALID_INPUT',
           '이메일과 인증번호를 입력해주세요.',
         );
       }
+
+      const normalizedEmail = validateEmail(email);
+      const normalizedCode = String(code).trim().replace(/\D/g, '');
+
+      if (normalizedCode.length !== 6) {
+        throw new HttpError(
+          400,
+          'INVALID_INPUT',
+          '6자리 인증번호를 입력해주세요.',
+        );
+      }
+
+      const verificationToken =
+        await findUsableEmailVerificationTokenByEmailAndCode(
+          normalizedEmail,
+          normalizedCode,
+        );
 
       if (!verificationToken) {
         throw new HttpError(
@@ -595,7 +595,7 @@ authRouter.post(
       }
 
       await markUserEmailVerified(verificationToken.user_id);
-      await markEmailVerificationTokenUsed(verificationToken.id);
+      await deleteEmailVerificationTokensForUser(verificationToken.user_id);
 
       res.json({
         verified: true,

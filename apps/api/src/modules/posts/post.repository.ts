@@ -6,7 +6,8 @@ export type PostRow = RowDataPacket & {
   user_id: number;
   category: string;
   title: string;
-  content: string;
+  /** 상세 조회에서만 읽는다. 목록에서는 본문(TEXT)을 가져오지 않는다. */
+  content?: string;
   is_pinned: number;
   request_status: string | null;
   author_nickname: string;
@@ -59,8 +60,33 @@ export function toPostListItem(row: PostRow): PostListItem {
 export function toPostDetail(row: PostRow): PostDetail {
   return {
     ...toPostListItem(row),
-    content: row.content,
+    content: row.content ?? '',
   };
+}
+
+/**
+ * 댓글 수는 게시글마다 idx_comments_post_id 로 센다. 댓글을 조인해 GROUP BY 하면
+ * LIMIT 전에 조건에 맞는 모든 게시글×댓글을 묶어야 해서 느리다.
+ */
+function postSelectSql(options: { withContent: boolean }) {
+  return `SELECT
+       p.id,
+       p.user_id,
+       p.category,
+       p.title,
+       ${options.withContent ? 'p.content,' : ''}
+       p.is_pinned,
+       p.request_status,
+       u.nickname AS author_nickname,
+       u.role AS author_role,
+       u.profile_image_url AS author_profile_image_url,
+       t.short_name AS author_favorite_team_short_name,
+       (SELECT COUNT(*) FROM comments c WHERE c.post_id = p.id) AS comment_count,
+       p.created_at,
+       p.updated_at
+     FROM posts p
+     JOIN users u ON u.id = p.user_id
+     LEFT JOIN teams t ON t.id = u.favorite_team_id`;
 }
 
 export async function createPost(input: {
@@ -148,40 +174,22 @@ export async function listPosts(input: {
     ? `WHERE ${conditions.join(' AND ')}`
     : '';
 
-  const [rows] = await db.query<PostRow[]>(
-    `SELECT
-       p.id,
-       p.user_id,
-       p.category,
-       p.title,
-       p.content,
-       p.is_pinned,
-       p.request_status,
-       u.nickname AS author_nickname,
-       u.role AS author_role,
-       u.profile_image_url AS author_profile_image_url,
-       t.short_name AS author_favorite_team_short_name,
-       COUNT(c.id) AS comment_count,
-       p.created_at,
-       p.updated_at
-     FROM posts p
-     JOIN users u ON u.id = p.user_id
-     LEFT JOIN teams t ON t.id = u.favorite_team_id
-     LEFT JOIN comments c ON c.post_id = p.id
-     ${whereClause}
-     GROUP BY p.id, p.user_id, p.category, p.title, p.content, p.is_pinned, p.request_status, u.nickname, u.role, u.profile_image_url, t.short_name, p.created_at, p.updated_at
-     ORDER BY p.is_pinned DESC, p.created_at DESC
-     LIMIT ? OFFSET ?`,
-    [...whereParams, input.size, offset],
-  );
-
-  const [countRows] = await db.query<(RowDataPacket & { total: number })[]>(
-    `SELECT COUNT(*) AS total
-     FROM posts p
-     JOIN users u ON u.id = p.user_id
-     ${whereClause}`,
-    whereParams,
-  );
+  const [[rows], [countRows]] = await Promise.all([
+    db.query<PostRow[]>(
+      `${postSelectSql({ withContent: false })}
+       ${whereClause}
+       ORDER BY p.is_pinned DESC, p.created_at DESC
+       LIMIT ? OFFSET ?`,
+      [...whereParams, input.size, offset],
+    ),
+    db.query<(RowDataPacket & { total: number })[]>(
+      `SELECT COUNT(*) AS total
+       FROM posts p
+       JOIN users u ON u.id = p.user_id
+       ${whereClause}`,
+      whereParams,
+    ),
+  ]);
 
   return {
     items: rows.map(toPostListItem),
@@ -191,27 +199,8 @@ export async function listPosts(input: {
 
 export async function listRecentPostsByUser(userId: number, limit = 5) {
   const [rows] = await db.query<PostRow[]>(
-    `SELECT
-       p.id,
-       p.user_id,
-       p.category,
-       p.title,
-       p.content,
-       p.is_pinned,
-       p.request_status,
-       u.nickname AS author_nickname,
-       u.role AS author_role,
-       u.profile_image_url AS author_profile_image_url,
-       t.short_name AS author_favorite_team_short_name,
-       COUNT(c.id) AS comment_count,
-       p.created_at,
-       p.updated_at
-     FROM posts p
-     JOIN users u ON u.id = p.user_id
-     LEFT JOIN teams t ON t.id = u.favorite_team_id
-     LEFT JOIN comments c ON c.post_id = p.id
+    `${postSelectSql({ withContent: false })}
      WHERE p.user_id = ?
-     GROUP BY p.id, p.user_id, p.category, p.title, p.content, p.is_pinned, p.request_status, u.nickname, u.role, u.profile_image_url, t.short_name, p.created_at, p.updated_at
      ORDER BY p.is_pinned DESC, p.created_at DESC
      LIMIT ?`,
     [userId, limit],
@@ -222,27 +211,8 @@ export async function listRecentPostsByUser(userId: number, limit = 5) {
 
 export async function findPostById(id: number) {
   const [rows] = await db.query<PostRow[]>(
-    `SELECT
-       p.id,
-       p.user_id,
-       p.category,
-       p.title,
-       p.content,
-       p.is_pinned,
-       p.request_status,
-       u.nickname AS author_nickname,
-       u.role AS author_role,
-       u.profile_image_url AS author_profile_image_url,
-       t.short_name AS author_favorite_team_short_name,
-       COUNT(c.id) AS comment_count,
-       p.created_at,
-       p.updated_at
-     FROM posts p
-     JOIN users u ON u.id = p.user_id
-     LEFT JOIN teams t ON t.id = u.favorite_team_id
-     LEFT JOIN comments c ON c.post_id = p.id
+    `${postSelectSql({ withContent: true })}
      WHERE p.id = ?
-     GROUP BY p.id, p.user_id, p.category, p.title, p.content, p.is_pinned, p.request_status, u.nickname, u.role, u.profile_image_url, t.short_name, p.created_at, p.updated_at
      LIMIT 1`,
     [id],
   );

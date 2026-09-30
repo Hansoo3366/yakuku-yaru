@@ -682,6 +682,50 @@ export function calculateSeasonProjection(
   const drawSums = new Map(teams.map((team) => [team.id, 0]));
   const lossSums = new Map(teams.map((team) => [team.id, 0]));
   const playoffCounts = new Map(teams.map((team) => [team.id, 0]));
+  // 경기별 승리 확률은 시뮬레이션마다 같으므로 한 번만 계산한다. (난수 사용 순서는 그대로라 결과가 같다)
+  const remainingGameOdds = remainingGames.flatMap((game) => {
+    if (!teamById.has(game.awayTeamId) || !teamById.has(game.homeTeamId)) {
+      return [];
+    }
+
+    const awayWinProbability = applyHomeAdvantage(
+      log5(
+        projectedWinRateByTeamId.get(game.awayTeamId) ?? 0.5,
+        projectedWinRateByTeamId.get(game.homeTeamId) ?? 0.5,
+      ),
+    );
+    const awayWinWithDraw = awayWinProbability * (1 - TIE_RATE);
+    const homeWinWithDraw = (1 - awayWinProbability) * (1 - TIE_RATE);
+
+    return [
+      {
+        awayTeamId: game.awayTeamId,
+        homeTeamId: game.homeTeamId,
+        awayWinBelow: awayWinWithDraw,
+        homeWinBelow: awayWinWithDraw + homeWinWithDraw,
+      },
+    ];
+  });
+  const fillerOdds = teams.flatMap((team) => {
+    const filler = fillerGamesByTeamId.get(team.id) ?? 0;
+
+    if (filler <= 0) {
+      return [];
+    }
+
+    const winProbability = fillerWinProbByTeamId.get(team.id) ?? 0.5;
+    const winWithDraw = winProbability * (1 - TIE_RATE);
+    const lossWithDraw = (1 - winProbability) * (1 - TIE_RATE);
+
+    return [
+      {
+        teamId: team.id,
+        filler,
+        winBelow: winWithDraw,
+        lossBelow: winWithDraw + lossWithDraw,
+      },
+    ];
+  });
 
   for (let simulation = 0; simulation < simulations; simulation += 1) {
     const records = new Map(
@@ -695,33 +739,19 @@ export function calculateSeasonProjection(
       ]),
     );
 
-    for (const game of remainingGames) {
-      const away = teamById.get(game.awayTeamId);
-      const home = teamById.get(game.homeTeamId);
-
-      if (!away || !home) {
-        continue;
-      }
-
-      const awayProjected = projectedWinRateByTeamId.get(away.id) ?? 0.5;
-      const homeProjected = projectedWinRateByTeamId.get(home.id) ?? 0.5;
-      const awayWinProbability = applyHomeAdvantage(
-        log5(awayProjected, homeProjected),
-      );
-      const awayWinWithDraw = awayWinProbability * (1 - TIE_RATE);
-      const homeWinWithDraw = (1 - awayWinProbability) * (1 - TIE_RATE);
+    for (const game of remainingGameOdds) {
       const roll = random();
-      const awayRecord = records.get(away.id);
-      const homeRecord = records.get(home.id);
+      const awayRecord = records.get(game.awayTeamId);
+      const homeRecord = records.get(game.homeTeamId);
 
       if (!awayRecord || !homeRecord) {
         continue;
       }
 
-      if (roll < awayWinWithDraw) {
+      if (roll < game.awayWinBelow) {
         awayRecord.wins += 1;
         homeRecord.losses += 1;
-      } else if (roll < awayWinWithDraw + homeWinWithDraw) {
+      } else if (roll < game.homeWinBelow) {
         homeRecord.wins += 1;
         awayRecord.losses += 1;
       } else {
@@ -730,29 +760,19 @@ export function calculateSeasonProjection(
       }
     }
 
-    for (const team of teams) {
-      const filler = fillerGamesByTeamId.get(team.id) ?? 0;
-
-      if (filler <= 0) {
-        continue;
-      }
-
-      const record = records.get(team.id);
+    for (const odds of fillerOdds) {
+      const record = records.get(odds.teamId);
 
       if (!record) {
         continue;
       }
 
-      const winProbability = fillerWinProbByTeamId.get(team.id) ?? 0.5;
-      const winWithDraw = winProbability * (1 - TIE_RATE);
-      const lossWithDraw = (1 - winProbability) * (1 - TIE_RATE);
-
-      for (let game = 0; game < filler; game += 1) {
+      for (let game = 0; game < odds.filler; game += 1) {
         const roll = random();
 
-        if (roll < winWithDraw) {
+        if (roll < odds.winBelow) {
           record.wins += 1;
-        } else if (roll < winWithDraw + lossWithDraw) {
+        } else if (roll < odds.lossBelow) {
           record.losses += 1;
         } else {
           record.draws += 1;

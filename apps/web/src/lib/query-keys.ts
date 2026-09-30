@@ -29,7 +29,6 @@ export const queryKeys = {
       input.rosterScope ?? 'firstTeam',
       input.size ?? 24,
     ] as const,
-  playerCheer: (playerId: number) => ['player-cheer', playerId] as const,
   teamCheers: () => ['team-cheers'] as const,
   attendanceRecords: (
     input: { from?: string; to?: string },

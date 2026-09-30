@@ -44,15 +44,6 @@ function parseBody(value: string) {
   };
 }
 
-function normalizeTeamShortName(value: string) {
-  if (value === '삼성') return '삼성';
-  if (value === '한화') return '한화';
-  if (value === '두산') return '두산';
-  if (value === '롯데') return '롯데';
-  if (value === '키움') return '키움';
-  return value;
-}
-
 export function parsePlayerSearchHtml(html: string): ParsedKboPlayer[] {
   const rows = [...html.matchAll(/<tr>\s*([\s\S]*?)\s*<\/tr>/g)];
   const players: ParsedKboPlayer[] = [];
@@ -80,7 +71,7 @@ export function parsePlayerSearchHtml(html: string): ParsedKboPlayer[] {
     players.push({
       kboPlayerId,
       name,
-      teamShortName: normalizeTeamShortName(stripHtml(cells[2])),
+      teamShortName: stripHtml(cells[2]),
       backNumber: stripHtml(cells[0]) || null,
       position: stripHtml(cells[3]) || null,
       birthDate: stripHtml(cells[4]) || null,

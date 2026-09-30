@@ -19,6 +19,7 @@ import { TeamStandingsTable } from '@/components/TeamStandingsTable';
 import { getTeamLogoSrc } from '@/lib/team-logo';
 import { Skeleton, SkeletonCard } from '@/components/Skeleton';
 import { EmptyState } from '@/components/EmptyState';
+import { useInitialSignedIn } from '@/components/AppProviders';
 import { HonorTitleSwiper } from '@/components/HonorTitleSwiper';
 import { getGameStatusLabel, getGameStatusTone } from '@/lib/game-status';
 import { isGameCancelled } from '@/lib/attendance-game';
@@ -288,6 +289,7 @@ function SeasonProjectionTable({
   loading?: boolean;
 }) {
   const [formulaOpen, setFormulaOpen] = useState(false);
+  const seasonYear = projection?.seasonYear ?? new Date().getFullYear();
   const formulaButton = (
     <button
       aria-label="예상 순위 계산식 보기"
@@ -305,7 +307,7 @@ function SeasonProjectionTable({
       <section aria-busy="true" className="card stack season-projection-card">
         <div className="section-heading season-projection-heading">
           <div>
-            <h2>2026 KBO 예상 순위</h2>
+            <h2>{seasonYear} KBO 예상 순위</h2>
             <p>DB에 저장된 시즌 예측 값을 불러오고 있어요…</p>
           </div>
           {formulaButton}
@@ -337,7 +339,7 @@ function SeasonProjectionTable({
       <section className="card stack season-projection-card">
         <div className="section-heading season-projection-heading">
           <div>
-            <h2>2026 KBO 포스트시즌 최종 예측</h2>
+            <h2>{seasonYear} KBO 포스트시즌 최종 예측</h2>
             <p>
               {projection.rankDate
                 ? `${projection.rankDate} 정규시즌 최종 순위 기반`
@@ -414,7 +416,7 @@ function SeasonProjectionTable({
     <section className="card stack season-projection-card">
       <div className="section-heading season-projection-heading">
         <div>
-          <h2>2026 KBO 시즌 예상 순위</h2>
+          <h2>{seasonYear} KBO 시즌 예상 순위</h2>
           <p>
             {projection.rankDate
               ? `${projection.rankDate}까지의 성적과 남은 대진 기반`
@@ -488,6 +490,7 @@ export default function HomePage() {
   const token = useAuthStore((state) => state.token);
   const hasHydrated = useAuthStore((state) => state.hasHydrated);
   const storedUser = useAuthStore((state) => state.user);
+  const initialSignedIn = useInitialSignedIn();
   const seasonYear = new Date().getFullYear();
   const meQuery = useMeQuery(token);
   const user = meQuery.data?.user ?? storedUser;
@@ -521,8 +524,11 @@ export default function HomePage() {
   const recordsQuery = useAttendanceRecordsQuery(attendanceStatsRange, token, {
     enabled: Boolean(token && user),
   });
+  // 인증 상태를 불러오기 전에는 서버가 쿠키로 판단한 값을 따른다. 비로그인이면 바로 랜딩을 그린다.
   const authState: 'checking' | 'guest' | 'authed' = !hasHydrated
-    ? 'checking'
+    ? initialSignedIn
+      ? 'checking'
+      : 'guest'
     : token && !meQuery.isError
       ? 'authed'
       : 'guest';

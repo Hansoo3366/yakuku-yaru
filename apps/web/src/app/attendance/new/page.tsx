@@ -25,10 +25,7 @@ import {
   canWriteAttendanceRecord,
   resolveFavoriteTeamIdInGame,
 } from '@/lib/attendance-game';
-import {
-  resolveAttendanceScoresFromGame,
-  type AttendanceResult,
-} from '@/lib/attendance-score';
+import { resolveAttendanceScoresFromGame } from '@/lib/attendance-score';
 import {
   CompanionPicker,
   type SelectedCompanion,
@@ -48,11 +45,6 @@ function NewAttendanceForm() {
   const hasHydrated = useAuthStore((state) => state.hasHydrated);
   const searchParams = useSearchParams();
   const gameId = Number(searchParams.get('gameId'));
-  const [myTeamScore, setMyTeamScore] = useState('');
-  const [opponentScore, setOpponentScore] = useState('');
-  const [result, setResult] = useState<AttendanceResult | null>(null);
-  const [resultManuallySet, setResultManuallySet] = useState(false);
-  const [scoreLocked, setScoreLocked] = useState(true);
   const [companions, setCompanions] = useState<SelectedCompanion[]>([]);
   const [photo, setPhoto] = useState<File | null>(null);
   const [photoPreviewUrl, setPhotoPreviewUrl] = useState('');
@@ -84,37 +76,15 @@ function NewAttendanceForm() {
     : false;
   const isCancelledGame = game ? isGameCancelled(game) : false;
   const canWrite = game ? canWriteAttendanceRecord(game) : false;
-
-  function applyOfficialScores(
-    targetGame: Game,
-    outcomeTeamId: number | null,
-  ) {
-    if (isGameCancelled(targetGame)) {
-      setMyTeamScore('');
-      setOpponentScore('');
-      setResult(null);
-      setResultManuallySet(true);
-      setScoreLocked(true);
-      return;
-    }
-
-    const official = resolveAttendanceScoresFromGame(targetGame, outcomeTeamId);
-
-    if (official) {
-      setMyTeamScore(String(official.myTeamScore));
-      setOpponentScore(String(official.opponentScore));
-      setResult(official.result);
-      setResultManuallySet(true);
-      setScoreLocked(true);
-      return;
-    }
-
-    setMyTeamScore('');
-    setOpponentScore('');
-    setResult(null);
-    setResultManuallySet(true);
-    setScoreLocked(true);
-  }
+  // 점수는 입력받지 않고 공식 스코어를 보여준다. 응원팀이 경기에 없으면 고른 응원팀 기준.
+  const officialScores =
+    game && !isCancelledGame
+      ? resolveAttendanceScoresFromGame(
+          game,
+          resolveFavoriteTeamIdInGame(game, favoriteTeamId, favoriteTeamShortName) ??
+            (isNeutral ? cheeredTeamId : null),
+        )
+      : null;
 
   useEffect(() => {
     if (!hasHydrated) {
@@ -135,17 +105,6 @@ function NewAttendanceForm() {
         const favoriteShortName = meResponse.user.favoriteTeamShortName ?? null;
         setFavoriteTeamId(favoriteTeamId);
         setFavoriteTeamShortName(favoriteShortName);
-        const teamInGameId = resolveFavoriteTeamIdInGame(
-          gameResponse.game,
-          favoriteTeamId,
-          favoriteShortName,
-        );
-
-        if (teamInGameId != null) {
-          applyOfficialScores(gameResponse.game, teamInGameId);
-        } else {
-          applyOfficialScores(gameResponse.game, null);
-        }
       })
       .catch(() => {
         setErrorMessage('경기 정보를 불러오지 못했습니다.');
@@ -154,14 +113,6 @@ function NewAttendanceForm() {
         setIsLoadingGame(false);
       });
   }, [gameId, hasHydrated, token]);
-
-  useEffect(() => {
-    if (!game || !isNeutral || !cheeredTeamId) {
-      return;
-    }
-
-    applyOfficialScores(game, cheeredTeamId);
-  }, [game, isNeutral, cheeredTeamId]);
 
   useEffect(() => {
     if (!photo) {
@@ -174,23 +125,6 @@ function NewAttendanceForm() {
 
     return () => URL.revokeObjectURL(objectUrl);
   }, [photo]);
-
-  function pickResult(value: AttendanceResult) {
-    if (scoreLocked) return;
-    setResult(value);
-    setResultManuallySet(true);
-  }
-
-  function handleScoreChange(side: 'my' | 'opponent', value: string) {
-    if (scoreLocked) return;
-
-    if (side === 'my') {
-      setMyTeamScore(value);
-    } else {
-      setOpponentScore(value);
-    }
-    setResultManuallySet(false);
-  }
 
   async function onSubmit(values: AttendanceFormValues) {
     if (!token) {
@@ -227,7 +161,7 @@ function NewAttendanceForm() {
       );
 
       if (photo) {
-        await uploadAttendancePhoto(response.record.id, photo, token);
+        await uploadAttendancePhoto(response.record.id, photo);
       }
 
       void queryClient.invalidateQueries({ queryKey: ['attendance-records'] });
@@ -363,18 +297,7 @@ function NewAttendanceForm() {
               </p>
             </section>
           ) : (
-            <AttendanceScoreSection
-              myTeamScore={myTeamScore}
-              opponentScore={opponentScore}
-              onMyTeamScoreChange={(value) => handleScoreChange('my', value)}
-              onOpponentScoreChange={(value) =>
-                handleScoreChange('opponent', value)
-              }
-              onPickResult={pickResult}
-              result={result}
-              resultManuallySet={resultManuallySet}
-              scoreLocked={scoreLocked}
-            />
+            <AttendanceScoreSection scores={officialScores} />
           )}
 
           <section className="card">

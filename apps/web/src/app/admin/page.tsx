@@ -384,6 +384,8 @@ export default function AdminPage() {
     status: 'all',
   });
   const loadRequestIdRef = useRef(0);
+  /** 검색 버튼으로 적용된 검색어. 입력 중인 keyword 와 달리 탭 이동 시 이 값으로 불러온다. */
+  const appliedKeywordRef = useRef('');
   const token = useAuthStore((state) => state.token);
   const hasHydrated = useAuthStore((state) => state.hasHydrated);
 
@@ -529,6 +531,7 @@ export default function AdminPage() {
     };
   }, [cheerKeyword, cheerPage, cheerRosterScope, cheerTeamId]);
 
+  /** 요약 카드와 지금 보고 있는 탭의 목록만 불러온다. 다른 탭은 그 탭으로 이동할 때 불러온다. */
   const loadAll = useCallback(
     async (
       nextKeyword: string,
@@ -539,72 +542,90 @@ export default function AdminPage() {
       if (!token) return;
       const requestId = loadRequestIdRef.current + 1;
       loadRequestIdRef.current = requestId;
-      const nextCheerInput = {
-        ...cheerFilterRef.current,
-        ...cheerInput,
+      appliedKeywordRef.current = nextKeyword;
+      const isCurrent = () => requestId === loadRequestIdRef.current;
+
+      const loadTabData = async (): Promise<(() => void) | null> => {
+        switch (tab) {
+          case 'users': {
+            const response = await listAdminUsers(token, nextKeyword);
+            return () => setUsers(response.items);
+          }
+          case 'posts': {
+            const input = { ...postFilterRef.current, ...postInput };
+            const response = await listAdminPosts(token, {
+              category: input.category,
+              keyword: nextKeyword,
+              page: input.page,
+              pin: input.pin,
+              size: 20,
+            });
+            return () => {
+              setPosts(response.items);
+              setPostPagination(response.pagination);
+            };
+          }
+          case 'comments': {
+            const response = await listAdminComments(token, nextKeyword);
+            return () => setComments(response.items);
+          }
+          case 'media': {
+            const response = await listAdminAttendanceRecords(
+              token,
+              nextKeyword,
+            );
+            return () => setAttendanceRecords(response.items);
+          }
+          case 'reports': {
+            const response = await listAdminReports(token);
+            return () => setReports(response.items);
+          }
+          case 'games': {
+            const input = { ...gameFilterRef.current, ...gameInput };
+            const response = await listAdminGames(token, {
+              page: input.page,
+              size: 25,
+              status: input.status,
+            });
+            return () => {
+              setGames(response.items);
+              setGamePagination(response.pagination);
+            };
+          }
+          case 'cheers': {
+            const input = { ...cheerFilterRef.current, ...cheerInput };
+            const [teamCheersResponse, cheersResponse] = await Promise.all([
+              listAdminTeamCheers(token),
+              listAdminPlayerCheers(token, {
+                keyword: input.keyword,
+                page: input.page,
+                rosterScope: input.rosterScope,
+                size: 24,
+                teamId: input.teamId,
+              }),
+            ]);
+            return () => {
+              setTeamCheers(teamCheersResponse.items);
+              setPlayerCheers(cheersResponse.items);
+              setPlayerCheerPagination(cheersResponse.pagination);
+            };
+          }
+          case 'sync':
+            return null;
+        }
       };
-      const nextPostInput = {
-        ...postFilterRef.current,
-        ...postInput,
-      };
-      const nextGameInput = {
-        ...gameFilterRef.current,
-        ...gameInput,
-      };
-      const [
-        summaryResponse,
-        usersResponse,
-        postsResponse,
-        commentsResponse,
-        attendanceResponse,
-        reportsResponse,
-        gamesResponse,
-        teamCheersResponse,
-        cheersResponse,
-      ] = await Promise.all([
+
+      const [summaryResponse, applyTabData] = await Promise.all([
         fetchAdminSummary(token),
-        listAdminUsers(token, nextKeyword),
-        listAdminPosts(token, {
-          category: nextPostInput.category,
-          keyword: nextKeyword,
-          page: nextPostInput.page,
-          pin: nextPostInput.pin,
-          size: 20,
-        }),
-        listAdminComments(token, nextKeyword),
-        listAdminAttendanceRecords(token, nextKeyword),
-        listAdminReports(token),
-        listAdminGames(token, {
-          page: nextGameInput.page,
-          size: 25,
-          status: nextGameInput.status,
-        }),
-        listAdminTeamCheers(token),
-        listAdminPlayerCheers(token, {
-          keyword: nextCheerInput.keyword,
-          page: nextCheerInput.page,
-          rosterScope: nextCheerInput.rosterScope,
-          size: 24,
-          teamId: nextCheerInput.teamId,
-        }),
+        loadTabData(),
       ]);
-      if (requestId !== loadRequestIdRef.current) {
+      if (!isCurrent()) {
         return;
       }
       setSummary(summaryResponse);
-      setUsers(usersResponse.items);
-      setPosts(postsResponse.items);
-      setPostPagination(postsResponse.pagination);
-      setComments(commentsResponse.items);
-      setAttendanceRecords(attendanceResponse.items);
-      setReports(reportsResponse.items);
-      setGames(gamesResponse.items);
-      setGamePagination(gamesResponse.pagination);
-      setTeamCheers(teamCheersResponse.items);
-      setPlayerCheers(cheersResponse.items);
-      setPlayerCheerPagination(cheersResponse.pagination);
+      applyTabData?.();
     },
-    [token],
+    [tab, token],
   );
 
   useEffect(() => {
@@ -626,11 +647,23 @@ export default function AdminPage() {
         setIsAdmin(true);
         setCurrentUserId(me.user.id);
         setTeams(teamResponse.items);
-        return loadAll('');
       })
       .catch(() => setIsAdmin(false))
       .finally(() => setIsLoading(false));
-  }, [hasHydrated, loadAll, token]);
+  }, [hasHydrated, token]);
+
+  // 권한 확인 뒤, 그리고 탭을 바꿀 때마다 그 탭의 데이터를 마지막 검색어로 불러온다.
+  useEffect(() => {
+    if (!isAdmin) {
+      return;
+    }
+
+    loadAll(appliedKeywordRef.current).catch((error) => {
+      setPostError(
+        error instanceof Error ? error.message : '관리 데이터를 불러오지 못했습니다.',
+      );
+    });
+  }, [isAdmin, loadAll]);
 
   async function handleSearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();

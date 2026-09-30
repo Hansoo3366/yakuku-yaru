@@ -40,7 +40,11 @@ async function indexExists(tableName: string, indexName: string) {
   return Number(rows[0]?.count ?? 0) > 0;
 }
 
-export async function runMigrations() {
+/**
+ * 버전 관리 도입 전까지 부팅마다 돌던 스키마 보강·데이터 보정 전체.
+ * 각 단계가 존재 여부를 확인하므로 기존 DB 에서도 한 번 더 돌려도 안전하며, 이후로는 다시 돌지 않는다.
+ */
+async function migrateBaseline() {
   const hasSessionVersion = await columnExists('users', 'session_version');
 
   if (!hasSessionVersion) {
@@ -963,5 +967,127 @@ export async function runMigrations() {
        ADD COLUMN is_public BOOLEAN NOT NULL DEFAULT TRUE AFTER parking_memo,
        ADD KEY idx_user_stadium_notes_public (stadium, is_public, updated_at)`,
     );
+  }
+}
+
+async function dropEmailVerificationTokenUnique() {
+  // 6자리 코드는 사용자끼리 겹칠 수 있다. 조회는 이메일+코드로 하므로 전역 고유 제약이 필요 없다.
+  if (
+    await indexExists(
+      'email_verification_tokens',
+      'uq_email_verification_tokens_token',
+    )
+  ) {
+    await db.execute(
+      `ALTER TABLE email_verification_tokens
+       DROP INDEX uq_email_verification_tokens_token`,
+    );
+  }
+}
+
+async function addIndexIfMissing(
+  tableName: string,
+  indexName: string,
+  columns: string,
+) {
+  if (!(await indexExists(tableName, indexName))) {
+    await db.execute(`ALTER TABLE ${tableName} ADD KEY ${indexName} (${columns})`);
+  }
+}
+
+async function addListQueryIndexes() {
+  // 알림 목록: WHERE user_id = ? ORDER BY created_at DESC LIMIT 30
+  await addIndexIfMissing(
+    'notifications',
+    'idx_notifications_user_created',
+    'user_id, created_at',
+  );
+  // 게시글 전체 목록 기본 정렬: ORDER BY is_pinned DESC, created_at DESC
+  await addIndexIfMissing(
+    'posts',
+    'idx_posts_pinned_created',
+    'is_pinned, created_at',
+  );
+  // 사용자별 최근 글·마지막 활동 시각: WHERE user_id = ? ORDER BY is_pinned, created_at / MAX(created_at)
+  await addIndexIfMissing(
+    'posts',
+    'idx_posts_user_pinned_created',
+    'user_id, is_pinned, created_at',
+  );
+}
+
+type Migration = {
+  /** 한 번 적용되면 schema_migrations 에 기록된다. 이미 배포된 id 는 바꾸지 않는다. */
+  id: string;
+  up: () => Promise<void>;
+};
+
+/**
+ * 새 스키마 변경은 맨 뒤에 추가한다. 적용된 마이그레이션은 수정하지 말고 새 항목으로 고친다.
+ * db/init/001_schema.sql 은 새 DB 의 출발점일 뿐이며, 이후 변경은 여기에 쌓인다.
+ */
+const MIGRATIONS: readonly Migration[] = [
+  { id: '0001_baseline', up: migrateBaseline },
+  {
+    id: '0002_email_verification_token_not_unique',
+    up: dropEmailVerificationTokenUnique,
+  },
+  { id: '0003_list_query_indexes', up: addListQueryIndexes },
+];
+
+const MIGRATION_LOCK_NAME = 'yakuku_yaru_migrations';
+const MIGRATION_LOCK_TIMEOUT_SECONDS = 120;
+
+/**
+ * API 서버와 동기화 스크립트가 시작할 때 호출한다. 적용된 마이그레이션은 건너뛰므로 평소에는 조회 한 번으로 끝난다.
+ * 여러 프로세스가 동시에 시작해도 DB 잠금으로 한 번에 하나만 적용한다.
+ */
+export async function runMigrations() {
+  const connection = await db.getConnection();
+
+  try {
+    const [lockRows] = await connection.query<
+      (RowDataPacket & { acquired: number | null })[]
+    >('SELECT GET_LOCK(?, ?) AS acquired', [
+      MIGRATION_LOCK_NAME,
+      MIGRATION_LOCK_TIMEOUT_SECONDS,
+    ]);
+
+    if (Number(lockRows[0]?.acquired) !== 1) {
+      throw new Error(
+        `마이그레이션 잠금을 ${MIGRATION_LOCK_TIMEOUT_SECONDS}초 안에 얻지 못했습니다.`,
+      );
+    }
+
+    try {
+      await connection.query(
+        `CREATE TABLE IF NOT EXISTS schema_migrations (
+           id VARCHAR(100) NOT NULL,
+           applied_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+           PRIMARY KEY (id)
+         )`,
+      );
+
+      const [appliedRows] = await connection.query<
+        (RowDataPacket & { id: string })[]
+      >('SELECT id FROM schema_migrations');
+      const applied = new Set(appliedRows.map((row) => row.id));
+
+      for (const migration of MIGRATIONS) {
+        if (applied.has(migration.id)) {
+          continue;
+        }
+
+        console.log(`[migrations] ${migration.id} 적용 중`);
+        await migration.up();
+        await connection.query('INSERT INTO schema_migrations (id) VALUES (?)', [
+          migration.id,
+        ]);
+      }
+    } finally {
+      await connection.query('SELECT RELEASE_LOCK(?)', [MIGRATION_LOCK_NAME]);
+    }
+  } finally {
+    connection.release();
   }
 }

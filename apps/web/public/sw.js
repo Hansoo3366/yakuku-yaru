@@ -1,4 +1,4 @@
-const CACHE_NAME = 'yakuku-yaru-v3';
+const CACHE_NAME = 'yakuku-yaru-v4';
 const OFFLINE_URL = '/offline';
 const APP_SHELL_URLS = [
   '/',

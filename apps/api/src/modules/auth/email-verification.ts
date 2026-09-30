@@ -5,6 +5,7 @@ import {
   createEmailVerificationToken,
   EMAIL_VERIFICATION_MAX_SENDS,
   EMAIL_VERIFICATION_RESEND_COOLDOWN_SECONDS,
+  EMAIL_VERIFICATION_SEND_WINDOW_MINUTES,
   getLatestEmailVerificationToken,
 } from './email-verification.repository.js';
 import { findUserByEmail } from '../users/user.repository.js';
@@ -62,7 +63,7 @@ export async function issueEmailVerification(input: {
     throw new HttpError(
       429,
       'VERIFICATION_RESEND_LIMIT',
-      '인증번호 재전송 횟수를 모두 사용했습니다. 회원가입을 처음부터 다시 진행해주세요.',
+      `인증번호 재전송 횟수를 모두 사용했습니다. ${EMAIL_VERIFICATION_SEND_WINDOW_MINUTES}분 후에 다시 시도해주세요.`,
     );
   }
 

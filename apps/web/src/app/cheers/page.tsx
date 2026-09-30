@@ -161,7 +161,7 @@ export default function CheersPage() {
   return (
     <main className="app-shell cheers-shell">
       <header className="cheers-page-intro">
-        <span>2026 KBO CHANTS</span>
+        <span>{new Date().getFullYear()} KBO CHANTS</span>
         <h1>응원가</h1>
         <p>오늘의 라인업부터 전체 선수까지, 응원가와 등장곡을 찾습니다.</p>
       </header>

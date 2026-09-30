@@ -1,7 +1,8 @@
 import type { ResultSetHeader, RowDataPacket } from 'mysql2';
-import { db } from '../../config/database.js';
+import type { PoolConnection } from 'mysql2/promise';
+import { db, withTransaction } from '../../config/database.js';
 import type { ParsedKboGame } from './parse-schedule.js';
-import { syncAttendanceScoresForGame } from '../attendance/attendance-score.js';
+import { reconcileAttendanceRecordsForGame } from '../attendance/attendance.repository.js';
 
 export const KBO_EXTERNAL_SOURCE = 'kbo';
 
@@ -89,17 +90,10 @@ async function findGameIdsBySameDayMatch(input: {
   return rows;
 }
 
-async function countAttendanceRecordsForGame(gameId: number) {
-  const [rows] = await db.query<CountRow[]>(
-    `SELECT COUNT(*) AS count
-     FROM attendance_records
-     WHERE game_id = ?`,
-    [gameId],
-  );
-
-  return rows[0]?.count ?? 0;
-}
-
+/**
+ * 같은 날 같은 대진으로 중복 생성된 경기를 정본 경기로 합친다.
+ * 여러 테이블을 옮기므로 한 트랜잭션으로 묶어, 중간에 실패하면 아무것도 바뀌지 않게 한다.
+ */
 async function mergeDuplicateGameIntoCanonical(input: {
   canonicalGameId: number;
   duplicateGameId: number;
@@ -108,18 +102,25 @@ async function mergeDuplicateGameIntoCanonical(input: {
     return;
   }
 
-  await db.execute(
+  await withTransaction((connection) => moveDuplicateGameData(connection, input));
+}
+
+async function moveDuplicateGameData(
+  connection: PoolConnection,
+  input: { canonicalGameId: number; duplicateGameId: number },
+) {
+  await connection.execute(
     `INSERT IGNORE INTO game_reminders (user_id, game_id, reminder_type, created_at)
      SELECT user_id, ?, reminder_type, created_at
      FROM game_reminders
      WHERE game_id = ?`,
     [input.canonicalGameId, input.duplicateGameId],
   );
-  await db.execute(`DELETE FROM game_reminders WHERE game_id = ?`, [
+  await connection.execute(`DELETE FROM game_reminders WHERE game_id = ?`, [
     input.duplicateGameId,
   ]);
 
-  await db.execute(
+  await connection.execute(
     `INSERT IGNORE INTO game_starting_pitchers (
        game_id,
        team_id,
@@ -157,11 +158,11 @@ async function mergeDuplicateGameIntoCanonical(input: {
      WHERE game_id = ?`,
     [input.canonicalGameId, input.duplicateGameId],
   );
-  await db.execute(`DELETE FROM game_starting_pitchers WHERE game_id = ?`, [
+  await connection.execute(`DELETE FROM game_starting_pitchers WHERE game_id = ?`, [
     input.duplicateGameId,
   ]);
 
-  await db.execute(
+  await connection.execute(
     `INSERT IGNORE INTO game_lineups (
        game_id,
        team_id,
@@ -191,25 +192,39 @@ async function mergeDuplicateGameIntoCanonical(input: {
      WHERE game_id = ?`,
     [input.canonicalGameId, input.duplicateGameId],
   );
-  await db.execute(`DELETE FROM game_lineups WHERE game_id = ?`, [
+  await connection.execute(`DELETE FROM game_lineups WHERE game_id = ?`, [
     input.duplicateGameId,
   ]);
 
-  await db.execute(
+  await connection.execute(
+    `UPDATE IGNORE attendance_viewer_preferences
+     SET game_id = ?
+     WHERE game_id = ?`,
+    [input.canonicalGameId, input.duplicateGameId],
+  );
+
+  await connection.execute(
     `UPDATE IGNORE attendance_records
      SET game_id = ?
      WHERE game_id = ?`,
     [input.canonicalGameId, input.duplicateGameId],
   );
 
-  if ((await countAttendanceRecordsForGame(input.duplicateGameId)) > 0) {
+  const [remainingRows] = await connection.query<CountRow[]>(
+    `SELECT COUNT(*) AS count
+     FROM attendance_records
+     WHERE game_id = ?`,
+    [input.duplicateGameId],
+  );
+
+  if (Number(remainingRows[0]?.count ?? 0) > 0) {
     console.warn(
       `[kbo-sync] 중복 경기 ${input.duplicateGameId} 삭제 보류: 충돌하는 직관 기록이 남아있습니다.`,
     );
     return;
   }
 
-  await db.execute(`DELETE FROM games WHERE id = ?`, [input.duplicateGameId]);
+  await connection.execute(`DELETE FROM games WHERE id = ?`, [input.duplicateGameId]);
 }
 
 async function mergeSameDayDuplicateGames(input: {
@@ -295,16 +310,15 @@ export async function upsertKboGame(
       ],
     );
 
-    if (game.homeScore !== null && game.awayScore !== null) {
-      await syncAttendanceScoresForGame(existingId);
-    }
-
     await mergeSameDayDuplicateGames({
       canonicalGameId: existingId,
       gameDate: game.gameDate,
       homeTeamId,
       awayTeamId,
     });
+
+    // 병합으로 옮겨온 기록까지 포함해 스코어 확정·취소 전환을 직관 기록에 반영한다. 바뀐 기록만 UPDATE 된다.
+    await reconcileAttendanceRecordsForGame(existingId);
 
     return 'updated';
   }
@@ -337,14 +351,6 @@ export async function upsertKboGame(
     ],
   );
 
-  if (
-    insertResult.insertId &&
-    game.homeScore !== null &&
-    game.awayScore !== null
-  ) {
-    await syncAttendanceScoresForGame(insertResult.insertId);
-  }
-
   if (insertResult.insertId) {
     await mergeSameDayDuplicateGames({
       canonicalGameId: insertResult.insertId,
@@ -352,6 +358,7 @@ export async function upsertKboGame(
       homeTeamId,
       awayTeamId,
     });
+    await reconcileAttendanceRecordsForGame(insertResult.insertId);
   }
 
   return 'inserted';

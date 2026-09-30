@@ -16,11 +16,7 @@ import {
 import { fetchPost, listComments, listPosts } from '@/lib/post-api';
 import type { PostCategory } from '@/lib/post-api';
 import { fetchFanProfile, listFans } from '@/lib/user-api';
-import {
-  fetchPlayerCheer,
-  listPlayerCheers,
-  listTeamCheers,
-} from '@/lib/player-cheer-api';
+import { listPlayerCheers, listTeamCheers } from '@/lib/player-cheer-api';
 import { queryKeys } from '@/lib/query-keys';
 import { fetchStadium, listStadiums } from '@/lib/stadium-note-api';
 
@@ -107,20 +103,6 @@ export function usePlayerCheersQuery(input: {
   return useQuery({
     queryKey: queryKeys.playerCheers(input),
     queryFn: () => listPlayerCheers(input),
-  });
-}
-
-export function usePlayerCheerQuery(
-  playerId: number,
-  options?: { enabled?: boolean },
-) {
-  return useQuery({
-    queryKey: queryKeys.playerCheer(playerId),
-    queryFn: () => fetchPlayerCheer(playerId),
-    enabled:
-      Number.isInteger(playerId) &&
-      playerId > 0 &&
-      (options?.enabled ?? true),
   });
 }
 

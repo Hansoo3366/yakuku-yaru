@@ -124,13 +124,6 @@ export function pickOpponentRankedList(
   return assignCompetitionRanks(sliced);
 }
 
-export function pickOpponentExtreme(
-  entries: OpponentAccumulator[],
-  direction: 'high' | 'low',
-): OpponentInsightItem | null {
-  return pickOpponentRankedList(entries, direction, 1)[0] ?? null;
-}
-
 function buildStadiumOpponentStats(
   records: AttendanceRecord[],
   favoriteTeamId: number,

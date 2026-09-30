@@ -109,25 +109,10 @@ export function isNeutralAttendance(
   );
 }
 
-export function countsTowardWinRate(
-  game: GameTeamsLike,
-  favoriteTeamId: number | null | undefined,
-) {
-  if (isGameCancelled(game)) {
-    return false;
-  }
-
-  return isTeamInGame(game, favoriteTeamId);
-}
-
 /** 기록 단위 승률 집계 대상 여부: 내 응원팀이 실제로 뛴 경기만 포함 */
 export function countsTowardWinRateForRecord(input: {
   game: GameTeamsLike;
   favoriteTeamId: number | null | undefined;
-  cheeredTeamId?: number | null;
-  viewerCheeredTeamId?: number | null;
-  viewerRelation?: 'owner' | 'companion';
-  ownerFavoriteTeamId?: number | null;
 }) {
   if (isGameCancelled(input.game)) {
     return false;

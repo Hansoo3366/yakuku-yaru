@@ -248,7 +248,7 @@ export default function MyPage() {
 
     setIsUploadingPhoto(true);
     try {
-      const response = await uploadProfilePhoto(file, token);
+      const response = await uploadProfilePhoto(file);
       setStoredUser(response.user);
       queryClient.setQueryData(queryKeys.me(token), { user: response.user });
       setStatusMessage('프로필 사진이 등록되었습니다.');

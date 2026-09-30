@@ -12,6 +12,7 @@
     "build": "npm run build --workspaces",
     "lint": "npm run lint --workspaces",
     "typecheck": "npm run typecheck --workspaces",
+    "test": "npm run test --workspaces --if-present",
     "format": "prettier --write ."
   },
   "overrides": {

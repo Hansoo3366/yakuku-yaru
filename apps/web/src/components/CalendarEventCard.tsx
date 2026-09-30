@@ -171,6 +171,8 @@ export function CalendarEventCard({
           <img
             alt="직관 사진"
             className="calendar-event-photo"
+            decoding="async"
+            loading="lazy"
             src={getAssetUrl(attendance.photoUrl)}
           />
         ) : null}

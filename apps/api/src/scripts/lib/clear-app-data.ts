@@ -1,32 +1,11 @@
-import { db } from '../../config/database.js';
+import { GAME_TABLES, truncateTables, USER_TABLES } from './truncate-tables.js';
 
-/** teams, stadium_guides 는 유지 */
+/** teams, stadium_guides, players, 응원가 마스터는 유지 */
 export async function clearAppData() {
-  await db.execute('SET FOREIGN_KEY_CHECKS = 0');
-  await db.execute('TRUNCATE TABLE comments');
-  await db.execute('TRUNCATE TABLE posts');
-  await db.execute('TRUNCATE TABLE notifications');
-  await db.execute('TRUNCATE TABLE attendance_companions');
-  await db.execute('TRUNCATE TABLE attendance_records');
-  await db.execute('TRUNCATE TABLE game_reminders');
-  await db.execute('TRUNCATE TABLE password_reset_tokens');
-  await db.execute('TRUNCATE TABLE email_verification_tokens');
-  await db.execute('TRUNCATE TABLE users');
-  await db.execute('TRUNCATE TABLE games');
-  await db.execute('SET FOREIGN_KEY_CHECKS = 1');
+  await truncateTables([...new Set([...USER_TABLES, ...GAME_TABLES])]);
 }
 
-/** 경기·사용자 제외 사용자 생성 데이터만 삭제 */
+/** 경기 일정은 유지하고 사용자와 사용자가 만든 데이터만 삭제 */
 export async function clearUserData() {
-  await db.execute('SET FOREIGN_KEY_CHECKS = 0');
-  await db.execute('TRUNCATE TABLE comments');
-  await db.execute('TRUNCATE TABLE posts');
-  await db.execute('TRUNCATE TABLE notifications');
-  await db.execute('TRUNCATE TABLE attendance_companions');
-  await db.execute('TRUNCATE TABLE attendance_records');
-  await db.execute('TRUNCATE TABLE game_reminders');
-  await db.execute('TRUNCATE TABLE password_reset_tokens');
-  await db.execute('TRUNCATE TABLE email_verification_tokens');
-  await db.execute('TRUNCATE TABLE users');
-  await db.execute('SET FOREIGN_KEY_CHECKS = 1');
+  await truncateTables(USER_TABLES);
 }

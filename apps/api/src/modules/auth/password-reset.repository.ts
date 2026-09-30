@@ -54,11 +54,18 @@ export async function findUsablePasswordResetToken(token: string) {
   return rows[0] ?? null;
 }
 
-export async function markPasswordResetTokenUsed(tokenId: number) {
-  await db.execute(
+/**
+ * 아직 쓰이지 않은 토큰만 사용 처리한다. 같은 링크로 동시에 요청이 와도 한 요청만 true 를 받는다.
+ */
+export async function claimPasswordResetToken(tokenId: number) {
+  const [result] = await db.execute<ResultSetHeader>(
     `UPDATE password_reset_tokens
      SET used_at = CURRENT_TIMESTAMP
-     WHERE id = ?`,
+     WHERE id = ?
+       AND used_at IS NULL
+       AND expires_at > CURRENT_TIMESTAMP`,
     [tokenId],
   );
+
+  return result.affectedRows === 1;
 }

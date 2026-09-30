@@ -1,5 +1,5 @@
 import { fetchWithAuthRetry, request } from './api';
-import { shouldSendAuthorizationHeader, type PublicUser } from './auth';
+import type { PublicUser } from './auth';
 
 export type AuthResponse = {
   user: PublicUser;
@@ -72,9 +72,7 @@ export function fetchMe(token: string) {
   });
 }
 
-export function verifyEmail(
-  input: { email: string; code: string } | { token: string },
-) {
+export function verifyEmail(input: { email: string; code: string }) {
   return request<{ verified: boolean }>('/auth/verify-email', {
     method: 'POST',
     body: input,
@@ -170,16 +168,13 @@ async function optimizeProfilePhoto(photo: File) {
   });
 }
 
-export async function uploadProfilePhoto(photo: File, token: string) {
+export async function uploadProfilePhoto(photo: File) {
   const optimizedPhoto = await optimizeProfilePhoto(photo);
   const formData = new FormData();
   formData.set('photo', optimizedPhoto);
 
   const response = await fetchWithAuthRetry('/users/me/profile-photo', {
     method: 'POST',
-    headers: shouldSendAuthorizationHeader(token)
-      ? { Authorization: `Bearer ${token}` }
-      : undefined,
     body: formData,
   });
 

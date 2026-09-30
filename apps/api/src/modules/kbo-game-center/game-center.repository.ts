@@ -1,5 +1,5 @@
 import type { ResultSetHeader, RowDataPacket } from 'mysql2';
-import { db } from '../../config/database.js';
+import { db, withTransaction } from '../../config/database.js';
 import { KBO_EXTERNAL_SOURCE } from '../kbo-schedule/kbo-game.repository.js';
 import type {
   KboGameCenterGame,
@@ -355,14 +355,9 @@ export async function replaceGameLineup(input: {
     return 0;
   }
 
-  await db.execute(
-    `DELETE FROM game_lineups
-     WHERE game_id = ?
-       AND team_id = ?`,
-    [input.gameId, input.teamId],
-  );
-
-  let inserted = 0;
+  // 선수 매칭(필요하면 선수 등록)을 먼저 끝낸 뒤, 기존 라인업 교체는 한 트랜잭션으로 한다.
+  // 중간에 실패해도 라인업이 비거나 절반만 남지 않는다.
+  const rows: Array<[number, number, number, number, string | null, number | null]> = [];
 
   for (const player of input.players) {
     const playerId = await upsertLineupPlayer({
@@ -370,11 +365,30 @@ export async function replaceGameLineup(input: {
       player,
     });
 
-    if (!playerId) {
-      continue;
+    if (playerId) {
+      rows.push([
+        input.gameId,
+        input.teamId,
+        playerId,
+        player.battingOrder,
+        player.fieldPosition,
+        player.war,
+      ]);
     }
+  }
 
-    await db.execute(
+  if (rows.length === 0) {
+    return 0;
+  }
+
+  await withTransaction(async (connection) => {
+    await connection.execute(
+      `DELETE FROM game_lineups
+       WHERE game_id = ?
+         AND team_id = ?`,
+      [input.gameId, input.teamId],
+    );
+    await connection.query(
       `INSERT INTO game_lineups (
          game_id,
          team_id,
@@ -386,19 +400,10 @@ export async function replaceGameLineup(input: {
          source,
          synced_at
        )
-       VALUES (?, ?, ?, ?, ?, ?, TRUE, 'kbo-game-center', NOW())`,
-      [
-        input.gameId,
-        input.teamId,
-        playerId,
-        player.battingOrder,
-        player.fieldPosition,
-        player.war,
-      ],
+       VALUES ${rows.map(() => "(?, ?, ?, ?, ?, ?, TRUE, 'kbo-game-center', NOW())").join(', ')}`,
+      rows.flat(),
     );
+  });
 
-    inserted += 1;
-  }
-
-  return inserted;
+  return rows.length;
 }

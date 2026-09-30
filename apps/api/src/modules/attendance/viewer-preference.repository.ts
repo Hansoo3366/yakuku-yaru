@@ -44,38 +44,6 @@ export async function getAttendanceViewerPreference(input: {
     : null;
 }
 
-export async function listAttendanceViewerPreferences(input: {
-  userId: number;
-  gameIds: number[];
-}) {
-  if (!input.gameIds.length) {
-    return new Map<number, AttendanceViewerPreference>();
-  }
-
-  const [rows] = await db.query<AttendanceViewerPreferenceRow[]>(
-    `SELECT
-       avp.user_id,
-       avp.game_id,
-       avp.cheered_team_id,
-       t.short_name AS cheered_team_short_name
-     FROM attendance_viewer_preferences avp
-     LEFT JOIN teams t ON t.id = avp.cheered_team_id
-     WHERE avp.user_id = ?
-       AND avp.game_id IN (?)`,
-    [input.userId, input.gameIds],
-  );
-
-  return rows.reduce<Map<number, AttendanceViewerPreference>>((acc, row) => {
-    acc.set(row.game_id, {
-      userId: row.user_id,
-      gameId: row.game_id,
-      cheeredTeamId: row.cheered_team_id,
-      cheeredTeamShortName: row.cheered_team_short_name,
-    });
-    return acc;
-  }, new Map());
-}
-
 export async function upsertAttendanceViewerPreference(input: {
   userId: number;
   gameId: number;

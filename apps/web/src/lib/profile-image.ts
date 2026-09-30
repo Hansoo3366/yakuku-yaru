@@ -3,7 +3,7 @@ import { getAssetUrl } from './api';
 import { getTeamLogoSrc } from './team-logo';
 import type { Team } from './baseball-api';
 
-export const DEFAULT_PROFILE_IMAGE_SRC = '/icons/default_profile.svg';
+export const DEFAULT_PROFILE_IMAGE_SRC = '/icons/default_profile.webp';
 
 export function getProfileImageSrc(
   user: Pick<PublicUser, 'profileImageUrl'> | null | undefined,

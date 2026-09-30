@@ -5,10 +5,11 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/server.ts",
-    "build": "tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.build.json",
     "start": "node dist/server.js",
     "lint": "eslint \"src/**/*.ts\"",
     "typecheck": "tsc --noEmit",
+    "test": "tsx --test \"src/**/*.test.ts\"",
     "sync:kbo-schedule": "node dist/scripts/sync-kbo-schedule.js",
     "sync:kbo-standings": "node dist/scripts/sync-kbo-team-rank.js",
     "sync:kbo-season-projection": "node dist/scripts/sync-kbo-season-projection.js",

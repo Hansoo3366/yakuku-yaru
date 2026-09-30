@@ -10,6 +10,8 @@ export type AppNotification = {
   message: string;
   readAt: string | null;
   createdAt: string;
+  /** 동행 태그 알림일 때 내 수락 상태 */
+  companionStatus: 'pending' | 'accepted' | 'rejected' | null;
 };
 
 export function listNotifications(token: string) {

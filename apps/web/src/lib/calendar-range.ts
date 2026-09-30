@@ -82,12 +82,6 @@ export function isGameInScheduleFilter(
   return isHome || isAway;
 }
 
-export function isDateInMonth(date: Date, month: Date) {
-  return (
-    date.getFullYear() === month.getFullYear() && date.getMonth() === month.getMonth()
-  );
-}
-
 export function getWeekRange(weekStart: Date) {
   const from = new Date(weekStart);
   const to = new Date(weekStart);

@@ -1,12 +1,4 @@
-import type { RowDataPacket } from 'mysql2';
 import type { Game } from '../games/game.repository.js';
-import { db } from '../../config/database.js';
-import { findGameById } from '../games/game.repository.js';
-import {
-  findUserById,
-  getFavoriteTeamIdFromUser,
-  getFavoriteTeamShortNameFromUser,
-} from '../users/user.repository.js';
 import {
   isGameCancelled,
   resolveOutcomeTeamId,
@@ -465,68 +457,4 @@ export function buildAttendanceScoreFields(input: {
     result: null,
     isScoreModified: false,
   };
-}
-
-/** KBO 경기 스코어 갱신 시 직관 기록 스코어·결과도 맞춤 (수동 입력 포함 전부 덮어씀) */
-export async function syncAttendanceScoresForGame(gameId: number) {
-  const game = await findGameById(gameId);
-
-  if (
-    !game ||
-    isGameCancelled(game) ||
-    !isGameFinished(game) ||
-    !gameHasOfficialScores(game)
-  ) {
-    return 0;
-  }
-
-  type AttendanceIdRow = RowDataPacket & {
-    id: number;
-    user_id: number;
-    cheered_team_id: number | null;
-  };
-
-  const [rows] = await db.query<AttendanceIdRow[]>(
-    `SELECT ar.id, ar.user_id, ar.cheered_team_id
-     FROM attendance_records ar
-     WHERE ar.game_id = ?`,
-    [gameId],
-  );
-
-  let updated = 0;
-
-  for (const row of rows) {
-    const user = await findUserById(row.user_id);
-    const scores = resolveAttendanceScoresFromGame(
-      game,
-      resolveStorageOutcomeTeamId({
-        game,
-        ownerFavoriteTeamId: getFavoriteTeamIdFromUser(user),
-        ownerFavoriteTeamShortName: getFavoriteTeamShortNameFromUser(user),
-        cheeredTeamId: row.cheered_team_id,
-      }),
-    );
-
-    if (!scores) {
-      continue;
-    }
-
-    await db.execute(
-      `UPDATE attendance_records
-       SET my_team_score = ?,
-           opponent_score = ?,
-           result = ?,
-           is_score_modified = 0
-       WHERE id = ?`,
-      [
-        scores.myTeamScore,
-        scores.opponentScore,
-        scores.result,
-        row.id,
-      ],
-    );
-    updated += 1;
-  }
-
-  return updated;
 }

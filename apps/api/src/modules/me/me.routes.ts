@@ -10,6 +10,7 @@ import {
   assertUserUploadQuota,
   profilePhotoUpload,
 } from '../attendance/upload.js';
+import { reconcileAttendanceScoresForUser } from '../attendance/attendance.repository.js';
 import { findTeamById } from '../teams/team.repository.js';
 import {
   findUserByNickname,
@@ -74,6 +75,9 @@ meRouter.patch(
           '사용자를 찾을 수 없습니다.',
         );
       }
+
+      // 직관 승패는 응원팀 기준으로 저장되므로 응원팀이 바뀌면 다시 맞춘다.
+      await reconcileAttendanceScoresForUser(user.id);
 
       res.json({
         user: toPublicUser(user),

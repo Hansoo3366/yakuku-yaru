@@ -128,7 +128,7 @@ export async function generateMetadata({
       locale: 'ko_KR',
       images: [
         {
-          url: getAbsoluteUrl('/main_kv.png'),
+          url: getAbsoluteUrl('/main_kv.jpg'),
           width: 1200,
           height: 630,
           alt: `${game.awayTeam.shortName} vs ${game.homeTeam.shortName} KBO 경기`,
@@ -139,7 +139,7 @@ export async function generateMetadata({
       card: 'summary_large_image',
       title,
       description,
-      images: [getAbsoluteUrl('/main_kv.png')],
+      images: [getAbsoluteUrl('/main_kv.jpg')],
     },
   };
 }

@@ -18,14 +18,3 @@ export function getPlayerProfileImageSrc(
 
   return DEFAULT_PLAYER_IMAGE_SRC;
 }
-
-export function hasPlayerProfileImage(
-  profileImageUrl: string | null | undefined,
-) {
-  return normalizeProfileImageUrl(profileImageUrl) !== null;
-}
-
-export function applyPlayerPhotoFallback(image: HTMLImageElement) {
-  image.onerror = null;
-  image.src = DEFAULT_PLAYER_IMAGE_SRC;
-}

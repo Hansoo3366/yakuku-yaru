@@ -328,23 +328,6 @@ function toLineupPlayer(row: GameLineupRow, referenceDate: Date): GameLineupPlay
   };
 }
 
-function rosterPlayerLookupSql(column: string) {
-  return `(
-    SELECT pr.${column}
-    FROM players pr
-    WHERE pr.team_id = gl.team_id
-      AND pr.kbo_player_id IS NOT NULL
-      AND p.kbo_player_id IS NOT NULL
-      AND pr.kbo_player_id = p.kbo_player_id
-    ORDER BY
-      (pr.birth_date IS NOT NULL) DESC,
-      (pr.season_batting_avg IS NOT NULL) DESC,
-      (pr.season_ops IS NOT NULL) DESC,
-      pr.id ASC
-    LIMIT 1
-  )`;
-}
-
 async function listGameLineups(gameId: number) {
   const [rows] = await db.query<GameLineupRow[]>(
     `SELECT
@@ -352,11 +335,11 @@ async function listGameLineups(gameId: number) {
        gl.team_id,
        gl.player_id,
        p.name AS player_name,
-       COALESCE(p.back_number, ${rosterPlayerLookupSql('back_number')}) AS player_back_number,
-       COALESCE(p.profile_image_url, ${rosterPlayerLookupSql('profile_image_url')}) AS player_profile_image_url,
-       COALESCE(p.season_batting_avg, ${rosterPlayerLookupSql('season_batting_avg')}) AS player_season_batting_avg,
-       COALESCE(p.season_ops, ${rosterPlayerLookupSql('season_ops')}) AS player_season_ops,
-       COALESCE(p.birth_date, ${rosterPlayerLookupSql('birth_date')}) AS player_birth_date,
+       p.back_number AS player_back_number,
+       p.profile_image_url AS player_profile_image_url,
+       p.season_batting_avg AS player_season_batting_avg,
+       p.season_ops AS player_season_ops,
+       p.birth_date AS player_birth_date,
        gl.batting_order,
        gl.field_position,
        gl.war,

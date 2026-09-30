@@ -4,12 +4,11 @@ import { create } from 'zustand';
 import {
   AUTH_LOGOUT_EVENT,
   COOKIE_SESSION_TOKEN,
-  clearAccessToken,
   clearLegacyStoredAccessToken,
   notifyAuthExpired,
   registerAuthExpiredHandler,
-  setCookieSessionToken,
   setRootAuthState,
+  shouldCheckSession,
   type PublicUser,
 } from '@/lib/auth';
 import { logout } from '@/lib/auth-api';
@@ -31,11 +30,16 @@ export const useAuthStore = create<AuthState>((set) => ({
   hasHydrated: false,
   hydrate: () => {
     clearLegacyStoredAccessToken();
-    setCookieSessionToken();
+
+    if (!shouldCheckSession()) {
+      setRootAuthState('guest');
+      set({ token: null, user: null, hasHydrated: true });
+      return;
+    }
+
     set({ token: COOKIE_SESSION_TOKEN, hasHydrated: true });
   },
   setSession: ({ user }) => {
-    setCookieSessionToken();
     setRootAuthState('authed');
     set({ token: COOKIE_SESSION_TOKEN, user: user ?? null, hasHydrated: true });
   },
@@ -49,7 +53,6 @@ export const useAuthStore = create<AuthState>((set) => ({
 }));
 
 registerAuthExpiredHandler(() => {
-  clearAccessToken();
   applyTeamTheme(null);
   setRootAuthState('guest');
   if (typeof window !== 'undefined') {

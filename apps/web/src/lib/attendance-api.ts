@@ -1,5 +1,4 @@
 import { fetchWithAuthRetry, request } from './api';
-import { shouldSendAuthorizationHeader } from './auth';
 import type { AttendanceHonorTitle } from './attendance-score';
 
 export type AttendanceRecord = {
@@ -288,7 +287,6 @@ async function optimizeAttendancePhoto(photo: File) {
 export async function uploadAttendancePhoto(
   recordId: number,
   photo: File,
-  token: string,
 ) {
   const optimizedPhoto = await optimizeAttendancePhoto(photo);
   const formData = new FormData();
@@ -298,9 +296,6 @@ export async function uploadAttendancePhoto(
     `/attendance-records/${recordId}/photo`,
     {
       method: 'POST',
-      headers: shouldSendAuthorizationHeader(token)
-        ? { Authorization: `Bearer ${token}` }
-        : undefined,
       body: formData,
     },
   );
