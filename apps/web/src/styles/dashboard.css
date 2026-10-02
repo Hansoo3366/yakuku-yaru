@@ -532,14 +532,6 @@
   padding: clamp(20px, 3vw, 34px);
 }
 
-@media (max-width: 560px) {
-  /* 좁은 화면에서는 순위표가 잘리지 않도록 카드 안쪽 여백을 줄인다. */
-  .page-shell--dashboard .home-leaderboard-card,
-  .dashboard-league-zone > .season-projection-card {
-    padding: 14px 12px;
-  }
-}
-
 .dashboard-upcoming-card {
   background: #eef2f5;
   background: light-dark(#eef2f5, #1d2127);
