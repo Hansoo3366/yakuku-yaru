@@ -9,7 +9,15 @@ import {
 } from '@/lib/calendar-range';
 import { CalendarEventCard } from '@/components/CalendarEventCard';
 
-const weekdayLabels = ['일', '월', '화', '수', '목', '금', '토'];
+const weekdayLabels = [
+  '일요일',
+  '월요일',
+  '화요일',
+  '수요일',
+  '목요일',
+  '금요일',
+  '토요일',
+];
 
 type Props = {
   days: Date[];
@@ -57,21 +65,15 @@ export function CalendarAgendaView({
     const dayGames = gamesByDate[key] ?? [];
     const dayRecords = attendanceByDate[key] ?? [];
 
-    return (
-      key === focusDateKey ||
-      dayGames.length > 0 ||
-      dayRecords.length > 0
-    );
+    return key === focusDateKey || dayGames.length > 0 || dayRecords.length > 0;
   });
 
   if (visibleDays.length === 0) {
-    return (
-      <p className="calendar-agenda-empty">표시할 일정이 없어요.</p>
-    );
+    return <p className="cal-agenda__empty">표시할 일정이 없어요.</p>;
   }
 
   return (
-    <section className="calendar-agenda" aria-label="일정 목록">
+    <section className="cal-agenda" aria-label="일정 목록">
       {visibleDays.map((date) => {
         const key = formatDateInput(date);
         const dayGames = gamesByDate[key] ?? [];
@@ -89,10 +91,12 @@ export function CalendarAgendaView({
         return (
           <article
             className={[
-              'calendar-agenda-day',
+              'cal-agenda__day',
               isOutside ? 'is-outside' : '',
               isToday ? 'is-today' : '',
               isFocused ? 'is-focused' : '',
+              date.getDay() === 0 ? 'is-sunday' : '',
+              date.getDay() === 6 ? 'is-saturday' : '',
             ]
               .filter(Boolean)
               .join(' ')}
@@ -100,18 +104,16 @@ export function CalendarAgendaView({
             id={getAgendaDayElementId(key)}
             key={key}
           >
-            <header className="calendar-agenda-day-head">
-              <span className="calendar-agenda-weekday">
-                {weekdayLabels[date.getDay()]}
-                {isToday ? ' · 오늘' : ''}
-              </span>
-              <span className="calendar-agenda-date">
+            <h2 className="cal-agenda__date">
+              <strong>
                 {date.getMonth() + 1}월 {date.getDate()}일
-              </span>
-            </header>
-            <div className="calendar-agenda-events">
+              </strong>
+              <span>{weekdayLabels[date.getDay()]}</span>
+              {isToday ? <em>오늘</em> : null}
+            </h2>
+            <div className="cal-agenda__events">
               {!hasEvents && isFocused ? (
-                <p className="calendar-agenda-day-empty">
+                <p className="cal-agenda__empty">
                   이 날짜에 표시할 경기·기록이 없어요.
                 </p>
               ) : null}
@@ -125,7 +127,7 @@ export function CalendarAgendaView({
                   <CalendarEventCard
                     attendance={attendance}
                     attendanceRecords={gameAttendanceRecords}
-                    dense={false}
+                    variant="card"
                     favoriteTeamId={favoriteTeamId}
                     game={game}
                     href={href}
@@ -144,7 +146,7 @@ export function CalendarAgendaView({
                   <CalendarEventCard
                     attendance={record}
                     attendanceRecords={records}
-                    dense={false}
+                    variant="card"
                     favoriteTeamId={favoriteTeamId}
                     game={{
                       id: record.gameId,

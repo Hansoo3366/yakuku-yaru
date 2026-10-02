@@ -2,6 +2,7 @@
 
 import './calendar.css';
 
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { type Game } from '@/lib/baseball-api';
 import { type AttendanceRecord } from '@/lib/attendance-api';
@@ -10,7 +11,10 @@ import {
   CalendarFilterBar,
   getCalendarViewAnchorDate,
 } from '@/components/CalendarFilterBar';
-import { CalendarEventCard } from '@/components/CalendarEventCard';
+import {
+  CalendarEventCard,
+  type CalendarEventVariant,
+} from '@/components/CalendarEventCard';
 import type {
   CalendarOutcomeCounts,
   CalendarOutcomeFilter,
@@ -135,26 +139,6 @@ function formatRecentTenLabel(value: string | null | undefined) {
   }
 
   return `${match[1]}-${match[2]}-${match[3]}`;
-}
-
-function getStreakKind(value: string | null | undefined) {
-  if (!value) {
-    return 'none';
-  }
-
-  if (value.includes('승')) {
-    return 'win';
-  }
-
-  if (value.includes('패')) {
-    return 'lose';
-  }
-
-  if (value.includes('무')) {
-    return 'draw';
-  }
-
-  return 'none';
 }
 
 export default function CalendarPage() {
@@ -336,11 +320,7 @@ export default function CalendarPage() {
 
       return outcome === outcomeFilter;
     });
-  }, [
-    scheduleScopedAttendanceRecords,
-    outcomeFilter,
-    effectiveFavoriteTeamId,
-  ]);
+  }, [scheduleScopedAttendanceRecords, outcomeFilter, effectiveFavoriteTeamId]);
 
   const periodRecords = useMemo(() => {
     const fromMs = new Date(`${range.from}T00:00:00`).getTime();
@@ -379,7 +359,10 @@ export default function CalendarPage() {
 
   const yearStadiumWinRate = useMemo(
     () =>
-      getStadiumAttendanceWinRate(statsAttendanceRecords, effectiveFavoriteTeamId),
+      getStadiumAttendanceWinRate(
+        statsAttendanceRecords,
+        effectiveFavoriteTeamId,
+      ),
     [statsAttendanceRecords, effectiveFavoriteTeamId],
   );
   const yearHomeWinRate = useMemo(
@@ -388,7 +371,8 @@ export default function CalendarPage() {
     [statsAttendanceRecords, effectiveFavoriteTeamId],
   );
   const yearTeamWinRate = useMemo(
-    () => getKboFavoriteTeamSeasonWinRate(teamStandings, effectiveFavoriteTeamId),
+    () =>
+      getKboFavoriteTeamSeasonWinRate(teamStandings, effectiveFavoriteTeamId),
     [teamStandings, effectiveFavoriteTeamId],
   );
   const opponentInsights = useMemo(() => {
@@ -413,8 +397,9 @@ export default function CalendarPage() {
     }
 
     return (
-      teamStandings.items.find((item) => item.teamId === effectiveFavoriteTeamId) ??
-      null
+      teamStandings.items.find(
+        (item) => item.teamId === effectiveFavoriteTeamId,
+      ) ?? null
     );
   }, [teamStandings, effectiveFavoriteTeamId]);
 
@@ -435,13 +420,12 @@ export default function CalendarPage() {
 
   const attendanceRecordsByGameId = useMemo(
     () =>
-      scheduleScopedAttendanceRecords.reduce<Record<number, AttendanceRecord[]>>(
-        (acc, record) => {
-          acc[record.gameId] = [...(acc[record.gameId] ?? []), record];
-          return acc;
-        },
-        {},
-      ),
+      scheduleScopedAttendanceRecords.reduce<
+        Record<number, AttendanceRecord[]>
+      >((acc, record) => {
+        acc[record.gameId] = [...(acc[record.gameId] ?? []), record];
+        return acc;
+      }, {}),
     [scheduleScopedAttendanceRecords],
   );
 
@@ -555,7 +539,9 @@ export default function CalendarPage() {
       ? getCalendarMonthDays(monthStart)
       : getWeekDays(weekStart);
 
-  const favoriteTeam = teams.find((team) => team.id === effectiveFavoriteTeamId);
+  const favoriteTeam = teams.find(
+    (team) => team.id === effectiveFavoriteTeamId,
+  );
 
   function handleScheduleFilterChange(filter: CalendarScheduleFilter) {
     if (!isAuthed) {
@@ -589,9 +575,13 @@ export default function CalendarPage() {
     setOutcomeFilter(filter);
   }
 
+  // 월간에서 리그 전체를 볼 때는 하루 다섯 경기가 한 칸에 들어가므로 한 줄 표기를 쓴다.
+  const monthEventVariant: CalendarEventVariant =
+    effectiveScheduleFilter === 'all' ? 'line' : 'cell';
+
   function renderDayCell(
     date: Date,
-    options: { dense: boolean; inMonth: boolean },
+    options: { variant: CalendarEventVariant; inMonth: boolean },
   ) {
     const key = formatDateInput(date);
     const dayGames = displayGamesByDate[key] ?? [];
@@ -604,8 +594,7 @@ export default function CalendarPage() {
     const isToday = isSameDay(date, new Date());
     const dayOfWeek = date.getDay();
     const classNames = [
-      'calendar-day',
-      viewMode === 'week' ? 'calendar-day--week' : '',
+      'cal-day',
       isOutside ? 'is-outside' : '',
       isToday ? 'is-today' : '',
       agendaFocusDateKey === key ? 'is-focused-day' : '',
@@ -626,7 +615,7 @@ export default function CalendarPage() {
       >
         <button
           aria-label={`${date.getMonth() + 1}월 ${date.getDate()}일 주간 보기`}
-          className="calendar-day-number"
+          className="cal-day__num"
           onClick={() => {
             setAgendaFocusDateKey(key);
             setViewMode('week');
@@ -637,7 +626,7 @@ export default function CalendarPage() {
         >
           {date.getDate()}
         </button>
-        <div className="calendar-events">
+        <div className="cal-day__events">
           {dayGames.map((game) => {
             const gameAttendanceRecords =
               attendanceRecordsByGameId[game.id] ?? [];
@@ -648,7 +637,7 @@ export default function CalendarPage() {
               <CalendarEventCard
                 attendance={attendance}
                 attendanceRecords={gameAttendanceRecords}
-                dense={options.dense}
+                variant={options.variant}
                 favoriteTeamId={effectiveFavoriteTeamId}
                 game={game}
                 href={href}
@@ -667,7 +656,7 @@ export default function CalendarPage() {
               <CalendarEventCard
                 attendance={record}
                 attendanceRecords={records}
-                dense={options.dense}
+                variant={options.variant}
                 favoriteTeamId={effectiveFavoriteTeamId}
                 game={{
                   id: record.gameId,
@@ -773,11 +762,7 @@ export default function CalendarPage() {
     todayJumpTick,
   ]);
 
-  const periodLabel = viewMode === 'month' ? '이번 달' : '이번 주';
   const showTeamWinRate = Boolean(effectiveFavoriteTeamId);
-  const teamRateLabel = favoriteTeam
-    ? `우리팀(${favoriteTeam.shortName}) 승률`
-    : null;
   const favoriteRankLabel = favoriteTeamStanding
     ? `${favoriteTeamStanding.rank}위`
     : favoriteTeam
@@ -800,208 +785,126 @@ export default function CalendarPage() {
               ? '예정된'
               : null;
 
+  const summaryItems: Array<{ label: string; value: string }> = isAuthed
+    ? [
+        {
+          label: `${favoriteTeam?.shortName ?? '리그'} 경기`,
+          value: `${displayGameCount}경기`,
+        },
+        { label: '내 기록', value: `${periodRecords.length}회` },
+        ...(favoriteRankLabel
+          ? [{ label: '현재 순위', value: favoriteRankLabel }]
+          : []),
+        ...(favoriteRecentTenLabel
+          ? [{ label: '최근 10경기', value: favoriteRecentTenLabel }]
+          : []),
+        ...(favoriteStreakLabel
+          ? [{ label: '연속', value: favoriteStreakLabel }]
+          : []),
+      ]
+    : [{ label: 'KBO 리그 전체', value: `${displayGameCount}경기` }];
+  const changeViewMode = (mode: CalendarViewMode) => {
+    setViewMode(mode);
+    setAnchorDate(getCalendarViewAnchorDate(mode, anchorDate));
+  };
+
   return (
-    <main
-      className={`app-shell app-shell--calendar with-bottom-nav${
-        isMobile ? ' has-calendar-filter-dock' : ''
-      }`}
-    >
-      <section
-        className={`calendar-overview${
-          isAuthed ? '' : ' calendar-overview--public'
-        }`}
-        aria-labelledby="calendar-title"
-      >
-        <header className="app-page-header">
-          <span className="eyebrow">{anchorDate.getFullYear()} 시즌</span>
+    <main className="app-shell app-shell--calendar with-bottom-nav">
+      <header className="cal-head">
+        <div className="cal-head__title">
           <h1 id="calendar-title">
-            {favoriteTeam
-              ? `${favoriteTeam.shortName} 직관 캘린더`
-              : 'KBO 야구 일정 캘린더'}
+            <span className="sr-only">
+              {favoriteTeam
+                ? `${favoriteTeam.shortName} 직관 캘린더 `
+                : 'KBO 야구 일정 캘린더 '}
+            </span>
+            {toolbarTitle}
           </h1>
-          <p>
-            {isAuthed && user?.nickname
-              ? `${user.nickname}님의 ${viewMode === 'month' ? '월간' : '주간'} 일정과 기록`
-              : '로그인 없이 KBO 전체 팀 경기 일정과 프로야구 캘린더를 확인하세요.'}
-          </p>
-        </header>
-
-        {isAuthed ? (
-          <section
-            className={`calendar-summary-row${
-              favoriteRankLabel ? '' : ' calendar-summary-row--duo'
-            }`}
-            aria-label="기간 요약"
+        </div>
+        <div aria-label="기간 이동" className="cal-head__nav" role="group">
+          <button
+            aria-label={viewMode === 'month' ? '이전 달' : '이전 주'}
+            onClick={() => {
+              setAgendaFocusDateKey(null);
+              setAnchorDate((current) => shiftAnchor(current, viewMode, -1));
+            }}
+            type="button"
           >
-            <div className="calendar-summary-card">
-              <span>{periodLabel} 경기</span>
-              <strong>
-                {displayGameCount}
-                <small>경기</small>
-              </strong>
-            </div>
-            <div className="calendar-summary-card">
-              <span>기록한 경기</span>
-              <strong>
-                {periodRecords.length}
-                <small>회</small>
-              </strong>
-            </div>
-            {favoriteRankLabel ? (
-              <div className="calendar-summary-card">
-                <span>{favoriteTeam?.shortName ?? '우리팀'} 순위</span>
-                <strong>{favoriteRankLabel}</strong>
-                {favoriteRecentTenLabel || favoriteStreakLabel ? (
-                  <div className="calendar-summary-trends">
-                    {favoriteRecentTenLabel ? (
-                      <span className="calendar-summary-trend-chip">
-                        <span className="calendar-summary-trend-label">
-                          최근 10경기
-                        </span>
-                        <strong>{favoriteRecentTenLabel}</strong>
-                      </span>
-                    ) : null}
-                    {favoriteStreakLabel ? (
-                      <span
-                        className="calendar-summary-trend-chip"
-                        data-kind={getStreakKind(favoriteStreakLabel)}
-                      >
-                        <span className="calendar-summary-trend-label">
-                          연속
-                        </span>
-                        <strong>{favoriteStreakLabel}</strong>
-                      </span>
-                    ) : null}
-                  </div>
-                ) : null}
-              </div>
-            ) : null}
-          </section>
-        ) : null}
-      </section>
+            <ChevronLeft aria-hidden="true" size={20} />
+          </button>
+          <button
+            aria-label={viewMode === 'month' ? '다음 달' : '다음 주'}
+            onClick={() => {
+              setAgendaFocusDateKey(null);
+              setAnchorDate((current) => shiftAnchor(current, viewMode, 1));
+            }}
+            type="button"
+          >
+            <ChevronRight aria-hidden="true" size={20} />
+          </button>
+          <button className="cal-head__today" onClick={goToToday} type="button">
+            오늘
+          </button>
+        </div>
+      </header>
 
-      <div
-        className={`calendar-main-layout${
-          !isMobile ? ' calendar-main-layout--with-rails' : ''
-        }${isAuthed ? '' : ' calendar-main-layout--public'}`}
-      >
-        {!isMobile ? (
-          <aside aria-label="캘린더 필터" className="calendar-filter-rail">
-            <CalendarFilterBar
-              favoriteTeamId={effectiveFavoriteTeamId}
-              layout="rail"
-              onOutcomeFilterChange={handleOutcomeFilterChange}
-              onScheduleFilterChange={handleScheduleFilterChange}
-              onViewModeChange={(mode) => {
-                setViewMode(mode);
-                setAnchorDate(getCalendarViewAnchorDate(mode, anchorDate));
-              }}
-              onWatchTypeFilterChange={handleWatchTypeFilterChange}
-              publicScheduleOnly={!isAuthed}
-              outcomeCounts={outcomeCounts}
-              outcomeFilter={outcomeFilter}
-              scheduleFilter={effectiveScheduleFilter}
-              viewMode={viewMode}
-              watchTypeFilter={effectiveWatchTypeFilter}
-            />
-          </aside>
-        ) : null}
-
-        <div className="calendar-primary-column">
-          <div className="calendar-toolbar-sticky">
-            <section aria-label="기간 이동" className="calendar-toolbar">
-              <button
-                aria-label={viewMode === 'month' ? '이전 달' : '이전 주'}
-                className="icon-button"
-                onClick={() => {
-                  setAgendaFocusDateKey(null);
-                  setAnchorDate((current) =>
-                    shiftAnchor(current, viewMode, -1),
-                  );
-                }}
-                type="button"
-              >
-                ←
-              </button>
-              <div className="calendar-month-label">
-                <small>
-                  {viewMode === 'month' ? '월간 일정' : '주간 일정'} ·{' '}
-                  {displayGameCount}경기
-                </small>
-                <span>{toolbarTitle}</span>
-              </div>
-              <button
-                aria-label={viewMode === 'month' ? '다음 달' : '다음 주'}
-                className="icon-button"
-                onClick={() => {
-                  setAgendaFocusDateKey(null);
-                  setAnchorDate((current) => shiftAnchor(current, viewMode, 1));
-                }}
-                type="button"
-              >
-                →
-              </button>
-              <button
-                className="calendar-today-button"
-                onClick={goToToday}
-                type="button"
-              >
-                오늘
-              </button>
-            </section>
+      <dl className="cal-summary">
+        {summaryItems.map((item) => (
+          <div key={item.label}>
+            <dt>{item.label}</dt>
+            <dd>{item.value}</dd>
           </div>
+        ))}
+      </dl>
 
+      <CalendarFilterBar
+        favoriteTeamId={effectiveFavoriteTeamId}
+        onOutcomeFilterChange={handleOutcomeFilterChange}
+        onScheduleFilterChange={handleScheduleFilterChange}
+        onViewModeChange={changeViewMode}
+        onWatchTypeFilterChange={handleWatchTypeFilterChange}
+        outcomeCounts={outcomeCounts}
+        outcomeFilter={outcomeFilter}
+        publicScheduleOnly={!isAuthed}
+        scheduleFilter={effectiveScheduleFilter}
+        viewMode={viewMode}
+        watchTypeFilter={effectiveWatchTypeFilter}
+      />
+
+      <div className={`cal-layout${isAuthed ? ' cal-layout--with-rail' : ''}`}>
+        <div className="cal-main">
           {isLoading ? (
-            <div className="card">
-              <Skeleton
-                height={isMobile ? 360 : viewMode === 'week' ? 520 : 420}
-                radius={10}
-              />
-            </div>
+            <Skeleton
+              height={isMobile ? 360 : viewMode === 'week' ? 520 : 620}
+              radius={10}
+            />
           ) : isMobile ? (
-            <>
-              <CalendarAgendaView
-                attendanceByDate={attendanceByDate}
-                attendanceRecordsByGameId={attendanceRecordsByGameId}
-                days={days}
-                favoriteTeamId={effectiveFavoriteTeamId}
-                focusDateKey={agendaFocusDateKey}
-                gamesByDate={displayGamesByDate}
-                referenceMonth={viewMode === 'month' ? monthStart : undefined}
-                showOutsideDays={viewMode === 'week'}
-              />
-              <CalendarFilterBar
-                favoriteTeamId={effectiveFavoriteTeamId}
-                layout="mobile"
-                onOutcomeFilterChange={handleOutcomeFilterChange}
-                onScheduleFilterChange={handleScheduleFilterChange}
-                onViewModeChange={(mode) => {
-                  setViewMode(mode);
-                  setAnchorDate(getCalendarViewAnchorDate(mode, anchorDate));
-                }}
-                onWatchTypeFilterChange={handleWatchTypeFilterChange}
-                publicScheduleOnly={!isAuthed}
-                outcomeCounts={outcomeCounts}
-                outcomeFilter={outcomeFilter}
-                scheduleFilter={effectiveScheduleFilter}
-                viewMode={viewMode}
-                watchTypeFilter={effectiveWatchTypeFilter}
-              />
-            </>
+            <CalendarAgendaView
+              attendanceByDate={attendanceByDate}
+              attendanceRecordsByGameId={attendanceRecordsByGameId}
+              days={days}
+              favoriteTeamId={effectiveFavoriteTeamId}
+              focusDateKey={agendaFocusDateKey}
+              gamesByDate={displayGamesByDate}
+              referenceMonth={viewMode === 'month' ? monthStart : undefined}
+              showOutsideDays={viewMode === 'week'}
+            />
           ) : (
             <section
-              className={`calendar-card${viewMode === 'week' ? ' calendar-card--week' : ''}`}
               aria-label={viewMode === 'month' ? '월간 캘린더' : '주간 캘린더'}
+              className="cal-board"
             >
-              <div className="calendar-weekdays" aria-hidden="true">
+              <div aria-hidden="true" className="cal-weekdays">
                 {weekdayLabels.map((weekday) => (
                   <span key={weekday}>{weekday}</span>
                 ))}
               </div>
-              <div className="calendar-grid">
+              <div
+                className={`cal-grid${viewMode === 'week' ? ' cal-grid--week' : ''}`}
+              >
                 {days.map((date) =>
                   renderDayCell(date, {
-                    dense: viewMode === 'month',
+                    variant: viewMode === 'month' ? monthEventVariant : 'card',
                     inMonth:
                       viewMode === 'week' ||
                       date.getMonth() === monthStart.getMonth(),
@@ -1020,82 +923,71 @@ export default function CalendarPage() {
                     ? `이번 달엔 ${outcomeEmptyLabel} 경기가 없어요`
                     : `이번 주엔 ${outcomeEmptyLabel} 경기가 없어요`
                   : effectiveWatchTypeFilter === 'all'
-                  ? effectiveScheduleFilter === 'favorite-home'
-                    ? viewMode === 'month'
-                      ? '이번 달엔 홈구장 경기가 없어요'
-                      : '이번 주엔 홈구장 경기가 없어요'
-                    : viewMode === 'month'
-                      ? '이번 달엔 경기 일정이 없어요'
-                      : '이번 주엔 경기 일정이 없어요'
-                  : effectiveWatchTypeFilter === 'stadium'
-                    ? '이번 기간에 직관 기록이 없어요'
-                    : '이번 기간에 집관 기록이 없어요'
+                    ? effectiveScheduleFilter === 'favorite-home'
+                      ? viewMode === 'month'
+                        ? '이번 달엔 홈구장 경기가 없어요'
+                        : '이번 주엔 홈구장 경기가 없어요'
+                      : viewMode === 'month'
+                        ? '이번 달엔 경기 일정이 없어요'
+                        : '이번 주엔 경기 일정이 없어요'
+                    : effectiveWatchTypeFilter === 'stadium'
+                      ? '이번 기간에 직관 기록이 없어요'
+                      : '이번 기간에 집관 기록이 없어요'
               }
               description={
                 outcomeEmptyLabel
                   ? '다른 경기 결과를 선택하거나 기간을 이동해보세요.'
                   : effectiveWatchTypeFilter === 'all'
-                  ? effectiveScheduleFilter === 'favorite-home'
-                    ? '원정 경기는 「응원팀」으로 확인해보세요.'
-                    : '다른 기간으로 이동해보세요.'
-                  : '직관 기록을 남기거나 다른 기간을 확인해보세요.'
+                    ? effectiveScheduleFilter === 'favorite-home'
+                      ? '원정 경기는 「응원팀」으로 확인해보세요.'
+                      : '다른 기간으로 이동해보세요.'
+                    : '직관 기록을 남기거나 다른 기간을 확인해보세요.'
               }
             />
           ) : null}
         </div>
 
         {isAuthed ? (
-          <aside className="calendar-insight-rail" aria-label="승률 요약">
-            <section className="calendar-win-rate-panel">
-            <div className="calendar-win-rate-group">
-              <h2 className="calendar-win-rate-heading">
-                {statsYear}년<small>연간 승률</small>
-              </h2>
-              <div
-                className={`calendar-summary-row calendar-summary-row--rates${
-                  showTeamWinRate ? ' calendar-summary-row--trio' : ''
-                }`}
-              >
-                <div className="calendar-summary-card">
-                  <span>직관 승률</span>
-                  <strong>{formatWinRateLabel(yearStadiumWinRate)}</strong>
+          <aside aria-label="승률 요약" className="cal-rail">
+            <section>
+              <h2>{statsYear}년 내 승률</h2>
+              <dl className="cal-rates">
+                <div>
+                  <dt>직관</dt>
+                  <dd>{formatWinRateLabel(yearStadiumWinRate)}</dd>
                 </div>
-                <div className="calendar-summary-card">
-                  <span>집관 승률</span>
-                  <strong>{formatWinRateLabel(yearHomeWinRate)}</strong>
+                <div>
+                  <dt>집관</dt>
+                  <dd>{formatWinRateLabel(yearHomeWinRate)}</dd>
                 </div>
-                {showTeamWinRate && teamRateLabel ? (
-                  <div className="calendar-summary-card">
-                    <span>{teamRateLabel}</span>
-                    <strong>{formatWinRateLabel(yearTeamWinRate)}</strong>
+                {showTeamWinRate && favoriteTeam ? (
+                  <div>
+                    <dt>{favoriteTeam.shortName} 시즌</dt>
+                    <dd>{formatWinRateLabel(yearTeamWinRate)}</dd>
                   </div>
                 ) : null}
-              </div>
-            </div>
-            {showTeamWinRate ? (
-              <div className="calendar-win-rate-group">
-                <h2 className="calendar-win-rate-heading">상대 팀 인사이트</h2>
-                <div className="calendar-summary-row calendar-summary-row--duo calendar-summary-row--insights">
-                  <div className="calendar-summary-card calendar-summary-card--ranking">
-                    <span>상대 승률 높은 팀</span>
-                    <OpponentInsightRanking
-                      items={opponentInsights.teamWinRateHigh}
-                      title="상대 승률 높은 팀"
-                      variant="high"
-                    />
-                  </div>
-                  <div className="calendar-summary-card calendar-summary-card--ranking">
-                    <span>직관 승률 높은 팀</span>
-                    <OpponentInsightRanking
-                      items={opponentInsights.stadiumWinRateHigh}
-                      title="직관 승률 높은 팀"
-                      variant="high"
-                    />
-                  </div>
-                </div>
-              </div>
-            ) : null}
+              </dl>
             </section>
+            {showTeamWinRate ? (
+              <>
+                <section>
+                  <h2>{favoriteTeam?.shortName ?? '우리 팀'}이 강한 상대</h2>
+                  <OpponentInsightRanking
+                    items={opponentInsights.teamWinRateHigh}
+                    title="상대 승률 높은 팀"
+                    variant="high"
+                  />
+                </section>
+                <section>
+                  <h2>내가 직관 가면 이기는 상대</h2>
+                  <OpponentInsightRanking
+                    items={opponentInsights.stadiumWinRateHigh}
+                    title="직관 승률 높은 팀"
+                    variant="high"
+                  />
+                </section>
+              </>
+            ) : null}
           </aside>
         ) : null}
       </div>

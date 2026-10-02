@@ -228,11 +228,6 @@
     max-width: none;
     right: 12px;
   }
-
-  /* 캘린더는 탭 바 위에 필터 바가 하나 더 있어서 그만큼 더 올린다. */
-  body:has(.calendar-filter-dock) .site-guide-invite {
-    bottom: calc(var(--bottom-nav-height, 72px) + 76px);
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {

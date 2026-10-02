@@ -12,7 +12,7 @@ const items: Array<{
   outcome: CalendarOutcomeFilter;
   label: string;
 }> = [
-  { outcome: 'all', label: '전체 결과' },
+  { outcome: 'all', label: '결과 전체' },
   { outcome: 'win', label: '승' },
   { outcome: 'lose', label: '패' },
   { outcome: 'draw', label: '무' },
@@ -28,15 +28,13 @@ type Props = {
 
 export function CalendarOutcomeLegend({ counts, onChange, selected }: Props) {
   return (
-    <div
-      aria-label="경기 결과 필터"
-      className="calendar-outcome-legend"
-    >
+    <div aria-label="경기 결과 필터" className="calendar-outcome-legend">
       {items.map((item) => {
         const isAll = item.outcome === 'all';
-        const count = item.outcome === 'all'
-          ? Object.values(counts).reduce((total, value) => total + value, 0)
-          : counts[item.outcome];
+        const count =
+          item.outcome === 'all'
+            ? Object.values(counts).reduce((total, value) => total + value, 0)
+            : counts[item.outcome];
 
         return (
           <button
@@ -56,7 +54,7 @@ export function CalendarOutcomeLegend({ counts, onChange, selected }: Props) {
                 data-outcome={item.outcome}
               />
             )}
-          <span className="calendar-outcome-legend-label">{item.label}</span>
+            <span className="calendar-outcome-legend-label">{item.label}</span>
             <strong>{count}</strong>
           </button>
         );

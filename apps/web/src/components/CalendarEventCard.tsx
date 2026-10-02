@@ -38,22 +38,22 @@ type GameLike = {
   };
 };
 
+/**
+ * 같은 경기를 자리에 따라 다르게 보여 준다.
+ * - line: 월간·리그 전체. 하루 다섯 경기가 한 칸에 들어가야 해서 한 줄로 줄인다.
+ * - cell: 월간·응원팀. 하루 한 경기라 결과와 스코어를 크게 보여 준다.
+ * - card: 주간과 모바일 목록. 폭이 넉넉해 양 팀을 좌우로 놓고 가운데에 스코어를 둔다.
+ */
+export type CalendarEventVariant = 'line' | 'cell' | 'card';
+
 type Props = {
   game: GameLike;
   href: string;
   favoriteTeamId: number | null | undefined;
   attendance?: AttendanceRecord | null;
   attendanceRecords?: AttendanceRecord[];
-  dense?: boolean;
+  variant?: CalendarEventVariant;
 };
-
-function formatScoreLine(game: GameLike) {
-  if (game.homeScore === null || game.awayScore === null) {
-    return null;
-  }
-
-  return `${game.awayScore} : ${game.homeScore}`;
-}
 
 function formatPitcherLine(game: GameLike) {
   const awayPitcher = game.probablePitchers?.away;
@@ -63,10 +63,7 @@ function formatPitcherLine(game: GameLike) {
     return null;
   }
 
-  const awayLabel = awayPitcher?.name ?? '-';
-  const homeLabel = homePitcher?.name ?? '-';
-
-  return `${awayLabel} vs ${homeLabel}`;
+  return `${awayPitcher?.name ?? '-'} vs ${homePitcher?.name ?? '-'}`;
 }
 
 export function CalendarEventCard({
@@ -75,7 +72,7 @@ export function CalendarEventCard({
   favoriteTeamId,
   attendance,
   attendanceRecords = attendance ? [attendance] : [],
-  dense = false,
+  variant = 'card',
 }: Props) {
   const ticketCount = attendanceRecords.length;
   const outcome: GameOutcome =
@@ -88,7 +85,7 @@ export function CalendarEventCard({
   const outcomeLabel = getGameOutcomeLabel(outcome);
   const matchupLabel = `${game.awayTeam.shortName} vs ${game.homeTeam.shortName}`;
   const timeLabel = formatGameTime(game.gameDate);
-  const scoreLine = formatScoreLine(game);
+  const hasScore = game.homeScore !== null && game.awayScore !== null;
   const pitcherLine = formatPitcherLine(game);
   const cancellationMeta =
     game.status === 'cancelled'
@@ -103,80 +100,176 @@ export function CalendarEventCard({
         ? 'neutral'
         : attendance.watchType
     : null;
-
-  const logos = (
-    <span aria-hidden="true" className="calendar-event-logos">
-      <img alt="" src={getTeamLogoSrc(game.awayTeam)} />
-      <img alt="" src={getTeamLogoSrc(game.homeTeam)} />
+  const tagLabel =
+    tagKind === 'home'
+      ? '집관'
+      : tagKind === 'companion'
+        ? '동행'
+        : tagKind === 'neutral'
+          ? attendance?.cheeredTeamShortName
+            ? `중립·${attendance.cheeredTeamShortName}`
+            : '중립'
+          : tagKind
+            ? '직관'
+            : null;
+  // 이긴 팀을 굵게 보여 주기 위한 표시. 응원팀이 없어도(리그 전체) 결과가 읽힌다.
+  const awayWon = hasScore && game.awayScore! > game.homeScore!;
+  const homeWon = hasScore && game.homeScore! > game.awayScore!;
+  const badge =
+    cancellationMeta?.label ??
+    (outcome === 'win' || outcome === 'lose' || outcome === 'draw'
+      ? outcomeLabel
+      : null);
+  const common = {
+    'aria-label': outcomeLabel
+      ? `${timeLabel} ${matchupLabel}, ${outcomeLabel}`
+      : `${timeLabel} ${matchupLabel}`,
+    'data-finished': hasScore ? 'true' : undefined,
+    'data-outcome': outcome !== 'unknown' ? outcome : undefined,
+    href,
+  };
+  const score = hasScore ? (
+    <span className="cal-event__score">
+      {game.awayScore}
+      <i aria-hidden="true">:</i>
+      {game.homeScore}
     </span>
+  ) : (
+    <span className="cal-event__vs">{cancellationMeta ? '취소' : 'vs'}</span>
   );
 
+  const involvesFavorite =
+    favoriteTeamId != null &&
+    (game.homeTeam.id === favoriteTeamId ||
+      game.awayTeam.id === favoriteTeamId);
+
+  if (variant === 'line') {
+    return (
+      // 리그 전체를 볼 때도 우리 팀 경기와 내가 본 경기는 한눈에 구분되게 한다.
+      <Link
+        {...common}
+        className="cal-event cal-event--line"
+        data-mine={involvesFavorite || undefined}
+      >
+        <span className="cal-event__time">{timeLabel}</span>
+        <span className="cal-event__line-teams">
+          <span data-won={awayWon || undefined}>{game.awayTeam.shortName}</span>
+          {score}
+          <span data-won={homeWon || undefined}>{game.homeTeam.shortName}</span>
+          {tagLabel ? (
+            // 한 줄 표기는 폭이 좁아 첫 글자만 보여 준다. (직관 → 직)
+            <span
+              aria-label={tagLabel}
+              className="cal-event__tag"
+              data-kind={tagKind}
+              title={tagLabel}
+            >
+              {tagLabel.slice(0, 1)}
+            </span>
+          ) : null}
+        </span>
+      </Link>
+    );
+  }
+
+  const extras = (
+    <>
+      {tagLabel ? (
+        <span className="cal-event__tag" data-kind={tagKind}>
+          {tagLabel}
+        </span>
+      ) : null}
+      {ticketCount > 1 ? (
+        <span className="cal-event__tag" data-kind="count">
+          티켓 {ticketCount}개
+        </span>
+      ) : null}
+    </>
+  );
+
+  if (variant === 'cell') {
+    // 응원팀 일정만 볼 때는 우리 팀 이름을 반복하지 않고 상대와 홈·원정만 보여 준다.
+    // 스코어도 "우리 : 상대" 순서로 적어 결과 배지와 함께 바로 읽히게 한다.
+    const favoriteIsHome = game.homeTeam.id === favoriteTeamId;
+    const favoriteIsAway = game.awayTeam.id === favoriteTeamId;
+    const opponent = favoriteIsHome
+      ? game.awayTeam
+      : favoriteIsAway
+        ? game.homeTeam
+        : null;
+
+    return (
+      <Link {...common} className="cal-event cal-event--cell">
+        <span className="cal-event__head">
+          <span className="cal-event__time">{timeLabel}</span>
+          {badge ? <span className="cal-event__badge">{badge}</span> : null}
+        </span>
+        {opponent ? (
+          <>
+            <span className="cal-event__opponent">
+              <img alt="" src={getTeamLogoSrc(opponent)} />
+              <span>{opponent.shortName}</span>
+              <small>{favoriteIsHome ? '홈' : '원정'}</small>
+            </span>
+            {hasScore ? (
+              <span className="cal-event__score">
+                {favoriteIsHome ? game.homeScore : game.awayScore}
+                <i aria-hidden="true">:</i>
+                {favoriteIsHome ? game.awayScore : game.homeScore}
+              </span>
+            ) : null}
+          </>
+        ) : (
+          <span className="cal-event__opponent">
+            <span>{matchupLabel}</span>
+            {hasScore ? score : null}
+          </span>
+        )}
+        {!hasScore && pitcherLine ? (
+          <span className="cal-event__meta">{pitcherLine}</span>
+        ) : null}
+        {tagLabel || ticketCount > 1 ? (
+          <span className="cal-event__tags">{extras}</span>
+        ) : null}
+      </Link>
+    );
+  }
+
   return (
-    <Link
-      aria-label={
-        outcomeLabel
-          ? `${timeLabel} ${matchupLabel}, ${outcomeLabel}`
-          : `${timeLabel} ${matchupLabel}`
-      }
-      className={`calendar-event${dense ? ' calendar-event--dense' : ''}`}
-      data-outcome={outcome !== 'unknown' ? outcome : undefined}
-      href={href}
-    >
-      <span className="calendar-event-head">
-        <span className="calendar-event-time">{timeLabel}</span>
-        {outcomeLabel ? (
-          <span className="calendar-event-outcome">{outcomeLabel}</span>
-        ) : null}
-        {logos}
+    <Link {...common} className="cal-event cal-event--card">
+      <span className="cal-event__head">
+        <span className="cal-event__time">{timeLabel}</span>
+        <span className="cal-event__place">{game.stadium}</span>
+        {badge ? <span className="cal-event__badge">{badge}</span> : null}
       </span>
-      <span className="calendar-event-body">
-        <span className="calendar-event-matchup">{matchupLabel}</span>
-        {scoreLine ? (
-          <span className="calendar-event-score">{scoreLine}</span>
-        ) : null}
-        {cancellationMeta ? (
-          <span
-            className="calendar-event-cancel"
-            data-reason={game.cancellationReason ?? 'other'}
-          >
-            <span aria-hidden="true">{cancellationMeta.icon}</span>
-            {cancellationMeta.label}
-          </span>
-        ) : null}
-        {pitcherLine ? (
-          <span className="calendar-event-pitchers">{pitcherLine}</span>
-        ) : null}
-        {!dense ? (
-          <span className="calendar-event-stadium">{game.stadium}</span>
-        ) : null}
-        {tagKind ? (
-          <span className="calendar-event-tag" data-kind={tagKind}>
-            {tagKind === 'home'
-              ? '집관'
-              : tagKind === 'companion'
-                ? '동행'
-                : tagKind === 'neutral'
-                  ? attendance?.cheeredTeamShortName
-                    ? `중립·${attendance.cheeredTeamShortName}`
-                    : '중립'
-                  : '직관'}
-          </span>
-        ) : null}
-        {ticketCount > 1 ? (
-          <span className="calendar-event-ticket-count">
-            티켓 {ticketCount}개
-          </span>
-        ) : null}
-        {attendance?.photoUrl ? (
-          <img
-            alt="직관 사진"
-            className="calendar-event-photo"
-            decoding="async"
-            loading="lazy"
-            src={getAssetUrl(attendance.photoUrl)}
-          />
-        ) : null}
+      <span className="cal-event__card-teams">
+        <span className="cal-event__team" data-won={awayWon || undefined}>
+          {game.awayTeam.shortName}
+          <img alt="" src={getTeamLogoSrc(game.awayTeam)} />
+        </span>
+        {score}
+        <span className="cal-event__team" data-won={homeWon || undefined}>
+          <img alt="" src={getTeamLogoSrc(game.homeTeam)} />
+          {game.homeTeam.shortName}
+        </span>
       </span>
+      {pitcherLine ? (
+        <span className="cal-event__meta">선발 {pitcherLine}</span>
+      ) : null}
+      {tagLabel || ticketCount > 1 || attendance?.photoUrl ? (
+        <span className="cal-event__tags">
+          {extras}
+          {attendance?.photoUrl ? (
+            <img
+              alt="직관 사진"
+              className="cal-event__photo"
+              decoding="async"
+              loading="lazy"
+              src={getAssetUrl(attendance.photoUrl)}
+            />
+          ) : null}
+        </span>
+      ) : null}
     </Link>
   );
 }
