@@ -14,6 +14,13 @@
   padding-top: 32px;
 }
 
+html[data-theme='dark'] .attendance-ticket-page {
+  --attendance-ink: #eceef1;
+  --attendance-muted: #aeb3ba;
+  --attendance-paper: #1e2228;
+  --attendance-paper-deep: #22262d;
+}
+
 .attendance-ticket-page__topbar {
   align-items: center;
   display: flex;
@@ -48,6 +55,7 @@
 .attendance-ticket-action {
   align-items: center;
   background: #f4f6f7;
+  background: light-dark(#f4f6f7, #1b1f24);
   border: 0;
   border-radius: 6px;
   color: var(--attendance-ink);
@@ -72,6 +80,7 @@
 .attendance-ticket-action--danger {
   background: transparent;
   color: #993f46;
+  color: light-dark(#993f46, #d59a9e);
 }
 
 .attendance-ticket-action--danger-solid {
@@ -82,8 +91,10 @@
 .attendance-ticket-delete-confirm {
   align-items: center;
   background: #f7e9e9;
+  background: light-dark(#f7e9e9, #412727);
   border-radius: 8px;
   color: #702d33;
+  color: light-dark(#702d33, #d6999f);
   display: flex;
   gap: 20px;
   justify-content: space-between;
@@ -98,6 +109,7 @@
 
 .attendance-ticket-delete-confirm p {
   color: #835158;
+  color: light-dark(#835158, #c8a7ab);
   font-size: 12px;
   margin-top: 2px;
 }
@@ -213,6 +225,11 @@
 .attendance-ticket-photo {
   aspect-ratio: 4 / 3;
   background: color-mix(in srgb, var(--team-color, #365b7c) 7%, #dfe5e9 93%);
+  background: color-mix(
+    in srgb,
+    var(--team-color, #365b7c) 7%,
+    light-dark(#dfe5e9, #24282f) 93%
+  );
   border-radius: 8px;
   margin: 0;
   min-height: 280px;
@@ -242,6 +259,11 @@
     in srgb,
     var(--team-color, var(--attendance-ink)) 68%,
     #5d6976 32%
+  );
+  color: color-mix(
+    in srgb,
+    var(--team-color, var(--attendance-ink)) 68%,
+    light-dark(#5d6976, #aaafb6) 32%
   );
   font-size: 10px;
   font-weight: 800;
@@ -280,6 +302,7 @@
 .attendance-ticket-matchup {
   align-items: center;
   background: rgba(255, 255, 255, 0.78);
+  background: light-dark(rgba(255, 255, 255, 0.78), rgba(23, 27, 33, 0.78));
   border-radius: 9px;
   display: grid;
   gap: 14px;
@@ -338,6 +361,7 @@
 
 .attendance-ticket-score > span:not(.attendance-ticket-score__vs) {
   color: #89939e;
+  color: light-dark(#89939e, #969da6);
   font-size: 20px;
   font-weight: 500;
 }
@@ -357,7 +381,11 @@
 }
 
 .attendance-ticket-meta div {
-  background: color-mix(in srgb, var(--team-color, #365b7c) 4%, #fff 96%);
+  background: color-mix(
+    in srgb,
+    var(--team-color, #365b7c) 4%,
+    var(--color-paper) 96%
+  );
   border-radius: 6px;
   display: grid;
   gap: 3px;
@@ -403,6 +431,7 @@
 .attendance-ticket-memory {
   align-items: start;
   background: rgba(255, 255, 255, 0.66);
+  background: light-dark(rgba(255, 255, 255, 0.66), rgba(23, 27, 33, 0.66));
   display: grid;
   gap: 20px;
   grid-template-columns: 104px minmax(0, 1fr);
@@ -502,6 +531,7 @@
 .attendance-ticket-person {
   align-items: center;
   background: rgba(255, 255, 255, 0.72);
+  background: light-dark(rgba(255, 255, 255, 0.72), rgba(23, 27, 33, 0.72));
   border-radius: 4px;
   display: inline-flex;
   gap: 7px;
@@ -522,10 +552,12 @@
 
 .attendance-ticket-person[data-status='accepted'] small {
   color: #267254;
+  color: light-dark(#267254, #94dbbf);
 }
 
 .attendance-ticket-person[data-status='rejected'] small {
   color: #963f47;
+  color: light-dark(#963f47, #d59aa0);
 }
 
 .attendance-ticket-permission-note {
@@ -542,6 +574,7 @@
 
   .attendance-ticket-action:hover {
     background: #e8ecef;
+    background: light-dark(#e8ecef, #20252b);
   }
 
   .attendance-ticket-action--primary:hover {
@@ -550,11 +583,17 @@
       var(--attendance-team-surface) 88%,
       #000 12%
     );
+    background: color-mix(
+      in srgb,
+      var(--attendance-team-surface) 88%,
+      light-dark(#000, #16191d) 12%
+    );
     color: var(--attendance-on-team);
   }
 
   .attendance-ticket-action--danger:hover {
     background: #f7e9e9;
+    background: light-dark(#f7e9e9, #412727);
   }
 
   .attendance-ticket-action--danger-solid:hover {

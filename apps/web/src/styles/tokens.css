@@ -1,0 +1,213 @@
+/* =========================================================
+ * 디자인 토큰 (색·간격·글자 크기)
+ * ========================================================= */
+:root {
+  --duration-exit: 150ms;
+  --duration-enter: 210ms;
+  --duration-move: 400ms;
+  color-scheme: light;
+  /* Typography */
+  --font-body:
+    'Pretendard', Inter, -apple-system, BlinkMacSystemFont,
+    'Apple SD Gothic Neo', 'Noto Sans KR', 'Segoe UI', Arial, sans-serif;
+  --font-display: var(--font-body);
+  /* Brand palette */
+  --color-field-700: #176b4d;
+  --color-field-800: #0d4a36;
+  --color-brand: #111111;
+  --color-brand-active: #242424;
+  --color-brand-disabled: #e5e7eb;
+  --color-field-100: #e5f1ea;
+  --color-field-50: #f3f8f5;
+  --color-night-navy: #111111;
+  --color-night-navy-soft: #242424;
+  --color-ticket-gold: #c99433;
+  --color-ticket-gold-soft: #f3e3be;
+  --color-score-red: #ef4444;
+  /* Status */
+  --color-win: #cf2f27;
+  --color-lose: #1a56b8;
+  --color-draw: #6b6b6b;
+  --color-cancelled: #8a6d62;
+  --color-scheduled: #0b8f7f;
+  --color-success: #10b981;
+  --color-warning: #f59e0b;
+  --color-error: #ef4444;
+  --color-brand-accent: #3b82f6;
+  /* 상태색을 글자로 쓸 때. 면으로 쓸 때(흰 글자가 올라감)와 달리 어두운 바탕에서는 더 밝아야 읽힌다. */
+  --color-win-ink: var(--color-win);
+  --color-lose-ink: var(--color-lose);
+  --color-draw-ink: var(--color-draw);
+  --color-cancelled-ink: var(--color-cancelled);
+  --color-scheduled-ink: var(--color-scheduled);
+  --color-error-ink: var(--color-error);
+  --color-success-ink: var(--color-success);
+  --color-field-ink: var(--color-field-700);
+  --color-field-ink-strong: var(--color-field-800);
+  --layout-wide-max: 1480px;
+  /* Surfaces */
+  --color-canvas: #ffffff;
+  /* 페이지 바탕 */
+  --color-paper: #ffffff;
+  /* 카드·패널 면 */
+  --color-paper-deep: #f5f5f5;
+  --color-surface-soft: #f8f9fa;
+  --color-surface-card: #f5f5f5;
+  --color-surface-strong: #e5e7eb;
+  --color-surface-dark: #101010;
+  --color-surface-dark-elevated: #1a1a1a;
+  --color-white: #ffffff;
+  --color-line: #e5e7eb;
+  --color-line-strong: #d1d5db;
+  --color-ink: #111111;
+  --color-muted: #6b7280;
+  --color-muted-soft: #898989;
+  /* Team accent (overridden when user has favorite team).
+   * Default is monochrome ink so the guest/default experience stays Cal-clean;
+   * logged-in fans still get their team color via JS. */
+  --team-color: var(--color-ink);
+  --team-color-soft: var(--color-surface-card);
+  /* 팀 컬러 계열의 글자색. JS 가 밝은 면용(--team-ink-light)과 어두운 면용(--team-ink-dark)을 계산해 준다. */
+  --team-color-ink: var(--team-ink-light, var(--color-ink));
+  --team-color-surface: var(--color-ink);
+  --team-color-contrast: var(--color-white);
+  /* Spacing scale */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
+  /* Radius */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-pill: 999px;
+  /* Typography scale */
+  --text-xs: 0.75rem;
+  /* 12 */
+  --text-sm: 0.8125rem;
+  /* 13 */
+  --text-base: 0.9375rem;
+  /* 15 */
+  --text-md: 1rem;
+  /* 16 */
+  --text-lg: 1.125rem;
+  /* 18 */
+  --text-xl: 1.375rem;
+  /* 22 */
+  --text-2xl: 1.75rem;
+  /* 28 */
+  --text-3xl: 2.25rem;
+  /* 36 */
+  --text-4xl: 3rem;
+  /* 48 */
+
+  /* Semantic typography hierarchy */
+  --type-display: clamp(2rem, 3vw, 2.5rem);
+  /* 32–40 */
+  --type-page-title: clamp(1.5rem, 2vw, 1.75rem);
+  /* 24–28 */
+  --type-section-title: clamp(1.125rem, 1.5vw, 1.25rem);
+  /* 18–20 */
+  --type-card-title: 1rem;
+  /* 16 */
+  --type-body: 0.9375rem;
+  /* 15 */
+  --type-caption: 0.75rem;
+  /* 12 */
+  --type-data-large: clamp(1.75rem, 2.8vw, 2.25rem);
+  /* 28–36 */
+
+  /* Weights */
+  --weight-regular: 400;
+  --weight-bold: 600;
+  --weight-black: 600;
+  --weight-display: 600;
+  /* Shadows */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 16px 36px rgba(0, 0, 0, 0.1);
+  --shadow-inset: inset 0 -1px 0 rgba(17, 17, 17, 0.06);
+  /* Layout */
+  --header-height: 64px;
+  --bottom-nav-height: 72px;
+  --container-max: 1180px;
+  --content-max: 880px;
+}
+
+/* 홈·순위표에서 쓰는 남색 계열 */
+:root {
+  --home-night: #101722;
+  --home-night-soft: #1a2433;
+  --home-chalk: #f7f8f5;
+  --home-ink: #172033;
+  --home-muted: #687386;
+  --home-line: #dfe3e8;
+}
+
+/* =========================================================
+ * 다크 모드
+ * <html data-theme="dark"> 일 때 토큰 값만 바꾼다. (layout.tsx 의 부트 스크립트가
+ * 저장된 설정 또는 시스템 설정에 따라 data-theme 을 붙인다)
+ * 헤더(GNB)의 팀 컬러는 그대로이고, 그 아래 면과 글자만 어두운 바탕용으로 바뀐다.
+ * ========================================================= */
+html[data-theme='dark'] {
+  color-scheme: dark;
+  /* 면: 바탕이 가장 어둡고, 위에 얹히는 면일수록 조금씩 밝다 */
+  --color-canvas: #0f1216;
+  --color-paper: #171b21;
+  --color-paper-deep: #1d2229;
+  --color-surface-soft: #1b2027;
+  --color-surface-card: #1f242c;
+  --color-surface-strong: #2a303a;
+  --color-line: #2a303a;
+  --color-line-strong: #3a424e;
+  /* 글자 */
+  --color-ink: #eceef1;
+  --color-muted: #a0a8b4;
+  --color-muted-soft: #8a929e;
+  /* 원래도 어두운 면(패널·버튼): 바탕과 구분되도록 한 단계 밝게 */
+  --color-night-navy: #222831;
+  --color-night-navy-soft: #2c333e;
+  --color-brand: #3b4352;
+  --color-brand-active: #4a5364;
+  --color-brand-disabled: #2a303a;
+  --home-night: #1a2130;
+  --home-night-soft: #242d3e;
+  --home-chalk: #1b2027;
+  --home-ink: #e6e9ee;
+  --home-muted: #9aa4b3;
+  --home-line: #2a303a;
+  --color-field-100: #1c3329;
+  --color-field-50: #18261f;
+  /* 상태색 글자: 어두운 바탕에서 읽히도록 밝힌 값 */
+  --color-win-ink: #ff7b72;
+  --color-lose-ink: #7aa7ff;
+  --color-draw-ink: #a8adb5;
+  --color-cancelled-ink: #c7ab9f;
+  --color-scheduled-ink: #45d0bd;
+  --color-error-ink: #ff7b72;
+  --color-success-ink: #3fd6a0;
+  --color-field-ink: #55cda0;
+  --color-field-ink-strong: #86dfbc;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.45);
+  --shadow-lg: 0 16px 36px rgba(0, 0, 0, 0.55);
+  --shadow-inset: inset 0 -1px 0 rgba(255, 255, 255, 0.06);
+}
+
+/* 다크 모드의 팀 컬러.
+ * 헤더(GNB)는 원래 팀 컬러(--team-color-display)를 그대로 쓴다.
+ * 헤더 아래의 선·점·배지·글자는 어두운 바탕에서 보이도록 JS 가 밝힌 값으로 바꾼다.
+ * (두산·롯데·KT 처럼 어두운 팀 컬러는 그대로 두면 바탕에 묻힌다)
+ * :root 의 인라인 값보다 body 에 선언한 값이 하위 요소에서 우선하므로 body 에 둔다. */
+html[data-theme='dark'] body {
+  --team-color: var(--team-accent-dark, var(--color-ink));
+  --team-color-contrast: var(--team-accent-dark-contrast, #111111);
+  --team-color-ink: var(--team-ink-dark, var(--color-ink));
+  --team-color-soft: color-mix(in srgb, var(--team-color) 16%, transparent);
+}

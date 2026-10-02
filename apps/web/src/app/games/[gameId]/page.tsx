@@ -2,7 +2,10 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import type { Game } from '@/lib/baseball-api';
 import { formatKoreanDateTime } from '@/lib/date-format';
-import { fetchPublicGame } from '@/lib/server-baseball-api';
+import {
+  fetchPublicGame,
+  fetchPublicGameResult,
+} from '@/lib/server-baseball-api';
 import { getAbsoluteUrl } from '@/lib/site-url';
 import { GameDetailPageClient } from './GameDetailPageClient';
 
@@ -62,6 +65,57 @@ function buildGameKeywords(game: Game) {
     '야구 예매',
     '야구장 정보',
   ];
+}
+
+/** 검색·AI 가 경기를 구조화된 데이터로 읽을 수 있게 schema.org SportsEvent 로 표현한다. */
+function buildGameJsonLd(game: Game) {
+  const url = getAbsoluteUrl(`/games/${game.id}`);
+  const team = (item: Game['homeTeam']) => ({
+    '@type': 'SportsTeam',
+    name: item.name,
+    alternateName: item.shortName,
+    sport: 'Baseball',
+  });
+
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'SportsEvent',
+    name: `${game.awayTeam.name} vs ${game.homeTeam.name}`,
+    description: buildGameDescription(game),
+    sport: 'Baseball',
+    startDate: game.gameDate,
+    url,
+    eventStatus:
+      game.status === 'cancelled'
+        ? 'https://schema.org/EventCancelled'
+        : 'https://schema.org/EventScheduled',
+    eventAttendanceMode: 'https://schema.org/OfflineEventAttendanceMode',
+    location: {
+      '@type': 'StadiumOrArena',
+      name: game.stadium,
+      address: { '@type': 'PostalAddress', addressCountry: 'KR' },
+    },
+    homeTeam: team(game.homeTeam),
+    awayTeam: team(game.awayTeam),
+    competitor: [team(game.awayTeam), team(game.homeTeam)],
+    organizer: { '@type': 'SportsOrganization', name: 'KBO 리그' },
+    ...(hasScore(game)
+      ? {
+          additionalProperty: [
+            {
+              '@type': 'PropertyValue',
+              name: `${game.awayTeam.shortName} 득점`,
+              value: game.awayScore,
+            },
+            {
+              '@type': 'PropertyValue',
+              name: `${game.homeTeam.shortName} 득점`,
+              value: game.homeScore,
+            },
+          ],
+        }
+      : {}),
+  };
 }
 
 export async function generateMetadata({
@@ -152,5 +206,28 @@ export default async function GameDetailPage({ params }: GamePageProps) {
     notFound();
   }
 
-  return <GameDetailPageClient gameId={numericGameId} />;
+  // generateMetadata 와 같은 요청이라 한 번만 나간다.
+  const { game, missing } = await fetchPublicGameResult(numericGameId);
+
+  // 없는 경기는 빈 화면 대신 404 로 응답한다. (일시적인 API 실패는 클라이언트 조회로 넘긴다)
+  if (missing) {
+    notFound();
+  }
+
+  return (
+    <>
+      {game ? (
+        <script
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(buildGameJsonLd(game)).replace(
+              /</g,
+              '\\u003c',
+            ),
+          }}
+          type="application/ld+json"
+        />
+      ) : null}
+      <GameDetailPageClient gameId={numericGameId} initialGame={game} />
+    </>
+  );
 }

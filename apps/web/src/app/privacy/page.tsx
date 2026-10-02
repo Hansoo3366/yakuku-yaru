@@ -8,7 +8,7 @@ export default function PrivacyPage() {
   return (
     <main className={`app-shell ${styles.page}`}>
       <header className={styles.header}>
-        <span>Privacy policy · 2026.08.03</span>
+        <span>개인정보 처리방침 · 2026.08.03</span>
         <h1>개인정보 처리방침</h1>
         <p>
           야크크 야르는 서비스에 꼭 필요한 정보만 처리하고, 이용자가 자신의

@@ -308,7 +308,7 @@ function RegisterPageContent() {
       </Link>
       <section className="auth-card">
         <header className="auth-header">
-          <span className="eyebrow">{isVerifyResume ? 'Verify email' : 'Sign up'}</span>
+          <span className="eyebrow">{isVerifyResume ? '이메일 인증' : '회원가입'}</span>
           <h1>{isVerifyResume ? '이메일 인증' : '야크크 야르 시작하기'}</h1>
           <p>
             {isVerifyResume

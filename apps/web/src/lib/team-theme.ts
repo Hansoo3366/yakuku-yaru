@@ -5,6 +5,7 @@ import {
   getAccessibleTeamSurface,
   getContrastingTextColor,
   getLightenedTeamColor,
+  getTeamColorOnDark,
   normalizeTeamColor,
 } from '@/lib/team-color';
 
@@ -29,7 +30,16 @@ export function applyTeamTheme(primaryColor: string | null | undefined) {
     root.style.setProperty('--team-color', safeColor);
     root.style.setProperty('--team-color-soft', `${safeColor}1f`);
     root.style.setProperty('--team-color-strong', `${safeColor}cc`);
-    root.style.setProperty('--team-color-ink', accessibleSurface);
+    // 글자색은 바탕에 따라 달라야 하므로 밝은 면용·어두운 면용을 따로 넘기고, CSS 가 테마에 맞는 쪽을 고른다.
+    root.style.setProperty('--team-ink-light', accessibleSurface);
+    root.style.setProperty('--team-ink-dark', getTeamColorOnDark(safeColor, 7));
+    // 다크 모드에서 헤더 아래 표시(선·점·배지)에 쓰는 팀 컬러. 헤더 자체는 원래 색을 쓴다.
+    const accentOnDark = getTeamColorOnDark(safeColor, 3);
+    root.style.setProperty('--team-accent-dark', accentOnDark);
+    root.style.setProperty(
+      '--team-accent-dark-contrast',
+      getContrastingTextColor(accentOnDark),
+    );
     root.style.setProperty('--team-color-surface', accessibleSurface);
     root.style.setProperty('--team-color-contrast', contrastingText);
     root.style.setProperty('--team-color-display', displayColor);
@@ -53,7 +63,10 @@ export function applyTeamTheme(primaryColor: string | null | undefined) {
     root.style.removeProperty('--team-color');
     root.style.removeProperty('--team-color-soft');
     root.style.removeProperty('--team-color-strong');
-    root.style.removeProperty('--team-color-ink');
+    root.style.removeProperty('--team-ink-light');
+    root.style.removeProperty('--team-ink-dark');
+    root.style.removeProperty('--team-accent-dark');
+    root.style.removeProperty('--team-accent-dark-contrast');
     root.style.removeProperty('--team-color-surface');
     root.style.removeProperty('--team-color-contrast');
     root.style.removeProperty('--team-color-display');

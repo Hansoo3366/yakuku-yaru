@@ -13,6 +13,7 @@ import { getProfileImageSrc } from '@/lib/profile-image';
 import { NotificationBell } from '@/components/NotificationBell';
 import { SERVICE_CONTACT_EMAIL } from '@/lib/service-contact';
 import { openSiteGuide } from '@/lib/site-guide';
+import { ThemeToggle } from '@/components/ThemeToggle';
 
 const primaryLinks: Array<{
   href: string;
@@ -177,6 +178,8 @@ export function AppFooter() {
         <nav aria-label="하단 링크">
           <Link href="/">홈</Link>
           <Link href="/calendar">캘린더</Link>
+          <Link href="/standings">순위</Link>
+          <Link href="/schedule">월별 일정표</Link>
           <Link href="/cheers">응원가</Link>
           <Link href="/posts">팬 라운지</Link>
           <Link href="/fans">팬 찾기</Link>
@@ -199,6 +202,7 @@ export function AppFooter() {
               사이트 가이드
             </button>
             <a href={`mailto:${SERVICE_CONTACT_EMAIL}`}>문의</a>
+            <ThemeToggle className="site-footer-guide site-footer-theme" />
           </nav>
           <p>
             비공식 야구 팬 서비스이며 KBO 및 각 구단과 제휴 관계가 없습니다.

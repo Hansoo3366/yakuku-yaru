@@ -162,14 +162,14 @@ export function TeamStandingsTable({
           <tr>
             <th scope="col">순위</th>
             <th scope="col">팀</th>
-            <th scope="col">경기</th>
+            <th className="col-wide" scope="col">경기</th>
             <th scope="col">승</th>
             <th scope="col">패</th>
             <th scope="col">무</th>
             <th scope="col">승률</th>
             <th scope="col">게임차</th>
-            <th scope="col">최근 10경기</th>
-            <th scope="col">연속</th>
+            <th className="col-wide" scope="col">최근 10경기</th>
+            <th className="col-wide" scope="col">연속</th>
           </tr>
         </thead>
         <tbody>
@@ -196,14 +196,14 @@ export function TeamStandingsTable({
                     </span>
                   </span>
                 </td>
-                <td>{item.games}</td>
+                <td className="col-wide">{item.games}</td>
                 <td>{item.wins}</td>
                 <td>{item.losses}</td>
                 <td>{item.draws}</td>
                 <td>{formatStandingWinRate(item.winRate)}</td>
                 <td>{item.gamesBehind}</td>
-                <td>{formatRecentTenRecord(item.recentTen)}</td>
-                <td>
+                <td className="col-wide">{formatRecentTenRecord(item.recentTen)}</td>
+                <td className="col-wide">
                   <span
                     className="standings-streak-badge"
                     data-kind={getStreakBadgeKind(item.streak)}

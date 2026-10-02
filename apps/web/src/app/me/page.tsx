@@ -299,7 +299,7 @@ export default function MyPage() {
               />
             </div>
             <div className="profile-identity">
-              <span className="eyebrow">My Page</span>
+              <span className="eyebrow">마이페이지</span>
               {isEditingNickname ? (
                 <div className="profile-nickname-edit">
                   <input

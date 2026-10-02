@@ -3,7 +3,7 @@
 }
 
 .header {
-  border-bottom: 2px solid var(--color-night-navy);
+  border-bottom: 2px solid var(--color-ink);
   display: grid;
   gap: 10px;
   margin-bottom: 28px;
@@ -51,7 +51,7 @@
 }
 
 .section {
-  background: var(--color-white);
+  background: var(--color-paper);
   border: 1px solid var(--color-line);
   border-radius: var(--radius-lg);
   padding: clamp(20px, 4vw, 32px);
@@ -78,7 +78,7 @@
 }
 
 .section a {
-  color: var(--color-brand);
+  color: var(--color-ink);
   font-weight: var(--weight-bold);
   text-decoration: underline;
   text-underline-offset: 3px;

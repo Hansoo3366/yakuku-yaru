@@ -8,6 +8,7 @@ import {
   Home,
   MessageSquareText,
   Music2,
+  ShieldCheck,
   UserRound,
   type LucideIcon,
 } from 'lucide-react';
@@ -28,9 +29,13 @@ const navItems: Array<{
 export function BottomNav() {
   const pathname = usePathname();
   const user = useAuthStore((state) => state.user);
-  const visibleNavItems = user
-    ? navItems
-    : navItems.filter((item) => item.href !== '/me');
+  // 모바일에는 상단 메뉴가 없으므로 관리자에게는 여기서 관리자 화면으로 가는 탭을 준다.
+  const visibleNavItems = [
+    ...(user ? navItems : navItems.filter((item) => item.href !== '/me')),
+    ...(user?.role === 'admin'
+      ? [{ href: '/admin', icon: ShieldCheck, label: '관리' }]
+      : []),
+  ];
 
   return (
     <nav className="bottom-nav" aria-label="주요 메뉴">

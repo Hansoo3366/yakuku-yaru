@@ -104,7 +104,7 @@ export function StadiumDetailPageClient({ stadium }: Props) {
 
       <header className={styles.hero}>
         <div>
-          <span className={styles.eyebrow}>Stadium guide</span>
+          <span className={styles.eyebrow}>구장 가이드</span>
           <div className={styles.heroTitle}>
             {homeTeams.length ? (
               <span className={styles.teamLogos}>
@@ -142,7 +142,7 @@ export function StadiumDetailPageClient({ stadium }: Props) {
           aria-label={`팬 메모 ${notes.length}개`}
         >
           <strong>{stadiumQuery.isLoading ? '—' : notes.length}</strong>
-          <span>NOTES</span>
+          <span>개의 팬 메모</span>
         </div>
       </header>
 

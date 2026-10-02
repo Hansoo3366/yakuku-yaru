@@ -76,7 +76,7 @@ export default function FanProfilePage() {
             )}
           />
           <div>
-            <span className={styles.eyebrow}>Fan profile</span>
+            <span className={styles.eyebrow}>팬 프로필</span>
             <div className={styles.profileNameRow}>
               <h1>{fan.nickname}</h1>
               {fan.role === 'admin' ? <AdminBadge inverse /> : null}

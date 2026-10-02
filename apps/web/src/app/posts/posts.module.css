@@ -1,11 +1,16 @@
 .page {
-  --board-black: #111111;
-  --board-paper: #ffffff;
+  --board-black: var(--color-night-navy);
+  --board-paper: var(--color-paper);
   --board-dugout: #f4f4f1;
   --board-muted: #686868;
   gap: 0;
   max-width: 1080px;
   padding-top: clamp(20px, 4vw, 44px);
+}
+
+html[data-theme='dark'] .page {
+  --board-dugout: #1c2026;
+  --board-muted: #a9aeb6;
 }
 
 .board {
@@ -21,6 +26,7 @@
 
 .sectionNav a {
   color: #858585;
+  color: light-dark(#858585, #9ca2ab);
   font-size: 12px;
   font-weight: 800;
   padding-top: 4px;
@@ -28,7 +34,7 @@
 
 .sectionNav a:hover,
 .sectionNav .sectionNavActive {
-  color: #111111;
+  color: var(--color-ink);
 }
 
 .sectionNav .sectionNavActive {
@@ -63,9 +69,9 @@
 }
 
 .kicker {
-  color: color-mix(in srgb, var(--team-color-contrast, #ffffff) 72%, transparent);
+  color: rgba(255, 255, 255, 0.72);
   font-family: ui-monospace, 'SFMono-Regular', Consolas, monospace;
-  font-size: 10px;
+  font-size: var(--type-caption);
   font-weight: 700;
   letter-spacing: 0.14em;
   margin-bottom: 18px;
@@ -91,8 +97,9 @@
 
 .heroAside {
   align-content: end;
-  background: var(--team-color, #292929);
-  color: var(--team-color-contrast, #ffffff);
+  background: #1f1f1f;
+  background: light-dark(#1f1f1f, #32373f);
+  color: #ffffff;
   display: grid;
   padding: 38px 30px;
   position: relative;
@@ -115,15 +122,15 @@
 
 .heroAside > small {
   color: color-mix(in srgb, currentColor 66%, transparent);
-  font-size: 11px;
+  font-size: var(--type-caption);
   margin-top: 6px;
 }
 
 .writeButton,
 .loginButton {
   align-items: center;
-  background: #ffffff;
-  color: #111111;
+  background: var(--color-paper);
+  color: var(--color-ink);
   display: flex;
   font-size: 13px;
   font-weight: 800;
@@ -182,7 +189,7 @@
 }
 
 .searchIcon {
-  color: #111111;
+  color: var(--color-ink);
   font-size: 21px;
   line-height: 1;
   transform: rotate(-12deg);
@@ -213,7 +220,7 @@
 
 .searchButton {
   align-self: stretch;
-  background: #111111;
+  background: var(--color-night-navy);
   border: 0;
   color: #ffffff;
   font-size: 13px;
@@ -224,6 +231,7 @@
 
 .searchButton:hover {
   background: #2c2c2c;
+  background: light-dark(#2c2c2c, #3d444e);
 }
 
 .feedTabs {
@@ -244,12 +252,13 @@
 
 .feedTabs button:hover,
 .feedTabs .feedTabActive {
-  background: #111111;
+  background: var(--color-night-navy);
   color: #ffffff;
 }
 
 .categoryTabs {
   border-bottom: 1px solid #deded9;
+  border-bottom: 1px solid light-dark(#deded9, #394049);
   display: flex;
   gap: 18px;
   margin-bottom: 18px;
@@ -261,6 +270,7 @@
   background: transparent;
   border: 0;
   color: #777777;
+  color: light-dark(#777777, #a2a8b0);
   flex: 0 0 auto;
   font-size: 12px;
   font-weight: 800;
@@ -270,7 +280,7 @@
 }
 
 .categoryTabs .categoryTabActive {
-  color: #111111;
+  color: var(--color-ink);
 }
 
 .categoryTabs .categoryTabActive::after {
@@ -283,7 +293,7 @@
 }
 
 .postList {
-  border-top: 2px solid #111111;
+  border-top: 2px solid var(--color-ink);
 }
 
 .listHeader,
@@ -296,7 +306,7 @@
 .listHeader {
   color: var(--board-muted);
   font-family: ui-monospace, 'SFMono-Regular', Consolas, monospace;
-  font-size: 10px;
+  font-size: var(--type-caption);
   font-weight: 700;
   letter-spacing: 0.12em;
   min-height: 34px;
@@ -311,6 +321,7 @@
 .postRow {
   align-items: center;
   border-top: 1px solid #e7e7e2;
+  border-top: 1px solid light-dark(#e7e7e2, #353b44);
   color: inherit;
   min-height: 84px;
   position: relative;
@@ -341,6 +352,7 @@
 
 .postNumber {
   color: #939393;
+  color: light-dark(#939393, #969ca5);
   font-family: ui-monospace, 'SFMono-Regular', Consolas, monospace;
   font-size: 12px;
   font-variant-numeric: tabular-nums;
@@ -355,7 +367,7 @@
 }
 
 .postTitle {
-  color: #111111;
+  color: var(--color-ink);
   font-size: 16px;
   font-weight: 800;
   letter-spacing: -0.025em;
@@ -373,22 +385,24 @@
 
 .categoryBadge {
   background: #eeeeea;
+  background: light-dark(#eeeeea, #1f2329);
   color: #444444;
+  color: light-dark(#444444, #babec4);
   flex: 0 0 auto;
-  font-size: 9px;
+  font-size: var(--type-caption);
   font-weight: 900;
   padding: 4px 6px;
 }
 
 .noticeBadge {
-  background: #111111;
+  background: var(--color-night-navy);
   color: #ffffff;
 }
 
 .requestStatus {
   border: 1px solid currentColor;
   color: var(--team-color-ink, #333333);
-  font-size: 9px;
+  font-size: var(--type-caption);
   font-weight: 900;
   padding: 2px 5px;
 }
@@ -404,7 +418,7 @@
   color: var(--board-muted);
   display: flex;
   flex-wrap: wrap;
-  font-size: 11px;
+  font-size: var(--type-caption);
   gap: 8px;
 }
 
@@ -420,6 +434,7 @@
 
 .author {
   color: #333333;
+  color: light-dark(#333333, #eceef1);
   font-weight: 700;
   max-width: 16ch;
   overflow: hidden;
@@ -429,7 +444,7 @@
 
 .commentCount {
   align-items: center;
-  color: #111111;
+  color: var(--color-ink);
   display: flex;
   font-family: ui-monospace, 'SFMono-Regular', Consolas, monospace;
   font-size: 12px;
@@ -442,6 +457,7 @@
 .loadingRow {
   align-items: center;
   border-bottom: 1px solid #e7e7e2;
+  border-bottom: 1px solid light-dark(#e7e7e2, #353b44);
   gap: 18px;
   min-height: 84px;
 }
@@ -452,13 +468,14 @@
 }
 
 .emptyWrap {
-  border-top: 2px solid #111111;
+  border-top: 2px solid var(--color-ink);
   padding: 56px 0 20px;
 }
 
 .pagination {
   align-items: center;
   border-top: 1px solid #e7e7e2;
+  border-top: 1px solid light-dark(#e7e7e2, #353b44);
   display: grid;
   grid-template-columns: 1fr auto 1fr;
   margin-top: 18px;
@@ -468,7 +485,7 @@
 .pagination button {
   background: transparent;
   border: 0;
-  color: #111111;
+  color: var(--color-ink);
   font-size: 13px;
   font-weight: 800;
   justify-self: start;
@@ -482,6 +499,7 @@
 
 .pagination button:disabled {
   color: #b8b8b8;
+  color: light-dark(#b8b8b8, #858c97);
 }
 
 .pageIndicator {
@@ -498,13 +516,16 @@
 
 .pageIndicator span {
   color: #8b8b8b;
+  color: light-dark(#8b8b8b, #999fa8);
   font-size: 12px;
 }
 
 .mobileWriteButton {
   align-items: center;
-  background: #111111;
-  bottom: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom, 0px) + 14px);
+  background: var(--color-night-navy);
+  bottom: calc(
+    var(--bottom-nav-height) + env(safe-area-inset-bottom, 0px) + 14px
+  );
   color: #ffffff;
   display: none;
   font-size: 13px;
@@ -519,7 +540,7 @@
 
 .bottomWriteCta {
   align-items: center;
-  background: #111111;
+  background: var(--color-night-navy);
   border-left: 7px solid var(--team-color, #ffffff);
   color: #ffffff;
   display: flex;
@@ -537,7 +558,7 @@
 .bottomWriteCta > div > span {
   color: rgba(255, 255, 255, 0.5);
   font-family: ui-monospace, 'SFMono-Regular', Consolas, monospace;
-  font-size: 9px;
+  font-size: var(--type-caption);
   font-weight: 800;
   letter-spacing: 0.14em;
 }
@@ -550,13 +571,13 @@
 
 .bottomWriteCta p {
   color: rgba(255, 255, 255, 0.6);
-  font-size: 11px;
+  font-size: var(--type-caption);
 }
 
 .bottomWriteCta > a {
   align-items: center;
-  background: var(--team-color, #ffffff);
-  color: var(--team-color-contrast, #111111);
+  background: var(--color-paper);
+  color: var(--color-ink);
   display: inline-flex;
   flex: 0 0 auto;
   font-size: 12px;
@@ -694,4 +715,44 @@
   .loginButton {
     transition: none;
   }
+}
+
+/* 손가락으로 누르는 화면: 탭과 글 제목·작성자 링크의 누르는 영역을 넓힌다. */
+@media (max-width: 720px) {
+  .feedTabs button {
+    min-height: 44px;
+  }
+
+  .categoryTabs {
+    gap: 6px;
+  }
+
+  .categoryTabs button {
+    min-height: 44px;
+    padding: 0 8px;
+  }
+
+  .postTitle {
+    margin-block: -10px;
+    padding-block: 10px;
+  }
+
+  .author,
+  .commentCount {
+    margin-block: -12px;
+    padding-block: 12px;
+  }
+}
+
+/* 다크 모드: 어두운 패널 위의 글쓰기 버튼은 밝게 유지해 눈에 띄게 한다. */
+html[data-theme='dark'] .writeButton,
+html[data-theme='dark'] .loginButton,
+html[data-theme='dark'] .bottomWriteCta > a {
+  background: #eceef1;
+  color: #14171c;
+}
+
+html[data-theme='dark'] .writeButton:hover,
+html[data-theme='dark'] .loginButton:hover {
+  background: #ffffff;
 }

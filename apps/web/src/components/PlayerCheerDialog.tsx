@@ -15,6 +15,7 @@ import {
   getContrastingTextColor,
   normalizeTeamColor,
 } from '@/lib/team-color';
+import { extractYoutubeId } from '@/lib/youtube';
 
 export type CheerDialogItem = {
   accentColor: string | null;
@@ -35,38 +36,6 @@ type Props = {
   player?: PlayerCheer | null;
   onClose: () => void;
 };
-
-function extractYoutubeId(value: string | null | undefined) {
-  if (!value) {
-    return null;
-  }
-
-  const trimmed = value.trim();
-
-  if (/^[A-Za-z0-9_-]{6,32}$/.test(trimmed)) {
-    return trimmed;
-  }
-
-  try {
-    const url = new URL(trimmed);
-
-    if (url.hostname.includes('youtu.be')) {
-      const id = url.pathname.split('/').filter(Boolean)[0] ?? '';
-      return /^[A-Za-z0-9_-]{6,32}$/.test(id) ? id : null;
-    }
-
-    const queryId = url.searchParams.get('v') ?? '';
-
-    if (/^[A-Za-z0-9_-]{6,32}$/.test(queryId)) {
-      return queryId;
-    }
-
-    const embedMatch = url.pathname.match(/\/embed\/([A-Za-z0-9_-]{6,32})/);
-    return embedMatch?.[1] ?? null;
-  } catch {
-    return null;
-  }
-}
 
 function toPlayerCheerDialogItem(player: PlayerCheer): CheerDialogItem {
   return {
@@ -185,7 +154,7 @@ export function PlayerCheerDialog({ cheer, player, onClose }: Props) {
       >
         <header className="cheer-dialog-titlebar">
           <div>
-            <span>CHANT SHEET</span>
+            <span>응원가</span>
             <strong>{item.cheerTitle ?? '응원가'}</strong>
           </div>
           <button
@@ -222,7 +191,7 @@ export function PlayerCheerDialog({ cheer, player, onClose }: Props) {
           {hasCheer ? (
             <div className="cheer-dialog-body">
               <header className="cheer-dialog-track">
-                <span>NOW SINGING</span>
+                <span>가사</span>
                 <h3>{item.cheerTitle || '응원가'}</h3>
               </header>
               {youtubeId ? (

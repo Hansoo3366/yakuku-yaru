@@ -8,7 +8,7 @@ export default function TermsPage() {
   return (
     <main className={`app-shell ${styles.page}`}>
       <header className={styles.header}>
-        <span>Terms of service · 2026.08.03</span>
+        <span>이용약관 · 2026.08.03</span>
         <h1>이용약관</h1>
         <p>야크크 야르를 안전하고 즐겁게 이용하기 위한 기본 약속입니다.</p>
       </header>

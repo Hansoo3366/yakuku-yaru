@@ -134,3 +134,39 @@ export function getAccessibleTeamSurface(
 
   return '#000000';
 }
+
+/** 다크 모드의 카드 면 색. 팀 컬러를 어두운 바탕 위에서 쓸 때의 대비 기준이다. */
+export const DARK_SURFACE_COLOR = '#171b21';
+
+/**
+ * 팀 컬러를 어두운 바탕 위에서 쓸 수 있게 밝힌다. 흰색을 조금씩 섞어 가며
+ * 바탕과의 대비가 기준 이상이 되는 첫 색을 고른다.
+ * (두산·롯데·KT 처럼 원래 어두운 팀 컬러는 어두운 바탕에서 보이지 않기 때문)
+ */
+export function getTeamColorOnDark(
+  primaryColor: string,
+  minimumContrast: number,
+  background = DARK_SURFACE_COLOR,
+) {
+  const source = parseHexColor(primaryColor);
+
+  if (!source) {
+    return '#eceef1';
+  }
+
+  for (let percentage = 0; percentage <= 100; percentage += 2) {
+    const ratio = percentage / 100;
+    const candidate = toHexColor({
+      red: source.red * (1 - ratio) + 255 * ratio,
+      green: source.green * (1 - ratio) + 255 * ratio,
+      blue: source.blue * (1 - ratio) + 255 * ratio,
+    });
+    const contrast = getContrastRatio(candidate, background);
+
+    if (contrast !== null && contrast >= minimumContrast) {
+      return candidate;
+    }
+  }
+
+  return '#ffffff';
+}

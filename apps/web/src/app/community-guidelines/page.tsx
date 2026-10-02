@@ -8,7 +8,7 @@ export default function CommunityGuidelinesPage() {
   return (
     <main className={`app-shell ${styles.page}`}>
       <header className={styles.header}>
-        <span>Community rules · 2026.08.03</span>
+        <span>커뮤니티 운영정책 · 2026.08.03</span>
         <h1>커뮤니티 운영정책</h1>
         <p>응원 팀은 달라도 사람을 존중하는 야구 팬 커뮤니티를 지향합니다.</p>
       </header>

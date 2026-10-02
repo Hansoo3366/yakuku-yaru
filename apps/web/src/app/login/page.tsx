@@ -92,7 +92,7 @@ export default function LoginPage() {
       </Link>
       <section className="auth-card">
         <header className="auth-header">
-          <span className="eyebrow">Sign in</span>
+          <span className="eyebrow">로그인</span>
           <h1>다시 만나서 반가워요</h1>
           <p>직관 캘린더와 승률 기록을 이어서 확인하세요.</p>
         </header>

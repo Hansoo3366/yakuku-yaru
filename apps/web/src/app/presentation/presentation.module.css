@@ -326,7 +326,10 @@
   background: #e7edf5;
   display: grid;
   gap: 8px;
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1.15fr) auto minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1.15fr) auto minmax(
+      0,
+      1fr
+    );
   padding: 16px;
 }
 
@@ -1002,7 +1005,9 @@
   align-items: center;
   display: grid;
   gap: clamp(10px, 1.2vw, 18px);
-  grid-template-columns: 90px minmax(130px, 1fr) auto minmax(150px, 1fr) auto minmax(150px, 1fr);
+  grid-template-columns:
+    90px minmax(130px, 1fr) auto minmax(150px, 1fr)
+    auto minmax(150px, 1fr);
 }
 
 .dbRelationRow > span {
@@ -1438,7 +1443,10 @@
   background: #e7edf5;
   display: grid;
   gap: 10px;
-  grid-template-columns: minmax(68px, 0.55fr) minmax(90px, 0.8fr) minmax(0, 1.6fr);
+  grid-template-columns: minmax(68px, 0.55fr) minmax(90px, 0.8fr) minmax(
+      0,
+      1.6fr
+    );
   padding: 12px 14px;
 }
 
@@ -1713,7 +1721,10 @@
   }
 
   .dbRelationRow {
-    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto minmax(
+        0,
+        1fr
+      );
   }
 
   .dbRelationRow > span {

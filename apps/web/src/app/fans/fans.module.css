@@ -1,11 +1,16 @@
 .page {
-  --fan-black: #111111;
-  --fan-paper: #ffffff;
+  --fan-black: var(--color-night-navy);
+  --fan-paper: var(--color-paper);
   --fan-dugout: #f3f3f0;
   --fan-muted: #707070;
   gap: 0;
   max-width: 1120px;
   padding-top: clamp(20px, 4vw, 42px);
+}
+
+html[data-theme='dark'] .page {
+  --fan-dugout: #1d2126;
+  --fan-muted: #a6abb3;
 }
 
 .sectionNav {
@@ -16,6 +21,7 @@
 
 .sectionNav a {
   color: #858585;
+  color: light-dark(#858585, #9ca2ab);
   font-size: 12px;
   font-weight: 800;
   padding-top: 4px;
@@ -23,7 +29,7 @@
 
 .sectionNav a:hover,
 .sectionNav .sectionNavActive {
-  color: #111111;
+  color: var(--color-ink);
 }
 
 .sectionNav .sectionNavActive {
@@ -57,7 +63,7 @@
   color: rgba(255, 255, 255, 0.58);
   display: block;
   font-family: ui-monospace, 'SFMono-Regular', Consolas, monospace;
-  font-size: 10px;
+  font-size: var(--type-caption);
   font-weight: 700;
   letter-spacing: 0.14em;
   margin-bottom: 14px;
@@ -95,7 +101,7 @@
 
 .heroCount span {
   color: rgba(255, 255, 255, 0.58);
-  font-size: 11px;
+  font-size: var(--type-caption);
 }
 
 .toolbar {
@@ -166,9 +172,10 @@
 }
 
 .teamFilter {
-  background: #ffffff;
+  background: var(--color-paper);
   border: 0;
   color: #7a7a7a;
+  color: light-dark(#7a7a7a, #a1a7af);
   flex: 0 0 auto;
   font-size: 12px;
   font-weight: 700;
@@ -194,7 +201,9 @@
   min-height: 216px;
   padding: 20px;
   position: relative;
-  transition: background 180ms ease, transform 180ms ease;
+  transition:
+    background 180ms ease,
+    transform 180ms ease;
 }
 
 .fanCard::before {
@@ -207,6 +216,7 @@
 
 .fanCard:hover {
   background: #ecece8;
+  background: light-dark(#ecece8, #20242b);
   transform: translateY(-2px);
 }
 
@@ -218,7 +228,7 @@
 }
 
 .avatar {
-  background: #ffffff;
+  background: var(--color-paper);
   border-radius: 14px;
   height: 48px;
   object-fit: cover;
@@ -249,7 +259,7 @@
 .identity > span {
   color: var(--fan-muted);
   display: block;
-  font-size: 11px;
+  font-size: var(--type-caption);
   margin-top: 2px;
 }
 
@@ -268,7 +278,7 @@
 .cardStats span {
   color: var(--fan-muted);
   display: block;
-  font-size: 10px;
+  font-size: var(--type-caption);
   margin-bottom: 3px;
 }
 
@@ -279,7 +289,7 @@
 }
 
 .cardLink {
-  font-size: 11px;
+  font-size: var(--type-caption);
   font-weight: 800;
   margin-top: 18px;
   width: fit-content;
@@ -320,7 +330,7 @@
 .pagination span {
   color: var(--fan-muted);
   font-family: ui-monospace, 'SFMono-Regular', Consolas, monospace;
-  font-size: 11px;
+  font-size: var(--type-caption);
 }
 
 .profileBack {
@@ -357,7 +367,7 @@
 }
 
 .profileAvatar {
-  background: #ffffff;
+  background: var(--color-paper);
   border-radius: 22px;
   height: 88px;
   object-fit: cover;
@@ -395,7 +405,7 @@
 .followNumbers {
   color: rgba(255, 255, 255, 0.64);
   display: flex;
-  font-size: 11px;
+  font-size: var(--type-caption);
   gap: 14px;
 }
 
@@ -406,8 +416,8 @@
 }
 
 .editProfile {
-  background: #ffffff;
-  color: #111111;
+  background: var(--color-paper);
+  color: var(--color-ink);
   font-size: 12px;
   font-weight: 800;
   min-height: 42px;
@@ -417,7 +427,11 @@
 }
 
 .sharedNote {
-  background: color-mix(in srgb, var(--fan-profile-color, #ffffff) 20%, #111111);
+  background: color-mix(
+    in srgb,
+    var(--fan-profile-color, var(--color-paper)) 20%,
+    var(--color-night-navy)
+  );
   color: #ffffff;
   font-size: 12px;
   font-weight: 700;
@@ -443,12 +457,13 @@
 
 .scoreboard div + div {
   border-left: 1px solid #d9d9d4;
+  border-left: 1px solid light-dark(#d9d9d4, #3c424c);
 }
 
 .scoreboard span {
   color: var(--fan-muted);
   display: block;
-  font-size: 10px;
+  font-size: var(--type-caption);
   margin-bottom: 7px;
 }
 
@@ -474,7 +489,7 @@
 .sectionHead span,
 .sectionHead a {
   color: var(--fan-muted);
-  font-size: 11px;
+  font-size: var(--type-caption);
 }
 
 .titleList {
@@ -497,16 +512,17 @@
 
 .titleItem span {
   color: var(--fan-muted);
-  font-size: 10px;
+  font-size: var(--type-caption);
 }
 
 .postList {
-  border-top: 2px solid var(--fan-black);
+  border-top: 2px solid var(--color-ink);
 }
 
 .postItem {
   align-items: center;
   border-bottom: 1px solid #e3e3df;
+  border-bottom: 1px solid light-dark(#e3e3df, #373d46);
   display: grid;
   gap: 18px;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -525,12 +541,12 @@
 .postItem span {
   color: var(--fan-muted);
   font-family: ui-monospace, 'SFMono-Regular', Consolas, monospace;
-  font-size: 10px;
+  font-size: var(--type-caption);
 }
 
 .postItem em {
   color: var(--fan-muted);
-  font-size: 10px;
+  font-size: var(--type-caption);
   font-style: normal;
 }
 

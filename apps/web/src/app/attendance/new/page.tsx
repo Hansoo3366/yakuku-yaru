@@ -183,7 +183,7 @@ function NewAttendanceForm() {
       </Link>
 
       <header className="app-page-header">
-        <span className="eyebrow">New Attendance</span>
+        <span className="eyebrow">새 기록</span>
         <h1>직관 기록 작성</h1>
         <p>오늘 경기에서 남기고 싶은 순간을 정리해보세요.</p>
       </header>

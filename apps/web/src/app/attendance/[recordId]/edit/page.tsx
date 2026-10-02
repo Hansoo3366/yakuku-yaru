@@ -246,7 +246,7 @@ export default function EditAttendancePage() {
       </Link>
 
       <header className="app-page-header">
-        <span className="eyebrow">Edit Attendance</span>
+        <span className="eyebrow">기록 수정</span>
         <h1>직관 기록 수정</h1>
         <p>
           {matchupTitle} ·{' '}

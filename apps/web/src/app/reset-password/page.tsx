@@ -62,7 +62,7 @@ function ResetPasswordForm() {
     return (
       <section className="auth-card">
         <header className="auth-header">
-          <span className="eyebrow">Password reset</span>
+          <span className="eyebrow">비밀번호 재설정</span>
           <h1>링크가 유효하지 않아요</h1>
           <p>비밀번호 찾기에서 이메일을 다시 요청해주세요.</p>
         </header>
@@ -76,7 +76,7 @@ function ResetPasswordForm() {
   return (
     <section className="auth-card">
       <header className="auth-header">
-        <span className="eyebrow">Password reset</span>
+        <span className="eyebrow">비밀번호 재설정</span>
         <h1>{successMessage ? '변경 완료' : '새 비밀번호 설정'}</h1>
         <p>
           {successMessage

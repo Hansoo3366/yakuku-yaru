@@ -64,3 +64,20 @@ export function formatKoreanWeekday(value: string | Date) {
 export function formatTimeAgo(value: string | Date) {
   return `${formatDistanceToNowStrict(new Date(value), { locale: ko })} 전`;
 }
+
+/** 한국 시간 기준 날짜를 YYYY-MM-DD 로 돌려준다. offsetDays 로 며칠 뒤/앞을 구한다. */
+export function getKoreaDateString(
+  value: string | Date = new Date(),
+  offsetDays = 0,
+) {
+  const shifted = new Date(
+    new Date(value).getTime() + offsetDays * 24 * 60 * 60 * 1000,
+  );
+
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: KOREA_TIME_ZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(shifted);
+}

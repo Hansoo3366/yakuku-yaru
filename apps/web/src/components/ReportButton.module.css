@@ -2,13 +2,16 @@
   align-items: center;
   align-self: center;
   background: rgba(255, 255, 255, 0.94);
+  background: light-dark(rgba(255, 255, 255, 0.94), rgba(23, 27, 33, 0.94));
   border: 1px solid #cbc8c1;
+  border: 1px solid light-dark(#cbc8c1, #434a55);
   border-radius: 6px;
   box-shadow: 0 1px 0 rgba(17, 17, 17, 0.07);
   color: #625d57;
+  color: light-dark(#625d57, #aeb3ba);
   display: inline-flex;
   flex: 0 0 auto;
-  font-size: 11px;
+  font-size: var(--type-caption);
   font-weight: 800;
   gap: 6px;
   justify-content: center;
@@ -25,8 +28,10 @@
 
 .trigger:hover {
   background: #fff2ef;
+  background: light-dark(#fff2ef, #44231c);
   border-color: #c7574b;
   color: #a22e25;
+  color: light-dark(#a22e25, #e4918b);
   transform: translateY(-1px);
 }
 
@@ -61,7 +66,7 @@
 }
 
 .dialog {
-  background: #ffffff;
+  background: var(--color-paper);
   box-shadow: 0 28px 70px rgba(0, 0, 0, 0.28);
   display: grid;
   gap: 18px;
@@ -78,8 +83,9 @@
 
 .dialog header span {
   color: #777777;
+  color: light-dark(#777777, #a2a8b0);
   font-family: ui-monospace, 'SFMono-Regular', Consolas, monospace;
-  font-size: 9px;
+  font-size: var(--type-caption);
   font-weight: 800;
   letter-spacing: 0.14em;
 }
@@ -92,6 +98,7 @@
 
 .close {
   background: #f1f1ee;
+  background: light-dark(#f1f1ee, #1e2227);
   border: 0;
   font-size: 24px;
   height: 38px;
@@ -111,6 +118,7 @@
 .dialog select,
 .dialog textarea {
   background: #f4f4f1;
+  background: light-dark(#f4f4f1, #1c2026);
   border: 0;
   font: inherit;
   outline: none;
@@ -125,6 +133,7 @@
 
 .dialog p {
   color: #555555;
+  color: light-dark(#555555, #b2b6bd);
   font-size: 12px;
 }
 
@@ -144,11 +153,13 @@
 
 .cancel {
   background: #efefec;
+  background: light-dark(#efefec, #1f2329);
   color: #222222;
+  color: light-dark(#222222, #eceef1);
 }
 
 .submit {
-  background: #111111;
+  background: var(--color-night-navy);
   color: #ffffff;
 }
 

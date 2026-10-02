@@ -13,6 +13,17 @@ const bootScript = `
 (function () {
   try {
     var root = document.documentElement;
+    // 화면 모드: 저장된 선택(light/dark)이 없으면 시스템 설정을 따른다. 첫 paint 전에 정해 깜빡임을 막는다.
+    var themePreference = 'system';
+    try {
+      themePreference = window.localStorage.getItem('yakuku.theme') || 'system';
+    } catch (themeError) {}
+    var prefersDark =
+      window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    root.dataset.theme =
+      themePreference === 'dark' || (themePreference !== 'light' && prefersDark)
+        ? 'dark'
+        : 'light';
     root.dataset.authState = /(?:^|;\\s*)${SIGNED_IN_COOKIE_NAME}=/.test(document.cookie)
       ? 'authed'
       : 'guest';
@@ -76,7 +87,23 @@ const bootScript = `
       root.style.setProperty('--team-color', teamColor);
       root.style.setProperty('--team-color-soft', teamColor + '1f');
       root.style.setProperty('--team-color-strong', teamColor + 'cc');
-      root.style.setProperty('--team-color-ink', teamSurface);
+      var onDark = function (minContrast) {
+        var surfaceLuminance = toLuminance('#171b21');
+        for (var mix = 0; mix <= 100; mix += 2) {
+          var candidate = toHex(sourceChannels.map(function (channel) {
+            return channel * (1 - mix / 100) + 255 * (mix / 100);
+          }));
+          if ((toLuminance(candidate) + 0.05) / (surfaceLuminance + 0.05) >= minContrast) {
+            return candidate;
+          }
+        }
+        return '#ffffff';
+      };
+      var teamAccentDark = onDark(3);
+      root.style.setProperty('--team-ink-light', teamSurface);
+      root.style.setProperty('--team-ink-dark', onDark(7));
+      root.style.setProperty('--team-accent-dark', teamAccentDark);
+      root.style.setProperty('--team-accent-dark-contrast', getContrastColor(teamAccentDark));
       root.style.setProperty('--team-color-surface', teamSurface);
       root.style.setProperty('--team-color-contrast', teamContrast);
       root.style.setProperty('--team-color-display', teamDisplay);
@@ -304,7 +331,10 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
-  themeColor: '#0f6b4f',
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#ffffff' },
+    { media: '(prefers-color-scheme: dark)', color: '#0f1216' },
+  ],
 };
 
 export default async function RootLayout({

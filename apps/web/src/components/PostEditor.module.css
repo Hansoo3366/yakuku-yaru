@@ -1,10 +1,14 @@
 .page {
-  --editor-ink: #111111;
-  --editor-paper: #ffffff;
+  --editor-ink: var(--color-ink);
+  --editor-paper: var(--color-paper);
   --editor-soft: #f2f2ee;
   gap: 0;
   max-width: 980px;
   padding-top: 28px;
+}
+
+html[data-theme='dark'] .page {
+  --editor-soft: #1d2127;
 }
 
 .backLink {
@@ -17,7 +21,7 @@
 }
 
 .hero {
-  background: var(--editor-ink);
+  background: var(--color-night-navy);
   border-top: 7px solid var(--team-color, #ffffff);
   color: #ffffff;
   display: grid;
@@ -33,9 +37,9 @@
 
 .hero > div > span,
 .adminOptions > div > span {
-  color: color-mix(in srgb, var(--team-color-contrast, #ffffff) 68%, transparent);
+  color: rgba(255, 255, 255, 0.68);
   font-family: ui-monospace, 'SFMono-Regular', Consolas, monospace;
-  font-size: 9px;
+  font-size: var(--type-caption);
   font-weight: 800;
   letter-spacing: 0.15em;
 }
@@ -58,8 +62,9 @@
 
 .hero aside {
   align-content: end;
-  background: var(--team-color, #282828);
-  color: var(--team-color-contrast, #ffffff);
+  background: #1f1f1f;
+  background: light-dark(#1f1f1f, #32373f);
+  color: #ffffff;
   display: grid;
   gap: 7px;
   padding: 30px 24px;
@@ -71,7 +76,7 @@
 }
 
 .hero aside span {
-  font-size: 11px;
+  font-size: var(--type-caption);
   opacity: 0.76;
 }
 
@@ -84,6 +89,7 @@
 .section {
   background: var(--editor-paper);
   border: 1px solid #deded9;
+  border: 1px solid light-dark(#deded9, #394049);
   display: grid;
   gap: 22px;
   padding: clamp(22px, 4vw, 34px);
@@ -99,7 +105,7 @@
 .sectionHeading > span {
   color: var(--team-color-ink, #333333);
   font-family: ui-monospace, 'SFMono-Regular', Consolas, monospace;
-  font-size: 11px;
+  font-size: var(--type-caption);
   font-weight: 900;
   padding-top: 4px;
 }
@@ -113,6 +119,7 @@
 
 .sectionHeading p {
   color: #707070;
+  color: light-dark(#707070, #a6abb3);
   font-size: 12px;
   margin-top: 3px;
 }
@@ -138,7 +145,9 @@
   gap: 4px;
   min-height: 118px;
   padding: 15px;
-  transition: border-color 150ms ease, transform 150ms ease;
+  transition:
+    border-color 150ms ease,
+    transform 150ms ease;
 }
 
 .categoryOption strong {
@@ -148,21 +157,23 @@
 
 .categoryOption small {
   color: #747474;
-  font-size: 10px;
+  color: light-dark(#747474, #a4a9b1);
+  font-size: var(--type-caption);
   line-height: 1.45;
 }
 
 .categoryOption i {
   align-self: end;
   color: #8a8a8a;
-  font-size: 9px;
+  color: light-dark(#8a8a8a, #9aa0a9);
+  font-size: var(--type-caption);
   font-style: normal;
   font-weight: 800;
   margin-top: auto;
 }
 
 .categoryOption input:checked + span {
-  background: #ffffff;
+  background: var(--color-paper);
   border-color: var(--team-color, #111111);
 }
 
@@ -195,8 +206,9 @@
 
 .fields label small {
   color: #888888;
+  color: light-dark(#888888, #9ba1aa);
   font-family: ui-monospace, 'SFMono-Regular', Consolas, monospace;
-  font-size: 9px;
+  font-size: var(--type-caption);
   font-weight: 700;
 }
 
@@ -228,14 +240,15 @@
 
 .fields em,
 .submitError {
-  color: var(--color-error);
-  font-size: 11px;
+  color: var(--color-error-ink);
+  font-size: var(--type-caption);
   font-style: normal;
 }
 
 .adminOptions {
   align-items: center;
   background: #191919;
+  background: light-dark(#191919, #2c3139);
   color: #ffffff;
   display: flex;
   gap: 24px;
@@ -254,7 +267,7 @@
 
 .adminOptions p {
   color: rgba(255, 255, 255, 0.58);
-  font-size: 11px;
+  font-size: var(--type-caption);
 }
 
 .adminOptions label {
@@ -274,7 +287,7 @@
 }
 
 .adminOptions label > span::after {
-  background: #ffffff;
+  background: var(--color-paper);
   content: '';
   display: block;
   height: 16px;
@@ -299,7 +312,7 @@
 
 .actions {
   align-items: center;
-  border-top: 2px solid var(--editor-ink);
+  border-top: 2px solid var(--color-ink);
   display: grid;
   gap: 10px;
   grid-template-columns: minmax(0, 1fr) auto auto;
@@ -317,7 +330,8 @@
 
 .actions > div span {
   color: #777777;
-  font-size: 10px;
+  color: light-dark(#777777, #a2a8b0);
+  font-size: var(--type-caption);
 }
 
 .actions > a,
@@ -338,7 +352,7 @@
 }
 
 .actions > button {
-  background: var(--editor-ink);
+  background: var(--color-night-navy);
   color: #ffffff;
   min-width: 130px;
 }

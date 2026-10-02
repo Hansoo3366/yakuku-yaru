@@ -1,0 +1,123 @@
+/* 순위·월별 일정표처럼 표 하나를 보여 주는 단순한 자료 페이지의 공통 스타일.
+   색은 전부 토큰을 써서 라이트·다크 양쪽에서 그대로 동작한다. */
+.page {
+  align-content: start;
+  gap: var(--space-5);
+  max-width: 1080px;
+}
+
+.head {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.head h1 {
+  color: var(--color-ink);
+  font-size: var(--type-page-title);
+  letter-spacing: -0.03em;
+  line-height: 1.25;
+}
+
+.head p {
+  color: var(--color-muted);
+  font-size: var(--text-base);
+}
+
+.links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.links a {
+  align-items: center;
+  border: 1px solid var(--color-line-strong);
+  border-radius: var(--radius-md);
+  color: var(--color-ink);
+  display: inline-flex;
+  font-size: var(--text-sm);
+  font-weight: 700;
+  min-height: 44px;
+  padding: 0 14px;
+}
+
+.links a:hover {
+  border-color: var(--color-ink);
+}
+
+.panel {
+  background: var(--color-surface-card);
+  border-radius: var(--radius-lg);
+  min-width: 0;
+  padding: clamp(14px, 2.4vw, 28px);
+}
+
+.day {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.day + .day {
+  margin-top: var(--space-5);
+}
+
+.day h2 {
+  color: var(--color-ink);
+  font-size: var(--text-md);
+}
+
+.tableWrap {
+  overflow-x: auto;
+}
+
+.table {
+  border-collapse: collapse;
+  font-size: var(--text-base);
+  font-variant-numeric: tabular-nums;
+  width: 100%;
+}
+
+.table th,
+.table td {
+  border-bottom: 1px solid var(--color-line);
+  padding: 10px 8px;
+  text-align: left;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.table th {
+  color: var(--color-muted);
+  font-size: var(--text-sm);
+  font-weight: 700;
+}
+
+.table td a {
+  color: var(--color-ink);
+  font-weight: 700;
+}
+
+.table td a:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.score {
+  font-weight: 800;
+}
+
+.muted {
+  color: var(--color-muted);
+}
+
+.empty {
+  color: var(--color-muted);
+  font-size: var(--text-base);
+}
+
+@media (max-width: 640px) {
+  /* 좁은 화면에서는 선발 투수 열을 숨겨 가로 스크롤을 줄인다. */
+  .wide {
+    display: none;
+  }
+}

@@ -1,4 +1,11 @@
 import type { Metadata } from 'next';
+import { QuerySeed } from '@/components/QuerySeed';
+import { queryKeys } from '@/lib/query-keys';
+import { listPublicTeams, requestPublic } from '@/lib/server-baseball-api';
+import type {
+  PublicStadiumNote,
+  StadiumSummary,
+} from '@/lib/stadium-note-api';
 import { StadiumDetailPageClient } from './StadiumDetailPageClient';
 
 type StadiumPageProps = {
@@ -33,5 +40,22 @@ export async function generateMetadata({
 export default async function StadiumPage({ params }: StadiumPageProps) {
   const stadium = decodeStadiumParam((await params).stadium);
 
-  return <StadiumDetailPageClient stadium={stadium} />;
+  const [detail, teams] = await Promise.all([
+    requestPublic<{ stadium: StadiumSummary; notes: PublicStadiumNote[] }>(
+      `/stadiums/${encodeURIComponent(stadium)}`,
+      60,
+    ),
+    listPublicTeams(),
+  ]);
+
+  return (
+    <QuerySeed
+      entries={[
+        { queryKey: queryKeys.teams(), data: teams },
+        { queryKey: queryKeys.stadium(stadium), data: detail },
+      ]}
+    >
+      <StadiumDetailPageClient stadium={stadium} />
+    </QuerySeed>
+  );
 }

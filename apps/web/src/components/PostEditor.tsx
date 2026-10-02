@@ -63,7 +63,7 @@ export function PostEditor({
       </Link>
       <header className={styles.hero}>
         <div>
-          <span>FAN LOUNGE · {mode === 'create' ? 'NEW ENTRY' : 'EDIT ENTRY'}</span>
+          <span>팬 라운지 · {mode === 'create' ? '새 글' : '글 수정'}</span>
           <h1>{mode === 'create' ? '새 글 쓰기' : '글 수정하기'}</h1>
           <p>{description}</p>
         </div>
@@ -155,7 +155,7 @@ export function PostEditor({
         {isAdmin ? (
           <section className={styles.adminOptions} aria-labelledby="admin-options-title">
             <div>
-              <span>ADMIN ONLY</span>
+              <span>관리자 전용</span>
               <strong id="admin-options-title">운영 노출 설정</strong>
               <p>공지 분류와 상단 고정은 관리자 계정에만 표시됩니다.</p>
             </div>

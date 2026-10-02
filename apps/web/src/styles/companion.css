@@ -1,0 +1,208 @@
+/* =========================================================
+ * 동행자 선택·칩
+ * ========================================================= */
+/* =========================================================
+ * Companion picker
+ * ========================================================= */
+.companion-section {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.companion-search-bar {
+  align-items: stretch;
+  display: grid;
+  gap: var(--space-2);
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.companion-search-input-wrap {
+  min-width: 0;
+}
+
+.companion-search-button {
+  flex-shrink: 0;
+  height: 46px;
+  min-width: 72px;
+  padding-inline: var(--space-4);
+}
+
+.companion-result-list {
+  background: var(--color-paper);
+  border: none;
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-sm);
+  display: grid;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.companion-result-list button {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--color-line);
+  color: var(--color-ink);
+  display: grid;
+  gap: 4px;
+  padding: var(--space-3);
+  text-align: left;
+}
+
+.companion-result-list button:last-child {
+  border-bottom: 0;
+}
+
+.companion-result-list button strong {
+  font-size: var(--text-base);
+}
+
+.companion-result-list button span {
+  color: var(--color-muted);
+  font-size: var(--text-xs);
+}
+
+.companion-result-list button:hover {
+  background: var(--color-paper-deep);
+}
+
+.companion-chip--picked {
+  align-items: center;
+  background: var(--color-night-navy);
+  border-radius: var(--radius-pill);
+  color: var(--color-white);
+  display: inline-flex;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
+  gap: 8px;
+  min-height: 36px;
+  padding: 4px 6px 4px 14px;
+}
+
+.companion-chip-remove-btn {
+  align-items: center;
+  background: var(--color-paper);
+  border: 1px solid var(--color-line-strong);
+  border-radius: var(--radius-pill);
+  color: var(--color-error-ink);
+  cursor: pointer;
+  display: inline-grid;
+  flex-shrink: 0;
+  font-size: 18px;
+  font-weight: var(--weight-black);
+  height: 28px;
+  justify-content: center;
+  line-height: 1;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
+  width: 28px;
+}
+
+.companion-chip-remove-btn:hover {
+  background: rgba(214, 59, 42, 0.1);
+  border-color: var(--color-score-red);
+  color: var(--color-error-ink);
+}
+
+.companion-chip-remove-btn:focus-visible {
+  outline: 2px solid var(--color-score-red);
+  outline-offset: 2px;
+}
+
+.companion-status-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.companion-status-pill {
+  align-items: center;
+  background: var(--color-paper);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-pill);
+  color: var(--color-ink);
+  display: inline-flex;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
+  gap: 6px;
+  height: 32px;
+  padding: 0 6px 0 12px;
+}
+
+.companion-status-pill em {
+  background: var(--color-paper-deep);
+  border-radius: var(--radius-pill);
+  color: var(--color-muted);
+  font-size: var(--text-xs);
+  font-style: normal;
+  font-weight: var(--weight-black);
+  padding: 2px 8px;
+}
+
+.companion-status-pill[data-status='accepted'] em {
+  background: var(--color-field-100);
+  color: var(--color-field-ink-strong);
+}
+
+.companion-status-pill[data-status='rejected'] em {
+  background: #fce6e3;
+  background: light-dark(#fce6e3, #4b241f);
+  color: var(--color-error-ink);
+}
+
+/* =========================================================
+ * Photo ticket (attendance detail)
+ * ========================================================= */
+/* PC · 태블릿: 가로로 길고 납작한 티켓 비율 */
+/* =========================================================
+ * Companion chips (record detail)
+ * ========================================================= */
+.companion-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.companion-chip {
+  align-items: center;
+  background: var(--color-paper-deep);
+  border-radius: var(--radius-pill);
+  color: var(--color-ink);
+  display: inline-flex;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
+  gap: 6px;
+  padding: 6px 12px;
+}
+
+.companion-chip[data-status='accepted'] {
+  background: color-mix(
+    in srgb,
+    var(--team-color, var(--color-field-700)) 16%,
+    var(--color-paper) 84%
+  );
+  color: var(--color-ink);
+}
+
+.companion-chip[data-status='rejected'] {
+  background: rgba(214, 59, 42, 0.1);
+  color: var(--color-error-ink);
+}
+
+.companion-chip small {
+  color: var(--color-muted);
+  font-size: var(--type-caption);
+  font-weight: var(--weight-bold);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.companion-chip[data-status='accepted'] small {
+  color: var(--team-color-ink, var(--team-color, var(--color-field-ink)));
+}
+
+.companion-chip[data-status='rejected'] small {
+  color: var(--color-error-ink);
+}

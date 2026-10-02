@@ -110,14 +110,52 @@ function teamCheerToDialogItem(
   };
 }
 
+/**
+ * 데이터가 비어 있을 때 문구를 고르는 기준.
+ * 아직 발표 전인 것(upcoming)과, 이미 지난 경기인데 기록이 없는 것(started),
+ * 취소된 경기(cancelled)는 사용자에게 다른 뜻이므로 구분해서 말한다.
+ */
+type GamePhase = 'upcoming' | 'started' | 'cancelled';
+
+function getGamePhase(game: Game): GamePhase {
+  if (game.status === 'cancelled') {
+    return 'cancelled';
+  }
+
+  return hasGameStarted(game) ? 'started' : 'upcoming';
+}
+
+const STARTER_EMPTY_COPY: Record<GamePhase, { name: string; body: string }> = {
+  upcoming: { name: '미정', body: '선발 투수 발표 전입니다.' },
+  started: { name: '기록 없음', body: '이 경기의 선발 투수 기록이 없습니다.' },
+  cancelled: { name: '-', body: '취소된 경기입니다.' },
+};
+
+const LINEUP_EMPTY_COPY: Record<GamePhase, { title: string; body: string }> = {
+  upcoming: {
+    title: '라인업 발표 전',
+    body: '라인업은 보통 경기 시작 1시간쯤 전에 발표됩니다. 발표되면 자동으로 표시돼요.',
+  },
+  started: {
+    title: '라인업 기록 없음',
+    body: '이 경기의 라인업 기록이 없습니다.',
+  },
+  cancelled: {
+    title: '취소된 경기',
+    body: '경기가 취소되어 라인업이 없습니다.',
+  },
+};
+
 function StarterPitcherCard({
   isFavoriteTeam,
   label,
+  phase,
   pitcher,
   team,
 }: {
   isFavoriteTeam: boolean;
   label: string;
+  phase: GamePhase;
   pitcher: Pitcher | null;
   team: Game['homeTeam'];
 }) {
@@ -137,7 +175,7 @@ function StarterPitcherCard({
         />
         <div>
           <span>{label}</span>
-          <strong>{pitcher?.name ?? '미정'}</strong>
+          <strong>{pitcher?.name ?? STARTER_EMPTY_COPY[phase].name}</strong>
           <p>
             {team.shortName}
             {pitcher?.backNumber ? ` · No.${pitcher.backNumber}` : ''}
@@ -190,14 +228,16 @@ function StarterPitcherCard({
           </dl>
         </>
       ) : (
-        <p className="starter-pitcher-empty">선발 투수 발표 전입니다.</p>
+        <p className="starter-pitcher-empty">
+          {STARTER_EMPTY_COPY[phase].body}
+        </p>
       )}
     </article>
   );
 }
 
 function LineupPanel({
-  gameStarted,
+  phase,
   isFavoriteTeam,
   isMobileActive,
   onPlayerClick,
@@ -208,7 +248,7 @@ function LineupPanel({
   team,
   teamCheer,
 }: {
-  gameStarted: boolean;
+  phase: GamePhase;
   isFavoriteTeam: boolean;
   isMobileActive: boolean;
   onPlayerClick: (playerId: number) => void;
@@ -298,12 +338,8 @@ function LineupPanel({
         </ol>
       ) : (
         <div className="lineup-empty">
-          <strong>라인업 정보 없음</strong>
-          <p>
-            {gameStarted
-              ? 'KBO 데이터 동기화가 끝나면 공식 라인업이 표시됩니다.'
-              : 'KBO 데이터 동기화 후 라인업이 여기에 표시됩니다.'}
-          </p>
+          <strong>{LINEUP_EMPTY_COPY[phase].title}</strong>
+          <p>{LINEUP_EMPTY_COPY[phase].body}</p>
         </div>
       )}
     </div>
@@ -483,7 +519,11 @@ function GameRecordPanel({
 }
 
 function GameTicketPanel({ game }: { game: Game }) {
-  const hasTicketExtras = Boolean(game.ticketUrl || game.ticketOpenAt);
+  // 이미 시작했거나 취소된 경기에는 '오픈 전에 준비하세요' 같은 예매 안내를 보여 주지 않는다.
+  const isPastOrCancelled =
+    hasGameStarted(game) || game.status === 'cancelled';
+  const hasTicketExtras =
+    !isPastOrCancelled && Boolean(game.ticketUrl || game.ticketOpenAt);
 
   return (
     <section
@@ -518,17 +558,28 @@ function GameTicketPanel({ game }: { game: Game }) {
         </div>
       ) : (
         <p className="game-detail-empty-copy">
-          아직 등록된 티켓 오픈 정보가 없습니다.
+          {isPastOrCancelled
+            ? game.status === 'cancelled'
+              ? '취소된 경기라 예매 정보가 없습니다.'
+              : '이미 시작했거나 끝난 경기라 예매 안내를 제공하지 않습니다.'
+            : '아직 등록된 티켓 오픈 정보가 없습니다.'}
         </p>
       )}
     </section>
   );
 }
 
-export function GameDetailPageClient({ gameId }: { gameId: number }) {
+export function GameDetailPageClient({
+  gameId,
+  initialGame,
+}: {
+  gameId: number;
+  /** 서버가 미리 받아 온 경기 정보. 첫 HTML 에 본문이 담기게 한다. */
+  initialGame?: Game | null;
+}) {
   const queryClient = useQueryClient();
   const token = useAuthStore((state) => state.token);
-  const gameQuery = useGameQuery(gameId);
+  const gameQuery = useGameQuery(gameId, { initialData: initialGame });
   const meQuery = useMeQuery(token);
   const gameDate = gameQuery.data?.game.gameDate ?? null;
   // 이 경기의 기록만 필요하므로 경기일 앞뒤 하루만 불러온다. (시간대 차이로 날짜가 밀려도 포함되게 여유를 둔다)
@@ -633,6 +684,7 @@ export function GameDetailPageClient({ gameId }: { gameId: number }) {
   }
 
   const statusTone = getGameStatusTone(game);
+  const gamePhase = getGamePhase(game);
   const isCancelled = game.status === 'cancelled';
   const isFinished =
     !isCancelled &&
@@ -687,11 +739,13 @@ export function GameDetailPageClient({ gameId }: { gameId: number }) {
             <span aria-hidden="true">←</span> 경기 일정
           </Link>
           <span className={getGameStatusBadgeClass(statusTone)}>
-            {getGameStatusLabel(statusTone)}
+            {statusTone === 'scheduled' && gamePhase === 'started'
+              ? '결과 미등록'
+              : getGameStatusLabel(statusTone)}
           </span>
         </div>
         <div className="match-hero-copy">
-          <span className="eyebrow">KBO MATCH</span>
+          <span className="eyebrow">KBO 리그</span>
           <h1>
             {game.awayTeam.name} vs {game.homeTeam.name}
           </h1>
@@ -726,7 +780,9 @@ export function GameDetailPageClient({ gameId }: { gameId: number }) {
                 ? '경기 취소'
                 : isFinished
                   ? '경기 종료'
-                  : '경기 예정'}
+                  : gamePhase === 'started'
+                    ? '결과 미등록'
+                    : '경기 예정'}
             </span>
             <span className="match-score-vs">
               {hasDisplayScore ? ':' : 'VS'}
@@ -781,6 +837,7 @@ export function GameDetailPageClient({ gameId }: { gameId: number }) {
           <StarterPitcherCard
             isFavoriteTeam={viewerFavoriteTeamId === game.awayTeam.id}
             label="원정 선발"
+            phase={gamePhase}
             pitcher={game.probablePitchers.away}
             team={game.awayTeam}
           />
@@ -790,6 +847,7 @@ export function GameDetailPageClient({ gameId }: { gameId: number }) {
           <StarterPitcherCard
             isFavoriteTeam={viewerFavoriteTeamId === game.homeTeam.id}
             label="홈 선발"
+            phase={gamePhase}
             pitcher={game.probablePitchers.home}
             team={game.homeTeam}
           />
@@ -847,7 +905,7 @@ export function GameDetailPageClient({ gameId }: { gameId: number }) {
         </div>
         <div className="lineup-grid">
           <LineupPanel
-            gameStarted={hasGameStarted(game)}
+            phase={gamePhase}
             isFavoriteTeam={viewerFavoriteTeamId === game.awayTeam.id}
             isMobileActive={activeLineupTeamId === game.awayTeam.id}
             onPlayerClick={handleLineupPlayerClick}
@@ -859,7 +917,7 @@ export function GameDetailPageClient({ gameId }: { gameId: number }) {
             teamCheer={teamCheersById.get(game.awayTeam.id) ?? null}
           />
           <LineupPanel
-            gameStarted={hasGameStarted(game)}
+            phase={gamePhase}
             isFavoriteTeam={viewerFavoriteTeamId === game.homeTeam.id}
             isMobileActive={activeLineupTeamId === game.homeTeam.id}
             onPlayerClick={handleLineupPlayerClick}

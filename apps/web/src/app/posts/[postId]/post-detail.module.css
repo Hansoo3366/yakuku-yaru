@@ -1,11 +1,16 @@
 .page {
-  --detail-black: #111111;
-  --detail-paper: #ffffff;
+  --detail-black: var(--color-night-navy);
+  --detail-paper: var(--color-paper);
   --detail-dugout: #f3f3f0;
   --detail-muted: #707070;
   gap: 0;
   max-width: 920px;
   padding-top: clamp(20px, 4vw, 42px);
+}
+
+html[data-theme='dark'] .page {
+  --detail-dugout: #1d2126;
+  --detail-muted: #a6abb3;
 }
 
 .sectionNav {
@@ -16,6 +21,7 @@
 
 .sectionNav a {
   color: #858585;
+  color: light-dark(#858585, #9ca2ab);
   font-size: 12px;
   font-weight: 800;
   padding-top: 4px;
@@ -23,7 +29,7 @@
 
 .sectionNav a:hover,
 .sectionNav .sectionNavActive {
-  color: #111111;
+  color: var(--color-ink);
 }
 
 .sectionNav .sectionNavActive {
@@ -73,7 +79,7 @@
   color: rgba(255, 255, 255, 0.55);
   display: block;
   font-family: ui-monospace, 'SFMono-Regular', Consolas, monospace;
-  font-size: 10px;
+  font-size: var(--type-caption);
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -91,7 +97,7 @@
 .articleStatus {
   background: rgba(255, 255, 255, 0.14);
   color: #ffffff;
-  font-size: 9px;
+  font-size: var(--type-caption);
   font-weight: 900;
   padding: 5px 7px;
 }
@@ -139,7 +145,7 @@
 }
 
 .authorLink img {
-  background: #ffffff;
+  background: var(--color-paper);
   border-radius: 10px;
   height: 34px;
   object-fit: contain;
@@ -164,13 +170,13 @@
 
 .authorLink small {
   color: rgba(255, 255, 255, 0.55);
-  font-size: 10px;
+  font-size: var(--type-caption);
 }
 
 .articleMeta time {
   color: rgba(255, 255, 255, 0.55);
   font-family: ui-monospace, 'SFMono-Regular', Consolas, monospace;
-  font-size: 10px;
+  font-size: var(--type-caption);
   font-variant-numeric: tabular-nums;
 }
 
@@ -188,7 +194,9 @@
   display: inline-flex;
   height: 38px;
   justify-content: center;
-  transition: background 180ms ease, transform 180ms ease;
+  transition:
+    background 180ms ease,
+    transform 180ms ease;
   width: 38px;
 }
 
@@ -199,8 +207,8 @@
 }
 
 .actionButton:hover {
-  background: #ffffff;
-  color: #111111;
+  background: var(--color-paper);
+  color: var(--color-ink);
 }
 
 .actionButton:active,
@@ -229,7 +237,7 @@
 
 .commentsHeader {
   align-items: flex-end;
-  border-bottom: 2px solid var(--detail-black);
+  border-bottom: 2px solid var(--color-ink);
   display: flex;
   justify-content: space-between;
   padding-bottom: 14px;
@@ -244,7 +252,7 @@
 .commentsHeader span {
   color: var(--detail-muted);
   font-family: ui-monospace, 'SFMono-Regular', Consolas, monospace;
-  font-size: 11px;
+  font-size: var(--type-caption);
   font-variant-numeric: tabular-nums;
 }
 
@@ -254,6 +262,7 @@
 
 .comment {
   border-bottom: 1px solid #e3e3df;
+  border-bottom: 1px solid light-dark(#e3e3df, #373d46);
   padding: 22px 4px 24px;
 }
 
@@ -302,7 +311,7 @@
 .commentMeta {
   color: var(--detail-muted);
   display: flex;
-  font-size: 10px;
+  font-size: var(--type-caption);
   gap: 7px;
 }
 
@@ -319,13 +328,14 @@
 .commentDelete {
   background: transparent;
   color: #8a8a8a;
+  color: light-dark(#8a8a8a, #9aa0a9);
   height: 34px;
   width: 34px;
 }
 
 .commentDelete:hover {
   background: var(--detail-dugout);
-  color: var(--color-error);
+  color: var(--color-error-ink);
 }
 
 .commentContent {
@@ -343,7 +353,7 @@
 }
 
 .commentsError {
-  color: var(--color-error);
+  color: var(--color-error-ink);
   font-size: 12px;
   padding: 18px 4px;
 }
@@ -368,11 +378,11 @@
 
 .composerHead span {
   color: var(--detail-muted);
-  font-size: 10px;
+  font-size: var(--type-caption);
 }
 
 .composer textarea {
-  background: #ffffff;
+  background: var(--color-paper);
   border: 0;
   font-size: 14px;
   line-height: 1.65;
@@ -400,12 +410,12 @@
 }
 
 .composerError {
-  color: var(--color-error);
-  font-size: 11px;
+  color: var(--color-error-ink);
+  font-size: var(--type-caption);
 }
 
 .submitButton {
-  background: #111111;
+  background: var(--color-night-navy);
   border: 0;
   color: #ffffff;
   flex: 0 0 auto;
@@ -417,6 +427,7 @@
 
 .submitButton:hover {
   background: #303030;
+  background: light-dark(#303030, #414852);
 }
 
 .loginNote {
@@ -429,7 +440,7 @@
 }
 
 .loginNote a {
-  color: #111111;
+  color: var(--color-ink);
   font-weight: 800;
   text-decoration: underline;
   text-underline-offset: 3px;

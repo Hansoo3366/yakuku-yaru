@@ -1,5 +1,5 @@
 .page {
-  --stadium-black: #111111;
+  --stadium-black: var(--color-night-navy);
   --stadium-dugout: #f3f3f0;
   --stadium-muted: #707070;
   gap: 0;
@@ -7,8 +7,14 @@
   padding-top: clamp(20px, 4vw, 42px);
 }
 
+html[data-theme='dark'] .page {
+  --stadium-dugout: #1d2126;
+  --stadium-muted: #a6abb3;
+}
+
 .backLink {
   color: #858585;
+  color: light-dark(#858585, #9ca2ab);
   display: inline-block;
   font-size: 12px;
   font-weight: 800;
@@ -16,7 +22,7 @@
 }
 
 .backLink:hover {
-  color: #111111;
+  color: var(--color-ink);
 }
 
 .hero {
@@ -43,7 +49,7 @@
   color: rgba(255, 255, 255, 0.58);
   display: block;
   font-family: ui-monospace, 'SFMono-Regular', Consolas, monospace;
-  font-size: 10px;
+  font-size: var(--type-caption);
   font-weight: 700;
   letter-spacing: 0.14em;
   margin-bottom: 14px;
@@ -82,8 +88,8 @@
 }
 
 .heroActions a:hover {
-  background: #ffffff;
-  color: var(--stadium-black);
+  background: var(--color-paper);
+  color: var(--color-ink);
 }
 
 .heroCount {
@@ -101,7 +107,7 @@
 
 .heroCount span {
   color: rgba(255, 255, 255, 0.58);
-  font-size: 11px;
+  font-size: var(--type-caption);
 }
 
 /* 목록 */
@@ -135,6 +141,7 @@
 
 .card:hover {
   background: #ebebe6;
+  background: light-dark(#ebebe6, #21252b);
   transform: translateY(-2px);
 }
 
@@ -152,7 +159,7 @@
 }
 
 .teamLogos img {
-  background: #ffffff;
+  background: var(--color-paper);
   height: 34px;
   object-fit: contain;
   padding: 4px;
@@ -204,7 +211,7 @@
 }
 
 .cardMeta strong {
-  color: var(--stadium-black);
+  color: var(--color-ink);
 }
 
 /* 상세 */
@@ -272,9 +279,10 @@
 
 .filter {
   align-items: center;
-  background: #ffffff;
+  background: var(--color-paper);
   border: 1px solid var(--color-line, #e5e7eb);
   color: #555555;
+  color: light-dark(#555555, #b2b6bd);
   display: inline-flex;
   flex: 0 0 auto;
   font-size: 12px;
@@ -286,14 +294,15 @@
 
 .filter small {
   color: #9a9a9a;
+  color: light-dark(#9a9a9a, #9399a3);
   font-family: ui-monospace, 'SFMono-Regular', Consolas, monospace;
-  font-size: 11px;
+  font-size: var(--type-caption);
 }
 
 .filter:hover,
 .filter.isActive {
   background: var(--stadium-surface, var(--stadium-black));
-  border-color: var(--stadium-surface, var(--stadium-black));
+  border-color: var(--stadium-surface, #111111);
   color: #ffffff;
 }
 
@@ -308,9 +317,10 @@
 }
 
 .filter:disabled:hover {
-  background: #ffffff;
+  background: var(--color-paper);
   border-color: var(--color-line, #e5e7eb);
   color: #555555;
+  color: light-dark(#555555, #b2b6bd);
 }
 
 .notes {
@@ -319,7 +329,7 @@
 }
 
 .note {
-  background: #ffffff;
+  background: var(--color-paper);
   border: 1px solid var(--color-line, #e5e7eb);
   display: grid;
   gap: 14px;
@@ -347,7 +357,7 @@
 .noteAuthor small {
   color: var(--stadium-muted);
   display: block;
-  font-size: 11px;
+  font-size: var(--type-caption);
 }
 
 .noteBody {
@@ -358,7 +368,7 @@
 
 .noteField h3 {
   color: var(--stadium-muted);
-  font-size: 11px;
+  font-size: var(--type-caption);
   font-weight: 800;
   letter-spacing: 0.04em;
   margin-bottom: 4px;
@@ -372,7 +382,11 @@
 }
 
 .noteField mark {
-  background: color-mix(in srgb, var(--stadium-color, #f59e0b) 16%, #ffffff);
+  background: color-mix(
+    in srgb,
+    var(--stadium-color, #f59e0b) 16%,
+    var(--color-paper)
+  );
   border-radius: 3px;
   box-shadow: inset 0 -2px 0 var(--stadium-color, #f59e0b);
   color: inherit;

@@ -87,7 +87,7 @@ export function ReportButton({
           >
             <header>
               <div>
-                <span>COMMUNITY SAFETY</span>
+                <span>신고</span>
                 <h2 id={`report-title-${targetType}-${targetId}`}>콘텐츠 신고</h2>
               </div>
               <button

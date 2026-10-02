@@ -210,7 +210,7 @@ export default function AttendanceDetailPage() {
       >
         <header className="attendance-ticket-card__top">
           <div className="attendance-ticket-card__identity">
-            <span>{gameYear} SEASON</span>
+            <span>{gameYear} 시즌</span>
             <strong>KBO {watchLabel} TICKET</strong>
           </div>
           <div className="attendance-ticket-card__status">

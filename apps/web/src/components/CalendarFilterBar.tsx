@@ -263,7 +263,7 @@ export function CalendarFilterBar({
   return (
     <section aria-label="캘린더 필터" className="calendar-filter-panel">
       <header className="calendar-filter-panel__header">
-        <span>Calendar view</span>
+        <span>보기 설정</span>
         <strong>일정 보기</strong>
         <p>{summary}</p>
       </header>

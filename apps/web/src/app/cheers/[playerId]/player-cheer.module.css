@@ -1,0 +1,125 @@
+/* 선수별 응원가 페이지. 색은 전부 토큰을 써서 라이트·다크 양쪽에서 그대로 동작한다. */
+.page {
+  align-content: start;
+  gap: var(--space-5);
+  max-width: 760px;
+}
+
+.back,
+.more {
+  align-items: center;
+  color: var(--color-muted);
+  display: inline-flex;
+  font-size: var(--text-base);
+  font-weight: 700;
+  justify-self: start;
+  min-height: 44px;
+}
+
+.back:hover,
+.more:hover {
+  color: var(--color-ink);
+}
+
+.header {
+  align-items: center;
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: 88px minmax(0, 1fr);
+}
+
+.photo {
+  background: var(--color-surface-card);
+  border-radius: 50%;
+  height: 88px;
+  object-fit: cover;
+  object-position: top;
+  width: 88px;
+}
+
+.identity {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.team {
+  align-items: center;
+  color: var(--color-muted);
+  display: inline-flex;
+  font-size: var(--text-sm);
+  font-weight: 700;
+  gap: 6px;
+}
+
+.team img {
+  height: 20px;
+  object-fit: contain;
+  width: 20px;
+}
+
+.identity h1 {
+  color: var(--color-ink);
+  font-size: var(--type-page-title);
+  letter-spacing: -0.03em;
+  line-height: 1.25;
+}
+
+.identity p {
+  color: var(--color-muted);
+  font-size: var(--text-base);
+}
+
+.body {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.video {
+  aspect-ratio: 16 / 9;
+  background: var(--color-night-navy);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.video iframe {
+  border: 0;
+  display: block;
+  height: 100%;
+  width: 100%;
+}
+
+.lyrics {
+  background: var(--color-surface-card);
+  border-radius: var(--radius-lg);
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-5);
+}
+
+.lyrics h2 {
+  color: var(--color-muted);
+  font-size: var(--text-sm);
+  font-weight: 700;
+}
+
+.lyrics p {
+  color: var(--color-ink);
+  font-size: var(--text-md);
+  line-height: 1.9;
+  white-space: pre-wrap;
+}
+
+.lyrics p.muted,
+.updated {
+  color: var(--color-muted);
+  font-size: var(--text-sm);
+}
+
+.empty {
+  background: var(--color-surface-card);
+  border-radius: var(--radius-lg);
+  color: var(--color-muted);
+  font-size: var(--text-base);
+  padding: var(--space-5);
+}

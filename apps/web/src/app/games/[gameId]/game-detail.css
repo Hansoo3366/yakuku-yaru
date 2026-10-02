@@ -1,18 +1,31 @@
 .app-shell--game-detail {
   --game-canvas: #e9ede9;
-  --game-paper: #ffffff;
+  --game-paper: var(--color-paper);
   --game-surface: #f5f7f4;
   --game-surface-strong: #dfe5df;
   --game-ink: #151c25;
   --game-muted: #5c6673;
-  --game-team: var(--team-color, #243b53);
+  /* 팀 컬러 면은 헤더(GNB)에만 둔다. 스코어보드·버튼 같은 넓은 면은 중립 잉크로 두고,
+     팀 컬러는 내 팀 라인업 머리 같은 '내 팀' 표시(--game-accent)에만 쓴다. */
+  --game-accent: var(--team-color, #243b53);
+  --game-on-accent: var(--team-color-contrast, var(--color-white));
+  --game-team: #151c25;
   --game-team-ink: var(--team-color-ink, var(--team-color-surface, #243b53));
-  --game-on-team: var(--team-color-contrast, var(--color-white));
+  --game-on-team: #ffffff;
   align-content: start;
   gap: 18px;
   max-width: 1220px;
   padding: 24px 22px 80px;
   width: 100%;
+}
+
+html[data-theme='dark'] .app-shell--game-detail {
+  --game-canvas: #20242b;
+  --game-surface: #1b1f24;
+  --game-surface-strong: #242930;
+  --game-ink: #eceef1;
+  --game-muted: #abb0b7;
+  --game-team: #273546;
 }
 
 .app-shell--game-detail,
@@ -67,7 +80,7 @@
   background: rgba(0, 0, 0, 0.25);
   border: 0;
   color: var(--color-white);
-  font-size: 11px;
+  font-size: var(--type-caption);
   min-height: 26px;
   padding: 5px 9px;
 }
@@ -79,7 +92,7 @@
 
 .app-shell--game-detail .match-hero .eyebrow {
   color: color-mix(in srgb, var(--game-on-team) 82%, transparent);
-  font-size: 10px;
+  font-size: var(--type-caption);
   font-weight: var(--weight-black);
   letter-spacing: 0.13em;
 }
@@ -156,6 +169,7 @@
 
 .app-shell--game-detail .match-team img {
   background: rgba(255, 255, 255, 0.94);
+  background: light-dark(rgba(255, 255, 255, 0.94), rgba(23, 27, 33, 0.94));
   border-radius: 50%;
   box-shadow: none;
   grid-area: logo;
@@ -167,7 +181,7 @@
 
 .app-shell--game-detail .match-team-side {
   color: var(--game-on-team);
-  font-size: 10px;
+  font-size: var(--type-caption);
   font-weight: var(--weight-black);
   grid-area: side;
   letter-spacing: 0.07em;
@@ -194,7 +208,7 @@
 
 .app-shell--game-detail .match-team small {
   color: var(--game-on-team);
-  font-size: 11px;
+  font-size: var(--type-caption);
   font-weight: var(--weight-bold);
   grid-area: full;
   letter-spacing: 0;
@@ -225,7 +239,7 @@
 
 .app-shell--game-detail .match-score-label {
   color: var(--game-on-team);
-  font-size: 9px;
+  font-size: var(--type-caption);
   font-weight: var(--weight-black);
   letter-spacing: 0.03em;
   text-align: center;
@@ -316,12 +330,18 @@
 .app-shell--game-detail .game-extras-panel .btn:hover,
 .app-shell--game-detail .stadium-personal-notes > .form-grid > .btn:hover {
   background: color-mix(in srgb, var(--game-team) 88%, black 12%);
+  background: color-mix(
+    in srgb,
+    var(--game-team) 88%,
+    light-dark(black, #16191d) 12%
+  );
   color: var(--game-on-team);
 }
 
 .app-shell--game-detail .score-input-hint,
 .app-shell--game-detail .game-detail-empty-copy {
   background: rgba(255, 255, 255, 0.62);
+  background: light-dark(rgba(255, 255, 255, 0.62), rgba(23, 27, 33, 0.62));
   border: 0;
   border-radius: 7px;
   color: var(--game-muted);
@@ -338,6 +358,7 @@
 
 .app-shell--game-detail .game-ticket-open-notice {
   background: rgba(255, 255, 255, 0.64);
+  background: light-dark(rgba(255, 255, 255, 0.64), rgba(23, 27, 33, 0.64));
   border: 0;
   border-radius: 7px;
   gap: 4px;
@@ -346,7 +367,7 @@
 
 .app-shell--game-detail .game-ticket-open-label {
   color: var(--game-team-ink);
-  font-size: 10px;
+  font-size: var(--type-caption);
   letter-spacing: 0.04em;
 }
 
@@ -416,6 +437,7 @@
 
 .app-shell--game-detail .starter-pitcher-head {
   background: #edf0ed;
+  background: light-dark(#edf0ed, #1f2328);
   border: 0;
   gap: 15px;
   grid-template-columns: 82px minmax(0, 1fr);
@@ -428,7 +450,7 @@
   background: color-mix(
     in srgb,
     var(--team-color, var(--game-team)) 14%,
-    white 86%
+    var(--color-paper) 86%
   );
 }
 
@@ -441,7 +463,7 @@
 
 .app-shell--game-detail .starter-pitcher-head span {
   color: var(--game-muted);
-  font-size: 10px;
+  font-size: var(--type-caption);
   letter-spacing: 0.06em;
 }
 
@@ -479,7 +501,7 @@
 
 .app-shell--game-detail .starter-pitcher-stats dt {
   color: var(--game-muted);
-  font-size: 10px;
+  font-size: var(--type-caption);
 }
 
 .app-shell--game-detail .starter-pitcher-stats dd {
@@ -494,7 +516,7 @@
   border-radius: 50%;
   color: var(--game-on-team);
   display: flex;
-  font-size: 10px;
+  font-size: var(--type-caption);
   font-weight: var(--weight-black);
   height: 34px;
   justify-content: center;
@@ -541,6 +563,7 @@
 
 .app-shell--game-detail .lineup-team-title {
   background: #293440;
+  background: light-dark(#293440, #3d4d5f);
   border: 0;
   color: var(--color-white);
   gap: 10px;
@@ -549,7 +572,8 @@
 }
 
 .app-shell--game-detail .lineup-panel.is-favorite-team .lineup-team-title {
-  background: var(--game-team);
+  --game-on-team: var(--game-on-accent);
+  background: var(--game-accent);
   color: var(--game-on-team);
 }
 
@@ -566,7 +590,7 @@
 }
 
 .app-shell--game-detail .lineup-team-title img {
-  background: var(--color-white);
+  background: var(--color-paper);
   border-radius: 50%;
   height: 34px;
   padding: 3px;
@@ -580,7 +604,7 @@
 
 .app-shell--game-detail .lineup-team-title span {
   color: rgba(255, 255, 255, 0.72);
-  font-size: 9px;
+  font-size: var(--type-caption);
   font-weight: var(--weight-bold);
 }
 
@@ -591,7 +615,7 @@
 
 .app-shell--game-detail .lineup-team-title em {
   color: rgba(255, 255, 255, 0.78);
-  font-size: 9px;
+  font-size: var(--type-caption);
   font-style: normal;
   font-weight: var(--weight-black);
   letter-spacing: 0.06em;
@@ -625,6 +649,7 @@
 
 .app-shell--game-detail .lineup-player-row {
   background: #f6f7f5;
+  background: light-dark(#f6f7f5, #1b1e24);
   border: 0;
   border-radius: 6px;
   min-height: 58px;
@@ -633,13 +658,14 @@
 
 .app-shell--game-detail .lineup-list li:nth-child(even) .lineup-player-row {
   background: #ecefec;
+  background: light-dark(#ecefec, #1f2329);
 }
 
 .app-shell--game-detail .lineup-player-row:hover {
   background: color-mix(
     in srgb,
     var(--team-color, var(--game-team)) 10%,
-    white 90%
+    var(--color-paper) 90%
   );
 }
 
@@ -665,7 +691,7 @@
 .app-shell--game-detail .lineup-player-main span,
 .app-shell--game-detail .lineup-stats span {
   color: var(--game-muted);
-  font-size: 10px;
+  font-size: var(--type-caption);
 }
 
 .app-shell--game-detail .lineup-stats {
@@ -680,7 +706,7 @@
   background: color-mix(
     in srgb,
     var(--team-color, var(--game-team)) 12%,
-    white 88%
+    var(--color-paper) 88%
   );
   border: 0;
   color: var(--game-team-ink);
@@ -731,8 +757,10 @@
 }
 
 .app-shell--game-detail .stadium-personal-notes .form-textarea:focus-visible {
-  border-color: var(--game-team);
-  outline: 2px solid var(--game-team);
+  border-color: #151c25;
+  border-color: light-dark(#151c25, #eceef1);
+  outline: 2px solid #151c25;
+  outline: 2px solid light-dark(#151c25, #eceef1);
   outline-offset: 1px;
 }
 
@@ -768,7 +796,7 @@
   .app-shell--game-detail .match-hero-meta {
     align-items: flex-start;
     flex-direction: column;
-    font-size: 11px;
+    font-size: var(--type-caption);
     gap: 4px;
   }
 
@@ -804,7 +832,7 @@
   }
 
   .app-shell--game-detail .match-team small {
-    font-size: 9px;
+    font-size: var(--type-caption);
     max-width: 100%;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -901,7 +929,7 @@
   }
 
   .app-shell--game-detail .lineup-mobile-switch img {
-    background: var(--color-white);
+    background: var(--color-paper);
     border-radius: 50%;
     height: 24px;
     object-fit: contain;
@@ -933,7 +961,7 @@
   }
 
   .app-shell--game-detail .lineup-stats span {
-    font-size: 9px;
+    font-size: var(--type-caption);
   }
 
   .app-shell--game-detail .stadium-personal-notes .form-grid {
@@ -949,7 +977,7 @@
 
 @media (max-width: 380px) {
   .app-shell--game-detail .match-hero-topline .badge {
-    font-size: 9px;
+    font-size: var(--type-caption);
   }
 
   .app-shell--game-detail .match-team small {
@@ -964,4 +992,11 @@
   .app-shell--game-detail .starter-pitcher-stats div {
     padding: 9px 7px;
   }
+}
+
+/* 내 팀 라인업 머리(팀 컬러 면) 위의 응원가 버튼은 그 면에 맞는 글자색을 쓴다. */
+.app-shell--game-detail
+  .lineup-panel.is-favorite-team
+  .lineup-team-cheer-button {
+  color: var(--game-on-accent);
 }

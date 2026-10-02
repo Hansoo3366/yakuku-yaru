@@ -57,7 +57,7 @@ export default function FansPage() {
       </nav>
       <header className={styles.hero}>
         <div>
-          <span className={styles.eyebrow}>Fan directory</span>
+          <span className={styles.eyebrow}>팬 찾기</span>
           <h1>같이 응원할 팬을 찾으세요</h1>
           <p>
             같은 팀을 응원하거나 같은 야구장에 다녀온 팬을 발견하고,
@@ -66,7 +66,7 @@ export default function FansPage() {
         </div>
         <div className={styles.heroCount} aria-label={`팬 ${total}명`}>
           <strong>{fansQuery.isLoading ? '—' : total}</strong>
-          <span>FANS</span>
+          <span>명의 팬</span>
         </div>
       </header>
 

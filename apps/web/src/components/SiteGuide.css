@@ -11,8 +11,8 @@
 }
 
 .site-guide {
-  background: #ffffff;
-  color: #111111;
+  background: var(--color-paper);
+  color: var(--color-ink);
   display: grid;
   gap: 18px;
   max-height: calc(100dvh - 40px);
@@ -40,8 +40,9 @@
 
 .site-guide-step {
   color: #8a8a8a;
+  color: light-dark(#8a8a8a, #9aa0a9);
   font-family: ui-monospace, 'SFMono-Regular', Consolas, monospace;
-  font-size: 11px;
+  font-size: var(--type-caption);
   font-weight: 700;
 }
 
@@ -49,13 +50,15 @@
   background: none;
   border: 0;
   color: #8a8a8a;
-  font-size: 12px;
+  color: light-dark(#8a8a8a, #9aa0a9);
+  font-size: 13px;
   font-weight: 700;
-  padding: 4px 0;
+  min-height: 44px;
+  padding: 4px 8px;
 }
 
 .site-guide-skip:hover {
-  color: #111111;
+  color: var(--color-ink);
 }
 
 .site-guide-body {
@@ -79,11 +82,10 @@
 
 .site-guide-eyebrow {
   color: #8a8a8a;
+  color: light-dark(#8a8a8a, #9aa0a9);
   font-family: ui-monospace, 'SFMono-Regular', Consolas, monospace;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 700;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
 }
 
 .site-guide h2 {
@@ -95,6 +97,7 @@
 
 .site-guide p {
   color: #4a4a4a;
+  color: light-dark(#4a4a4a, #b7bbc2);
   font-size: 14px;
   line-height: 1.7;
 }
@@ -112,23 +115,35 @@
 
 .site-guide-dots {
   display: flex;
-  gap: 6px;
+  gap: 2px;
   justify-content: center;
 }
 
 .site-guide-dots button {
-  background: #dddddd;
+  /* 점은 작게 보이되 누르는 영역은 24px 로 확보한다. */
+  align-items: center;
+  background: none;
   border: 0;
-  height: 6px;
+  display: inline-flex;
+  height: 24px;
+  justify-content: center;
+  min-width: 24px;
   padding: 0;
+}
+
+.site-guide-dots button::before {
+  background: #dddddd;
+  background: light-dark(#dddddd, #272c34);
+  content: '';
+  height: 6px;
   transition:
     width 180ms ease,
     background 180ms ease;
   width: 6px;
 }
 
-.site-guide-dots button.is-active {
-  background: #111111;
+.site-guide-dots button.is-active::before {
+  background: var(--color-night-navy);
   width: 22px;
 }
 
@@ -150,8 +165,79 @@
   }
 }
 
+/* 첫 방문 안내 카드: 내용을 가리지 않게 화면 아래 모서리에 작게 띄운다. */
+.site-guide-invite {
+  align-items: center;
+  animation: site-guide-invite-enter 260ms ease both;
+  background: var(--color-paper);
+  border: 1px solid var(--color-line, #e5e7eb);
+  border-radius: var(--radius-lg, 12px);
+  bottom: 24px;
+  box-shadow: var(--shadow-lg);
+  color: var(--color-ink);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 16px;
+  max-width: 420px;
+  padding: 14px 16px;
+  position: fixed;
+  right: 24px;
+  z-index: 60;
+}
+
+.site-guide-invite p {
+  color: #4a4a4a;
+  color: light-dark(#4a4a4a, #b7bbc2);
+  flex: 1 1 200px;
+  font-size: 14px;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.site-guide-invite p strong {
+  color: var(--color-ink);
+  display: block;
+}
+
+.site-guide-invite__actions {
+  display: flex;
+  gap: 8px;
+}
+
+.site-guide-invite__actions .btn {
+  min-height: 40px;
+}
+
+@keyframes site-guide-invite-enter {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (max-width: 720px) {
+  .site-guide-invite {
+    /* 하단 탭 바 위에 얹는다. */
+    bottom: calc(var(--bottom-nav-height, 72px) + 12px);
+    left: 12px;
+    max-width: none;
+    right: 12px;
+  }
+
+  /* 캘린더는 탭 바 위에 필터 바가 하나 더 있어서 그만큼 더 올린다. */
+  body:has(.calendar-filter-dock) .site-guide-invite {
+    bottom: calc(var(--bottom-nav-height, 72px) + 76px);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .site-guide-body {
+  .site-guide-body,
+  .site-guide-invite {
     animation: none;
   }
 }
@@ -174,4 +260,20 @@
 
 .account-actions .account-guide {
   cursor: pointer;
+}
+
+/* 화면 모드 전환 버튼 (푸터) */
+.site-footer .site-footer-theme {
+  align-items: center;
+  display: inline-flex;
+  gap: 6px;
+}
+
+/* 다크 모드: 단계 표시 점이 바탕에 묻히지 않게 한다. */
+html[data-theme='dark'] .site-guide-dots button::before {
+  background: #3a424e;
+}
+
+html[data-theme='dark'] .site-guide-dots button.is-active::before {
+  background: #eceef1;
 }

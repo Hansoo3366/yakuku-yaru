@@ -44,7 +44,7 @@ export default function ForgotPasswordPage() {
       </Link>
       <section className="auth-card">
         <header className="auth-header">
-          <span className="eyebrow">Password reset</span>
+          <span className="eyebrow">비밀번호 재설정</span>
           <h1>비밀번호 찾기</h1>
           <p>가입한 이메일로 재설정 링크를 보내드려요.</p>
         </header>

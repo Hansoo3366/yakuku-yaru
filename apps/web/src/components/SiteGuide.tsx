@@ -32,7 +32,7 @@ type GuideStep = {
 const GUIDE_STEPS: GuideStep[] = [
   {
     icon: Sparkles,
-    eyebrow: 'Welcome',
+    eyebrow: '환영합니다',
     title: '야크크 야르~에 오신 걸 환영해요',
     body: [
       '야구장 직관과 집에서 본 집관 기록을 캘린더에 모아두는 KBO 팬 서비스예요.',
@@ -41,7 +41,7 @@ const GUIDE_STEPS: GuideStep[] = [
   },
   {
     icon: CalendarDays,
-    eyebrow: 'Calendar',
+    eyebrow: '캘린더',
     title: '캘린더로 경기 일정 보기',
     body: [
       '회원가입 때 고른 내 팀 기준으로 경기 일정·결과·선발 투수가 캘린더에 표시돼요.',
@@ -51,7 +51,7 @@ const GUIDE_STEPS: GuideStep[] = [
   },
   {
     icon: ClipboardPen,
-    eyebrow: 'Record',
+    eyebrow: '기록',
     title: '직관·집관 기록 남기기',
     body: [
       '경기를 눌러 직관 또는 집관 기록을 남기세요. 사진, 메모, 함께 간 친구 태그까지 저장돼요.',
@@ -60,7 +60,7 @@ const GUIDE_STEPS: GuideStep[] = [
   },
   {
     icon: Trophy,
-    eyebrow: 'Game day',
+    eyebrow: '경기 상세',
     title: '경기 상세와 응원가',
     body: [
       '경기 상세에서 선발 투수 기록과 라인업을 확인하고, 선수를 누르면 응원가를 볼 수 있어요.',
@@ -70,7 +70,7 @@ const GUIDE_STEPS: GuideStep[] = [
   },
   {
     icon: MapPin,
-    eyebrow: 'Stadium',
+    eyebrow: '구장',
     title: '구장 정보와 팬 메모',
     body: [
       '구장별로 팬들이 남긴 맛집·주차·교통 메모를 모아 볼 수 있어요.',
@@ -80,7 +80,7 @@ const GUIDE_STEPS: GuideStep[] = [
   },
   {
     icon: MessageSquareText,
-    eyebrow: 'Community',
+    eyebrow: '커뮤니티',
     title: '팬 라운지와 앱 설치',
     body: [
       '팬 라운지에 직관 후기를 쓰고, 팬 찾기에서 같은 팀 팬을 팔로우해 보세요.',
@@ -93,6 +93,8 @@ const GUIDE_STEPS: GuideStep[] = [
 export function SiteGuide() {
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
+  // 첫 방문자에게는 화면을 가리는 모달 대신 작은 안내 카드만 띄운다.
+  const [isInviteVisible, setIsInviteVisible] = useState(false);
   const [stepIndex, setStepIndex] = useState(0);
   const titleId = useId();
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -101,7 +103,13 @@ export function SiteGuide() {
 
   const open = useCallback(() => {
     setStepIndex(0);
+    setIsInviteVisible(false);
     setIsOpen(true);
+  }, []);
+
+  const dismissInvite = useCallback(() => {
+    markSiteGuideSeen();
+    setIsInviteVisible(false);
   }, []);
 
   const close = useCallback(() => {
@@ -114,7 +122,8 @@ export function SiteGuide() {
     return () => window.removeEventListener(SITE_GUIDE_OPEN_EVENT, open);
   }, [open]);
 
-  // 첫 방문 자동 노출. 경로만 바뀌는 client navigation마다 다시 확인해도 본 뒤엔 뜨지 않는다.
+  // 첫 방문에는 가이드 모달을 바로 열지 않고, 내용을 가리지 않는 안내 카드만 보여 준다.
+  // 경로만 바뀌는 client navigation마다 다시 확인해도 본 뒤엔 뜨지 않는다.
   useEffect(() => {
     if (
       SITE_GUIDE_SKIP_PATHS.some(
@@ -122,12 +131,13 @@ export function SiteGuide() {
       ) ||
       hasSeenSiteGuide()
     ) {
+      setIsInviteVisible(false);
       return;
     }
 
-    const timer = window.setTimeout(open, 600);
+    const timer = window.setTimeout(() => setIsInviteVisible(true), 1200);
     return () => window.clearTimeout(timer);
-  }, [open, pathname]);
+  }, [pathname]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -165,7 +175,30 @@ export function SiteGuide() {
   }, [close, isOpen]);
 
   if (!isOpen) {
-    return null;
+    if (!isInviteVisible) {
+      return null;
+    }
+
+    return (
+      <aside aria-label="사이트 가이드 안내" className="site-guide-invite">
+        <p>
+          <strong>처음 오셨나요?</strong>
+          1분 가이드로 주요 기능을 둘러보세요.
+        </p>
+        <div className="site-guide-invite__actions">
+          <button className="btn btn-primary btn-sm" onClick={open} type="button">
+            가이드 보기
+          </button>
+          <button
+            className="btn btn-secondary btn-sm"
+            onClick={dismissInvite}
+            type="button"
+          >
+            닫기
+          </button>
+        </div>
+      </aside>
+    );
   }
 
   const Icon = step.icon;
