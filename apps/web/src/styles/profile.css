@@ -659,15 +659,6 @@
   max-width: none;
 }
 
-.home-title-swiper .profile-title-pill[data-description]::after {
-  box-shadow: none;
-  z-index: 30;
-}
-
-.home-title-swiper .profile-title-pill[data-description]::before {
-  z-index: 31;
-}
-
 @media (max-width: 720px) {
   .profile-stat-explorer-head {
     align-items: stretch;

@@ -514,6 +514,47 @@
   overflow: hidden;
 }
 
+/* 명예타이틀 설명. 칩 줄이 잘려 있으므로 body 에 띄운다 (HonorTitleSwiper). */
+.honor-title-tip {
+  background: var(--navy-9);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-lg);
+  color: var(--color-white);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  line-height: 1.4;
+  max-width: min(260px, calc(100vw - 16px));
+  min-width: 160px;
+  padding: 9px 11px;
+  pointer-events: none;
+  position: fixed;
+  text-align: center;
+  transform: translateY(calc(-100% - 10px));
+  width: max-content;
+  z-index: 1000;
+}
+
+/* 칩 가운데를 가리키는 꼬리. 툴팁이 가장자리에서 밀려도 칩을 가리킨다. */
+.honor-title-tip::after {
+  border: 6px solid transparent;
+  border-top-color: var(--navy-9);
+  content: '';
+  left: var(--caret-x, 50%);
+  position: absolute;
+  top: 100%;
+  transform: translateX(-50%);
+}
+
+html[data-theme='dark'] .honor-title-tip {
+  background: var(--navy-11);
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+html[data-theme='dark'] .honor-title-tip::after {
+  border-top-color: var(--navy-11);
+}
+
 .season-stats__empty {
   color: var(--home-muted);
   font-size: var(--text-sm);
@@ -587,11 +628,13 @@
   color: var(--team-color-contrast, var(--color-white));
   font-size: var(--text-xs);
   font-weight: 700;
-  left: 12px;
+  left: 50%;
   line-height: 1;
   padding: 5px 9px;
   position: absolute;
   top: -10px;
+  transform: translateX(-50%);
+  white-space: nowrap;
   z-index: 1;
 }
 
