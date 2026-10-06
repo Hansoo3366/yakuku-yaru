@@ -38,6 +38,7 @@ import {
   formatWeekLabel,
   getAgendaDayElementId,
   getCalendarMonthDays,
+  getCalendarGridRange,
   getMonthRange,
   getMonthStart,
   getWeekDays,
@@ -202,9 +203,22 @@ export default function CalendarPage() {
   const range = useMemo(
     () =>
       viewMode === 'month'
+        ? getCalendarGridRange(monthStart)
+        : getWeekRange(weekStart),
+    [viewMode, monthStart, weekStart],
+  );
+  // 조회(range)는 격자 전체지만, 요약 수치와 결과 개수는 그 달(주)만 센다.
+  const periodRange = useMemo(
+    () =>
+      viewMode === 'month'
         ? getMonthRange(monthStart)
         : getWeekRange(weekStart),
     [viewMode, monthStart, weekStart],
+  );
+  const isInPeriod = useCallback(
+    (dateKey: string) =>
+      dateKey >= periodRange.from && dateKey < periodRange.to,
+    [periodRange.from, periodRange.to],
   );
   const statsYear = anchorDate.getFullYear();
   const yearRange = useMemo(() => getYearRange(statsYear), [statsYear]);
@@ -337,14 +351,14 @@ export default function CalendarPage() {
   }, [scheduleScopedAttendanceRecords, outcomeFilter, effectiveFavoriteTeamId]);
 
   const periodRecords = useMemo(() => {
-    const fromMs = new Date(`${range.from}T00:00:00`).getTime();
-    const toMs = new Date(`${range.to}T00:00:00`).getTime();
+    const fromMs = new Date(`${periodRange.from}T00:00:00`).getTime();
+    const toMs = new Date(`${periodRange.to}T00:00:00`).getTime();
 
     return outcomeScopedAttendanceRecords.filter((record) => {
       const ms = new Date(record.game.gameDate).getTime();
       return ms >= fromMs && ms < toMs;
     });
-  }, [outcomeScopedAttendanceRecords, range.from, range.to]);
+  }, [outcomeScopedAttendanceRecords, periodRange.from, periodRange.to]);
 
   const statsAttendanceRecords = useMemo(() => {
     const byId = new Map<number, AttendanceRecord>();
@@ -490,7 +504,11 @@ export default function CalendarPage() {
     };
     const countedGameIds = new Set<number>();
 
-    for (const dayGames of Object.values(baseDisplayGamesByDate)) {
+    for (const [dateKey, dayGames] of Object.entries(baseDisplayGamesByDate)) {
+      if (!isInPeriod(dateKey)) {
+        continue;
+      }
+
       for (const game of dayGames) {
         if (countedGameIds.has(game.id)) {
           continue;
@@ -506,7 +524,7 @@ export default function CalendarPage() {
     }
 
     return counts;
-  }, [baseDisplayGamesByDate, resolveGameOutcome]);
+  }, [baseDisplayGamesByDate, isInPeriod, resolveGameOutcome]);
 
   const displayGamesByDate = useMemo<Record<string, Game[]>>(() => {
     if (outcomeFilter === 'all') {
@@ -529,11 +547,12 @@ export default function CalendarPage() {
   }, [baseDisplayGamesByDate, outcomeFilter, resolveGameOutcome]);
 
   const displayGameCount = useMemo(() => {
-    return Object.values(displayGamesByDate).reduce(
-      (total, dayGames) => total + dayGames.length,
+    return Object.entries(displayGamesByDate).reduce(
+      (total, [dateKey, dayGames]) =>
+        isInPeriod(dateKey) ? total + dayGames.length : total,
       0,
     );
-  }, [displayGamesByDate]);
+  }, [displayGamesByDate, isInPeriod]);
 
   const attendanceByDate = useMemo(
     () =>
@@ -810,7 +829,11 @@ export default function CalendarPage() {
   const summaryItems: Array<{ label: string; value: string }> = isAuthed
     ? [
         {
-          label: `${favoriteTeam?.shortName ?? '리그'} 경기`,
+          // 리그 전체를 볼 때는 리그 경기 수이지 우리 팀 경기 수가 아니다.
+          label:
+            effectiveScheduleFilter === 'all'
+              ? '리그 경기'
+              : `${favoriteTeam?.shortName ?? '리그'} 경기`,
           value: `${displayGameCount}경기`,
         },
         { label: '내 기록', value: `${periodRecords.length}회` },

@@ -116,11 +116,12 @@ export function CalendarEventCard({
   // 이긴 팀을 굵게 보여 주기 위한 표시. 응원팀이 없어도(리그 전체) 결과가 읽힌다.
   const awayWon = hasScore && game.awayScore! > game.homeScore!;
   const homeWon = hasScore && game.homeScore! > game.awayScore!;
-  const badge =
-    cancellationMeta?.label ??
-    (outcome === 'win' || outcome === 'lose' || outcome === 'draw'
+  // 취소는 사유 아이콘(☂ ☼ ❄ …)을 글자 앞에 붙여 한눈에 보이게 한다.
+  const badge = cancellationMeta
+    ? `${cancellationMeta.icon} ${cancellationMeta.label}`
+    : outcome === 'win' || outcome === 'lose' || outcome === 'draw'
       ? outcomeLabel
-      : null);
+      : null;
   const common = {
     'aria-label': outcomeLabel
       ? `${timeLabel} ${matchupLabel}, ${outcomeLabel}`
@@ -158,7 +159,17 @@ export function CalendarEventCard({
           {score}
           <span data-won={homeWon || undefined}>{game.homeTeam.shortName}</span>
         </span>
-        {tagLabel ? (
+        {cancellationMeta ? (
+          // 취소 경기는 인디케이터 자리에 사유 아이콘을 둔다.
+          <span
+            aria-label={cancellationMeta.label}
+            className="cal-event__cancel-icon"
+            role="img"
+            title={cancellationMeta.label}
+          >
+            {cancellationMeta.icon}
+          </span>
+        ) : tagLabel ? (
           // 한 줄 표기는 폭이 좁아 글자 대신 점으로만 내 기록을 표시한다.
           <span
             aria-label={tagLabel}

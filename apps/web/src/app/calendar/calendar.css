@@ -291,6 +291,16 @@ html[data-theme='dark'] .cal-seg button[aria-pressed='true'] {
   background: var(--color-surface-soft);
 }
 
+/* 바깥 날짜 칸은 회색 바탕이라, 그 안의 경기 줄은 흰 면 + 선으로 띄워 칸 바탕과 구분한다. */
+.cal-day.is-outside .cal-event--line {
+  background: var(--color-paper);
+  border-color: var(--color-line);
+}
+
+.cal-day.is-outside .cal-time-group__label {
+  color: var(--color-muted-soft);
+}
+
 .cal-day.is-today {
   background: color-mix(in srgb, var(--cal-accent) 7%, var(--color-paper));
 }
@@ -574,9 +584,16 @@ html[data-theme='dark'] .cal-seg button[aria-pressed='true'] {
   border-color: var(--cal-accent);
 }
 
+/* 취소 경기: 취소선은 팀명마다 따로 그어져 지저분하므로 쓰지 않는다. 흐린 글자 + 사유 아이콘. */
 .cal-event--line[data-outcome='cancelled'] .cal-event__line-teams {
   color: var(--color-muted-soft);
-  text-decoration: line-through;
+}
+
+.cal-event__cancel-icon {
+  color: var(--color-cancelled-ink);
+  flex: 0 0 auto;
+  font-size: 14px;
+  line-height: 1;
 }
 
 /* 칸 표기 (월간·응원팀) */

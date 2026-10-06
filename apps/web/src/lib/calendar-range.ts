@@ -45,6 +45,18 @@ export function getMonthRange(month: Date) {
   return { from: formatDateInput(from), to: formatDateInput(to) };
 }
 
+/**
+ * 월간 달력 격자 전체의 조회 범위. 격자에는 지난달 끝과 다음달 첫 날짜도 보이므로
+ * 그 날짜의 경기까지 받아와야 바깥 날짜 칸이 비거나 내 기록만 덩그러니 남지 않는다.
+ */
+export function getCalendarGridRange(month: Date) {
+  const days = getCalendarMonthDays(month);
+  const from = days[0];
+  const to = new Date(days[days.length - 1]);
+  to.setDate(to.getDate() + 1);
+  return { from: formatDateInput(from), to: formatDateInput(to) };
+}
+
 export function getYearRange(year: number) {
   const from = new Date(year, 0, 1);
   const to = new Date(year + 1, 0, 1);

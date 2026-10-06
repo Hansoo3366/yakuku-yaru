@@ -1,25 +1,19 @@
 import { QuerySeed } from '@/components/QuerySeed';
 import { getKoreaDateString } from '@/lib/date-format';
 import { queryKeys } from '@/lib/query-keys';
+import { getCalendarGridRange } from '@/lib/calendar-range';
 import { listPublicGames, listPublicTeams } from '@/lib/server-baseball-api';
 import CalendarPageClient from './CalendarPageClient';
 
-/** 한국 시간 기준 이번 달의 조회 범위. 클라이언트의 getMonthRange 와 같은 형식이다. */
-function getKoreaMonthRange() {
+/** 한국 시간 기준 이번 달 달력 격자의 조회 범위. 클라이언트와 같은 함수로 계산해 쿼리 키가 맞는다. */
+function getKoreaCalendarGridRange() {
   const [year, month] = getKoreaDateString().split('-').map(Number);
-  const pad = (value: number) => String(value).padStart(2, '0');
-  const next =
-    month === 12 ? { year: year + 1, month: 1 } : { year, month: month + 1 };
-
-  return {
-    from: `${year}-${pad(month)}-01`,
-    to: `${next.year}-${pad(next.month)}-01`,
-  };
+  return getCalendarGridRange(new Date(year, month - 1, 1));
 }
 
-/** 이번 달 리그 전체 일정을 서버에서 먼저 받아 첫 HTML 에 담는다. */
+/** 이번 달 달력에 보이는 리그 전체 일정을 서버에서 먼저 받아 첫 HTML 에 담는다. */
 export default async function CalendarPage() {
-  const range = getKoreaMonthRange();
+  const range = getKoreaCalendarGridRange();
   const [games, teams] = await Promise.all([
     listPublicGames(range),
     listPublicTeams(),
