@@ -12,7 +12,7 @@ type ScheduleFilter = 'favorite' | 'favorite-home' | 'all';
 type WatchTypeFilter = 'all' | 'stadium' | 'home';
 
 const SCHEDULE_LABELS: Record<ScheduleFilter, string> = {
-  all: '리그 전체',
+  all: '리그',
   favorite: '응원팀',
   'favorite-home': '홈구장',
 };
@@ -69,8 +69,8 @@ function Segment<T extends string>({
 }
 
 /**
- * 달력 위에 가로 한 줄로 놓이는 필터.
- * 좁은 화면에서는 줄바꿈하지 않고 옆으로 밀어서 본다.
+ * 달력 위에 놓이는 필터. 넓은 화면에서는 한 줄, 좁은 화면에서는 두세 줄로 줄바꿈한다.
+ * 옆으로 미는 방식은 끝에 뭐가 더 있는지 안 보여서 쓰지 않는다.
  */
 export function CalendarFilterBar({
   viewMode,

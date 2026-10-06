@@ -9,6 +9,7 @@ import {
 import { getAbsoluteUrl } from '@/lib/site-url';
 import { getTeamLogoSrc } from '@/lib/team-logo';
 import { GameDetailPageClient } from './GameDetailPageClient';
+import { josa } from '@/lib/josa';
 
 export const revalidate = 3600;
 
@@ -38,7 +39,7 @@ function buildGameTitle(game: Game) {
 }
 
 function buildGameDescription(game: Game) {
-  const matchup = `${game.awayTeam.name}와 ${game.homeTeam.name}`;
+  const matchup = `${josa(game.awayTeam.name, '과')} ${game.homeTeam.name}`;
   const score = hasScore(game)
     ? `스코어는 ${game.awayTeam.shortName} ${game.awayScore}, ${game.homeTeam.shortName} ${game.homeScore}입니다. `
     : '';

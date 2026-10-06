@@ -11,6 +11,7 @@ import { getAbsoluteUrl } from '@/lib/site-url';
 import { getTeamLogoSrc } from '@/lib/team-logo';
 import { extractYoutubeId } from '@/lib/youtube';
 import styles from './player-cheer.module.css';
+import { josa } from '@/lib/josa';
 
 /**
  * 선수 한 명의 응원가 페이지.
@@ -68,7 +69,7 @@ export async function generateMetadata({
   const lyricSummary = summarizeLyrics(player.lyrics);
   const description = hasCheer(player)
     ? `${describePlayer(player)} ${player.name} 선수의 ${cheerType} 가사와 영상입니다.${lyricSummary ? ` ${lyricSummary}` : ''}`
-    : `${describePlayer(player)} ${player.name} 선수의 ${cheerType}는 아직 등록되지 않았습니다.`;
+    : `${describePlayer(player)} ${player.name} 선수의 ${josa(cheerType, '은')} 아직 등록되지 않았습니다.`;
   const canonical = `/cheers/${player.playerId}`;
 
   return {
@@ -243,7 +244,7 @@ export default async function PlayerCheerPage({
         </article>
       ) : (
         <p className={styles.empty}>
-          {player.name} 선수의 {cheerType}는 아직 준비 중이에요.
+          {player.name} 선수의 {josa(cheerType, '은')} 아직 준비 중이에요.
         </p>
       )}
 

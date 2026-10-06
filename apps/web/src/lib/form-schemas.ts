@@ -11,12 +11,13 @@ import {
   validateEmailClient,
   validatePasswordClient,
 } from '@/lib/user-input';
+import { josa } from '@/lib/josa';
 
 function requiredText(fieldName: string) {
   return z
     .string()
     .trim()
-    .min(1, `${fieldName}을 입력해주세요.`);
+    .min(1, `${josa(fieldName, '을')} 입력해주세요.`);
 }
 
 export const loginSchema = z.object({
@@ -29,8 +30,14 @@ export const loginSchema = z.object({
     }),
   password: z
     .string()
-    .min(PASSWORD_MIN_LENGTH, `비밀번호는 ${PASSWORD_MIN_LENGTH}자 이상이어야 합니다.`)
-    .max(PASSWORD_MAX_LENGTH, `비밀번호는 ${PASSWORD_MAX_LENGTH}자 이하로 입력해주세요.`)
+    .min(
+      PASSWORD_MIN_LENGTH,
+      `비밀번호는 ${PASSWORD_MIN_LENGTH}자 이상이어야 합니다.`,
+    )
+    .max(
+      PASSWORD_MAX_LENGTH,
+      `비밀번호는 ${PASSWORD_MAX_LENGTH}자 이하로 입력해주세요.`,
+    )
     .refine((value) => !validatePasswordClient(value), {
       message: '비밀번호 형식을 확인해주세요.',
     }),
@@ -40,7 +47,10 @@ export const postFormSchema = z.object({
   category: z.enum(['review', 'free', 'info', 'feature', 'notice']),
   isPinned: z.boolean(),
   title: requiredText('제목')
-    .max(POST_TITLE_MAX_LENGTH, `${POST_TITLE_MAX_LENGTH}자 이하로 입력해주세요.`)
+    .max(
+      POST_TITLE_MAX_LENGTH,
+      `${POST_TITLE_MAX_LENGTH}자 이하로 입력해주세요.`,
+    )
     .refine((value) => !validateBoardTextClient(value, POST_TITLE_MAX_LENGTH), {
       message: '제목에 스크립트, CSS, HTML 태그는 입력할 수 없습니다.',
     }),

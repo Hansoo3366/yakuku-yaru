@@ -37,6 +37,7 @@ import {
   formatKoreanTime,
   formatKoreanWeekday,
 } from '@/lib/date-format';
+import { josa } from '@/lib/josa';
 
 function formatAttendanceResultLabel(
   record: AttendanceRecord,
@@ -230,7 +231,7 @@ export function HomePageClient({
             <h1>{user?.nickname ?? '야구팬'}님, 오늘도 플레이볼.</h1>
             <p>
               {favoriteTeam && favoriteStanding
-                ? `${favoriteTeam.shortName}은 현재 ${favoriteStanding.rank}위 · 내 관람 기록은 ${stats?.totalCount ?? 0}경기예요.`
+                ? `${josa(favoriteTeam.shortName, '은')} 현재 ${favoriteStanding.rank}위 · 내 관람 기록은 ${stats?.totalCount ?? 0}경기예요.`
                 : favoriteTeam
                   ? `${favoriteTeam.name}의 다음 경기를 기다리고 있어요.`
                   : '응원 팀을 설정하면 내 팀 일정부터 정리해 드려요.'}
@@ -526,7 +527,7 @@ export function HomePageClient({
               <h3>KBO 팀 순위</h3>
               <p>
                 {favoriteTeam
-                  ? `${favoriteTeam.shortName}는 ${
+                  ? `${josa(favoriteTeam.shortName, '은')} ${
                       teamStandings?.items.find(
                         (item) => item.teamId === favoriteTeam.id,
                       )?.rank ?? '—'

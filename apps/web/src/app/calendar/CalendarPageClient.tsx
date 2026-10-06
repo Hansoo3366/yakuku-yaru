@@ -34,10 +34,10 @@ import {
 } from '@/lib/kbo-season-insights';
 import {
   formatDateInput,
+  formatGameTime,
   formatWeekLabel,
   getAgendaDayElementId,
   getCalendarMonthDays,
-  scrollAgendaDayIntoView,
   getMonthRange,
   getMonthStart,
   getWeekDays,
@@ -46,6 +46,7 @@ import {
   getYearRange,
   isGameInScheduleFilter,
   isSameDay,
+  scrollAgendaDayIntoView,
 } from '@/lib/calendar-range';
 import {
   countsTowardWinRate,
@@ -68,6 +69,7 @@ import {
   useTeamsQuery,
   useTeamStandingsQuery,
 } from '@/lib/queries';
+import { josa } from '@/lib/josa';
 
 const weekdayLabels = ['일', '월', '화', '수', '목', '금', '토'];
 
@@ -139,6 +141,18 @@ function formatRecentTenLabel(value: string | null | undefined) {
   }
 
   return `${match[1]}-${match[2]}-${match[3]}`;
+}
+
+/** 같은 시작 시간의 경기를 묶는다. 시간 순서는 유지한다. */
+function groupGamesByTime(games: Game[]): Array<[string, Game[]]> {
+  const groups = new Map<string, Game[]>();
+
+  for (const game of games) {
+    const time = formatGameTime(game.gameDate);
+    groups.set(time, [...(groups.get(time) ?? []), game]);
+  }
+
+  return [...groups.entries()];
 }
 
 export default function CalendarPage() {
@@ -605,6 +619,23 @@ export default function CalendarPage() {
       .filter(Boolean)
       .join(' ');
 
+    function renderDayGame(game: Game) {
+      const gameAttendanceRecords = attendanceRecordsByGameId[game.id] ?? [];
+      const attendance = gameAttendanceRecords[0] ?? null;
+
+      return (
+        <CalendarEventCard
+          attendance={attendance}
+          attendanceRecords={gameAttendanceRecords}
+          variant={options.variant}
+          favoriteTeamId={effectiveFavoriteTeamId}
+          game={game}
+          href={`/games/${game.id}`}
+          key={game.id}
+        />
+      );
+    }
+
     return (
       <div
         className={classNames}
@@ -627,24 +658,15 @@ export default function CalendarPage() {
           {date.getDate()}
         </button>
         <div className="cal-day__events">
-          {dayGames.map((game) => {
-            const gameAttendanceRecords =
-              attendanceRecordsByGameId[game.id] ?? [];
-            const attendance = gameAttendanceRecords[0] ?? null;
-            const href = `/games/${game.id}`;
-
-            return (
-              <CalendarEventCard
-                attendance={attendance}
-                attendanceRecords={gameAttendanceRecords}
-                variant={options.variant}
-                favoriteTeamId={effectiveFavoriteTeamId}
-                game={game}
-                href={href}
-                key={game.id}
-              />
-            );
-          })}
+          {options.variant === 'line'
+            ? // 리그 전체: 시간을 경기마다 반복하지 않고 시간별로 묶어서 한 번만 적는다.
+              groupGamesByTime(dayGames).map(([time, games]) => (
+                <div className="cal-time-group" key={time}>
+                  <span className="cal-time-group__label">{time}</span>
+                  {games.map((game) => renderDayGame(game))}
+                </div>
+              ))
+            : dayGames.map((game) => renderDayGame(game))}
           {extraRecordGroups.map((records) => {
             const record = records[0];
 
@@ -971,7 +993,9 @@ export default function CalendarPage() {
             {showTeamWinRate ? (
               <>
                 <section>
-                  <h2>{favoriteTeam?.shortName ?? '우리 팀'}이 강한 상대</h2>
+                  <h2>
+                    {josa(favoriteTeam?.shortName ?? '우리 팀', '이')} 강한 상대
+                  </h2>
                   <OpponentInsightRanking
                     items={opponentInsights.teamWinRateHigh}
                     title="상대 승률 높은 팀"

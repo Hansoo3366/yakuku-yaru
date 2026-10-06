@@ -12,6 +12,7 @@ import {
   type GameOutcome,
 } from '@/lib/game-outcome';
 import { getCancellationMeta } from '@/lib/game-cancellation';
+import { getStadiumShortName } from '@/lib/stadium-name';
 import { getTeamLogoSrc } from '@/lib/team-logo';
 
 type TeamLike = {
@@ -151,23 +152,22 @@ export function CalendarEventCard({
         className="cal-event cal-event--line"
         data-mine={involvesFavorite || undefined}
       >
-        <span className="cal-event__time">{timeLabel}</span>
+        {/* 시간은 칸 폭을 잡아먹어 팀명이 잘리므로 한 줄 표기에는 넣지 않는다. (aria-label 과 상세에 있다) */}
         <span className="cal-event__line-teams">
           <span data-won={awayWon || undefined}>{game.awayTeam.shortName}</span>
           {score}
           <span data-won={homeWon || undefined}>{game.homeTeam.shortName}</span>
-          {tagLabel ? (
-            // 한 줄 표기는 폭이 좁아 첫 글자만 보여 준다. (직관 → 직)
-            <span
-              aria-label={tagLabel}
-              className="cal-event__tag"
-              data-kind={tagKind}
-              title={tagLabel}
-            >
-              {tagLabel.slice(0, 1)}
-            </span>
-          ) : null}
         </span>
+        {tagLabel ? (
+          // 한 줄 표기는 폭이 좁아 글자 대신 점으로만 내 기록을 표시한다.
+          <span
+            aria-label={tagLabel}
+            className="cal-event__dot"
+            data-kind={tagKind}
+            role="img"
+            title={tagLabel}
+          />
+        ) : null}
       </Link>
     );
   }
@@ -188,8 +188,9 @@ export function CalendarEventCard({
   );
 
   if (variant === 'cell') {
-    // 응원팀 일정만 볼 때는 우리 팀 이름을 반복하지 않고 상대와 홈·원정만 보여 준다.
-    // 스코어도 "우리 : 상대" 순서로 적어 결과 배지와 함께 바로 읽히게 한다.
+    // 응원팀 일정만 볼 때는 우리 팀 이름을 반복하지 않고 상대 팀과 구장만 보여 준다.
+    // 구장 이름이 곧 홈·원정을 말해 주므로 따로 적지 않는다.
+    // 스코어는 "우리 : 상대" 순서로 적어 결과 배지와 함께 바로 읽히게 한다.
     const favoriteIsHome = game.homeTeam.id === favoriteTeamId;
     const favoriteIsAway = game.awayTeam.id === favoriteTeamId;
     const opponent = favoriteIsHome
@@ -208,8 +209,10 @@ export function CalendarEventCard({
           <>
             <span className="cal-event__opponent">
               <img alt="" src={getTeamLogoSrc(opponent)} />
-              <span>{opponent.shortName}</span>
-              <small>{favoriteIsHome ? '홈' : '원정'}</small>
+              <span className="cal-event__opponent-name">
+                <strong>{opponent.shortName}</strong>
+                <small>{getStadiumShortName(game.stadium)}</small>
+              </span>
             </span>
             {hasScore ? (
               <span className="cal-event__score">
