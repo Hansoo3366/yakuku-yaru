@@ -1,15 +1,10 @@
 .page {
   --stadium-black: var(--color-night-navy);
-  --stadium-dugout: #f3f3f0;
-  --stadium-muted: #707070;
+  --stadium-dugout: var(--color-surface-soft);
+  --stadium-muted: var(--color-muted);
   gap: 0;
   max-width: 1120px;
   padding-top: clamp(20px, 4vw, 42px);
-}
-
-html[data-theme='dark'] .page {
-  --stadium-dugout: #1d2126;
-  --stadium-muted: #a6abb3;
 }
 
 .backLink {
@@ -48,19 +43,17 @@ html[data-theme='dark'] .page {
 .eyebrow {
   color: rgba(255, 255, 255, 0.58);
   display: block;
-  font-family: ui-monospace, 'SFMono-Regular', Consolas, monospace;
+  font-variant-numeric: tabular-nums;
   font-size: var(--type-caption);
   font-weight: 700;
-  letter-spacing: 0.14em;
   margin-bottom: 14px;
-  text-transform: uppercase;
 }
 
 .hero h1 {
   color: #ffffff;
   font-size: var(--type-page-title);
-  font-weight: 900;
-  letter-spacing: -0.045em;
+  font-weight: 800;
+  letter-spacing: var(--tracking-display);
   line-height: 1.12;
 }
 
@@ -95,7 +88,7 @@ html[data-theme='dark'] .page {
 .heroCount {
   align-items: baseline;
   display: flex;
-  font-family: ui-monospace, 'SFMono-Regular', Consolas, monospace;
+  font-variant-numeric: tabular-nums;
   gap: 7px;
 }
 
@@ -187,7 +180,7 @@ html[data-theme='dark'] .page {
 
 .card h2 {
   font-size: 18px;
-  font-weight: 900;
+  font-weight: 800;
   letter-spacing: -0.03em;
 }
 
@@ -235,7 +228,7 @@ html[data-theme='dark'] .page {
 .toolbarTitle strong {
   display: block;
   font-size: var(--type-section-title);
-  font-weight: 900;
+  font-weight: 800;
   letter-spacing: -0.035em;
 }
 
@@ -293,9 +286,8 @@ html[data-theme='dark'] .page {
 }
 
 .filter small {
-  color: #9a9a9a;
-  color: light-dark(#9a9a9a, #9399a3);
-  font-family: ui-monospace, 'SFMono-Regular', Consolas, monospace;
+  color: var(--color-muted);
+  font-variant-numeric: tabular-nums;
   font-size: var(--type-caption);
 }
 

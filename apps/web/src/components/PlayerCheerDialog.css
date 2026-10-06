@@ -11,8 +11,8 @@
 }
 
 .cheer-dialog {
-  --cheer-dialog-ink: #19232e;
-  --cheer-dialog-muted: #52606d;
+  --cheer-dialog-ink: var(--color-ink);
+  --cheer-dialog-muted: var(--color-muted);
   background: #edf1f3;
   background: light-dark(#edf1f3, #1e2228);
   border-radius: 14px;
@@ -23,11 +23,6 @@
   max-width: 900px;
   overflow: hidden;
   width: min(100%, 900px);
-}
-
-html[data-theme='dark'] .cheer-dialog {
-  --cheer-dialog-ink: #eceef1;
-  --cheer-dialog-muted: #aeb3ba;
 }
 
 .cheer-dialog-titlebar {
@@ -52,8 +47,7 @@ html[data-theme='dark'] .cheer-dialog {
     transparent
   );
   font-size: var(--type-caption);
-  font-weight: 750;
-  letter-spacing: 0.16em;
+  font-weight: 700;
 }
 
 .cheer-dialog-titlebar strong {
@@ -154,14 +148,13 @@ html[data-theme='dark'] .cheer-dialog {
   color: var(--cheer-dialog-surface, var(--cheer-dialog-ink));
   font-size: var(--type-caption);
   font-weight: 800;
-  letter-spacing: 0.08em;
 }
 
 .cheer-dialog-identity__copy h2 {
   color: var(--cheer-dialog-ink);
   font-size: clamp(24px, 3.2vw, 32px);
   font-weight: 800;
-  letter-spacing: -0.045em;
+  letter-spacing: var(--tracking-display);
   line-height: 1.12;
   overflow-wrap: anywhere;
 }
@@ -189,7 +182,6 @@ html[data-theme='dark'] .cheer-dialog {
   color: var(--cheer-dialog-surface, var(--cheer-dialog-ink));
   font-size: var(--type-caption);
   font-weight: 800;
-  letter-spacing: 0.15em;
 }
 
 .cheer-dialog-track h3 {
@@ -235,7 +227,7 @@ html[data-theme='dark'] .cheer-dialog {
 .cheer-dialog-lyrics p {
   color: var(--cheer-dialog-ink);
   font-size: 14px;
-  font-weight: 550;
+  font-weight: 500;
   line-height: 1.85;
   white-space: pre-wrap;
 }

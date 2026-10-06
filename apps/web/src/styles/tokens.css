@@ -1,77 +1,201 @@
 /* =========================================================
- * 디자인 토큰 (색·간격·글자 크기)
+ * 디자인 토큰
+ *
+ * 구조는 두 층이다 (docs/design-system.md 참고).
+ *   1. 기본 팔레트: --gray-1 ~ --gray-12 처럼 "어떤 색인지"만 말한다.
+ *   2. 의미 토큰: --color-ink, --color-line 처럼 "어디에 쓰는지"를 말한다. 화면 CSS 는 이것만 쓴다.
+ * 다크 모드는 의미 토큰의 값만 바꾼다. 팀 컬러(헤더)와 티켓 골드는 두 모드에서 같다.
  * ========================================================= */
+
+@font-face {
+  font-family: 'Pretendard';
+  font-display: swap;
+  font-style: normal;
+  font-weight: 400;
+  src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/pretendard@1.0/Pretendard-Regular.woff2')
+    format('woff2');
+}
+
+@font-face {
+  font-family: 'Pretendard';
+  font-display: swap;
+  font-style: normal;
+  font-weight: 500;
+  src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/pretendard@1.0/Pretendard-Medium.woff2')
+    format('woff2');
+}
+
+@font-face {
+  font-family: 'Pretendard';
+  font-display: swap;
+  font-style: normal;
+  font-weight: 600;
+  src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/pretendard@1.0/Pretendard-SemiBold.woff2')
+    format('woff2');
+}
+
+@font-face {
+  font-family: 'Pretendard';
+  font-display: swap;
+  font-style: normal;
+  font-weight: 700;
+  src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/pretendard@1.0/Pretendard-Bold.woff2')
+    format('woff2');
+}
+
+@font-face {
+  font-family: 'Pretendard';
+  font-display: swap;
+  font-style: normal;
+  font-weight: 800;
+  src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/pretendard@1.0/Pretendard-ExtraBold.woff2')
+    format('woff2');
+}
+
 :root {
   --duration-exit: 150ms;
   --duration-enter: 210ms;
   --duration-move: 400ms;
   color-scheme: light;
-  /* Typography */
+
+  /* ---------- 글꼴 ---------- */
   --font-body:
     'Pretendard', Inter, -apple-system, BlinkMacSystemFont,
     'Apple SD Gothic Neo', 'Noto Sans KR', 'Segoe UI', Arial, sans-serif;
   --font-display: var(--font-body);
-  /* Brand palette */
-  --color-field-700: #176b4d;
-  --color-field-800: #0d4a36;
-  --color-brand: #111111;
-  --color-brand-active: #242424;
-  --color-brand-disabled: #e5e7eb;
-  --color-field-100: #e5f1ea;
-  --color-field-50: #f3f8f5;
-  --color-night-navy: #111111;
-  --color-night-navy-soft: #242424;
-  --color-ticket-gold: #c99433;
-  --color-ticket-gold-soft: #f3e3be;
-  --color-score-red: #ef4444;
-  /* Status */
-  --color-win: #cf2f27;
-  --color-lose: #1a56b8;
-  --color-draw: #6b6b6b;
-  --color-cancelled: #8a6d62;
-  --color-scheduled: #0b8f7f;
-  --color-success: #10b981;
-  --color-warning: #f59e0b;
-  --color-error: #ef4444;
-  --color-brand-accent: #3b82f6;
-  /* 상태색을 글자로 쓸 때. 면으로 쓸 때(흰 글자가 올라감)와 달리 어두운 바탕에서는 더 밝아야 읽힌다. */
-  --color-win-ink: var(--color-win);
-  --color-lose-ink: var(--color-lose);
-  --color-draw-ink: var(--color-draw);
-  --color-cancelled-ink: var(--color-cancelled);
-  --color-scheduled-ink: var(--color-scheduled);
-  --color-error-ink: var(--color-error);
-  --color-success-ink: var(--color-success);
-  --color-field-ink: var(--color-field-700);
-  --color-field-ink-strong: var(--color-field-800);
-  --layout-wide-max: 1480px;
-  /* Surfaces */
-  --color-canvas: #ffffff;
+
+  /* ---------- 기본 팔레트: 중립 (slate, 약간 푸른 회색) ----------
+   * 1–2 바탕 / 3–5 컴포넌트 면(기본·hover·active) / 6–8 선 / 9–10 단색 면 / 11–12 글자 */
+  --gray-1: #f7f8fa;
+  --gray-2: #f1f3f6;
+  --gray-3: #eaedf1;
+  --gray-4: #e1e5eb;
+  --gray-5: #d8dde4;
+  --gray-6: #cdd3db;
+  --gray-7: #bcc4ce;
+  --gray-8: #a3adba;
+  --gray-9: #7e8897;
+  --gray-10: #6c7685;
+  --gray-11: #58626f;
+  --gray-12: #161b22;
+
+  /* 남색: 어두운 패널·스코어보드·표 머리. 검정 대신 쓴다. */
+  --navy-9: #141b2a;
+  --navy-10: #1f2838;
+  --navy-11: #2a3447;
+
+  /* 티켓 골드: 명예·타이틀·헤더 밑줄 같은 작은 강조 */
+  --gold-9: #c99433;
+  --gold-4: #f6e9c8;
+  --gold-11: #7a5513;
+
+  /* 상태: 면(solid) · 옅은 면(tint) · 선(line) · 글자(ink) */
+  --red-9: #d6372e;
+  --red-4: #fde8e6;
+  --red-6: #f4b8b2;
+  --red-11: #b32a22;
+  --blue-9: #2460c8;
+  --blue-4: #e6eefb;
+  --blue-6: #b4c9ef;
+  --blue-11: #1f52ab;
+  --green-9: #1a7f5a;
+  --green-4: #e3f3eb;
+  --green-6: #a9dac3;
+  --green-11: #156a4b;
+  --teal-9: #0f8f80;
+  --teal-11: #0c7568;
+  --amber-9: #dd8a00;
+  --amber-4: #fdf0d5;
+  --amber-11: #9a5f00;
+  --brown-9: #8e7066;
+  --brown-4: #f1ebe7;
+  --brown-11: #6f554c;
+
+  /* ---------- 의미 토큰: 면 ---------- */
+  --color-canvas: var(--gray-1);
   /* 페이지 바탕 */
   --color-paper: #ffffff;
-  /* 카드·패널 면 */
-  --color-paper-deep: #f5f5f5;
-  --color-surface-soft: #f8f9fa;
-  --color-surface-card: #f5f5f5;
-  --color-surface-strong: #e5e7eb;
-  --color-surface-dark: #101010;
-  --color-surface-dark-elevated: #1a1a1a;
+  /* 카드·패널·입력창 면 */
+  --color-paper-deep: var(--gray-2);
+  --color-surface-soft: var(--gray-2);
+  /* 카드 안의 보조 면 */
+  --color-surface-card: var(--gray-3);
+  /* 눌린 면, 비활성 컨트롤 */
+  --color-surface-strong: var(--gray-5);
+  --color-surface-dark: var(--navy-9);
+  --color-surface-dark-elevated: var(--navy-10);
   --color-white: #ffffff;
-  --color-line: #e5e7eb;
-  --color-line-strong: #d1d5db;
-  --color-ink: #111111;
-  --color-muted: #6b7280;
-  --color-muted-soft: #898989;
-  /* Team accent (overridden when user has favorite team).
-   * Default is monochrome ink so the guest/default experience stays Cal-clean;
-   * logged-in fans still get their team color via JS. */
+
+  /* ---------- 의미 토큰: 선 ---------- */
+  --color-line: var(--gray-4);
+  --color-line-strong: var(--gray-6);
+
+  /* ---------- 의미 토큰: 글자 ---------- */
+  --color-ink: var(--gray-12);
+  --color-muted: var(--gray-11);
+  --color-muted-soft: var(--gray-9);
+
+  /* ---------- 의미 토큰: 어두운 면과 그 위 글자 ---------- */
+  --color-night-navy: var(--navy-9);
+  --color-night-navy-soft: var(--navy-10);
+  --color-brand: var(--navy-9);
+  --color-brand-active: var(--navy-10);
+  --color-brand-disabled: var(--gray-5);
+  --home-night: var(--navy-9);
+  --home-night-soft: var(--navy-10);
+  --home-chalk: var(--gray-2);
+  --home-ink: var(--gray-12);
+  --home-muted: var(--gray-11);
+  --home-line: var(--gray-4);
+
+  /* ---------- 의미 토큰: 상태 ---------- */
+  --color-win: var(--red-9);
+  --color-win-tint: var(--red-4);
+  --color-win-line: var(--red-6);
+  --color-win-ink: var(--red-11);
+  --color-lose: var(--blue-9);
+  --color-lose-tint: var(--blue-4);
+  --color-lose-line: var(--blue-6);
+  --color-lose-ink: var(--blue-11);
+  --color-draw: var(--gray-9);
+  --color-draw-tint: var(--gray-3);
+  --color-draw-ink: var(--gray-11);
+  --color-cancelled: var(--brown-9);
+  --color-cancelled-tint: var(--brown-4);
+  --color-cancelled-ink: var(--brown-11);
+  --color-scheduled: var(--teal-9);
+  --color-scheduled-ink: var(--teal-11);
+  --color-success: var(--green-9);
+  --color-success-tint: var(--green-4);
+  --color-success-ink: var(--green-11);
+  --color-warning: var(--amber-9);
+  --color-warning-tint: var(--amber-4);
+  --color-warning-ink: var(--amber-11);
+  --color-error: var(--red-9);
+  --color-error-tint: var(--red-4);
+  --color-error-ink: var(--red-11);
+  --color-score-red: var(--red-9);
+  --color-brand-accent: var(--blue-9);
+  /* 필드 그린: 로그인 전 기본 강조와 '예정' 배지 */
+  --color-field-700: var(--green-9);
+  --color-field-800: var(--green-11);
+  --color-field-100: var(--green-4);
+  --color-field-50: #f1f9f5;
+  --color-field-ink: var(--green-9);
+  --color-field-ink-strong: var(--green-11);
+  --color-ticket-gold: var(--gold-9);
+  --color-ticket-gold-soft: var(--gold-4);
+  --color-ticket-gold-ink: var(--gold-11);
+
+  /* ---------- 팀 컬러 (로그인하면 JS 가 덮어쓴다) ---------- */
   --team-color: var(--color-ink);
   --team-color-soft: var(--color-surface-card);
   /* 팀 컬러 계열의 글자색. JS 가 밝은 면용(--team-ink-light)과 어두운 면용(--team-ink-dark)을 계산해 준다. */
   --team-color-ink: var(--team-ink-light, var(--color-ink));
   --team-color-surface: var(--color-ink);
   --team-color-contrast: var(--color-white);
-  /* Spacing scale */
+
+  /* ---------- 간격 ---------- */
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
@@ -80,123 +204,132 @@
   --space-6: 32px;
   --space-7: 48px;
   --space-8: 64px;
-  /* Radius */
+
+  /* ---------- 반경 ---------- */
+  --radius-xs: 4px;
   --radius-sm: 6px;
   --radius-md: 8px;
   --radius-lg: 12px;
   --radius-xl: 16px;
   --radius-pill: 999px;
-  /* Typography scale */
-  --text-xs: 0.75rem;
-  /* 12 */
-  --text-sm: 0.8125rem;
-  /* 13 */
-  --text-base: 0.9375rem;
-  /* 15 */
-  --text-md: 1rem;
-  /* 16 */
-  --text-lg: 1.125rem;
-  /* 18 */
-  --text-xl: 1.375rem;
-  /* 22 */
-  --text-2xl: 1.75rem;
-  /* 28 */
-  --text-3xl: 2.25rem;
-  /* 36 */
-  --text-4xl: 3rem;
-  /* 48 */
 
-  /* Semantic typography hierarchy */
-  --type-display: clamp(2rem, 3vw, 2.5rem);
-  /* 32–40 */
-  --type-page-title: clamp(1.5rem, 2vw, 1.75rem);
-  /* 24–28 */
-  --type-section-title: clamp(1.125rem, 1.5vw, 1.25rem);
-  /* 18–20 */
-  --type-card-title: 1rem;
-  /* 16 */
-  --type-body: 0.9375rem;
-  /* 15 */
-  --type-caption: 0.75rem;
-  /* 12 */
-  --type-data-large: clamp(1.75rem, 2.8vw, 2.25rem);
-  /* 28–36 */
+  /* ---------- 글자 크기 (px 기준 주석) ----------
+   * 12px 미만은 쓰지 않는다. 숫자는 font-variant-numeric: tabular-nums 로 자리를 맞춘다. */
+  --text-xs: 0.75rem; /* 12 · 보조 라벨, 배지 */
+  --text-sm: 0.8125rem; /* 13 · 캡션, 메타 */
+  --text-base: 0.9375rem; /* 15 · 본문 */
+  --text-md: 1rem; /* 16 · 강조 본문, 카드 제목 */
+  --text-lg: 1.125rem; /* 18 · 소제목 */
+  --text-xl: 1.375rem; /* 22 · 섹션 제목, 큰 숫자 */
+  --text-2xl: 1.75rem; /* 28 · 페이지 제목 */
+  --text-3xl: 2.25rem; /* 36 · 디스플레이 */
+  --text-4xl: 3rem; /* 48 · 디스플레이 숫자 */
 
-  /* Weights */
+  /* 역할별 조합 */
+  --type-display: clamp(2rem, 3vw, 2.5rem); /* 32–40 */
+  --type-page-title: clamp(1.5rem, 2vw, 1.75rem); /* 24–28 */
+  --type-section-title: clamp(1.125rem, 1.5vw, 1.375rem); /* 18–22 */
+  --type-card-title: 1rem; /* 16 */
+  --type-body: 0.9375rem; /* 15 */
+  --type-caption: 0.75rem; /* 12 */
+  --type-data-large: clamp(1.75rem, 2.8vw, 2.25rem); /* 28–36 */
+
+  /* 자간: 큰 글자일수록 좁힌다 */
+  --tracking-display: -0.035em;
+  --tracking-title: -0.025em;
+  --tracking-heading: -0.015em;
+
+  /* 줄 높이 */
+  --leading-tight: 1.2;
+  --leading-snug: 1.35;
+  --leading-body: 1.55;
+  --leading-loose: 1.7;
+
+  /* 굵기: 본문 400·500, 라벨 600, 제목 700, 숫자·디스플레이 800. 900은 쓰지 않는다. */
   --weight-regular: 400;
-  --weight-bold: 600;
-  --weight-black: 600;
-  --weight-display: 600;
-  /* Shadows */
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
-  --shadow-lg: 0 16px 36px rgba(0, 0, 0, 0.1);
-  --shadow-inset: inset 0 -1px 0 rgba(17, 17, 17, 0.06);
-  /* Layout */
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+  --weight-black: 800;
+  --weight-display: 800;
+
+  /* ---------- 그림자: 색 있는 그림자 대신 옅은 중립색 두 겹 ---------- */
+  --shadow-sm: 0 1px 2px rgba(22, 27, 34, 0.06);
+  --shadow-md:
+    0 2px 6px rgba(22, 27, 34, 0.06), 0 8px 20px rgba(22, 27, 34, 0.06);
+  --shadow-lg:
+    0 4px 10px rgba(22, 27, 34, 0.08), 0 20px 44px rgba(22, 27, 34, 0.12);
+  --shadow-inset: inset 0 -1px 0 rgba(22, 27, 34, 0.06);
+
+  /* ---------- 레이아웃 ---------- */
   --header-height: 64px;
   --bottom-nav-height: 72px;
   --container-max: 1180px;
   --content-max: 880px;
-}
-
-/* 홈·순위표에서 쓰는 남색 계열 */
-:root {
-  --home-night: #101722;
-  --home-night-soft: #1a2433;
-  --home-chalk: #f7f8f5;
-  --home-ink: #172033;
-  --home-muted: #687386;
-  --home-line: #dfe3e8;
+  --layout-wide-max: 1480px;
 }
 
 /* =========================================================
  * 다크 모드
- * <html data-theme="dark"> 일 때 토큰 값만 바꾼다. (layout.tsx 의 부트 스크립트가
+ * <html data-theme="dark"> 일 때 의미 토큰의 값만 바꾼다. (layout.tsx 의 부트 스크립트가
  * 저장된 설정 또는 시스템 설정에 따라 data-theme 을 붙인다)
  * 헤더(GNB)의 팀 컬러는 그대로이고, 그 아래 면과 글자만 어두운 바탕용으로 바뀐다.
  * ========================================================= */
 html[data-theme='dark'] {
   color-scheme: dark;
-  /* 면: 바탕이 가장 어둡고, 위에 얹히는 면일수록 조금씩 밝다 */
-  --color-canvas: #0f1216;
-  --color-paper: #171b21;
-  --color-paper-deep: #1d2229;
-  --color-surface-soft: #1b2027;
-  --color-surface-card: #1f242c;
-  --color-surface-strong: #2a303a;
-  --color-line: #2a303a;
-  --color-line-strong: #3a424e;
-  /* 글자 */
-  --color-ink: #eceef1;
-  --color-muted: #a0a8b4;
-  --color-muted-soft: #8a929e;
-  /* 원래도 어두운 면(패널·버튼): 바탕과 구분되도록 한 단계 밝게 */
-  --color-night-navy: #222831;
-  --color-night-navy-soft: #2c333e;
-  --color-brand: #3b4352;
-  --color-brand-active: #4a5364;
-  --color-brand-disabled: #2a303a;
-  --home-night: #1a2130;
-  --home-night-soft: #242d3e;
-  --home-chalk: #1b2027;
-  --home-ink: #e6e9ee;
-  --home-muted: #9aa4b3;
-  --home-line: #2a303a;
-  --color-field-100: #1c3329;
-  --color-field-50: #18261f;
-  /* 상태색 글자: 어두운 바탕에서 읽히도록 밝힌 값 */
-  --color-win-ink: #ff7b72;
-  --color-lose-ink: #7aa7ff;
-  --color-draw-ink: #a8adb5;
-  --color-cancelled-ink: #c7ab9f;
-  --color-scheduled-ink: #45d0bd;
-  --color-error-ink: #ff7b72;
-  --color-success-ink: #3fd6a0;
-  --color-field-ink: #55cda0;
-  --color-field-ink-strong: #86dfbc;
+
+  --gray-1: #0f1216;
+  --gray-2: #161a20;
+  --gray-3: #1c2128;
+  --gray-4: #222830;
+  --gray-5: #292f38;
+  --gray-6: #313843;
+  --gray-7: #3c4552;
+  --gray-8: #4d5766;
+  --gray-9: #6c7685;
+  --gray-10: #7e8897;
+  --gray-11: #a6afbb;
+  --gray-12: #edf0f3;
+
+  --navy-9: #1d2535;
+  --navy-10: #28334a;
+  --navy-11: #34405a;
+
+  --gold-4: #3a2f14;
+  --gold-11: #e6c37a;
+
+  /* 어두운 바탕에서는 옅은 면과 선을 색을 섞어 만들고, 글자는 더 밝혀야 읽힌다 */
+  --red-4: #3a1f1e;
+  --red-6: #6a2f2b;
+  --red-11: #ff8a80;
+  --blue-4: #1b2740;
+  --blue-6: #2f4873;
+  --blue-11: #86adff;
+  --green-4: #163024;
+  --green-6: #22533e;
+  --green-11: #5bd3a2;
+  --teal-11: #4fd4c3;
+  --amber-4: #3a2b10;
+  --amber-11: #f0b24f;
+  --brown-4: #2f2724;
+  --brown-11: #c7ab9f;
+
+  --color-paper: var(--gray-2);
+  --color-paper-deep: var(--gray-3);
+  --color-surface-soft: var(--gray-3);
+  --color-surface-card: var(--gray-4);
+  --color-surface-strong: var(--gray-6);
+  --color-line: var(--gray-5);
+  --color-line-strong: var(--gray-7);
+  --color-brand: var(--navy-10);
+  --color-brand-active: var(--navy-11);
+  --color-brand-disabled: var(--gray-5);
+  --color-draw-tint: var(--gray-4);
+  --color-field-50: #15241c;
+
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
-  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.45);
-  --shadow-lg: 0 16px 36px rgba(0, 0, 0, 0.55);
+  --shadow-md: 0 2px 6px rgba(0, 0, 0, 0.4), 0 8px 20px rgba(0, 0, 0, 0.35);
+  --shadow-lg: 0 4px 10px rgba(0, 0, 0, 0.45), 0 20px 44px rgba(0, 0, 0, 0.5);
   --shadow-inset: inset 0 -1px 0 rgba(255, 255, 255, 0.06);
 }
 

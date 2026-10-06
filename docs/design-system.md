@@ -23,89 +23,122 @@ Yakuku Yaru는 Tailwind CSS와 shadcn/ui를 사용하지 않고, 서비스에 �
 - 넓은 면적은 neutral surface 토큰을 사용하고, 대비가 필요한 곳만 어두운 면(`--color-night-navy`, `--home-night`)을 씁니다.
 - 반경은 토큰을 씁니다: `--radius-sm` 6px, `--radius-md` 8px, `--radius-lg` 12px, `--radius-xl` 16px(히어로 같은 큰 패널), `--radius-pill`.
 - 텍스트는 좁은 카드 안에서 잘리지 않도록 크기와 줄 수를 안정적으로 제한합니다.
-- letter spacing은 기본값 0을 사용합니다.
+- letter spacing은 기본값 0을 사용합니다. 제목만 토큰(`--tracking-*`)으로 살짝 좁힙니다.
+- 모노스페이스 서체, 대문자 변환, 넓은 자간 라벨은 쓰지 않습니다. 숫자는 Pretendard 에 `tabular-nums` 를 씁니다.
 - 색은 리터럴(`#fff`, `#111`)로 쓰지 않고 토큰으로 씁니다. 라이트·다크 두 모드에서 같은 CSS 가 동작해야 하기 때문입니다.
 
 ## Color Palette
 
-색은 전부 `apps/web/src/styles/tokens.css` 의 CSS 변수로 정의합니다. 아래 값은 그 파일과 같아야 하며, 값을 바꿀 때는 이 표도 함께 고칩니다. 다크 값은 `html[data-theme='dark']` 블록에서 같은 이름의 토큰을 덮어씁니다.
+색은 전부 `apps/web/src/styles/tokens.css` 의 CSS 변수로 정의하고, **두 층**으로 나눕니다. 화면 CSS 는 아래쪽 의미 토큰만 쓰고, 팔레트 값은 토큰 파일 안에서만 참조합니다.
 
-### 면과 선
+1. **기본 팔레트** (`--gray-1…12`, `--navy-9…11`, `--red-*`, `--blue-*` …): 이름에 단계 번호가 붙은 원색 표.
+2. **의미 토큰** (`--color-canvas`, `--color-ink`, `--color-win-tint` …): "어디에 쓰는 색"으로 이름 붙인 별칭. 다크 모드는 팔레트 값을 바꾸는 것만으로 대부분 따라옵니다.
 
-| Token | Light | Dark | Usage |
-| --- | --- | --- | --- |
-| `--color-canvas` | `#FFFFFF` | `#0F1216` | 페이지 바탕 (`body`) |
-| `--color-paper` | `#FFFFFF` | `#171B21` | 카드·패널·입력창 면 |
-| `--color-surface-soft` | `#F8F9FA` | `#1B2027` | 가장 옅은 구분 면 |
-| `--color-surface-card`, `--color-paper-deep` | `#F5F5F5` | `#1F242C`, `#1D2229` | 카드 안의 보조 면 |
-| `--color-surface-strong` | `#E5E7EB` | `#2A303A` | 강조 면, 비활성 컨트롤 |
-| `--color-line` | `#E5E7EB` | `#2A303A` | 기본 선 |
-| `--color-line-strong` | `#D1D5DB` | `#3A424E` | 강한 선 |
+참고한 체계:
 
-### 글자
+- [Radix Colors](https://www.radix-ui.com/colors/docs/palette-composition/understanding-the-scale) 의 12단계 척도. 1–2 바탕, 3–5 컴포넌트 면, 6–8 선, 9–10 단색 면, 11–12 글자라는 역할을 단계 번호에 고정해 두면 "회색을 몇 개 써야 하나"를 매번 고민하지 않아도 됩니다.
+- [Vercel Geist](https://vercel.com/geist/colors) 의 색 체계. 회색을 100–1000 단계로 두고 배경·선·글자 역할을 번호로 못 박는 방식, 상태색마다 면과 글자 값을 따로 두는 방식을 가져왔습니다.
+- [토스 디자인 시스템의 색 개편](https://toss.tech/article/tds-color) 에서 "같은 단계의 색은 밝기가 같아야 한다"는 원칙과, 라이트·다크에서 대비 기준을 따로 잡는 방식을 가져왔습니다. 상태색(승·패·성공·경고)의 9단계는 모두 비슷한 밝기로 맞춰 어느 것도 혼자 튀지 않게 했습니다.
 
-| Token | Light | Dark | Usage |
-| --- | --- | --- | --- |
-| `--color-ink` | `#111111` | `#ECEEF1` | 본문·제목 |
-| `--color-muted` | `#6B7280` | `#A0A8B4` | 보조 글자 |
-| `--color-muted-soft` | `#898989` | `#8A929E` | 가장 옅은 보조 글자 |
-| `--color-white` | `#FFFFFF` | `#FFFFFF` | 어두운 면·팀 컬러 면 위의 글자 (테마와 무관) |
+### 기본 팔레트
 
-### 어두운 면
+회색은 아주 약하게 푸른 기를 띱니다. 순수 회색(`#eee`)보다 흰 면과 자연스럽게 이어지고, 남색 패널과 같은 계열이 되기 때문입니다.
 
-원래도 어두운 패널과 버튼입니다. 다크 모드에서는 바탕과 구분되도록 한 단계 밝아집니다. 그 위의 글자는 양쪽 모두 `--color-white` 입니다.
+| 단계        | 역할                                    | Light     | Dark      |
+| ----------- | --------------------------------------- | --------- | --------- |
+| `--gray-1`  | 페이지 바탕                             | `#F7F8FA` | `#0F1216` |
+| `--gray-2`  | 옅은 면, 카드 안 보조 면                | `#F1F3F6` | `#161A20` |
+| `--gray-3`  | 컴포넌트 면 (칩, 입력창, 선택 안 된 탭) | `#EAEDF1` | `#1C2128` |
+| `--gray-4`  | 기본 선, hover 면                       | `#E1E5EB` | `#222830` |
+| `--gray-5`  | 강한 면, 비활성 컨트롤                  | `#D8DDE4` | `#292F38` |
+| `--gray-6`  | 강한 선                                 | `#CDD3DB` | `#313843` |
+| `--gray-7`  | 입력창 테두리, 구분선 강조              | `#BCC4CE` | `#3C4552` |
+| `--gray-8`  | 아이콘, 비활성 글자                     | `#A3ADBA` | `#4D5766` |
+| `--gray-9`  | 가장 옅은 보조 글자, 무승부 색          | `#7E8897` | `#6C7685` |
+| `--gray-10` | 보조 글자 (큰 글자용)                   | `#6C7685` | `#7E8897` |
+| `--gray-11` | 보조 글자                               | `#58626F` | `#A6AFBB` |
+| `--gray-12` | 본문·제목                               | `#161B22` | `#EDF0F3` |
 
-| Token | Light | Dark | Usage |
-| --- | --- | --- | --- |
-| `--color-night-navy` | `#111111` | `#222831` | 어두운 패널, 비로그인 헤더, 표 머리 |
-| `--color-night-navy-soft` | `#242424` | `#2C333E` | 어두운 패널의 hover·보조 면 |
-| `--color-brand` | `#111111` | `#3B4352` | 주 버튼 |
-| `--color-brand-active` | `#242424` | `#4A5364` | 주 버튼 hover |
-| `--color-brand-disabled` | `#E5E7EB` | `#2A303A` | 비활성 버튼 |
-| `--home-night` | `#101722` | `#1A2130` | 홈 히어로·대시보드 인사 영역 |
-| `--home-night-soft` | `#1A2433` | `#242D3E` | 위 영역의 보조 면 |
+남색은 "어두운 면" 전용입니다. 검정 대신 쓰며, 다크 모드에서는 바탕보다 한 단계 밝아져 패널이 구분됩니다.
 
-### 홈·순위표의 남색 계열
+| Token       | 역할                                         | Light     | Dark      |
+| ----------- | -------------------------------------------- | --------- | --------- |
+| `--navy-9`  | 어두운 패널, 주 버튼, 표 머리, 비로그인 헤더 | `#141B2A` | `#1D2535` |
+| `--navy-10` | 위 패널의 보조 면, 버튼 hover                | `#1F2838` | `#28334A` |
+| `--navy-11` | 어두운 패널 위의 선·active                   | `#2A3447` | `#34405A` |
 
-| Token | Light | Dark | Usage |
-| --- | --- | --- | --- |
-| `--home-ink` | `#172033` | `#E6E9EE` | 제목·숫자 |
-| `--home-muted` | `#687386` | `#9AA4B3` | 보조 글자 |
-| `--home-line` | `#DFE3E8` | `#2A303A` | 선 |
-| `--home-chalk` | `#F7F8F5` | `#1B2027` | 옅은 면 |
+상태색은 각각 **4 (틴트 면) · 6 (선) · 9 (단색 면) · 11 (글자)** 네 단계만 둡니다. 단색 면 위에는 흰 글자, 틴트 면 위에는 같은 계열의 11단계 글자를 올립니다.
 
-### 상태색
+| 계열        | 의미                                  | 4 틴트 (L / D)        | 9 단색    | 11 글자 (L / D)       |
+| ----------- | ------------------------------------- | --------------------- | --------- | --------------------- |
+| `--red-*`   | 승, 오류, 스코어                      | `#FDE8E6` / `#3A1F1E` | `#D6372E` | `#B32A22` / `#FF8A80` |
+| `--blue-*`  | 패, 링크 accent                       | `#E6EEFB` / `#1B2740` | `#2460C8` | `#1F52AB` / `#86ADFF` |
+| `--green-*` | 성공, 필드 그린                       | `#E3F3EB` / `#163024` | `#1A7F5A` | `#156A4B` / `#5BD3A2` |
+| `--teal-*`  | 예정 경기                             | —                     | `#0F8F80` | `#0C7568` / `#4FD4C3` |
+| `--amber-*` | 경고                                  | `#FDF0D5` / `#3A2B10` | `#DD8A00` | `#9A5F00` / `#F0B24F` |
+| `--gold-*`  | 티켓·명예타이틀 (강조색, 그대로 유지) | `#F6E9C8` / `#3A2F14` | `#C99433` | `#7A5513` / `#E6C37A` |
+| `--brown-*` | 취소 경기                             | `#F1EBE7` / `#2F2724` | `#8E7066` | `#6F554C` / `#C7AB9F` |
 
-면으로 쓸 때(흰 글자가 올라감)와 글자로 쓸 때의 값을 나눕니다. 어두운 바탕에서는 글자가 더 밝아야 읽히기 때문입니다. **글자에는 반드시 `-ink` 토큰을 씁니다.**
+### 의미 토큰
 
-| 의미 | 면 (`--color-*`) | 글자 Light (`--color-*-ink`) | 글자 Dark |
-| --- | --- | --- | --- |
-| 승 `win` | `#CF2F27` | `#CF2F27` | `#FF7B72` |
-| 패 `lose` | `#1A56B8` | `#1A56B8` | `#7AA7FF` |
-| 무 `draw` | `#6B6B6B` | `#6B6B6B` | `#A8ADB5` |
-| 취소 `cancelled` | `#8A6D62` | `#8A6D62` | `#C7AB9F` |
-| 예정 `scheduled` | `#0B8F7F` | `#0B8F7F` | `#45D0BD` |
-| 오류 `error` (`score-red` 포함) | `#EF4444` | `#EF4444` | `#FF7B72` |
-| 성공 `success` | `#10B981` | `#10B981` | `#3FD6A0` |
-| 필드 그린 `field-700` → `--color-field-ink` | `#176B4D` | `#176B4D` | `#55CDA0` |
+화면 CSS 에서 쓰는 이름입니다. 오른쪽이 참조하는 팔레트 단계이고, 다크 모드에서 참조가 바뀌는 것만 괄호에 적었습니다.
 
-그 밖에 `--color-warning` `#F59E0B`, `--color-brand-accent` `#3B82F6`, `--color-ticket-gold` `#C99433`, `--color-ticket-gold-soft` `#F3E3BE` 는 테마와 무관하게 같은 값을 씁니다.
+**면과 선**
+
+| Token                                                        | 참조                                              | Usage                  |
+| ------------------------------------------------------------ | ------------------------------------------------- | ---------------------- |
+| `--color-canvas`                                             | `gray-1`                                          | 페이지 바탕 (`body`)   |
+| `--color-paper`                                              | `#FFFFFF` (dark `gray-2`)                         | 카드·패널·입력창 면    |
+| `--color-surface-soft`                                       | `gray-2` (dark `gray-3`)                          | 옅은 구분 면           |
+| `--color-surface-card`, `--color-paper-deep`                 | `gray-3` / `gray-2` (dark `gray-4` / `gray-3`)    | 카드 안의 보조 면, 칩  |
+| `--color-surface-strong`                                     | `gray-5` (dark `gray-6`)                          | 강조 면, 비활성 컨트롤 |
+| `--color-line`                                               | `gray-4` (dark `gray-5`)                          | 기본 선                |
+| `--color-line-strong`                                        | `gray-6` (dark `gray-7`)                          | 강한 선                |
+| `--color-night-navy`, `--home-night`, `--color-surface-dark` | `navy-9`                                          | 어두운 패널, 표 머리   |
+| `--color-night-navy-soft`, `--home-night-soft`               | `navy-10`                                         | 어두운 패널의 보조 면  |
+| `--color-brand` / `--color-brand-active`                     | `navy-9` / `navy-10` (dark `navy-10` / `navy-11`) | 주 버튼 / hover        |
+
+**글자**
+
+| Token                           | 참조      | Usage                                        |
+| ------------------------------- | --------- | -------------------------------------------- |
+| `--color-ink`, `--home-ink`     | `gray-12` | 본문·제목·숫자                               |
+| `--color-muted`, `--home-muted` | `gray-11` | 보조 글자 (라벨, 메타)                       |
+| `--color-muted-soft`            | `gray-9`  | 가장 옅은 보조 글자, 자리표시자              |
+| `--color-white`                 | `#FFFFFF` | 어두운 면·팀 컬러 면 위의 글자 (테마와 무관) |
+
+**상태색** — 이름 규칙은 `--color-{의미}` (단색 면), `-tint` (옅은 면), `-line` (선), `-ink` (글자) 입니다. **글자에는 반드시 `-ink` 를 씁니다.** 단색 면은 흰 글자를 올릴 때만 씁니다.
+
+| 의미      | 단색 면                                        | 틴트                       | 글자                      |
+| --------- | ---------------------------------------------- | -------------------------- | ------------------------- |
+| 승        | `--color-win` (`red-9`)                        | `--color-win-tint`         | `--color-win-ink`         |
+| 패        | `--color-lose` (`blue-9`)                      | `--color-lose-tint`        | `--color-lose-ink`        |
+| 무        | `--color-draw` (`gray-9`)                      | `--color-draw-tint`        | `--color-draw-ink`        |
+| 취소      | `--color-cancelled` (`brown-9`)                | `--color-cancelled-tint`   | `--color-cancelled-ink`   |
+| 예정      | `--color-scheduled` (`teal-9`)                 | —                          | `--color-scheduled-ink`   |
+| 성공      | `--color-success` (`green-9`)                  | `--color-success-tint`     | `--color-success-ink`     |
+| 경고      | `--color-warning` (`amber-9`)                  | `--color-warning-tint`     | `--color-warning-ink`     |
+| 오류      | `--color-error`, `--color-score-red` (`red-9`) | `--color-error-tint`       | `--color-error-ink`       |
+| 필드 그린 | `--color-field-700` (`green-9`)                | `--color-field-100`        | `--color-field-ink`       |
+| 골드      | `--color-ticket-gold` (`gold-9`)               | `--color-ticket-gold-soft` | `--color-ticket-gold-ink` |
+
+배지·칩·명예타이틀은 **틴트 면 + 같은 계열 글자 + 글자색 22% 의 1px 선** 조합이 기본입니다 (`.badge-*`, `.profile-title-pill`). 채도 높은 단색 알약은 쓰지 않습니다. 단색 면은 승·패 결과 배지처럼 작은 요소에만 씁니다.
 
 ### 팀 컬러
 
 팀 컬러는 `lib/team-theme.ts` (와 `layout.tsx` 의 부트 스크립트)가 구단의 `primaryColor` 에서 계산해 `<html>` 에 인라인으로 넣습니다.
 
-| Token | 값 | Usage |
-| --- | --- | --- |
-| `--team-color` | 구단 색 그대로 | 선·점·배지 같은 accent |
-| `--team-color-display` | 구단 색에 흰색 5% | 헤더(GNB) 면 |
-| `--team-color-display-contrast` | `#111111` 또는 `#FFFFFF` 중 대비가 높은 쪽 | 헤더 위 글자 |
-| `--team-color-contrast` | 위와 같은 방식 | 팀 컬러 accent 위 글자 |
-| `--team-color-soft` | 구단 색 + 알파 12% | 옅은 틴트 |
-| `--team-ink-light` | 흰 바탕과 대비 7:1 이 될 때까지 어둡게 | 밝은 바탕의 팀 컬러 글자 |
-| `--team-ink-dark` | 어두운 면(`#171B21`)과 대비 7:1 이 될 때까지 밝게 | 어두운 바탕의 팀 컬러 글자 |
-| `--team-accent-dark` | 어두운 면과 대비 3:1 이 될 때까지 밝게 | 다크 모드의 accent |
-| `--team-color-ink` | 테마에 따라 위 두 글자색 중 하나 | CSS 에서는 이 토큰만 쓴다 |
+| Token                           | 값                                         | Usage                      |
+| ------------------------------- | ------------------------------------------ | -------------------------- |
+| `--team-color`                  | 구단 색 그대로                             | 선·점·배지 같은 accent     |
+| `--team-color-display`          | 구단 색에 흰색 5%                          | 헤더(GNB) 면               |
+| `--team-color-display-contrast` | `#111111` 또는 `#FFFFFF` 중 대비가 높은 쪽 | 헤더 위 글자               |
+| `--team-color-contrast`         | 위와 같은 방식                             | 팀 컬러 accent 위 글자     |
+| `--team-color-soft`             | 구단 색 + 알파 12%                         | 옅은 틴트                  |
+| `--team-ink-light`              | 흰 바탕과 대비 7:1 이 될 때까지 어둡게     | 밝은 바탕의 팀 컬러 글자   |
+| `--team-ink-dark`               | 어두운 면과 대비 7:1 이 될 때까지 밝게     | 어두운 바탕의 팀 컬러 글자 |
+| `--team-accent-dark`            | 어두운 면과 대비 3:1 이 될 때까지 밝게     | 다크 모드의 accent         |
+| `--team-color-ink`              | 테마에 따라 위 두 글자색 중 하나           | CSS 에서는 이 토큰만 쓴다  |
 
 비로그인일 때는 `--team-color` 가 `--color-ink` 이고, 헤더는 `--color-night-navy` 를 씁니다.
 
@@ -139,23 +172,52 @@ Yakuku Yaru는 Tailwind CSS와 shadcn/ui를 사용하지 않고, 서비스에 �
 
 ## Typography
 
-- 기본 폰트는 Pretendard를 사용합니다.
-- fallback은 `Apple SD Gothic Neo`, `Noto Sans KR`, `Arial` 순서를 사용합니다.
-- 숫자와 스코어는 굵게, 설명 텍스트는 작고 차분하게 둡니다.
-- 내부 화면에서 hero-scale type을 남발하지 않습니다.
+서체는 Pretendard 하나만 씁니다 (400·500·600·700·800). fallback 은 `Apple SD Gothic Neo`, `Noto Sans KR`, `Arial` 순서입니다. 모노스페이스는 쓰지 않습니다. 숫자가 줄 맞춰야 하면 `font-variant-numeric: tabular-nums` 를 씁니다.
 
-권장 크기:
+크기·굵기·자간·행간은 전부 토큰입니다. [Vercel Geist 의 타이포그래피 프리셋](https://vercel.com/geist/text) 처럼 "크기 하나 = 굵기·행간·자간 한 묶음"으로 쓰고, 묶음을 깨서 섞지 않습니다.
 
-| Role | Size |
-| --- | --- |
-| Page title | 26-32px |
-| Section title | 18-20px |
-| Body | 15-16px |
-| Caption | 12-13px |
-| Compact meta | 12px |
-| Score | 28-44px |
+### 크기 척도
 
-글자 크기는 12px 미만을 쓰지 않습니다. 작은 보조 글자는 `--type-caption`(12px)을 씁니다. 영문 대문자 장식 라벨(`YOUR SEASON`, `LEAGUE PULSE` 등)은 쓰지 않고, 필요한 소제목은 한국어로 씁니다.
+| Token         | px  | 역할                                      |
+| ------------- | --- | ----------------------------------------- |
+| `--text-xs`   | 12  | 배지, 보조 라벨 (12px 미만은 쓰지 않는다) |
+| `--text-sm`   | 13  | 캡션, 메타 정보                           |
+| `--text-base` | 15  | 본문                                      |
+| `--text-md`   | 16  | 강조 본문, 카드 제목                      |
+| `--text-lg`   | 18  | 소제목                                    |
+| `--text-xl`   | 22  | 섹션 제목, 큰 숫자                        |
+| `--text-2xl`  | 28  | 페이지 제목                               |
+| `--text-3xl`  | 36  | 디스플레이                                |
+| `--text-4xl`  | 48  | 디스플레이 숫자                           |
+
+화면 폭에 따라 변하는 역할형 토큰도 있습니다: `--type-display` (32–40), `--type-page-title` (24–28), `--type-section-title` (18–22), `--type-data-large` (28–36), `--type-card-title` 16, `--type-body` 15, `--type-caption` 12.
+
+### 굵기·자간·행간
+
+| 역할               | 굵기                                            | 자간                          | 행간                  |
+| ------------------ | ----------------------------------------------- | ----------------------------- | --------------------- |
+| 디스플레이·큰 숫자 | `--weight-display` 800                          | `--tracking-display` −0.035em | `--leading-tight` 1.2 |
+| 페이지·섹션 제목   | `--weight-bold` 700                             | `--tracking-title` −0.025em   | `--leading-tight`     |
+| 카드 제목·강조     | `--weight-semibold` 600                         | `--tracking-heading` −0.015em | `--leading-snug` 1.35 |
+| 본문               | `--weight-regular` 400                          | 0                             | `--leading-body` 1.55 |
+| 라벨·버튼·배지     | `--weight-medium` 500 / `--weight-semibold` 600 | 0                             | `--leading-snug`      |
+
+- 굵기는 네 단계(400 · 500 · 600 · 700)에 디스플레이용 800 하나입니다. 900 은 쓰지 않습니다. 한글은 굵기 차이보다 **크기와 색 차이**로 위계를 만드는 쪽이 또렷합니다.
+- 자간을 넓히지 않습니다. 넓은 자간의 대문자 라벨(`YOUR SEASON`), 자간 넓힌 한글 소제목은 쓰지 않습니다. 소제목이 필요하면 `--text-xs` / `--weight-semibold` / `--color-muted` 로 작게 씁니다.
+- 자간을 −0.035em 보다 더 좁히지 않습니다.
+- 본문 줄 길이는 60자 안팎을 넘기지 않게 `max-width` 를 둡니다.
+
+### 위계 만드는 법
+
+한 화면에서 큰 글자는 하나만 둡니다. 제목 → 보조 설명 → 본문 순서로 크기와 색이 함께 내려가야 합니다.
+
+| 층                  | 크기                      | 색                   |
+| ------------------- | ------------------------- | -------------------- |
+| 1 제목·핵심 숫자    | `--text-2xl` 이상         | `--color-ink`        |
+| 2 소제목·강조 값    | `--text-lg` ~ `--text-xl` | `--color-ink`        |
+| 3 본문              | `--text-base`             | `--color-ink`        |
+| 4 보조 설명·라벨    | `--text-sm` / `--text-xs` | `--color-muted`      |
+| 5 자리표시자·비활성 | `--text-sm`               | `--color-muted-soft` |
 
 ## Layout
 
@@ -165,6 +227,7 @@ Yakuku Yaru는 Tailwind CSS와 shadcn/ui를 사용하지 않고, 서비스에 �
 - 반복 아이템만 카드화합니다.
 - 하단 내비게이션은 홈, 캘린더, 응원가, 라운지, 마이(로그인 시)를 탭으로 둡니다.
 - 첫 화면에는 장식보다 데이터를 먼저 둡니다. 비로그인 홈은 소개 문구 옆에 오늘(또는 다음) 경기를, 바로 아래에 순위표를 보여 줍니다.
+- 로그인 홈의 '내 시즌'은 두 열로 나누지 않습니다. 승률·직관·집관·타이틀을 한 줄 요약 띠에 두고, 그 아래 최근 기록 → 오늘 → 다가오는 경기를 같은 크기의 칸으로 가로 타임라인에 놓습니다. 칸 크기가 같아 줄이 어긋나지 않고, 좁은 화면에서는 옆으로 밀어 봅니다.
 - 좁은 화면에서 표는 핵심 열만 남기고(`col-wide` 열 숨김) 가로 스크롤 없이 읽히게 합니다.
 - 그리드 열은 `1fr` 대신 `minmax(0, 1fr)` 를 써서 넓은 내용이 페이지를 가로로 밀지 않게 합니다.
 
@@ -210,7 +273,7 @@ Yakuku Yaru는 Tailwind CSS와 shadcn/ui를 사용하지 않고, 서비스에 �
 
 - 마이페이지는 기록 대시보드처럼 보이게 합니다.
 - 승률은 크게, 보조 통계는 compact card로 정리합니다.
-- 통계 카드는 왼쪽 라인이나 과한 파스텔 대신 차분한 배경색으로 구분합니다.
+- 통계 카드는 왼쪽 라인이나 과한 파스텔 대신 차분한 배경색으로 구분합니다. 히어로 패널에도 세로 장식선을 긋지 않습니다.
 
 ### Forms
 
@@ -231,17 +294,17 @@ Yakuku Yaru는 Tailwind CSS와 shadcn/ui를 사용하지 않고, 서비스에 �
 
 `app/globals.css` 는 규칙을 직접 담지 않고 `src/styles/` 의 모듈을 순서대로 불러오기만 합니다. (캘린더 스타일은 전부 `app/calendar/calendar.css` 한 파일에 있습니다) **불러오는 순서가 곧 우선순위**이고, 공통 모듈이 앞, 화면 모듈이 뒤입니다.
 
-| 순서 | 파일 | 내용 |
-| --- | --- | --- |
-| 1 | `tokens.css` | 색·간격·글자 크기 토큰, 다크 모드 값 |
-| 2 | `base.css` | 기본 요소, 폰트, 화면 전환 애니메이션 |
-| 3 | `layout.css` | 페이지 뼈대, 공통 배치 |
-| 4 | `chrome.css` | 헤더(GNB)·푸터·하단 탭·알림 |
-| 5 | `components.css` | 카드·버튼·배지 등 공통 컴포넌트 |
-| 6 | `forms.css` | 폼 입력 요소 |
-| 7 | `standings.css` | 순위표·시즌 예상 순위 |
-| 8 | `companion.css` | 동행자 선택·칩 |
-| 9–14 | `game-detail.css`, `cheers.css`, `auth.css`, `admin.css`, `profile.css`, `dashboard.css` | 화면별 공통 규칙 |
+| 순서 | 파일                                                                                     | 내용                                  |
+| ---- | ---------------------------------------------------------------------------------------- | ------------------------------------- |
+| 1    | `tokens.css`                                                                             | 색·간격·글자 크기 토큰, 다크 모드 값  |
+| 2    | `base.css`                                                                               | 기본 요소, 폰트, 화면 전환 애니메이션 |
+| 3    | `layout.css`                                                                             | 페이지 뼈대, 공통 배치                |
+| 4    | `chrome.css`                                                                             | 헤더(GNB)·푸터·하단 탭·알림           |
+| 5    | `components.css`                                                                         | 카드·버튼·배지 등 공통 컴포넌트       |
+| 6    | `forms.css`                                                                              | 폼 입력 요소                          |
+| 7    | `standings.css`                                                                          | 순위표·시즌 예상 순위                 |
+| 8    | `companion.css`                                                                          | 동행자 선택·칩                        |
+| 9–14 | `game-detail.css`, `cheers.css`, `auth.css`, `admin.css`, `profile.css`, `dashboard.css` | 화면별 공통 규칙                      |
 
 - 한 화면에서만 쓰는 스타일은 그 화면 폴더의 CSS 파일(`app/public-home.css`, `app/calendar/calendar.css`, `*.module.css`)에 둡니다.
 - 같은 선택자를 뒤에서 다시 정의해 덮어쓰지 않습니다. 고칠 때는 원래 규칙을 고칩니다.

@@ -84,15 +84,14 @@
 .dialog header span {
   color: #777777;
   color: light-dark(#777777, #a2a8b0);
-  font-family: ui-monospace, 'SFMono-Regular', Consolas, monospace;
+  font-variant-numeric: tabular-nums;
   font-size: var(--type-caption);
   font-weight: 800;
-  letter-spacing: 0.14em;
 }
 
 .dialog h2 {
   font-size: 25px;
-  letter-spacing: -0.04em;
+  letter-spacing: var(--tracking-display);
   margin-top: 4px;
 }
 

@@ -1,19 +1,12 @@
 .cheers-shell {
-  --cheers-ink: #19232e;
-  --cheers-muted: #52606d;
-  --cheers-paper: #edf1f3;
-  --cheers-paper-deep: #e2e8ec;
+  --cheers-ink: var(--color-ink);
+  --cheers-muted: var(--color-muted);
+  --cheers-paper: var(--color-surface-soft);
+  --cheers-paper-deep: var(--color-surface-card);
   gap: 28px;
   max-width: 1180px;
   padding-top: 38px;
   width: 100%;
-}
-
-html[data-theme='dark'] .cheers-shell {
-  --cheers-ink: #eceef1;
-  --cheers-muted: #aeb3ba;
-  --cheers-paper: #1e2228;
-  --cheers-paper-deep: #22272e;
 }
 
 .cheers-page-intro {
@@ -27,14 +20,13 @@ html[data-theme='dark'] .cheers-shell {
   color: var(--team-color-ink, var(--team-color, var(--cheers-ink)));
   font-size: var(--type-caption);
   font-weight: 800;
-  letter-spacing: 0.14em;
 }
 
 .cheers-page-intro h1 {
   color: var(--cheers-ink);
   font-size: clamp(28px, 3.4vw, 38px);
   font-weight: 800;
-  letter-spacing: -0.045em;
+  letter-spacing: var(--tracking-display);
   line-height: 1.1;
 }
 
@@ -175,7 +167,7 @@ html[data-theme='dark'] .cheers-shell {
   border-radius: 5px;
   color: var(--cheers-muted);
   font-size: var(--type-caption);
-  font-weight: 750;
+  font-weight: 700;
   min-height: 36px;
   padding: 0 11px;
 }
@@ -397,7 +389,6 @@ html[data-theme='dark'] .cheers-shell {
   color: var(--cheers-muted);
   font-size: var(--type-caption);
   font-weight: 800;
-  letter-spacing: 0.08em;
 }
 
 .cheers-team-feature__identity h2 {
@@ -512,7 +503,7 @@ html[data-theme='dark'] .cheers-shell {
 .cheer-player-order small {
   color: var(--cheers-muted);
   font-size: var(--type-caption);
-  font-weight: 750;
+  font-weight: 700;
   max-width: 38px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -568,7 +559,7 @@ html[data-theme='dark'] .cheers-shell {
   color: var(--cheers-muted);
   display: inline-flex;
   font-size: var(--type-caption);
-  font-weight: 750;
+  font-weight: 700;
   gap: 6px;
   justify-self: end;
   white-space: nowrap;

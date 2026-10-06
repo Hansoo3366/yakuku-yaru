@@ -1,8 +1,8 @@
 .attendance-ticket-page {
-  --attendance-ink: #18222d;
-  --attendance-muted: #52606d;
-  --attendance-paper: #edf1f3;
-  --attendance-paper-deep: #e3e9ed;
+  --attendance-ink: var(--color-ink);
+  --attendance-muted: var(--color-muted);
+  --attendance-paper: var(--color-surface-soft);
+  --attendance-paper-deep: var(--color-surface-card);
   --attendance-team-surface: var(--team-color, #183b66);
   --attendance-team-ink: var(
     --team-color-ink,
@@ -12,13 +12,6 @@
   gap: 20px;
   max-width: 1080px;
   padding-top: 32px;
-}
-
-html[data-theme='dark'] .attendance-ticket-page {
-  --attendance-ink: #eceef1;
-  --attendance-muted: #aeb3ba;
-  --attendance-paper: #1e2228;
-  --attendance-paper-deep: #22262d;
 }
 
 .attendance-ticket-page__topbar {
@@ -124,7 +117,6 @@ html[data-theme='dark'] .attendance-ticket-page {
   color: var(--attendance-team-ink);
   font-size: 10px;
   font-weight: 800;
-  letter-spacing: 0.14em;
 }
 
 .attendance-ticket-heading h1 {
@@ -195,7 +187,6 @@ html[data-theme='dark'] .attendance-ticket-page {
   font-size: 10px;
   font-variant-numeric: tabular-nums;
   font-weight: 700;
-  letter-spacing: 0.12em;
 }
 
 .attendance-ticket-card__identity strong {
@@ -267,7 +258,6 @@ html[data-theme='dark'] .attendance-ticket-page {
   );
   font-size: 10px;
   font-weight: 800;
-  letter-spacing: 0.18em;
 }
 
 .attendance-ticket-photo__empty strong {
@@ -355,7 +345,7 @@ html[data-theme='dark'] .attendance-ticket-page {
   color: var(--attendance-ink);
   font-size: 36px;
   font-weight: 800;
-  letter-spacing: -0.05em;
+  letter-spacing: var(--tracking-display);
   line-height: 1;
 }
 
@@ -370,7 +360,6 @@ html[data-theme='dark'] .attendance-ticket-page {
   color: var(--attendance-muted);
   font-size: 13px;
   font-weight: 800;
-  letter-spacing: 0.08em;
 }
 
 .attendance-ticket-meta {
@@ -402,7 +391,7 @@ html[data-theme='dark'] .attendance-ticket-page {
 .attendance-ticket-meta dd {
   color: var(--attendance-ink);
   font-size: 12px;
-  font-weight: 750;
+  font-weight: 700;
   line-height: 1.35;
   margin: 0;
   min-width: 0;
@@ -448,7 +437,7 @@ html[data-theme='dark'] .attendance-ticket-page {
 .attendance-ticket-memory p {
   color: var(--attendance-ink);
   font-size: 14px;
-  font-weight: 650;
+  font-weight: 600;
   line-height: 1.65;
   white-space: pre-wrap;
 }
@@ -541,7 +530,7 @@ html[data-theme='dark'] .attendance-ticket-page {
 
 .attendance-ticket-person strong {
   font-size: 11px;
-  font-weight: 750;
+  font-weight: 700;
 }
 
 .attendance-ticket-person small {

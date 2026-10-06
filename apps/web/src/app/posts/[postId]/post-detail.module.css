@@ -1,16 +1,11 @@
 .page {
   --detail-black: var(--color-night-navy);
   --detail-paper: var(--color-paper);
-  --detail-dugout: #f3f3f0;
-  --detail-muted: #707070;
+  --detail-dugout: var(--color-surface-soft);
+  --detail-muted: var(--color-muted);
   gap: 0;
   max-width: 920px;
   padding-top: clamp(20px, 4vw, 42px);
-}
-
-html[data-theme='dark'] .page {
-  --detail-dugout: #1d2126;
-  --detail-muted: #a6abb3;
 }
 
 .sectionNav {
@@ -78,11 +73,9 @@ html[data-theme='dark'] .page {
 .articleKicker {
   color: rgba(255, 255, 255, 0.55);
   display: block;
-  font-family: ui-monospace, 'SFMono-Regular', Consolas, monospace;
+  font-variant-numeric: tabular-nums;
   font-size: var(--type-caption);
   font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
 }
 
 .articleLabelRow {
@@ -98,7 +91,7 @@ html[data-theme='dark'] .page {
   background: rgba(255, 255, 255, 0.14);
   color: #ffffff;
   font-size: var(--type-caption);
-  font-weight: 900;
+  font-weight: 800;
   padding: 5px 7px;
 }
 
@@ -117,8 +110,8 @@ html[data-theme='dark'] .page {
 .articleHeader h1 {
   color: #ffffff;
   font-size: var(--type-page-title);
-  font-weight: 900;
-  letter-spacing: -0.045em;
+  font-weight: 800;
+  letter-spacing: var(--tracking-display);
   line-height: 1.22;
   max-width: 24ch;
   overflow-wrap: anywhere;
@@ -175,7 +168,7 @@ html[data-theme='dark'] .page {
 
 .articleMeta time {
   color: rgba(255, 255, 255, 0.55);
-  font-family: ui-monospace, 'SFMono-Regular', Consolas, monospace;
+  font-variant-numeric: tabular-nums;
   font-size: var(--type-caption);
   font-variant-numeric: tabular-nums;
 }
@@ -245,13 +238,13 @@ html[data-theme='dark'] .page {
 
 .commentsHeader h2 {
   font-size: var(--type-section-title);
-  font-weight: 900;
+  font-weight: 800;
   letter-spacing: -0.035em;
 }
 
 .commentsHeader span {
   color: var(--detail-muted);
-  font-family: ui-monospace, 'SFMono-Regular', Consolas, monospace;
+  font-variant-numeric: tabular-nums;
   font-size: var(--type-caption);
   font-variant-numeric: tabular-nums;
 }
@@ -321,7 +314,6 @@ html[data-theme='dark'] .page {
 }
 
 .commentAuthorText time {
-  font-family: ui-monospace, 'SFMono-Regular', Consolas, monospace;
   font-variant-numeric: tabular-nums;
 }
 

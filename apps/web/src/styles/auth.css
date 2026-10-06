@@ -42,7 +42,6 @@
 .verification-code-input {
   font-size: var(--text-xl);
   font-weight: var(--weight-black);
-  letter-spacing: 0.35em;
   text-align: center;
 }
 
@@ -93,7 +92,6 @@
   justify-content: center;
   letter-spacing: 0.04em;
   padding: 0 var(--space-2);
-  text-transform: uppercase;
 }
 
 .auth-step.is-active {
@@ -106,7 +104,6 @@
   font-size: var(--text-sm);
   font-weight: var(--weight-black);
   letter-spacing: 0.04em;
-  text-transform: uppercase;
 }
 
 .auth-footnote {

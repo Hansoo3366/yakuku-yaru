@@ -6,20 +6,14 @@
 .landing {
   --landing-night: var(--home-night);
   --landing-ink: var(--home-ink);
-  --landing-muted: #5d6879;
-  --landing-line: #e3e7ec;
-  --landing-soft: #f4f6f8;
+  --landing-muted: var(--color-muted);
+  --landing-line: var(--color-line);
+  --landing-soft: var(--color-surface-soft);
   gap: clamp(40px, 6vw, 72px);
   max-width: 1180px;
   padding-bottom: 96px;
   padding-top: clamp(16px, 3vw, 36px);
   width: 100%;
-}
-
-html[data-theme='dark'] .landing {
-  --landing-muted: #aaafb6;
-  --landing-line: #353b44;
-  --landing-soft: #1b1f24;
 }
 
 .landing > * {
@@ -51,7 +45,7 @@ html[data-theme='dark'] .landing {
   color: var(--landing-ink);
   font-size: clamp(1.625rem, 3vw, 2.25rem);
   font-weight: 800;
-  letter-spacing: -0.04em;
+  letter-spacing: var(--tracking-display);
   line-height: 1.25;
   text-wrap: balance;
 }
@@ -274,7 +268,7 @@ html[data-theme='dark'] .landing {
 .landing-features > h2 {
   color: var(--landing-ink);
   font-size: var(--type-page-title);
-  letter-spacing: -0.04em;
+  letter-spacing: var(--tracking-display);
   line-height: 1.25;
 }
 
@@ -307,7 +301,7 @@ html[data-theme='dark'] .landing {
 .landing-section .season-projection-heading h2 {
   color: var(--landing-ink);
   font-size: var(--type-page-title);
-  letter-spacing: -0.04em;
+  letter-spacing: var(--tracking-display);
 }
 
 /* ---------- 기능 소개 ---------- */

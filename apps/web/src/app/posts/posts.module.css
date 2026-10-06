@@ -1,16 +1,11 @@
 .page {
   --board-black: var(--color-night-navy);
   --board-paper: var(--color-paper);
-  --board-dugout: #f4f4f1;
-  --board-muted: #686868;
+  --board-dugout: var(--color-surface-soft);
+  --board-muted: var(--color-muted);
   gap: 0;
   max-width: 1080px;
   padding-top: clamp(20px, 4vw, 44px);
-}
-
-html[data-theme='dark'] .page {
-  --board-dugout: #1c2026;
-  --board-muted: #a9aeb6;
 }
 
 .board {
@@ -70,19 +65,17 @@ html[data-theme='dark'] .page {
 
 .kicker {
   color: rgba(255, 255, 255, 0.72);
-  font-family: ui-monospace, 'SFMono-Regular', Consolas, monospace;
+  font-variant-numeric: tabular-nums;
   font-size: var(--type-caption);
   font-weight: 700;
-  letter-spacing: 0.14em;
   margin-bottom: 18px;
-  text-transform: uppercase;
 }
 
 .hero h1 {
   color: #ffffff;
   font-size: var(--type-page-title);
-  font-weight: 900;
-  letter-spacing: -0.055em;
+  font-weight: 800;
+  letter-spacing: var(--tracking-display);
   line-height: 0.98;
   text-wrap: balance;
 }
@@ -97,8 +90,7 @@ html[data-theme='dark'] .page {
 
 .heroAside {
   align-content: end;
-  background: #1f1f1f;
-  background: light-dark(#1f1f1f, #32373f);
+  background: var(--navy-10);
   color: #ffffff;
   display: grid;
   padding: 38px 30px;
@@ -111,11 +103,11 @@ html[data-theme='dark'] .page {
 }
 
 .heroAside > strong {
-  font-family: ui-monospace, 'SFMono-Regular', Consolas, monospace;
+  font-variant-numeric: tabular-nums;
   font-size: var(--type-data-large);
   font-variant-numeric: tabular-nums;
   font-weight: 700;
-  letter-spacing: -0.08em;
+  letter-spacing: var(--tracking-display);
   line-height: 0.95;
   margin-top: 8px;
 }
@@ -169,7 +161,7 @@ html[data-theme='dark'] .page {
 .listIntro strong {
   display: block;
   font-size: var(--type-section-title);
-  font-weight: 900;
+  font-weight: 800;
   letter-spacing: -0.035em;
 }
 
@@ -305,13 +297,11 @@ html[data-theme='dark'] .page {
 
 .listHeader {
   color: var(--board-muted);
-  font-family: ui-monospace, 'SFMono-Regular', Consolas, monospace;
+  font-variant-numeric: tabular-nums;
   font-size: var(--type-caption);
   font-weight: 700;
-  letter-spacing: 0.12em;
   min-height: 34px;
   place-items: center start;
-  text-transform: uppercase;
 }
 
 .listHeader span:last-child {
@@ -353,7 +343,7 @@ html[data-theme='dark'] .page {
 .postNumber {
   color: #939393;
   color: light-dark(#939393, #969ca5);
-  font-family: ui-monospace, 'SFMono-Regular', Consolas, monospace;
+  font-variant-numeric: tabular-nums;
   font-size: 12px;
   font-variant-numeric: tabular-nums;
   font-weight: 700;
@@ -390,7 +380,7 @@ html[data-theme='dark'] .page {
   color: light-dark(#444444, #babec4);
   flex: 0 0 auto;
   font-size: var(--type-caption);
-  font-weight: 900;
+  font-weight: 800;
   padding: 4px 6px;
 }
 
@@ -403,7 +393,7 @@ html[data-theme='dark'] .page {
   border: 1px solid currentColor;
   color: var(--team-color-ink, #333333);
   font-size: var(--type-caption);
-  font-weight: 900;
+  font-weight: 800;
   padding: 2px 5px;
 }
 
@@ -423,7 +413,6 @@ html[data-theme='dark'] .page {
 }
 
 .postMeta time {
-  font-family: ui-monospace, 'SFMono-Regular', Consolas, monospace;
   font-variant-numeric: tabular-nums;
 }
 
@@ -446,7 +435,7 @@ html[data-theme='dark'] .page {
   align-items: center;
   color: var(--color-ink);
   display: flex;
-  font-family: ui-monospace, 'SFMono-Regular', Consolas, monospace;
+  font-variant-numeric: tabular-nums;
   font-size: 12px;
   font-variant-numeric: tabular-nums;
   font-weight: 800;
@@ -505,7 +494,6 @@ html[data-theme='dark'] .page {
 .pageIndicator {
   align-items: baseline;
   display: flex;
-  font-family: ui-monospace, 'SFMono-Regular', Consolas, monospace;
   font-variant-numeric: tabular-nums;
   gap: 7px;
 }
@@ -529,7 +517,7 @@ html[data-theme='dark'] .page {
   color: #ffffff;
   display: none;
   font-size: 13px;
-  font-weight: 900;
+  font-weight: 800;
   gap: 4px;
   min-height: 46px;
   padding: 0 16px;
@@ -557,15 +545,14 @@ html[data-theme='dark'] .page {
 
 .bottomWriteCta > div > span {
   color: rgba(255, 255, 255, 0.5);
-  font-family: ui-monospace, 'SFMono-Regular', Consolas, monospace;
+  font-variant-numeric: tabular-nums;
   font-size: var(--type-caption);
   font-weight: 800;
-  letter-spacing: 0.14em;
 }
 
 .bottomWriteCta strong {
   font-size: 17px;
-  font-weight: 900;
+  font-weight: 800;
   letter-spacing: -0.025em;
 }
 
@@ -581,7 +568,7 @@ html[data-theme='dark'] .page {
   display: inline-flex;
   flex: 0 0 auto;
   font-size: 12px;
-  font-weight: 900;
+  font-weight: 800;
   gap: 18px;
   min-height: 46px;
   padding: 0 16px;

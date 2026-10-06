@@ -41,7 +41,7 @@
 .site-guide-step {
   color: #8a8a8a;
   color: light-dark(#8a8a8a, #9aa0a9);
-  font-family: ui-monospace, 'SFMono-Regular', Consolas, monospace;
+  font-variant-numeric: tabular-nums;
   font-size: var(--type-caption);
   font-weight: 700;
 }
@@ -83,15 +83,15 @@
 .site-guide-eyebrow {
   color: #8a8a8a;
   color: light-dark(#8a8a8a, #9aa0a9);
-  font-family: ui-monospace, 'SFMono-Regular', Consolas, monospace;
+  font-variant-numeric: tabular-nums;
   font-size: 12px;
   font-weight: 700;
 }
 
 .site-guide h2 {
   font-size: 22px;
-  font-weight: 900;
-  letter-spacing: -0.04em;
+  font-weight: 800;
+  letter-spacing: var(--tracking-display);
   line-height: 1.25;
 }
 

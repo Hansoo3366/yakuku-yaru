@@ -31,7 +31,7 @@
 }
 
 .fan-follow-button strong {
-  font-family: ui-monospace, 'SFMono-Regular', Consolas, monospace;
+  font-variant-numeric: tabular-nums;
   font-size: var(--type-caption);
   font-variant-numeric: tabular-nums;
 }
@@ -240,22 +240,21 @@
 
 .badge-gold {
   background: var(--color-ticket-gold-soft);
-  color: #6b4912;
-  color: light-dark(#6b4912, #eac485);
+  color: var(--color-ticket-gold-ink);
 }
 
 .badge-green {
-  background: var(--color-field-100);
-  color: var(--color-field-ink-strong);
+  background: var(--color-success-tint);
+  color: var(--color-success-ink);
 }
 
 .badge-navy {
-  background: rgba(20, 33, 61, 0.08);
+  background: var(--color-surface-card);
   color: var(--color-ink);
 }
 
 .badge-gray {
-  background: rgba(115, 115, 115, 0.12);
+  background: var(--color-draw-tint);
   color: var(--color-draw-ink);
 }
 
@@ -487,7 +486,6 @@
   color: var(--color-muted);
   font-size: var(--text-xs);
   font-weight: var(--weight-bold);
-  letter-spacing: 0.08em;
   text-transform: lowercase;
 }
 

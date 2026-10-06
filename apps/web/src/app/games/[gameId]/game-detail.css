@@ -1,15 +1,15 @@
 .app-shell--game-detail {
-  --game-canvas: #e9ede9;
+  --game-canvas: var(--color-canvas);
   --game-paper: var(--color-paper);
-  --game-surface: #f5f7f4;
-  --game-surface-strong: #dfe5df;
-  --game-ink: #151c25;
-  --game-muted: #5c6673;
+  --game-surface: var(--color-surface-soft);
+  --game-surface-strong: var(--color-surface-card);
+  --game-ink: var(--color-ink);
+  --game-muted: var(--color-muted);
   /* 팀 컬러 면은 헤더(GNB)에만 둔다. 스코어보드·버튼 같은 넓은 면은 중립 잉크로 두고,
      팀 컬러는 내 팀 라인업 머리 같은 '내 팀' 표시(--game-accent)에만 쓴다. */
   --game-accent: var(--team-color, #243b53);
   --game-on-accent: var(--team-color-contrast, var(--color-white));
-  --game-team: #151c25;
+  --game-team: var(--color-night-navy);
   --game-team-ink: var(--team-color-ink, var(--team-color-surface, #243b53));
   --game-on-team: #ffffff;
   align-content: start;
@@ -17,15 +17,6 @@
   max-width: 1220px;
   padding: 24px 22px 80px;
   width: 100%;
-}
-
-html[data-theme='dark'] .app-shell--game-detail {
-  --game-canvas: #20242b;
-  --game-surface: #1b1f24;
-  --game-surface-strong: #242930;
-  --game-ink: #eceef1;
-  --game-muted: #abb0b7;
-  --game-team: #273546;
 }
 
 .app-shell--game-detail,
@@ -94,7 +85,6 @@ html[data-theme='dark'] .app-shell--game-detail {
   color: color-mix(in srgb, var(--game-on-team) 82%, transparent);
   font-size: var(--type-caption);
   font-weight: var(--weight-black);
-  letter-spacing: 0.13em;
 }
 
 .app-shell--game-detail .match-hero h1 {
@@ -184,7 +174,6 @@ html[data-theme='dark'] .app-shell--game-detail {
   font-size: var(--type-caption);
   font-weight: var(--weight-black);
   grid-area: side;
-  letter-spacing: 0.07em;
 }
 
 .app-shell--game-detail
@@ -221,7 +210,7 @@ html[data-theme='dark'] .app-shell--game-detail {
   font-variant-numeric: tabular-nums;
   font-weight: var(--weight-black);
   grid-area: score;
-  letter-spacing: -0.06em;
+  letter-spacing: var(--tracking-display);
   line-height: 1;
 }
 
@@ -464,7 +453,6 @@ html[data-theme='dark'] .app-shell--game-detail {
 .app-shell--game-detail .starter-pitcher-head span {
   color: var(--game-muted);
   font-size: var(--type-caption);
-  letter-spacing: 0.06em;
 }
 
 .app-shell--game-detail .starter-pitcher-head strong {
@@ -618,7 +606,6 @@ html[data-theme='dark'] .app-shell--game-detail {
   font-size: var(--type-caption);
   font-style: normal;
   font-weight: var(--weight-black);
-  letter-spacing: 0.06em;
   margin-left: auto;
 }
 

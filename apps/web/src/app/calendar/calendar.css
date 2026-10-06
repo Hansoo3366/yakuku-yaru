@@ -47,7 +47,7 @@ html[data-theme='dark'] .app-shell--calendar {
   font-size: clamp(1.75rem, 3vw, 2.25rem);
   font-variant-numeric: tabular-nums;
   font-weight: 800;
-  letter-spacing: -0.04em;
+  letter-spacing: var(--tracking-display);
   line-height: 1.15;
 }
 

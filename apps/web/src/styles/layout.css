@@ -187,9 +187,8 @@
 
 .app-shell--profile .profile-identity .eyebrow {
   color: rgba(255, 255, 255, 0.5);
-  font-family: ui-monospace, 'SFMono-Regular', Consolas, monospace;
+  font-variant-numeric: tabular-nums;
   font-size: var(--type-caption);
-  letter-spacing: 0.14em;
 }
 
 .app-shell--profile .profile-setting-card .section-heading {
@@ -199,7 +198,7 @@
 .app-shell--profile .profile-setting-card .section-heading h2 {
   color: var(--profile-black);
   font-size: 18px;
-  font-weight: 900;
+  font-weight: 800;
 }
 
 .app-shell--profile .profile-setting-card .section-heading p {

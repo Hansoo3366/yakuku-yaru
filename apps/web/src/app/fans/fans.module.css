@@ -1,16 +1,11 @@
 .page {
   --fan-black: var(--color-night-navy);
   --fan-paper: var(--color-paper);
-  --fan-dugout: #f3f3f0;
-  --fan-muted: #707070;
+  --fan-dugout: var(--color-surface-soft);
+  --fan-muted: var(--color-muted);
   gap: 0;
   max-width: 1120px;
   padding-top: clamp(20px, 4vw, 42px);
-}
-
-html[data-theme='dark'] .page {
-  --fan-dugout: #1d2126;
-  --fan-muted: #a6abb3;
 }
 
 .sectionNav {
@@ -62,19 +57,17 @@ html[data-theme='dark'] .page {
 .eyebrow {
   color: rgba(255, 255, 255, 0.58);
   display: block;
-  font-family: ui-monospace, 'SFMono-Regular', Consolas, monospace;
+  font-variant-numeric: tabular-nums;
   font-size: var(--type-caption);
   font-weight: 700;
-  letter-spacing: 0.14em;
   margin-bottom: 14px;
-  text-transform: uppercase;
 }
 
 .hero h1 {
   color: #ffffff;
   font-size: var(--type-page-title);
-  font-weight: 900;
-  letter-spacing: -0.045em;
+  font-weight: 800;
+  letter-spacing: var(--tracking-display);
   line-height: 1.12;
 }
 
@@ -89,7 +82,7 @@ html[data-theme='dark'] .page {
 .heroCount {
   align-items: baseline;
   display: flex;
-  font-family: ui-monospace, 'SFMono-Regular', Consolas, monospace;
+  font-variant-numeric: tabular-nums;
   gap: 7px;
 }
 
@@ -120,7 +113,7 @@ html[data-theme='dark'] .page {
 .toolbarTitle strong {
   display: block;
   font-size: var(--type-section-title);
-  font-weight: 900;
+  font-weight: 800;
   letter-spacing: -0.035em;
 }
 
@@ -283,7 +276,7 @@ html[data-theme='dark'] .page {
 }
 
 .cardStats strong {
-  font-family: ui-monospace, 'SFMono-Regular', Consolas, monospace;
+  font-variant-numeric: tabular-nums;
   font-size: 15px;
   font-variant-numeric: tabular-nums;
 }
@@ -329,7 +322,7 @@ html[data-theme='dark'] .page {
 
 .pagination span {
   color: var(--fan-muted);
-  font-family: ui-monospace, 'SFMono-Regular', Consolas, monospace;
+  font-variant-numeric: tabular-nums;
   font-size: var(--type-caption);
 }
 
@@ -378,8 +371,8 @@ html[data-theme='dark'] .page {
 .profileIdentity h1 {
   color: #ffffff;
   font-size: var(--type-page-title);
-  font-weight: 900;
-  letter-spacing: -0.045em;
+  font-weight: 800;
+  letter-spacing: var(--tracking-display);
 }
 
 .profileNameRow {
@@ -411,7 +404,7 @@ html[data-theme='dark'] .page {
 
 .followNumbers strong {
   color: #ffffff;
-  font-family: ui-monospace, 'SFMono-Regular', Consolas, monospace;
+  font-variant-numeric: tabular-nums;
   margin-left: 4px;
 }
 
@@ -468,10 +461,10 @@ html[data-theme='dark'] .page {
 }
 
 .scoreboard strong {
-  font-family: ui-monospace, 'SFMono-Regular', Consolas, monospace;
+  font-variant-numeric: tabular-nums;
   font-size: 22px;
   font-variant-numeric: tabular-nums;
-  letter-spacing: -0.05em;
+  letter-spacing: var(--tracking-display);
 }
 
 .sectionHead {
@@ -540,7 +533,7 @@ html[data-theme='dark'] .page {
 
 .postItem span {
   color: var(--fan-muted);
-  font-family: ui-monospace, 'SFMono-Regular', Consolas, monospace;
+  font-variant-numeric: tabular-nums;
   font-size: var(--type-caption);
 }
 
