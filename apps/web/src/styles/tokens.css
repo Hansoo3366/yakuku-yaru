@@ -112,7 +112,8 @@
   --brown-11: #6f554c;
 
   /* ---------- 의미 토큰: 면 ---------- */
-  --color-canvas: var(--gray-1);
+  /* 페이지 바탕은 흰색. 옅은 회색 면(gray-2)이 그 위에 올라가야 구분된다. 다크는 gray-1. */
+  --color-canvas: #ffffff;
   /* 페이지 바탕 */
   --color-paper: #ffffff;
   /* 카드·패널·입력창 면 */
@@ -314,6 +315,7 @@ html[data-theme='dark'] {
   --brown-4: #2f2724;
   --brown-11: #c7ab9f;
 
+  --color-canvas: var(--gray-1);
   --color-paper: var(--gray-2);
   --color-paper-deep: var(--gray-3);
   --color-surface-soft: var(--gray-3);

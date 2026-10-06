@@ -85,18 +85,18 @@ Yakuku Yaru는 Tailwind CSS와 shadcn/ui를 사용하지 않고, 서비스에 �
 
 **면과 선**
 
-| Token                                                        | 참조                                              | Usage                  |
-| ------------------------------------------------------------ | ------------------------------------------------- | ---------------------- |
-| `--color-canvas`                                             | `gray-1`                                          | 페이지 바탕 (`body`)   |
-| `--color-paper`                                              | `#FFFFFF` (dark `gray-2`)                         | 카드·패널·입력창 면    |
-| `--color-surface-soft`                                       | `gray-2` (dark `gray-3`)                          | 옅은 구분 면           |
-| `--color-surface-card`, `--color-paper-deep`                 | `gray-3` / `gray-2` (dark `gray-4` / `gray-3`)    | 카드 안의 보조 면, 칩  |
-| `--color-surface-strong`                                     | `gray-5` (dark `gray-6`)                          | 강조 면, 비활성 컨트롤 |
-| `--color-line`                                               | `gray-4` (dark `gray-5`)                          | 기본 선                |
-| `--color-line-strong`                                        | `gray-6` (dark `gray-7`)                          | 강한 선                |
-| `--color-night-navy`, `--home-night`, `--color-surface-dark` | `navy-9`                                          | 어두운 패널, 표 머리   |
-| `--color-night-navy-soft`, `--home-night-soft`               | `navy-10`                                         | 어두운 패널의 보조 면  |
-| `--color-brand` / `--color-brand-active`                     | `navy-9` / `navy-10` (dark `navy-10` / `navy-11`) | 주 버튼 / hover        |
+| Token                                                        | 참조                                              | Usage                                                                      |
+| ------------------------------------------------------------ | ------------------------------------------------- | -------------------------------------------------------------------------- |
+| `--color-canvas`                                             | `#FFFFFF` (dark `gray-1`)                         | 페이지 바탕 (`body`). 흰색이어야 그 위의 옅은 회색 면(`gray-2`)이 구분된다 |
+| `--color-paper`                                              | `#FFFFFF` (dark `gray-2`)                         | 카드·패널·입력창 면                                                        |
+| `--color-surface-soft`                                       | `gray-2` (dark `gray-3`)                          | 옅은 구분 면                                                               |
+| `--color-surface-card`, `--color-paper-deep`                 | `gray-3` / `gray-2` (dark `gray-4` / `gray-3`)    | 카드 안의 보조 면, 칩                                                      |
+| `--color-surface-strong`                                     | `gray-5` (dark `gray-6`)                          | 강조 면, 비활성 컨트롤                                                     |
+| `--color-line`                                               | `gray-4` (dark `gray-5`)                          | 기본 선                                                                    |
+| `--color-line-strong`                                        | `gray-6` (dark `gray-7`)                          | 강한 선                                                                    |
+| `--color-night-navy`, `--home-night`, `--color-surface-dark` | `navy-9`                                          | 어두운 패널, 표 머리                                                       |
+| `--color-night-navy-soft`, `--home-night-soft`               | `navy-10`                                         | 어두운 패널의 보조 면                                                      |
+| `--color-brand` / `--color-brand-active`                     | `navy-9` / `navy-10` (dark `navy-10` / `navy-11`) | 주 버튼 / hover                                                            |
 
 **글자**
 
