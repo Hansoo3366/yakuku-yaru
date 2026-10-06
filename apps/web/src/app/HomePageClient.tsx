@@ -4,7 +4,7 @@
 
 import Link from 'next/link';
 import { ArrowUpRight, CalendarDays, ChevronRight, MapPin } from 'lucide-react';
-import { useEffect, useMemo, useRef } from 'react';
+import { useMemo } from 'react';
 import { type AttendanceRecord } from '@/lib/attendance-api';
 import { computeAttendanceStatsFromRecords } from '@/lib/attendance-stats';
 import { TeamStandingsTable } from '@/components/TeamStandingsTable';
@@ -14,6 +14,11 @@ import { SeasonProjectionTable } from '@/components/SeasonProjectionTable';
 import { PublicHome } from './PublicHome';
 import { useInitialSignedIn } from '@/components/AppProviders';
 import { HonorTitleSwiper } from '@/components/HonorTitleSwiper';
+import {
+  SeasonTimeline,
+  type SeasonTimelineSlide,
+} from '@/components/SeasonTimeline';
+import { getStadiumShortName } from '@/lib/stadium-name';
 import { getGameStatusTone } from '@/lib/game-status';
 import { isGameCancelled } from '@/lib/attendance-game';
 import { resolveAttendanceOutcome } from '@/lib/attendance-score';
@@ -36,6 +41,7 @@ import {
   formatKoreanMonthDay,
   formatKoreanTime,
   formatKoreanWeekday,
+  getKoreaDateString,
 } from '@/lib/date-format';
 import { josa } from '@/lib/josa';
 
@@ -160,7 +166,8 @@ export function HomePageClient({
           new Date(b.game.gameDate).getTime() -
           new Date(a.game.gameDate).getTime(),
       )
-      .slice(0, 3);
+      // 타임라인에서 왼쪽으로 넘겨 볼 수 있도록 최근 기록을 넉넉히 둔다.
+      .slice(0, 10);
   }, [attendanceRecords]);
   const stats = useMemo(
     () =>
@@ -174,19 +181,151 @@ export function HomePageClient({
   );
   const seasonProjection = seasonProjectionQuery.data ?? null;
   const seasonProjectionLoading = seasonProjectionQuery.isLoading;
-  // 좁은 화면에서는 타임라인이 옆으로 넘치므로, 처음에 '오늘' 칸이 왼쪽에 오도록 밀어 둔다.
-  const todayMarkerRef = useRef<HTMLLIElement>(null);
+  // 타임라인: 최근 기록 → 다가오는 경기. 오늘 경기 칸을 처음 가운데에 둔다.
+  const timeline = useMemo(() => {
+    const todayKey = getKoreaDateString();
+    const recordGameIds = new Set(recentRecords.map((record) => record.gameId));
+    // 오늘 경기를 이미 기록했으면 기록 칸 하나만 남긴다.
+    const nextGames = upcomingGames.filter(
+      (game) => !recordGameIds.has(game.id),
+    );
+    const getOpponent = (game: Game) =>
+      game.homeTeam.id === favoriteTeam?.id
+        ? game.awayTeam
+        : game.awayTeam.id === favoriteTeam?.id
+          ? game.homeTeam
+          : null;
+    const renderTeam = (game: Game) => {
+      const opponent = getOpponent(game);
 
-  useEffect(() => {
-    const marker = todayMarkerRef.current;
-    const strip = marker?.parentElement;
+      // 홈·원정 글자 대신 구장 이름. 구장이 곧 홈·원정을 말해 준다.
+      return opponent ? (
+        <span className="season-tile__team">
+          <img alt="" src={getTeamLogoSrc(opponent)} />
+          <strong>{opponent.shortName}</strong>
+          <small>{getStadiumShortName(game.stadium)}</small>
+        </span>
+      ) : (
+        <span className="season-tile__team">
+          <img alt="" src={getTeamLogoSrc(game.awayTeam)} />
+          <strong>
+            {game.awayTeam.shortName} vs {game.homeTeam.shortName}
+          </strong>
+          <small>{getStadiumShortName(game.stadium)}</small>
+        </span>
+      );
+    };
 
-    if (!marker || !strip || strip.scrollWidth <= strip.clientWidth) {
-      return;
+    const slides: SeasonTimelineSlide[] = [
+      ...[...recentRecords].reverse().map((record) => {
+        const game = record.game as Game;
+        const parts = formatDateParts(game.gameDate);
+        const favoriteIsHome = game.homeTeam.id === favoriteTeam?.id;
+        const hasScore = game.homeScore !== null && game.awayScore !== null;
+        const outcome = isGameCancelled(game)
+          ? 'cancelled'
+          : (resolveAttendanceOutcome(record, favoriteTeam?.id) ?? 'unknown');
+
+        return {
+          key: `record-${record.id}`,
+          isToday: game.gameDate.slice(0, 10) === todayKey,
+          content: (
+            <Link
+              className="season-tile season-tile--past"
+              data-outcome={outcome}
+              href={`/attendance/${record.id}`}
+              prefetch={false}
+            >
+              <span className="season-tile__head">
+                <time dateTime={game.gameDate}>
+                  {parts.month}.{parts.day} {parts.weekday}
+                </time>
+                <span className="season-tile__tag">
+                  {record.watchType === 'home' ? '집관' : '직관'}
+                </span>
+              </span>
+              {renderTeam(game)}
+              <span className="season-tile__foot">
+                {hasScore ? (
+                  <span className="season-tile__score">
+                    {favoriteIsHome ? game.homeScore : game.awayScore}
+                    <i aria-hidden="true">:</i>
+                    {favoriteIsHome ? game.awayScore : game.homeScore}
+                  </span>
+                ) : (
+                  <span className="season-tile__note">기록</span>
+                )}
+                <span className="season-tile__result">
+                  {formatAttendanceResultLabel(record, favoriteTeam?.id)}
+                </span>
+              </span>
+            </Link>
+          ),
+        };
+      }),
+      ...nextGames.map((game) => {
+        const parts = formatDateParts(game.gameDate);
+        const tone = getGameStatusTone(game);
+        const favoriteIsHome = game.homeTeam.id === favoriteTeam?.id;
+        const pitcher = favoriteIsHome
+          ? game.probablePitchers?.home
+          : game.probablePitchers?.away;
+
+        return {
+          key: `game-${game.id}`,
+          isToday: game.gameDate.slice(0, 10) === todayKey,
+          content: (
+            <Link
+              className="season-tile season-tile--next"
+              data-outcome={tone === 'cancelled' ? 'cancelled' : undefined}
+              href={`/games/${game.id}`}
+            >
+              <span className="season-tile__head">
+                <time dateTime={game.gameDate}>
+                  {parts.month}.{parts.day} {parts.weekday}
+                </time>
+                <span className="season-tile__time">{parts.time}</span>
+              </span>
+              {renderTeam(game)}
+              <span className="season-tile__foot">
+                <span className="season-tile__note">
+                  {tone === 'cancelled'
+                    ? getCancellationLabel(game.cancellationReason)
+                    : pitcher
+                      ? `선발 ${pitcher.name}`
+                      : '선발 발표 전'}
+                </span>
+              </span>
+            </Link>
+          ),
+        };
+      }),
+    ];
+
+    if (nextGames.length === 0) {
+      slides.push({
+        key: 'empty',
+        isToday: false,
+        content: (
+          <div className="season-tile season-tile--empty">
+            <span>가까운 일정이 없어요</span>
+            <Link href="/calendar">캘린더에서 다른 달 보기</Link>
+          </div>
+        ),
+      });
     }
 
-    strip.scrollLeft = Math.max(0, marker.offsetLeft - 12);
-  }, [recentRecords.length, upcomingGames.length]);
+    const todayIndex = slides.findIndex((slide) => slide.isToday);
+    const firstNextIndex = recentRecords.length;
+
+    return {
+      slides,
+      startIndex:
+        todayIndex >= 0
+          ? todayIndex
+          : Math.min(firstNextIndex, slides.length - 1),
+    };
+  }, [favoriteTeam?.id, recentRecords, upcomingGames]);
 
   const nextGame = upcomingGames[0] ?? null;
   const nextGameDate = nextGame ? formatDateParts(nextGame.gameDate) : null;
@@ -370,145 +509,10 @@ export function HomePageClient({
           {authState === 'checking' ? (
             <Skeleton height={164} radius={12} />
           ) : (
-            <ol aria-label="최근 기록과 다가오는 경기" className="season-strip">
-              {[...recentRecords].reverse().map((record) => {
-                const game = record.game;
-                const parts = formatDateParts(game.gameDate);
-                const favoriteIsHome = game.homeTeam.id === favoriteTeam?.id;
-                const favoriteIsAway = game.awayTeam.id === favoriteTeam?.id;
-                const opponent = favoriteIsHome
-                  ? game.awayTeam
-                  : favoriteIsAway
-                    ? game.homeTeam
-                    : null;
-                const hasScore =
-                  game.homeScore !== null && game.awayScore !== null;
-                const outcome = isGameCancelled(game)
-                  ? 'cancelled'
-                  : (resolveAttendanceOutcome(record, favoriteTeam?.id) ??
-                    'unknown');
-
-                return (
-                  <li key={`record-${record.id}`}>
-                    <Link
-                      className="season-tile season-tile--past"
-                      data-outcome={outcome}
-                      href={`/attendance/${record.id}`}
-                      prefetch={false}
-                    >
-                      <span className="season-tile__head">
-                        <time dateTime={game.gameDate}>
-                          {parts.month}.{parts.day} {parts.weekday}
-                        </time>
-                        <span className="season-tile__tag">
-                          {record.watchType === 'home' ? '집관' : '직관'}
-                        </span>
-                      </span>
-                      {opponent ? (
-                        <span className="season-tile__team">
-                          <img alt="" src={getTeamLogoSrc(opponent)} />
-                          <strong>{opponent.shortName}</strong>
-                          <small>{favoriteIsHome ? '홈' : '원정'}</small>
-                        </span>
-                      ) : (
-                        <span className="season-tile__team">
-                          <img alt="" src={getTeamLogoSrc(game.awayTeam)} />
-                          <strong>
-                            {game.awayTeam.shortName} vs{' '}
-                            {game.homeTeam.shortName}
-                          </strong>
-                        </span>
-                      )}
-                      <span className="season-tile__foot">
-                        {hasScore ? (
-                          <span className="season-tile__score">
-                            {favoriteIsHome ? game.homeScore : game.awayScore}
-                            <i aria-hidden="true">:</i>
-                            {favoriteIsHome ? game.awayScore : game.homeScore}
-                          </span>
-                        ) : (
-                          <span className="season-tile__note">기록</span>
-                        )}
-                        <span className="season-tile__result">
-                          {formatAttendanceResultLabel(
-                            record,
-                            favoriteTeam?.id,
-                          )}
-                        </span>
-                      </span>
-                    </Link>
-                  </li>
-                );
-              })}
-
-              <li
-                aria-hidden="true"
-                className="season-strip__today"
-                ref={todayMarkerRef}
-              >
-                <span>오늘</span>
-              </li>
-
-              {upcomingGames.length ? (
-                upcomingGames.map((game) => {
-                  const parts = formatDateParts(game.gameDate);
-                  const favoriteIsHome = game.homeTeam.id === favoriteTeam?.id;
-                  const favoriteIsAway = game.awayTeam.id === favoriteTeam?.id;
-                  const opponent = favoriteIsHome
-                    ? game.awayTeam
-                    : favoriteIsAway
-                      ? game.homeTeam
-                      : null;
-                  const tone = getGameStatusTone(game);
-
-                  return (
-                    <li key={`game-${game.id}`}>
-                      <Link
-                        className="season-tile season-tile--next"
-                        data-outcome={
-                          tone === 'cancelled' ? 'cancelled' : undefined
-                        }
-                        href={`/games/${game.id}`}
-                      >
-                        <span className="season-tile__head">
-                          <time dateTime={game.gameDate}>
-                            {parts.month}.{parts.day} {parts.weekday}
-                          </time>
-                          <span className="season-tile__time">
-                            {parts.time}
-                          </span>
-                        </span>
-                        {opponent ? (
-                          <span className="season-tile__team">
-                            <img alt="" src={getTeamLogoSrc(opponent)} />
-                            <strong>{opponent.shortName}</strong>
-                            <small>{favoriteIsHome ? '홈' : '원정'}</small>
-                          </span>
-                        ) : (
-                          <span className="season-tile__team">
-                            <img alt="" src={getTeamLogoSrc(game.awayTeam)} />
-                            <strong>
-                              {game.awayTeam.shortName} vs{' '}
-                              {game.homeTeam.shortName}
-                            </strong>
-                          </span>
-                        )}
-                        <span className="season-tile__foot">
-                          <span className="season-tile__note">
-                            {tone === 'cancelled' ? '취소' : game.stadium}
-                          </span>
-                        </span>
-                      </Link>
-                    </li>
-                  );
-                })
-              ) : (
-                <li className="season-strip__empty">
-                  <span>가까운 일정이 없어요</span>
-                  <Link href="/calendar">캘린더에서 다른 달 보기</Link>
-                </li>
-              )}
-            </ol>
+            <SeasonTimeline
+              initialIndex={timeline.startIndex}
+              slides={timeline.slides}
+            />
           )}
         </div>
       </section>

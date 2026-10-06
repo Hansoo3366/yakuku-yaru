@@ -95,6 +95,7 @@
 }
 
 .page-shell--dashboard {
+  grid-template-columns: minmax(0, 1fr);
   max-width: 1240px;
   padding-top: clamp(20px, 3vw, 40px);
 }
@@ -389,6 +390,9 @@
 .season {
   display: grid;
   gap: var(--space-4);
+  /* 그리드 칸이 Swiper 내용 폭만큼 늘어나지 않게 한다. */
+  grid-template-columns: minmax(0, 1fr);
+  min-width: 0;
 }
 
 .season__link {
@@ -515,22 +519,80 @@
   font-size: var(--text-sm);
 }
 
-/* ---------- 타임라인 ---------- */
-.season-strip {
-  display: flex;
-  gap: var(--space-2);
-  list-style: none;
-  margin: 0;
-  overflow-x: auto;
-  padding: 2px 2px 6px;
-  scroll-snap-type: x proximity;
-  scrollbar-width: thin;
+/* ---------- 타임라인 ----------
+ * 최근 기록 → 다가오는 경기를 Swiper 로 넘긴다. 처음에는 오늘 칸이 가운데 온다.
+ * 좌우 화살표는 칸 위에 겹쳐 두고, 끝에 닿으면 숨긴다. */
+.season-timeline {
+  min-width: 0;
+  position: relative;
 }
 
-.season-strip > li {
-  flex: 1 0 clamp(136px, 12vw, 160px);
-  min-width: 0;
-  scroll-snap-align: start;
+/* 오늘 배지가 카드 위로 올라오므로 위쪽에 자리를 둔다. */
+.season-swiper.swiper {
+  padding: 12px 2px 4px;
+}
+
+.season-swiper .swiper-slide.season-slide {
+  height: auto;
+  position: relative;
+  width: clamp(148px, 13vw, 172px);
+}
+
+.season-timeline__nav {
+  align-items: center;
+  background: var(--color-paper);
+  border: 1px solid var(--home-line);
+  border-radius: 50%;
+  box-shadow: var(--shadow-md);
+  color: var(--home-ink);
+  display: inline-flex;
+  height: 36px;
+  justify-content: center;
+  position: absolute;
+  top: calc(50% + 4px);
+  transform: translateY(-50%);
+  transition:
+    opacity 140ms ease,
+    border-color 140ms ease;
+  width: 36px;
+  z-index: 2;
+}
+
+.season-timeline__nav:hover:not(:disabled) {
+  border-color: var(--home-ink);
+}
+
+.season-timeline__nav:disabled {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.season-timeline__nav--prev {
+  left: -12px;
+}
+
+.season-timeline__nav--next {
+  right: -12px;
+}
+
+/* 오늘 칸: 팀 컬러 테두리 + 카드 위 배지 (헤더 밖에서 팀 컬러를 쓰는 작은 표시) */
+.season-slide.is-today .season-tile {
+  border-color: var(--team-color, var(--home-ink));
+  box-shadow: 0 0 0 1px var(--team-color, var(--home-ink));
+}
+
+.season-slide__badge {
+  background: var(--team-color, var(--home-ink));
+  border-radius: var(--radius-pill);
+  color: var(--team-color-contrast, var(--color-white));
+  font-size: var(--text-xs);
+  font-weight: 700;
+  left: 12px;
+  line-height: 1;
+  padding: 5px 9px;
+  position: absolute;
+  top: -10px;
+  z-index: 1;
 }
 
 .season-tile {
@@ -587,12 +649,9 @@
 
 .season-tile__team strong {
   font-size: var(--text-md);
-  letter-spacing: -0.02em;
+  letter-spacing: var(--tracking-heading);
   line-height: 1.2;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  max-width: 100%;
+  word-break: keep-all;
 }
 
 .season-tile__team small {
@@ -643,8 +702,8 @@
 
 /* 결과 색: 승은 붉은 틴트, 패는 푸른 틴트. 캘린더와 같은 규칙이다. */
 .season-tile[data-outcome='win'] {
-  background: color-mix(in srgb, var(--color-win) 9%, var(--color-paper));
-  border-color: color-mix(in srgb, var(--color-win) 30%, var(--color-paper));
+  background: var(--color-win-tint);
+  border-color: var(--color-win-line);
 }
 
 .season-tile[data-outcome='win'] .season-tile__result {
@@ -652,8 +711,8 @@
 }
 
 .season-tile[data-outcome='lose'] {
-  background: color-mix(in srgb, var(--color-lose) 9%, var(--color-paper));
-  border-color: color-mix(in srgb, var(--color-lose) 28%, var(--color-paper));
+  background: var(--color-lose-tint);
+  border-color: var(--color-lose-line);
 }
 
 .season-tile[data-outcome='lose'] .season-tile__result {
@@ -679,50 +738,17 @@
   color: var(--home-ink);
 }
 
-/* 오늘 구분선 */
-.season-strip > .season-strip__today {
-  align-items: center;
-  display: flex;
-  flex: 0 0 auto;
-  justify-content: center;
-  padding: 0 2px;
-  position: relative;
-}
-
-.season-strip__today::before {
-  background: var(--team-color, var(--home-ink));
-  border-radius: 999px;
-  content: '';
-  height: 100%;
-  position: absolute;
-  width: 2px;
-}
-
-.season-strip__today span {
-  background: var(--team-color, var(--home-ink));
-  border-radius: 999px;
-  color: var(--team-color-contrast, var(--color-white));
-  font-size: var(--text-xs);
-  font-weight: 800;
-  line-height: 1;
-  padding: 5px 7px;
-  position: relative;
-}
-
-.season-strip > .season-strip__empty {
+/* 가까운 일정이 없을 때 */
+.season-tile--empty {
   align-content: center;
   background: var(--color-surface-soft);
-  border-radius: var(--radius-lg);
   color: var(--home-muted);
-  display: grid;
-  flex: 1 1 auto;
   font-size: var(--text-sm);
   gap: 4px;
   justify-items: start;
-  padding: var(--space-4);
 }
 
-.season-strip__empty a {
+.season-tile--empty a {
   color: var(--home-ink);
   font-weight: 700;
 }
@@ -759,20 +785,24 @@
     border-top: 1px solid var(--home-line);
   }
 
-  /* 한 화면에 안 들어가면 옆으로 민다. 마지막 칸이 살짝 잘려 보여 더 있다는 걸 알린다. */
-  .season-strip {
-    margin: 0 calc(var(--space-4) * -1);
-    padding: 2px var(--space-4) 6px;
-    scrollbar-width: none;
+  /* 좁은 화면에서는 화살표를 카드 안쪽 가장자리에 겹친다. */
+  .season-timeline__nav {
+    height: 32px;
+    width: 32px;
   }
 
-  .season-strip > li {
-    flex: 0 0 148px;
+  .season-timeline__nav--prev {
+    left: -6px;
+  }
+
+  .season-timeline__nav--next {
+    right: -6px;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .season-tile {
+  .season-tile,
+  .season-timeline__nav {
     transition: none;
   }
 }
