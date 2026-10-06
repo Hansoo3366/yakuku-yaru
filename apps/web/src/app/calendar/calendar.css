@@ -298,7 +298,7 @@ html[data-theme='dark'] .cal-seg button[aria-pressed='true'] {
 }
 
 .cal-day.is-outside .cal-time-group__label {
-  color: var(--color-muted-soft);
+  color: var(--color-muted);
 }
 
 .cal-day.is-today {
@@ -380,11 +380,12 @@ html[data-theme='dark'] .cal-seg button[aria-pressed='true'] {
 }
 
 .cal-time-group__label {
-  color: var(--color-muted);
+  /* 경기 줄은 회색 면이라 시간은 잉크색으로 또렷하게. */
+  color: var(--color-ink);
   font-size: var(--text-xs);
   font-variant-numeric: tabular-nums;
   font-weight: 700;
-  padding: 1px 2px 0;
+  padding: 2px 2px 0;
 }
 
 /* ---------- 경기 ---------- */
