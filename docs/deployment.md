@@ -332,13 +332,20 @@ NEXT_PUBLIC_SENTRY_DSN=
 - 요청 추적(tracing)과 세션 리플레이는 끄고 오류만 보냅니다. 소스맵은 올리지 않습니다.
 - Sentry 를 쓰면서 메일 알림도 받고 싶으면 `ERROR_ALERT_ENABLED=true` 를 따로 켭니다.
 
-`.env.production`만 수정했을 때는 Caddy만 재시작하면 안 되고, 해당 환경 변수를 사용하는 `api`와 필요 시 `web` 컨테이너를 다시 올려야 합니다.
+`.env.production`만 수정했을 때는 Caddy만 재시작하면 안 되고, 해당 환경 변수를 사용하는 `api`와 `web` 컨테이너를 다시 올려야 합니다.
 
-GitHub Actions 배포에서는 이미지를 Actions에서 빌드하므로 서버에서 `--build`를 붙이지 않습니다.
+**가장 쉬운 방법은 배포 워크플로를 다시 돌리는 것입니다.** GitHub 의 Actions → "Deploy to Google Cloud VM" → Run workflow, 또는 로컬에서 `gh workflow run deploy.yml --ref main`. 바뀐 값을 읽어 `api`·`web` 컨테이너가 새로 만들어집니다.
+
+서버에서 직접 올리려면 이미지 이름을 함께 넘겨야 합니다. 이미지는 Actions 에서 빌드해 `ghcr.io/<owner>/yakuku-yaru-{api,web}:<커밋 sha>` 로 올리고, compose 파일은 `API_IMAGE` / `WEB_IMAGE` 환경 변수로 그 이름을 받습니다. 빼먹으면 기본값 `yakuku-yaru-api:latest` 를 찾다가 `No such image` 로 실패합니다. (기존 컨테이너는 그대로 돌기 때문에 사이트가 멈추지는 않습니다.)
 
 ```bash
-docker compose --env-file .env.production -f docker-compose.prod.yml --profile proxy up -d --no-build api web gateway caddy
+# 지금 돌고 있는 컨테이너의 이미지 이름을 그대로 다시 쓴다
+export API_IMAGE=$(docker inspect -f '{{.Config.Image}}' yakuku-yaru-api-1)
+export WEB_IMAGE=$(docker inspect -f '{{.Config.Image}}' yakuku-yaru-web-1)
+docker compose --env-file .env.production -f docker-compose.prod.yml --profile proxy up -d --no-build api web
 ```
+
+서버에서 `--build` 는 붙이지 않습니다.
 
 ## 11. 데이터 보존
 
