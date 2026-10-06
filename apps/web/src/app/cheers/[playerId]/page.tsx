@@ -112,6 +112,7 @@ export default async function PlayerCheerPage({
 
   const cheerType = getPlayerCheerType(player);
   const youtubeId = player.youtubeId ?? extractYoutubeId(player.youtubeUrl);
+  const lyricSummary = summarizeLyrics(player.lyrics);
   const jsonLd = hasCheer(player)
     ? {
         '@context': 'https://schema.org',
@@ -134,11 +135,20 @@ export default async function PlayerCheerPage({
         ...(player.lyrics
           ? { lyrics: { '@type': 'CreativeWork', text: player.lyrics } }
           : {}),
-        ...(youtubeId
+        // Google 은 VideoObject 에 썸네일과 게시일이 없으면 검색 결과에 쓰지 않는다.
+        // 게시일은 이 사이트에 응원가를 등록한 날짜로 둔다. 그 값마저 없으면 영상 항목을 빼고 가사만 둔다.
+        ...(youtubeId && player.cheerUpdatedAt
           ? {
               video: {
                 '@type': 'VideoObject',
-                name: `${player.name} ${cheerType}`,
+                name: `${player.name} ${cheerType} 영상`,
+                description:
+                  `${player.teamName} ${player.name} 선수의 ${cheerType} 영상입니다.` +
+                  (lyricSummary ? ` ${lyricSummary}` : ''),
+                thumbnailUrl: [
+                  `https://i.ytimg.com/vi/${youtubeId}/hqdefault.jpg`,
+                ],
+                uploadDate: player.cheerUpdatedAt,
                 embedUrl: `https://www.youtube-nocookie.com/embed/${youtubeId}`,
               },
             }

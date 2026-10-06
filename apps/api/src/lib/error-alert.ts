@@ -1,6 +1,7 @@
 import os from 'node:os';
 import { env } from '../config/env.js';
 import { createSmtpTransport, isSmtpConfigured } from './mailer.js';
+import { captureError, flushSentry } from './sentry.js';
 
 type AlertContext = Record<string, string | number | null | undefined>;
 
@@ -11,6 +12,8 @@ export type ErrorAlertInput = {
   title: string;
   error: unknown;
   context?: AlertContext;
+  /** 로그인한 사용자의 요청이면 그 사용자 id. Sentry 에서 사용자별로 묶인다. */
+  userId?: number | null;
 };
 
 const SEND_TIMEOUT_MS = 10_000;
@@ -67,10 +70,17 @@ function takeAlertSlot(key: string, now: number) {
 }
 
 /**
- * 관리자에게 서버 오류 메일을 보낸다. 실패해도 절대 throw 하지 않는다.
- * 크래시 직전처럼 발송 완료를 기다려야 할 때만 await 한다.
+ * 서버 오류를 Sentry 에 보내고, 메일 알림이 켜져 있으면 관리자에게 메일도 보낸다.
+ * 실패해도 절대 throw 하지 않는다. 크래시 직전처럼 발송 완료를 기다려야 할 때만 await 한다.
  */
 export async function sendErrorAlert(input: ErrorAlertInput) {
+  captureError({
+    source: input.source,
+    error: input.error,
+    context: input.context,
+    userId: input.userId,
+  });
+
   if (!env.errorAlert.enabled) return false;
 
   if (!isSmtpConfigured() || env.errorAlert.recipients.length === 0) {
@@ -179,6 +189,8 @@ export function installCrashAlerts(source: string) {
       title: `${source} 프로세스 비정상 종료`,
       error,
       context: { 원인: origin, 명령: process.argv.slice(2).join(' ') },
-    }).finally(() => process.exit(1));
+    })
+      .then(() => flushSentry())
+      .finally(() => process.exit(1));
   });
 }

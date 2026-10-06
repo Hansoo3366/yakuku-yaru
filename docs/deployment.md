@@ -301,7 +301,36 @@ SMTP_SECURE=true
 SMTP_USER=your-gmail@gmail.com
 SMTP_PASSWORD=your-gmail-app-password
 SMTP_FROM="야크크 야르 <your-gmail@gmail.com>"
+
+# 오류 추적 (아래 "오류 추적 (Sentry)" 참고). 비워 두면 메일 알림으로 대신한다.
+SENTRY_DSN=
+NEXT_PUBLIC_SENTRY_DSN=
 ```
+
+### 오류 추적 (Sentry)
+
+서버·브라우저에서 난 오류는 [Sentry](https://sentry.io) 로 모읍니다. DSN 이 없으면 추적이 꺼진 채로 동작하고, 그때는 production 에서 오류 메일 알림(`ERROR_ALERT_*`)이 대신 켜집니다.
+
+1. Sentry 에서 프로젝트를 두 개 만듭니다: 플랫폼 **Node.js** (API) 하나, **Next.js** (웹) 하나. 각 프로젝트의 DSN 을 복사합니다.
+2. 서버의 `.env.production` 에 추가합니다.
+
+   ```env
+   # API 오류 (Node.js 프로젝트 DSN)
+   SENTRY_DSN=https://...@o0.ingest.sentry.io/0
+   # 웹 오류 (Next.js 프로젝트 DSN). 서버 렌더링과 브라우저 양쪽에 쓰인다.
+   NEXT_PUBLIC_SENTRY_DSN=https://...@o0.ingest.sentry.io/0
+   SENTRY_ENVIRONMENT=production
+   ```
+
+3. 브라우저 쪽 DSN 은 빌드 때 번들에 들어가므로 GitHub repository secret 에도 `NEXT_PUBLIC_SENTRY_DSN` 을 같은 값으로 넣습니다. 배포 워크플로가 웹 이미지를 빌드할 때 이 값을 씁니다.
+4. 다음 배포부터 적용됩니다. 릴리스 이름은 배포한 커밋의 sha(`SENTRY_RELEASE`)로 자동으로 붙습니다.
+
+동작 방식:
+
+- API: 500 응답, 처리되지 않은 예외, KBO 동기화 실패가 요청 경로·사용자 id 와 함께 올라갑니다. 브라우저가 이미지 요청을 중간에 취소한 경우(`ECONNABORTED`)는 오류가 아니므로 보내지 않습니다.
+- 웹: 서버 컴포넌트·라우트 핸들러 오류와 브라우저 오류가 올라갑니다. 브라우저는 `sentry.io` 로 직접 보내지 않고 같은 도메인의 `/monitoring` 을 거치므로 CSP 를 바꾸지 않아도 됩니다.
+- 요청 추적(tracing)과 세션 리플레이는 끄고 오류만 보냅니다. 소스맵은 올리지 않습니다.
+- Sentry 를 쓰면서 메일 알림도 받고 싶으면 `ERROR_ALERT_ENABLED=true` 를 따로 켭니다.
 
 `.env.production`만 수정했을 때는 Caddy만 재시작하면 안 되고, 해당 환경 변수를 사용하는 `api`와 필요 시 `web` 컨테이너를 다시 올려야 합니다.
 

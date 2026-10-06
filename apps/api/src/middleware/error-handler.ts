@@ -3,7 +3,42 @@ import multer from 'multer';
 import { notifyError } from '../lib/error-alert.js';
 import { HttpError } from '../utils/http-error.js';
 
-export const errorHandler: ErrorRequestHandler = (error, req, res, _next) => {
+/**
+ * 클라이언트가 응답을 받다 말고 연결을 끊었을 때 Node/Express 가 내는 오류.
+ * 페이지를 떠나거나 이미지 로딩을 취소한 것이라 서버 잘못이 아니므로 알리지 않는다.
+ */
+const CLIENT_ABORT_CODES = new Set(['ECONNABORTED', 'ECONNRESET', 'EPIPE']);
+
+function isClientAbort(
+  error: unknown,
+  req: Parameters<ErrorRequestHandler>[1],
+) {
+  if (req.aborted) return true;
+
+  return (
+    error instanceof Error &&
+    'code' in error &&
+    typeof error.code === 'string' &&
+    CLIENT_ABORT_CODES.has(error.code)
+  );
+}
+
+export const errorHandler: ErrorRequestHandler = (error, req, res, next) => {
+  if (isClientAbort(error, req)) {
+    // 응답할 상대가 없다. 연결만 정리한다.
+    if (!res.headersSent) {
+      res.destroy();
+    }
+    return;
+  }
+
+  // 응답을 이미 보내기 시작했으면 JSON 으로 바꿔 보낼 수 없다. Express 기본 처리(연결 종료)에 맡긴다.
+  if (res.headersSent) {
+    console.error(error);
+    next(error);
+    return;
+  }
+
   if (error instanceof HttpError) {
     res.status(error.statusCode).json({
       code: error.code,
@@ -59,10 +94,10 @@ export const errorHandler: ErrorRequestHandler = (error, req, res, _next) => {
     error,
     context: {
       요청: `${req.method} ${path}`,
-      사용자ID: req.user?.id,
       IP: req.ip,
       'User-Agent': req.header('user-agent'),
     },
+    userId: req.user?.id,
   });
 
   res.status(500).json({

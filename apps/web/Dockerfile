@@ -12,8 +12,11 @@ WORKDIR /app
 
 ARG NEXT_PUBLIC_API_URL
 ARG NEXT_PUBLIC_CONTACT_EMAIL=contact@yakuku-yaru.today
+# 브라우저 오류 추적용 Sentry DSN. 비어 있으면 추적이 꺼진 채로 빌드된다.
+ARG NEXT_PUBLIC_SENTRY_DSN=
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_CONTACT_EMAIL=$NEXT_PUBLIC_CONTACT_EMAIL
+ENV NEXT_PUBLIC_SENTRY_DSN=$NEXT_PUBLIC_SENTRY_DSN
 
 COPY --from=deps /app/node_modules ./node_modules
 COPY package.json package-lock.json tsconfig.base.json ./

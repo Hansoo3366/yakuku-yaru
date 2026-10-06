@@ -60,6 +60,10 @@ services:
       ERROR_ALERT_ENABLED: ${ERROR_ALERT_ENABLED:-}
       ERROR_ALERT_EMAIL: ${ERROR_ALERT_EMAIL:-}
       ERROR_ALERT_COOLDOWN_MS: ${ERROR_ALERT_COOLDOWN_MS:-600000}
+      # Sentry 오류 추적. DSN 이 비어 있으면 꺼진다. (DSN 이 있으면 메일 알림은 기본으로 꺼진다)
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      SENTRY_ENVIRONMENT: ${SENTRY_ENVIRONMENT:-production}
+      SENTRY_RELEASE: ${SENTRY_RELEASE:-}
       UPLOAD_DIR: uploads
       MYSQL_HOST: mysql
       MYSQL_PORT: 3306
@@ -79,6 +83,7 @@ services:
       args:
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
         NEXT_PUBLIC_CONTACT_EMAIL: ${NEXT_PUBLIC_CONTACT_EMAIL:-contact@yakuku-yaru.today}
+        NEXT_PUBLIC_SENTRY_DSN: ${NEXT_PUBLIC_SENTRY_DSN:-}
     restart: unless-stopped
     security_opt:
       - no-new-privileges:true
@@ -90,6 +95,9 @@ services:
       NODE_ENV: production
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
       NEXT_PUBLIC_CONTACT_EMAIL: ${NEXT_PUBLIC_CONTACT_EMAIL:-contact@yakuku-yaru.today}
+      # 서버 렌더링 쪽 오류 추적. 브라우저 쪽은 빌드 인자(NEXT_PUBLIC_SENTRY_DSN)로 들어간다.
+      SENTRY_DSN: ${NEXT_PUBLIC_SENTRY_DSN:-}
+      SENTRY_ENVIRONMENT: ${SENTRY_ENVIRONMENT:-production}
     ports:
       - '127.0.0.1:${WEB_PORT:-3000}:3000'
 

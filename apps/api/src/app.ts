@@ -81,6 +81,11 @@ export function createApp() {
       (error) => {
         if (!error) return;
 
+        // 브라우저가 이미지 요청을 중간에 취소한 경우. 오류가 아니므로 조용히 끝낸다.
+        if ('code' in error && error.code === 'ECONNABORTED') {
+          return;
+        }
+
         if ('status' in error && error.status === 404) {
           next(
             new HttpError(404, 'ASSET_NOT_FOUND', '이미지를 찾을 수 없습니다.'),

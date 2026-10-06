@@ -7,6 +7,7 @@ import {
   fetchPublicGameResult,
 } from '@/lib/server-baseball-api';
 import { getAbsoluteUrl } from '@/lib/site-url';
+import { getTeamLogoSrc } from '@/lib/team-logo';
 import { GameDetailPageClient } from './GameDetailPageClient';
 
 export const revalidate = 3600;
@@ -24,14 +25,14 @@ function parseGameId(value: string) {
 }
 
 function hasScore(game: Game) {
-  return typeof game.awayScore === 'number' && typeof game.homeScore === 'number';
+  return (
+    typeof game.awayScore === 'number' && typeof game.homeScore === 'number'
+  );
 }
 
 function buildGameTitle(game: Game) {
   const matchup = `${game.awayTeam.shortName} vs ${game.homeTeam.shortName}`;
-  const score = hasScore(game)
-    ? ` ${game.awayScore} : ${game.homeScore}`
-    : '';
+  const score = hasScore(game) ? ` ${game.awayScore} : ${game.homeScore}` : '';
 
   return `${matchup}${score} - ${formatKoreanDateTime(game.gameDate)} KBO 경기`;
 }
@@ -68,13 +69,22 @@ function buildGameKeywords(game: Game) {
 }
 
 /** 검색·AI 가 경기를 구조화된 데이터로 읽을 수 있게 schema.org SportsEvent 로 표현한다. */
+/** KBO 경기는 보통 3시간 안팎이라, 끝난 시각 정보가 없으니 시작 3시간 30분 뒤를 종료로 본다. */
+const TYPICAL_GAME_DURATION_MS = 3.5 * 60 * 60 * 1000;
+
 function buildGameJsonLd(game: Game) {
   const url = getAbsoluteUrl(`/games/${game.id}`);
+  const startedAt = new Date(game.gameDate);
+  const endDate = new Date(
+    startedAt.getTime() + TYPICAL_GAME_DURATION_MS,
+  ).toISOString();
+  const isUpcoming = game.status !== 'cancelled' && startedAt > new Date();
   const team = (item: Game['homeTeam']) => ({
     '@type': 'SportsTeam',
     name: item.name,
     alternateName: item.shortName,
     sport: 'Baseball',
+    logo: getAbsoluteUrl(getTeamLogoSrc(item)),
   });
 
   return {
@@ -84,7 +94,9 @@ function buildGameJsonLd(game: Game) {
     description: buildGameDescription(game),
     sport: 'Baseball',
     startDate: game.gameDate,
+    endDate,
     url,
+    image: [getAbsoluteUrl('/main_kv.jpg')],
     eventStatus:
       game.status === 'cancelled'
         ? 'https://schema.org/EventCancelled'
@@ -98,7 +110,23 @@ function buildGameJsonLd(game: Game) {
     homeTeam: team(game.homeTeam),
     awayTeam: team(game.awayTeam),
     competitor: [team(game.awayTeam), team(game.homeTeam)],
-    organizer: { '@type': 'SportsOrganization', name: 'KBO 리그' },
+    performer: [team(game.awayTeam), team(game.homeTeam)],
+    organizer: {
+      '@type': 'SportsOrganization',
+      name: 'KBO 리그',
+      url: 'https://www.koreabaseball.com',
+    },
+    // 예매 정보는 앞으로 열리는 경기에만 뜻이 있다. 가격은 구단·좌석마다 달라 적지 않는다.
+    ...(isUpcoming && game.ticketUrl
+      ? {
+          offers: {
+            '@type': 'Offer',
+            url: game.ticketUrl,
+            availability: 'https://schema.org/InStock',
+            ...(game.ticketOpenAt ? { validFrom: game.ticketOpenAt } : {}),
+          },
+        }
+      : {}),
     ...(hasScore(game)
       ? {
           additionalProperty: [

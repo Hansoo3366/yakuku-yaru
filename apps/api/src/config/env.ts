@@ -47,8 +47,17 @@ const allowedOrigins = Array.from(
   ),
 );
 
+const sentryDsn = process.env.SENTRY_DSN?.trim() || null;
+
 export const env = {
   nodeEnv,
+  /** Sentry 오류 추적. DSN 이 없으면 꺼진다. */
+  sentry: {
+    dsn: sentryDsn,
+    environment: process.env.SENTRY_ENVIRONMENT?.trim() || nodeEnv,
+    /** 배포 이미지의 git sha. 없으면 Sentry 가 release 없이 기록한다. */
+    release: process.env.SENTRY_RELEASE?.trim() || null,
+  },
   apiPort: Number(process.env.API_PORT ?? 4000),
   appUrl,
   allowedOrigins,
@@ -69,10 +78,15 @@ export const env = {
     from: process.env.SMTP_FROM ?? process.env.SMTP_USER ?? '',
   },
   errorAlert: {
-    /** 기본값: production에서만 켬 */
+    /**
+     * 오류 메일 알림. 기본값: production 이면서 Sentry 를 쓰지 않을 때만 켬.
+     * Sentry DSN 이 있으면 오류는 Sentry 로 가고, 메일은 ERROR_ALERT_ENABLED=true 로 따로 켜야 한다.
+     */
     enabled:
       process.env.ERROR_ALERT_ENABLED === 'true' ||
-      (process.env.ERROR_ALERT_ENABLED !== 'false' && nodeEnv === 'production'),
+      (process.env.ERROR_ALERT_ENABLED !== 'false' &&
+        nodeEnv === 'production' &&
+        !sentryDsn),
     /** 쉼표로 여러 명 지정 가능. 비우면 SMTP_USER로 발송 */
     recipients: (process.env.ERROR_ALERT_EMAIL || process.env.SMTP_USER || '')
       .split(',')
