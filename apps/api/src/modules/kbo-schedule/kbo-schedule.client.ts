@@ -6,8 +6,11 @@ const KBO_SCHEDULE_PAGE_URL =
 const KBO_SCHEDULE_LIST_URL =
   'https://www.koreabaseball.com/ws/Schedule.asmx/GetScheduleList';
 
-/** KBO 정규시즌 (시범+정규+포스트 — 페이지 기본값과 동일) */
-export const KBO_DEFAULT_SERIES_IDS = '0,9,6';
+/**
+ * 정규시즌(0,9,6) + 포스트시즌(3,4,5,7: 준PO·WC·PO·KS).
+ * KBO 일정 페이지는 둘을 다른 탭으로 나눠 부르지만, 한 번에 넘기면 대진이 확정된 경기만 합쳐서 내려준다.
+ */
+export const KBO_DEFAULT_SERIES_IDS = '0,9,6,3,4,5,7';
 
 export type FetchKboMonthScheduleInput = {
   seasonYear: number;
