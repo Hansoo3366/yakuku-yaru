@@ -1,3 +1,4 @@
+import { purgeWebCache } from '../../lib/web-cache.js';
 import { syncKboGameCenter } from '../kbo-game-center/sync-game-center.js';
 import { syncKboPlayers } from '../kbo-players/sync-kbo-players.js';
 import { syncKboScheduleForMonth } from '../kbo-schedule/sync-schedule.js';
@@ -289,6 +290,9 @@ async function runJob(jobId: string) {
     }
 
     const summary = await executeSyncJob(job.type, job.params);
+
+    // 갱신한 데이터가 바로 보이도록, 완료로 표시하기 전에 웹 서버가 들고 있는 캐시를 비운다.
+    await purgeWebCache();
 
     updateJob(jobId, {
       status: 'succeeded',

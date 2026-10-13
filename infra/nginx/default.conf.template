@@ -92,6 +92,11 @@ server {
     proxy_pass http://yakuku_api;
   }
 
+  # 웹 서버의 내부 전용 경로(캐시 비우기). API 컨테이너가 web:3000 으로 직접 부르고, 밖에서는 닿지 않게 한다.
+  location ^~ /internal/ {
+    return 404;
+  }
+
   location / {
     limit_req zone=web_per_ip burst=80 nodelay;
 

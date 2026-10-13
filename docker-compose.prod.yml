@@ -45,6 +45,8 @@ services:
       KBO_SYNC_TODAY_CRON: ${KBO_SYNC_TODAY_CRON:-0 * * * *}
       KBO_SYNC_ON_START: ${KBO_SYNC_ON_START:-false}
       APP_URL: ${APP_URL:-}
+      # 데이터 갱신 뒤 웹 서버 캐시를 비울 때 부르는 내부 주소 (게이트웨이를 거치지 않는다)
+      WEB_INTERNAL_URL: ${WEB_INTERNAL_URL:-http://web:3000}
       APP_DOMAIN: ${APP_DOMAIN:-}
       CORS_ORIGINS: ${CORS_ORIGINS:-}
       JWT_SECRET: ${JWT_SECRET}

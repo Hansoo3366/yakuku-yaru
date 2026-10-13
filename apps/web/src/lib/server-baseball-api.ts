@@ -16,6 +16,12 @@ const API_URL = (
   process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api'
 ).replace(/\/+$/, '');
 
+/**
+ * 서버에서 받아 둔 공개 데이터에 붙이는 캐시 태그.
+ * 관리자 페이지의 데이터 갱신이 끝나면 API 가 /internal/revalidate 를 불러 이 태그를 한 번에 비운다.
+ */
+export const PUBLIC_DATA_CACHE_TAG = 'public-data';
+
 /** 로그인 없이 볼 수 있는 API 를 서버에서 호출한다. 실패하면 null 을 돌려주고 화면은 클라이언트 조회로 넘어간다. */
 export async function requestPublic<T>(path: string, revalidate = 60 * 60) {
   try {
@@ -25,6 +31,7 @@ export async function requestPublic<T>(path: string, revalidate = 60 * 60) {
       },
       next: {
         revalidate,
+        tags: [PUBLIC_DATA_CACHE_TAG],
       },
     });
 
@@ -48,7 +55,7 @@ export async function fetchPublicGameResult(
   try {
     const response = await fetch(`${API_URL}/games/${gameId}`, {
       headers: { Accept: 'application/json' },
-      next: { revalidate: 60 * 5 },
+      next: { revalidate: 60 * 5, tags: [PUBLIC_DATA_CACHE_TAG] },
     });
 
     if (response.status === 404) {
@@ -130,7 +137,7 @@ export async function fetchPublicPlayerCheerResult(
   try {
     const response = await fetch(`${API_URL}/player-cheers/${playerId}`, {
       headers: { Accept: 'application/json' },
-      next: { revalidate: 60 * 10 },
+      next: { revalidate: 60 * 10, tags: [PUBLIC_DATA_CACHE_TAG] },
     });
 
     if (response.status === 404) {

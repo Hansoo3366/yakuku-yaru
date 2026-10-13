@@ -102,6 +102,10 @@ export const env = {
     user: process.env.MYSQL_USER ?? 'yakuku',
     password: process.env.MYSQL_PASSWORD ?? 'yakuku_password',
   },
+  /** 웹(Next) 서버를 내부망에서 직접 부르는 주소. 데이터 갱신 뒤 캐시를 비울 때 쓴다. */
+  webInternalUrl: (
+    process.env.WEB_INTERNAL_URL?.trim() || 'http://localhost:3000'
+  ).replace(/\/+$/, ''),
   kboSync: {
     userAgent: process.env.KBO_USER_AGENT?.trim() || null,
     enabled:
