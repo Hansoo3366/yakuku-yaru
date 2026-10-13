@@ -52,6 +52,12 @@ export function formatKoreanTime(value: string | Date) {
   return `${hour}:${minute}`;
 }
 
+/** datetime-local 입력에 넣는 한국 시간 기준 값 (YYYY-MM-DDTHH:mm). ISO 문자열을 그대로 자르면 UTC 시각이 들어간다. */
+export function formatKoreanDateTimeLocalInput(value: string | Date) {
+  const { year, month, day, hour, minute } = dateParts(value);
+  return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}T${hour}:${minute}`;
+}
+
 export function formatKoreanMonthDay(value: string | Date) {
   const { month, day } = dateParts(value);
   return `${month.padStart(2, '0')}월 ${day.padStart(2, '0')}일`;

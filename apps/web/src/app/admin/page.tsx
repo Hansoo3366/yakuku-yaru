@@ -53,7 +53,10 @@ import { getAssetUrl } from '@/lib/api';
 import { useAuthStore } from '@/lib/auth-store';
 import { fetchMe } from '@/lib/auth-api';
 import { listTeams, type Team } from '@/lib/baseball-api';
-import { formatKoreanDateTimeShort } from '@/lib/date-format';
+import {
+  formatKoreanDateTimeLocalInput,
+  formatKoreanDateTimeShort,
+} from '@/lib/date-format';
 import { FEATURE_STATUS_LABELS, POST_CATEGORY_LABELS } from '@/lib/post-meta';
 import {
   deleteAdminPlayerCheer,
@@ -747,12 +750,14 @@ export default function AdminPage() {
     setGameForm({
       awayScore: game.awayScore?.toString() ?? '',
       awayTeamId: String(game.awayTeamId),
-      gameDate: game.gameDate.slice(0, 16),
+      gameDate: formatKoreanDateTimeLocalInput(game.gameDate),
       homeScore: game.homeScore?.toString() ?? '',
       homeTeamId: String(game.homeTeamId),
       stadium: game.stadium,
       status: game.status,
-      ticketOpenAt: game.ticketOpenAt?.slice(0, 16) ?? '',
+      ticketOpenAt: game.ticketOpenAt
+        ? formatKoreanDateTimeLocalInput(game.ticketOpenAt)
+        : '',
       ticketUrl: game.ticketUrl ?? '',
     });
   }
