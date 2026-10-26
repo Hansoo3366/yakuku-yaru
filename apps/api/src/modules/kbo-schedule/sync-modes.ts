@@ -2,7 +2,12 @@ import { syncLog } from '../../lib/sync-log.js';
 import type { ParsedKboGame } from './parse-schedule.js';
 import { fetchKboMonthSchedule } from './kbo-schedule.client.js';
 import { parseKboScheduleTable } from './parse-schedule.js';
-import { listTeamIdsByShortName, upsertKboGame } from './kbo-game.repository.js';
+import {
+  listTeamIdsByShortName,
+  removeKboGamesMissingFromSchedule,
+  upsertKboGame,
+} from './kbo-game.repository.js';
+import { resolveMonthWindow, type ScheduleWindow } from './stale-games.js';
 
 const KST_TIME_ZONE = 'Asia/Seoul';
 
@@ -20,6 +25,10 @@ export type KboSyncModeSummary = {
   inserted: number;
   updated: number;
   skipped: number;
+  /** KBO 일정에서 사라져 지운 예정 경기 */
+  removed: number;
+  /** KBO 일정에서 사라졌지만 직관 기록이 있어 취소로 남긴 경기 */
+  cancelled: number;
 };
 
 export function getKstYearMonth(reference = new Date()): MonthTarget {
@@ -136,6 +145,53 @@ function getWeekBounds(reference = new Date()) {
   };
 }
 
+function kstSqlDateTime(ms: number) {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: KST_TIME_ZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(new Date(ms));
+  const get = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((part) => part.type === type)?.value ?? '00';
+
+  return `${get('year')}-${get('month')}-${get('day')} ${get('hour')}:${get('minute')}:${get('second')}`;
+}
+
+function toScheduleWindow(filter: { fromMs: number; toMs: number } | null) {
+  return filter
+    ? { from: kstSqlDateTime(filter.fromMs), to: kstSqlDateTime(filter.toMs) }
+    : null;
+}
+
+/**
+ * 받은 달 일정에 없는 예정 경기를 정리한다. 응답이 비어 있으면 KBO 쪽 일시 오류일 수 있으므로 건드리지 않는다.
+ */
+export async function removeGamesMissingFromMonth(input: {
+  target: MonthTarget;
+  monthGames: ParsedKboGame[];
+  filter?: ScheduleWindow | null;
+}) {
+  const window = resolveMonthWindow(
+    input.target.seasonYear,
+    input.target.month,
+    input.filter,
+  );
+
+  if (!window || input.monthGames.length === 0) {
+    return { deleted: 0, cancelled: 0 };
+  }
+
+  return removeKboGamesMissingFromSchedule(
+    window,
+    new Set(input.monthGames.map((game) => game.externalId)),
+  );
+}
+
 function filterGamesByRange(
   games: ParsedKboGame[],
   fromMs: number,
@@ -181,6 +237,9 @@ export async function runKboSyncMode(
   let inserted = 0;
   let updated = 0;
   let skipped = 0;
+  let removed = 0;
+  let cancelled = 0;
+  const window = toScheduleWindow(filter);
 
   const targetLabel = targets
     .map((target) => `${target.seasonYear}-${String(target.month).padStart(2, '0')}`)
@@ -201,11 +260,10 @@ export async function runKboSyncMode(
       seasonYear: target.seasonYear,
       month: target.month,
     });
-    let parsedGames = parseKboScheduleTable(table, target.seasonYear);
-
-    if (filter) {
-      parsedGames = filterGamesByRange(parsedGames, filter.fromMs, filter.toMs);
-    }
+    const monthGames = parseKboScheduleTable(table, target.seasonYear);
+    const parsedGames = filter
+      ? filterGamesByRange(monthGames, filter.fromMs, filter.toMs)
+      : monthGames;
 
     parsed += parsedGames.length;
 
@@ -221,10 +279,18 @@ export async function runKboSyncMode(
       else if (result === 'updated') updated += 1;
       else skipped += 1;
     }
+
+    const stale = await removeGamesMissingFromMonth({
+      target,
+      monthGames,
+      filter: window,
+    });
+    removed += stale.deleted;
+    cancelled += stale.cancelled;
   }
 
   console.log(
-    `[kbo-sync] 완료 — 파싱 ${parsed}건, 추가 ${inserted}, 갱신 ${updated}, 건너뜀 ${skipped}`,
+    `[kbo-sync] 완료 — 파싱 ${parsed}건, 추가 ${inserted}, 갱신 ${updated}, 건너뜀 ${skipped}, 일정에서 빠져 삭제 ${removed}, 취소 처리 ${cancelled}`,
   );
 
   return {
@@ -234,5 +300,7 @@ export async function runKboSyncMode(
     inserted,
     updated,
     skipped,
+    removed,
+    cancelled,
   };
 }

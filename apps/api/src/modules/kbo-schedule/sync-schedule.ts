@@ -1,6 +1,7 @@
 import { fetchKboMonthSchedule } from './kbo-schedule.client.js';
 import { parseKboScheduleTable } from './parse-schedule.js';
 import { listTeamIdsByShortName, upsertKboGame } from './kbo-game.repository.js';
+import { removeGamesMissingFromMonth } from './sync-modes.js';
 
 export type SyncKboScheduleSummary = {
   seasonYear: number;
@@ -28,6 +29,11 @@ export async function syncKboScheduleForMonth(seasonYear: number, month: number)
     else skipped += 1;
   }
 
+  const stale = await removeGamesMissingFromMonth({
+    target: { seasonYear, month },
+    monthGames: parsedGames,
+  });
+
   return {
     seasonYear,
     month,
@@ -35,5 +41,7 @@ export async function syncKboScheduleForMonth(seasonYear: number, month: number)
     inserted,
     updated,
     skipped,
+    removed: stale.deleted,
+    cancelled: stale.cancelled,
   };
 }

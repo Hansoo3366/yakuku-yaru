@@ -2,6 +2,10 @@ import type { ResultSetHeader, RowDataPacket } from 'mysql2';
 import type { PoolConnection } from 'mysql2/promise';
 import { db, withTransaction } from '../../config/database.js';
 import type { ParsedKboGame } from './parse-schedule.js';
+import {
+  selectGamesMissingFromSchedule,
+  type ScheduleWindow,
+} from './stale-games.js';
 import { reconcileAttendanceRecordsForGame } from '../attendance/attendance.repository.js';
 
 export const KBO_EXTERNAL_SOURCE = 'kbo';
@@ -12,6 +16,11 @@ type GameMatchRow = RowDataPacket & {
   external_id: string | null;
 };
 type CountRow = RowDataPacket & { count: number };
+type ScheduledGameRow = RowDataPacket & {
+  id: number;
+  external_id: string | null;
+  attendance_count: number;
+};
 
 type TeamIdRow = RowDataPacket & {
   id: number;
@@ -362,4 +371,60 @@ export async function upsertKboGame(
   }
 
   return 'inserted';
+}
+
+export type RemoveStaleKboGamesResult = { deleted: number; cancelled: number };
+
+/**
+ * 범위 안의 KBO 예정 경기 가운데 방금 받은 일정에 없는 것을 정리한다.
+ * 직관 기록이 없으면 지우고(알림·라인업은 함께 지워진다), 있으면 취소로 바꿔 기록을 남긴다.
+ */
+export async function removeKboGamesMissingFromSchedule(
+  window: ScheduleWindow,
+  scheduledExternalIds: ReadonlySet<string>,
+): Promise<RemoveStaleKboGamesResult> {
+  const [rows] = await db.query<ScheduledGameRow[]>(
+    `SELECT
+       g.id,
+       g.external_id,
+       (SELECT COUNT(*) FROM attendance_records ar WHERE ar.game_id = g.id) AS attendance_count
+     FROM games g
+     WHERE g.external_source = ?
+       AND g.status = 'scheduled'
+       AND g.game_date >= ?
+       AND g.game_date < ?`,
+    [KBO_EXTERNAL_SOURCE, window.from, window.to],
+  );
+
+  const actions = selectGamesMissingFromSchedule(
+    rows.map((row) => ({
+      id: Number(row.id),
+      externalId: row.external_id,
+      attendanceCount: Number(row.attendance_count),
+    })),
+    scheduledExternalIds,
+  );
+
+  let deleted = 0;
+  let cancelled = 0;
+
+  for (const { id, action } of actions) {
+    if (action === 'delete') {
+      await db.execute(`DELETE FROM games WHERE id = ?`, [id]);
+      deleted += 1;
+      continue;
+    }
+
+    await db.execute(
+      `UPDATE games
+       SET status = 'cancelled',
+           cancellation_reason = 'other'
+       WHERE id = ?`,
+      [id],
+    );
+    await reconcileAttendanceRecordsForGame(id);
+    cancelled += 1;
+  }
+
+  return { deleted, cancelled };
 }

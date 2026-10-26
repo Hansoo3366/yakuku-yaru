@@ -46,6 +46,8 @@ if (seasonYear && months.length > 0) {
   let inserted = 0;
   let updated = 0;
   let skipped = 0;
+  let removed = 0;
+  let cancelled = 0;
 
   for (const month of months) {
     const summary = await syncKboScheduleForMonth(seasonYear, month);
@@ -53,10 +55,12 @@ if (seasonYear && months.length > 0) {
     inserted += summary.inserted;
     updated += summary.updated;
     skipped += summary.skipped;
+    removed += summary.removed;
+    cancelled += summary.cancelled;
   }
 
   console.log(
-    `[kbo-sync] 완료 — 파싱 ${parsed}건, 추가 ${inserted}, 갱신 ${updated}, 건너뜀 ${skipped}`,
+    `[kbo-sync] 완료 — 파싱 ${parsed}건, 추가 ${inserted}, 갱신 ${updated}, 건너뜀 ${skipped}, 일정에서 빠져 삭제 ${removed}, 취소 처리 ${cancelled}`,
   );
 } else if (mode) {
   await runKboSyncMode(mode, {
