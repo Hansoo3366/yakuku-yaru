@@ -1,5 +1,6 @@
 import type {
   Game,
+  PostseasonBracket,
   SeasonProjectionResponse,
   Team,
   TeamStandingsResponse,
@@ -114,6 +115,13 @@ export function fetchPublicSeasonProjection(seasonYear: number) {
   return requestPublic<SeasonProjectionResponse>(
     `/teams/season-projection?seasonYear=${seasonYear}`,
     60 * 10,
+  );
+}
+
+export function fetchPublicPostseason(seasonYear: number) {
+  return requestPublic<PostseasonBracket>(
+    `/teams/postseason?seasonYear=${seasonYear}`,
+    60 * 5,
   );
 }
 

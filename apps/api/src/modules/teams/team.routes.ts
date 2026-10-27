@@ -5,6 +5,7 @@ import {
   getLatestSeasonProjection,
 } from '../kbo-season-projection/season-projection.repository.js';
 import { listTeamStandings } from '../kbo-team-rank/team-rank.repository.js';
+import { getPostseasonBracket } from '../kbo-postseason/postseason.repository.js';
 import { listTeams } from './team.repository.js';
 
 export const teamRouter = Router();
@@ -48,6 +49,23 @@ teamRouter.get('/standings', async (req, res, next) => {
     }
 
     res.json(standings);
+  } catch (error) {
+    next(error);
+  }
+});
+
+teamRouter.get('/postseason', async (req, res, next) => {
+  try {
+    const seasonYear =
+      typeof req.query.seasonYear === 'string'
+        ? Number(req.query.seasonYear)
+        : new Date().getFullYear();
+
+    if (!Number.isInteger(seasonYear) || seasonYear < 2000) {
+      throw new HttpError(400, 'INVALID_INPUT', '올바른 시즌 연도가 필요합니다.');
+    }
+
+    res.json(await getPostseasonBracket(seasonYear));
   } catch (error) {
     next(error);
   }

@@ -13,10 +13,15 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { useMemo } from 'react';
+import {
+  PostseasonBracket,
+  summarizePostseason,
+} from '@/components/PostseasonBracket';
 import { SeasonProjectionTable } from '@/components/SeasonProjectionTable';
 import { TeamStandingsTable } from '@/components/TeamStandingsTable';
 import type {
   Game,
+  PostseasonBracket as PostseasonBracketData,
   SeasonProjectionResponse,
   TeamStandingsResponse,
 } from '@/lib/baseball-api';
@@ -59,6 +64,8 @@ const features: Array<{
 
 type Props = {
   standings: TeamStandingsResponse | null;
+  /** 포스트시즌 중일 때만 넘어온다 */
+  postseason: PostseasonBracketData | null;
   projection: SeasonProjectionResponse | null;
   projectionLoading: boolean;
   initialGames: Game[] | null;
@@ -142,6 +149,7 @@ function GameRow({ game }: { game: Game }) {
 
 export function PublicHome({
   standings,
+  postseason,
   projection,
   projectionLoading,
   initialGames,
@@ -210,14 +218,39 @@ export function PublicHome({
         </div>
       </div>
 
+      {postseason ? (
+        <section
+          aria-labelledby="landing-postseason-title"
+          className="landing-section"
+        >
+          <header className="landing-section__head">
+            <div>
+              <h2 id="landing-postseason-title">
+                {postseason.seasonYear} 포스트시즌
+              </h2>
+              <p>{summarizePostseason(postseason)}</p>
+            </div>
+          </header>
+          <div className="landing-section__body">
+            <PostseasonBracket bracket={postseason} />
+          </div>
+        </section>
+      ) : null}
+
       <section
         aria-labelledby="landing-standings-title"
         className="landing-section"
       >
         <header className="landing-section__head">
           <div>
-            <h2 id="landing-standings-title">KBO 팀 순위</h2>
-            <p>매일 갱신되는 순위로 선두 경쟁과 중위권 흐름을 확인하세요.</p>
+            <h2 id="landing-standings-title">
+              {postseason ? '정규시즌 최종 순위' : 'KBO 팀 순위'}
+            </h2>
+            <p>
+              {postseason
+                ? '포스트시즌 시드를 정한 정규시즌 성적이에요.'
+                : '매일 갱신되는 순위로 선두 경쟁과 중위권 흐름을 확인하세요.'}
+            </p>
           </div>
           <Link href="/calendar">
             전체 일정 보기 <ArrowRight aria-hidden="true" size={16} />

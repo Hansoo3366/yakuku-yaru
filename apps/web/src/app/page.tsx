@@ -1,5 +1,6 @@
 import { getKoreaDateString } from '@/lib/date-format';
 import {
+  fetchPublicPostseason,
   fetchPublicSeasonProjection,
   fetchPublicStandings,
   getKoreaSeasonYear,
@@ -18,18 +19,19 @@ export default async function HomePage() {
     from: getKoreaDateString(),
     to: getKoreaDateString(new Date(), 7),
   };
-  const [initialStandings, initialProjection, initialGames] = await Promise.all(
-    [
+  const [initialStandings, initialProjection, initialGames, initialPostseason] =
+    await Promise.all([
       fetchPublicStandings(seasonYear),
       fetchPublicSeasonProjection(seasonYear),
       listPublicGames(gamesRange),
-    ],
-  );
+      fetchPublicPostseason(seasonYear),
+    ]);
 
   return (
     <HomePageClient
       gamesRange={gamesRange}
       initialGames={initialGames}
+      initialPostseason={initialPostseason}
       initialProjection={initialProjection}
       initialStandings={initialStandings}
       seasonYear={seasonYear}

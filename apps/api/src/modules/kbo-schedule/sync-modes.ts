@@ -8,6 +8,11 @@ import {
   upsertKboGame,
 } from './kbo-game.repository.js';
 import { resolveMonthWindow, type ScheduleWindow } from './stale-games.js';
+import { syncMissingBoxScores } from '../kbo-box-score/sync-box-scores.js';
+import {
+  fetchPostseasonSeriesByExternalId,
+  KBO_REGULAR_SERIES_ID,
+} from './postseason-series.js';
 
 const KST_TIME_ZONE = 'Asia/Seoul';
 
@@ -29,6 +34,8 @@ export type KboSyncModeSummary = {
   removed: number;
   /** KBO 일정에서 사라졌지만 직관 기록이 있어 취소로 남긴 경기 */
   cancelled: number;
+  /** 새로 받은 끝난 경기 박스스코어 */
+  boxScores: number;
 };
 
 export function getKstYearMonth(reference = new Date()): MonthTarget {
@@ -192,6 +199,20 @@ export async function removeGamesMissingFromMonth(input: {
   );
 }
 
+/** 일정 반영으로 끝난 경기가 생겼을 수 있으니, 같은 범위에서 아직 없는 박스스코어를 받는다. */
+export async function syncBoxScoresForMonth(input: {
+  target: MonthTarget;
+  filter?: ScheduleWindow | null;
+}) {
+  const window = resolveMonthWindow(
+    input.target.seasonYear,
+    input.target.month,
+    input.filter,
+  );
+
+  return window ? syncMissingBoxScores(window) : { saved: 0, failed: 0 };
+}
+
 function filterGamesByRange(
   games: ParsedKboGame[],
   fromMs: number,
@@ -239,6 +260,7 @@ export async function runKboSyncMode(
   let skipped = 0;
   let removed = 0;
   let cancelled = 0;
+  let boxScores = 0;
   const window = toScheduleWindow(filter);
 
   const targetLabel = targets
@@ -261,6 +283,10 @@ export async function runKboSyncMode(
       month: target.month,
     });
     const monthGames = parseKboScheduleTable(table, target.seasonYear);
+    const seriesByExternalId = await fetchPostseasonSeriesByExternalId(
+      target.seasonYear,
+      target.month,
+    );
     const parsedGames = filter
       ? filterGamesByRange(monthGames, filter.fromMs, filter.toMs)
       : monthGames;
@@ -273,7 +299,11 @@ export async function runKboSyncMode(
     );
 
     for (const game of parsedGames) {
-      const result = await upsertKboGame(game, teamIds);
+      const result = await upsertKboGame(
+        game,
+        teamIds,
+        seriesByExternalId.get(game.externalId) ?? KBO_REGULAR_SERIES_ID,
+      );
 
       if (result === 'inserted') inserted += 1;
       else if (result === 'updated') updated += 1;
@@ -287,10 +317,13 @@ export async function runKboSyncMode(
     });
     removed += stale.deleted;
     cancelled += stale.cancelled;
+
+    const boxScoreResult = await syncBoxScoresForMonth({ target, filter: window });
+    boxScores += boxScoreResult.saved;
   }
 
   console.log(
-    `[kbo-sync] 완료 — 파싱 ${parsed}건, 추가 ${inserted}, 갱신 ${updated}, 건너뜀 ${skipped}, 일정에서 빠져 삭제 ${removed}, 취소 처리 ${cancelled}`,
+    `[kbo-sync] 완료 — 파싱 ${parsed}건, 추가 ${inserted}, 갱신 ${updated}, 건너뜀 ${skipped}, 일정에서 빠져 삭제 ${removed}, 취소 처리 ${cancelled}, 박스스코어 ${boxScores}`,
   );
 
   return {
@@ -302,5 +335,6 @@ export async function runKboSyncMode(
     skipped,
     removed,
     cancelled,
+    boxScores,
   };
 }

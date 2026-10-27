@@ -47,6 +47,7 @@ import {
 import { queryKeys } from '@/lib/query-keys';
 import { formatKoreanDateTime } from '@/lib/date-format';
 import { PlayerCheerDialog } from '@/components/PlayerCheerDialog';
+import { GameBoxScore } from './GameBoxScore';
 import {
   fetchPlayerCheer,
   type PlayerCheer,
@@ -821,6 +822,10 @@ export function GameDetailPageClient({
         />
         <GameTicketPanel game={game} />
       </div>
+
+      {isFinished ? (
+        <GameBoxScore game={game} viewerFavoriteTeamId={viewerFavoriteTeamId} />
+      ) : null}
 
       <section
         aria-label="선발 투수"

@@ -12,6 +12,8 @@ export const queryKeys = {
     teamId?: number | null;
   }) => ['games', input.from, input.to, input.teamId ?? null] as const,
   game: (gameId: number) => ['game', gameId] as const,
+  gameBoxScore: (gameId: number) => ['game-box-score', gameId] as const,
+  postseason: (seasonYear: number) => ['postseason', seasonYear] as const,
   playerCheers: (input: {
     keyword?: string;
     teamId?: number | null;

@@ -1016,6 +1016,32 @@ async function addListQueryIndexes() {
   );
 }
 
+/** 포스트시즌 대진표용 시리즈 구분과, 끝난 경기의 박스스코어 보관 테이블 */
+async function addGameSeriesAndBoxScores() {
+  if (!(await columnExists('games', 'kbo_series_id'))) {
+    await db.execute(
+      `ALTER TABLE games
+       ADD COLUMN kbo_series_id VARCHAR(4) NOT NULL DEFAULT '0' AFTER external_id`,
+    );
+  }
+
+  await addIndexIfMissing('games', 'idx_games_series_date', 'kbo_series_id, game_date');
+
+  await db.execute(
+    `CREATE TABLE IF NOT EXISTS game_box_scores (
+       game_id BIGINT UNSIGNED NOT NULL,
+       payload JSON NOT NULL,
+       synced_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+       created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+       updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+       PRIMARY KEY (game_id),
+       CONSTRAINT fk_game_box_scores_game
+         FOREIGN KEY (game_id) REFERENCES games(id)
+         ON DELETE CASCADE
+     )`,
+  );
+}
+
 type Migration = {
   /** 한 번 적용되면 schema_migrations 에 기록된다. 이미 배포된 id 는 바꾸지 않는다. */
   id: string;
@@ -1033,6 +1059,7 @@ const MIGRATIONS: readonly Migration[] = [
     up: dropEmailVerificationTokenUnique,
   },
   { id: '0003_list_query_indexes', up: addListQueryIndexes },
+  { id: '0004_game_series_and_box_scores', up: addGameSeriesAndBoxScores },
 ];
 
 const MIGRATION_LOCK_NAME = 'yakuku_yaru_migrations';

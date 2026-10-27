@@ -4,6 +4,8 @@ import { useQuery } from '@tanstack/react-query';
 import { fetchMe } from '@/lib/auth-api';
 import {
   fetchGame,
+  fetchGameBoxScore,
+  getPostseasonBracket,
   getSeasonProjection,
   listGames,
   listTeamStandings,
@@ -15,6 +17,7 @@ import {
 } from '@/lib/attendance-api';
 import type {
   Game,
+  PostseasonBracket,
   SeasonProjectionResponse,
   TeamStandingsResponse,
 } from '@/lib/baseball-api';
@@ -83,6 +86,28 @@ export function useSeasonProjectionQuery(
     queryFn: () => getSeasonProjection(seasonYear),
     initialData: options?.initialData ?? undefined,
     staleTime: 1000 * 60 * 10,
+  });
+}
+
+export function usePostseasonQuery(
+  seasonYear: number,
+  options?: { initialData?: PostseasonBracket | null },
+) {
+  return useQuery({
+    queryKey: queryKeys.postseason(seasonYear),
+    queryFn: () => getPostseasonBracket(seasonYear),
+    initialData: options?.initialData ?? undefined,
+    staleTime: 1000 * 60,
+  });
+}
+
+/** 끝난 경기만 박스스코어가 있다. 경기 직후에는 아직 안 받아 왔을 수 있다. */
+export function useGameBoxScoreQuery(gameId: number, enabled: boolean) {
+  return useQuery({
+    queryKey: queryKeys.gameBoxScore(gameId),
+    queryFn: () => fetchGameBoxScore(gameId),
+    enabled,
+    staleTime: 1000 * 60 * 5,
   });
 }
 

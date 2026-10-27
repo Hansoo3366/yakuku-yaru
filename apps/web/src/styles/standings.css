@@ -772,3 +772,391 @@
     padding-right: 12px;
   }
 }
+
+/* =========================================================
+ * 포스트시즌 대진표 (계단식 토너먼트)
+ * 넓으면 왼쪽 아래 와일드카드 → 오른쪽 위 한국시리즈로 올라가고, 한국시리즈 위에 우승 왕관이 얹힌다.
+ * 좁으면 왕관·한국시리즈를 맨 위에 두고 아래로 내려가며 앞 라운드를 보여 준다.
+ * 칸 높이를 고정해 두고 그 값으로 연결선 위치를 계산한다.
+ * ========================================================= */
+.postseason-bracket-wrap {
+  container-type: inline-size;
+}
+
+.postseason-bracket {
+  --bracket-pad: 10px;
+  --bracket-head: 28px;
+  --bracket-slot: 42px;
+  --bracket-slot-gap: 4px;
+  --bracket-rise: 34px;
+  --bracket-col-gap: 36px;
+  --bracket-crown: 78px;
+  --bracket-line: var(--color-line-strong);
+  --bracket-line-live: var(--color-win-ink);
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 18px;
+}
+
+.bracket-column {
+  display: grid;
+  gap: var(--space-2);
+  min-width: 0;
+  position: relative;
+}
+
+/* 세로 배치: 위 라운드(먼저 보이는 칸)와 이어지는 짧은 선 */
+.bracket-column:not([data-final='true'])::before {
+  background: var(--bracket-line);
+  content: '';
+  height: 18px;
+  left: 50%;
+  position: absolute;
+  top: -18px;
+  width: 2px;
+}
+
+.bracket-match {
+  background: var(--color-paper);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-lg);
+  display: grid;
+  gap: 0;
+  padding: var(--bracket-pad);
+  position: relative;
+}
+
+.bracket-match[data-status='in_progress'] {
+  border-color: var(--color-line-strong);
+  box-shadow: var(--shadow-sm);
+}
+
+.bracket-match__head {
+  align-items: center;
+  display: flex;
+  gap: var(--space-2);
+  height: var(--bracket-head);
+  justify-content: space-between;
+  padding: 0 4px 4px;
+}
+
+.bracket-match__head h4 {
+  color: var(--color-ink);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
+  margin: 0;
+  white-space: nowrap;
+}
+
+.bracket-match__status {
+  color: var(--color-muted);
+  flex-shrink: 0;
+  font-size: var(--type-caption);
+  font-weight: var(--weight-bold);
+}
+
+.bracket-match[data-status='in_progress'] .bracket-match__status {
+  align-items: center;
+  color: var(--color-win-ink);
+  display: inline-flex;
+  gap: 5px;
+}
+
+.bracket-match[data-status='in_progress'] .bracket-match__status::before {
+  background: var(--color-win);
+  border-radius: 50%;
+  content: '';
+  height: 6px;
+  width: 6px;
+}
+
+.bracket-match__slots {
+  display: grid;
+  gap: var(--bracket-slot-gap);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.bracket-slot {
+  align-items: center;
+  background: var(--color-surface-soft);
+  border-radius: var(--radius-md);
+  display: flex;
+  gap: 8px;
+  height: var(--bracket-slot);
+  padding: 0 10px 0 8px;
+}
+
+.bracket-slot__seed {
+  color: var(--color-muted);
+  flex-shrink: 0;
+  font-size: var(--type-caption);
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--weight-bold);
+  text-align: center;
+  width: 10px;
+}
+
+.bracket-slot img,
+.bracket-slot__logo-empty {
+  flex-shrink: 0;
+  height: 26px;
+  object-fit: contain;
+  width: 26px;
+}
+
+.bracket-slot__logo-empty {
+  border: 1px dashed var(--color-line-strong);
+  border-radius: 50%;
+}
+
+.bracket-slot__name {
+  color: var(--color-ink);
+  flex: 1;
+  font-size: var(--text-base);
+  font-weight: var(--weight-bold);
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.bracket-slot.is-placeholder {
+  background: transparent;
+  border: 1px dashed var(--color-line);
+}
+
+.bracket-slot.is-placeholder .bracket-slot__name {
+  color: var(--color-muted);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+}
+
+.bracket-slot.is-winner {
+  background: var(--color-win-tint);
+}
+
+.bracket-slot.is-winner .bracket-slot__name strong,
+.bracket-slot.is-winner .bracket-slot__wins {
+  color: var(--color-win-ink);
+}
+
+.bracket-slot.is-eliminated img,
+.bracket-slot.is-eliminated .bracket-slot__name,
+.bracket-slot.is-eliminated .bracket-slot__wins {
+  opacity: 0.45;
+}
+
+.bracket-slot.is-highlighted:not(.is-winner) {
+  background: color-mix(
+    in srgb,
+    var(--team-color, var(--color-field-700)) 10%,
+    var(--color-paper) 90%
+  );
+}
+
+.bracket-slot__wins {
+  color: var(--color-ink);
+  font-size: var(--text-xl);
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--weight-black);
+  line-height: 1;
+}
+
+.bracket-column__detail {
+  display: grid;
+  gap: 4px;
+  padding: 0 4px;
+}
+
+.bracket-column__meta {
+  color: var(--color-muted);
+  font-size: var(--type-caption);
+  margin: 0;
+  padding: 0 6px;
+}
+
+.bracket-column__games {
+  display: grid;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.bracket-game {
+  align-items: baseline;
+  border-radius: var(--radius-sm);
+  color: var(--color-ink);
+  display: flex;
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+  gap: var(--space-2);
+  justify-content: space-between;
+  padding: 4px 6px;
+  text-decoration: none;
+}
+
+.bracket-game:hover {
+  background: var(--color-surface-soft);
+}
+
+.bracket-game__no {
+  color: var(--color-muted);
+  font-weight: var(--weight-bold);
+}
+
+.bracket-game__score {
+  white-space: nowrap;
+}
+
+.bracket-game__score b {
+  font-weight: var(--weight-black);
+}
+
+.bracket-game__score.is-scheduled {
+  color: var(--color-muted);
+}
+
+.bracket-game__score small {
+  color: var(--color-scheduled-ink);
+  font-size: inherit;
+  font-weight: var(--weight-bold);
+}
+
+/* 좁은 화면에서는 끝난 라운드의 경기 목록을 접어 진행 중인 라운드가 먼저 보이게 한다 */
+.bracket-column__detail[data-status='finished'] .bracket-column__games {
+  display: none;
+}
+
+/* 우승 왕관: 한국시리즈 칸 위에 금색 선으로 이어진다 */
+.bracket-crown {
+  align-items: center;
+  display: grid;
+  gap: 2px;
+  justify-items: center;
+  /* 칸 사이 간격만큼 당겨 금색 선이 한국시리즈 칸 위에 바로 닿게 한다 */
+  margin-bottom: calc(var(--space-2) * -1);
+  padding-bottom: 16px;
+  position: relative;
+}
+
+.bracket-crown::after {
+  background: linear-gradient(var(--color-ticket-gold), var(--color-line-strong));
+  bottom: 0;
+  content: '';
+  height: 16px;
+  left: 50%;
+  position: absolute;
+  transform: translateX(-50%);
+  width: 2px;
+}
+
+.bracket-crown.is-decided::after {
+  background: var(--color-ticket-gold);
+}
+
+/* 금빛 왕관: 면을 채워 그림처럼 보이게 하고, 우승팀이 정해지면 빛이 퍼진다 */
+.bracket-crown__badge {
+  align-items: center;
+  color: var(--color-ticket-gold);
+  display: inline-flex;
+  filter: drop-shadow(0 2px 6px color-mix(in srgb, var(--color-ticket-gold) 40%, transparent));
+  justify-content: center;
+}
+
+.bracket-crown__badge svg {
+  fill: currentColor;
+  stroke: var(--color-ticket-gold-ink);
+  stroke-width: 1.4;
+}
+
+.bracket-crown.is-decided .bracket-crown__badge {
+  filter: drop-shadow(0 0 10px color-mix(in srgb, var(--color-ticket-gold) 70%, transparent));
+}
+
+.bracket-crown__label {
+  align-items: center;
+  color: var(--color-ticket-gold-ink);
+  display: inline-flex;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
+  gap: 5px;
+  white-space: nowrap;
+}
+
+.bracket-crown__label img {
+  height: 20px;
+  object-fit: contain;
+  width: 20px;
+}
+
+.bracket-crown__label strong {
+  font-weight: var(--weight-black);
+}
+
+/* 넓은 화면: 계단식. 오른쪽 라운드일수록 위로 올라간다 */
+@container (min-width: 720px) {
+  .postseason-bracket {
+    align-items: start;
+    display: grid;
+    gap: var(--bracket-col-gap);
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .bracket-column {
+    margin-top: calc(var(--bracket-crown) + var(--bracket-step) * var(--bracket-rise));
+  }
+
+  .bracket-column[data-final='true'] {
+    margin-top: 0;
+  }
+
+  .bracket-column:not([data-final='true'])::before {
+    display: none;
+  }
+
+  .bracket-crown {
+    height: var(--bracket-crown);
+    align-content: end;
+  }
+
+  /* 앞 라운드 승자 → 이 라운드 아랫칸으로 꺾여 들어가는 선 */
+  .bracket-column:not([data-first='true']) .bracket-match::before,
+  .bracket-column:not([data-first='true']) .bracket-match::after {
+    content: '';
+    position: absolute;
+    width: calc(var(--bracket-col-gap) / 2);
+  }
+
+  /* 아랫칸 가운데 높이에서 왼쪽으로 반 칸, 그리고 아래로 */
+  .bracket-column:not([data-first='true']) .bracket-match::before {
+    border-left: 2px solid var(--bracket-line);
+    border-top: 2px solid var(--bracket-line);
+    height: calc(
+      var(--bracket-rise) - var(--bracket-slot) / 2 - var(--bracket-slot-gap) / 2
+    );
+    left: calc(var(--bracket-col-gap) / -2 - 1px);
+    top: calc(
+      var(--bracket-pad) + var(--bracket-head) + var(--bracket-slot) +
+        var(--bracket-slot-gap) + var(--bracket-slot) / 2 - 2px
+    );
+  }
+
+  /* 앞 라운드 칸의 오른쪽 가운데에서 나오는 선 */
+  .bracket-column:not([data-first='true']) .bracket-match::after {
+    border-top: 2px solid var(--bracket-line);
+    left: calc(var(--bracket-col-gap) * -1 - 1px);
+    top: calc(
+      var(--bracket-pad) + var(--bracket-head) + var(--bracket-slot) +
+        var(--bracket-slot-gap) / 2 + var(--bracket-rise) - 2px
+    );
+  }
+
+  .bracket-column[data-fed='true'] .bracket-match::before,
+  .bracket-column[data-fed='true'] .bracket-match::after {
+    border-color: var(--bracket-line-live);
+  }
+
+  .bracket-column__detail[data-status='finished'] .bracket-column__games {
+    display: grid;
+  }
+}

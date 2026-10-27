@@ -11,6 +11,10 @@ import { TeamStandingsTable } from '@/components/TeamStandingsTable';
 import { getTeamLogoSrc } from '@/lib/team-logo';
 import { Skeleton } from '@/components/Skeleton';
 import { SeasonProjectionTable } from '@/components/SeasonProjectionTable';
+import {
+  PostseasonBracket,
+  summarizePostseason,
+} from '@/components/PostseasonBracket';
 import { PublicHome } from './PublicHome';
 import { useInitialSignedIn } from '@/components/AppProviders';
 import { HonorTitleSwiper } from '@/components/HonorTitleSwiper';
@@ -25,6 +29,7 @@ import { resolveAttendanceOutcome } from '@/lib/attendance-score';
 import { getCancellationLabel } from '@/lib/game-cancellation';
 import type {
   Game,
+  PostseasonBracket as PostseasonBracketData,
   SeasonProjectionResponse,
   TeamStandingsResponse,
 } from '@/lib/baseball-api';
@@ -33,6 +38,7 @@ import {
   useAttendanceRecordsQuery,
   useGamesQuery,
   useMeQuery,
+  usePostseasonQuery,
   useSeasonProjectionQuery,
   useTeamsQuery,
   useTeamStandingsQuery,
@@ -71,6 +77,17 @@ function formatDateParts(value: string) {
   };
 }
 
+/** 지난 경기 결과를 타임라인에 보여 주는 기간 */
+const RECENT_RESULT_DAYS = 21;
+/** 타임라인 왼쪽(지난 경기)에 두는 칸 수 */
+const PAST_TILE_LIMIT = 10;
+
+function hasFinalScore(game: Game) {
+  return (
+    game.status === 'finished' && game.homeScore !== null && game.awayScore !== null
+  );
+}
+
 function isUpcoming(value: string) {
   return new Date(value).getTime() >= Date.now() - 1000 * 60 * 60 * 6;
 }
@@ -80,6 +97,8 @@ export type HomePageClientProps = {
   seasonYear: number;
   initialStandings: TeamStandingsResponse | null;
   initialProjection: SeasonProjectionResponse | null;
+  /** 포스트시즌 경기가 잡히면(active) 순위표 위에 대진표를 띄운다 */
+  initialPostseason: PostseasonBracketData | null;
   /** 비로그인 홈의 '오늘의 경기'용 리그 전체 일정 */
   initialGames: Game[] | null;
   gamesRange: { from: string; to: string };
@@ -89,6 +108,7 @@ export function HomePageClient({
   seasonYear,
   initialStandings,
   initialProjection,
+  initialPostseason,
   initialGames,
   gamesRange,
 }: HomePageClientProps) {
@@ -105,6 +125,10 @@ export function HomePageClient({
   const seasonProjectionQuery = useSeasonProjectionQuery(seasonYear, {
     initialData: initialProjection,
   });
+  const postseasonQuery = usePostseasonQuery(seasonYear, {
+    initialData: initialPostseason,
+  });
+  const postseason = postseasonQuery.data?.active ? postseasonQuery.data : null;
   const attendanceStatsRange = useMemo(
     () => ({
       from: `${seasonYear}-01-01`,
@@ -112,13 +136,16 @@ export function HomePageClient({
     }),
     [seasonYear],
   );
+  // 지난 3주 결과(기록 안 한 경기 포함)와 앞으로 두 달 일정을 함께 받는다.
   const scheduleRange = useMemo(() => {
     const today = new Date();
+    const weeksAgo = new Date(today);
+    weeksAgo.setDate(today.getDate() - RECENT_RESULT_DAYS);
     const monthLater = new Date(today);
     monthLater.setMonth(today.getMonth() + 2);
 
     return {
-      from: today.toISOString().slice(0, 10),
+      from: weeksAgo.toISOString().slice(0, 10),
       to: monthLater.toISOString().slice(0, 10),
     };
   }, []);
@@ -151,9 +178,18 @@ export function HomePageClient({
   const upcomingGames = useMemo(
     () =>
       (gamesQuery.data?.items ?? [])
-        .filter((game) => isUpcoming(game.gameDate))
+        .filter((game) => !hasFinalScore(game) && isUpcoming(game.gameDate))
         .slice(0, 5),
     [gamesQuery.data?.items],
+  );
+  // 기록하지 않은 경기도 응원 팀 결과는 타임라인에 남긴다 (포스트시즌처럼 집에서 못 챙긴 경기)
+  // 응원 팀이 없으면 리그 전체 경기가 오므로 결과 칸은 응원 팀이 있을 때만 만든다.
+  const finishedTeamGames = useMemo(
+    () =>
+      user?.favoriteTeamId
+        ? (gamesQuery.data?.items ?? []).filter(hasFinalScore)
+        : [],
+    [gamesQuery.data?.items, user?.favoriteTeamId],
   );
   const recentRecords = useMemo(() => {
     const ownedRecords = attendanceRecords.filter(
@@ -167,7 +203,7 @@ export function HomePageClient({
           new Date(a.game.gameDate).getTime(),
       )
       // 타임라인에서 왼쪽으로 넘겨 볼 수 있도록 최근 기록을 넉넉히 둔다.
-      .slice(0, 10);
+      .slice(0, PAST_TILE_LIMIT);
   }, [attendanceRecords]);
   const stats = useMemo(
     () =>
@@ -216,8 +252,79 @@ export function HomePageClient({
       );
     };
 
+    // 내 기록과 기록 안 한 팀 경기 결과를 날짜순으로 섞는다. 같은 경기는 기록 칸만 남긴다.
+    const pastItems = [
+      ...recentRecords.map((record) => ({
+        kind: 'record' as const,
+        date: record.game.gameDate,
+        record,
+      })),
+      ...finishedTeamGames
+        .filter((game) => !recordGameIds.has(game.id))
+        .map((game) => ({ kind: 'result' as const, date: game.gameDate, game })),
+    ]
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+      .slice(0, PAST_TILE_LIMIT)
+      .reverse();
+
+    const renderResultTile = (game: Game) => {
+      const parts = formatDateParts(game.gameDate);
+      const favoriteIsHome = game.homeTeam.id === favoriteTeam?.id;
+      const favoriteScore = favoriteIsHome ? game.homeScore : game.awayScore;
+      const opponentScore = favoriteIsHome ? game.awayScore : game.homeScore;
+      const outcome =
+        favoriteScore === null || opponentScore === null
+          ? 'unknown'
+          : favoriteScore === opponentScore
+            ? 'draw'
+            : favoriteScore > opponentScore
+              ? 'win'
+              : 'lose';
+
+      return (
+        <Link
+          className="season-tile season-tile--past season-tile--result"
+          data-outcome={outcome}
+          href={`/games/${game.id}`}
+        >
+          <span className="season-tile__head">
+            <time dateTime={game.gameDate}>
+              {parts.month}.{parts.day} {parts.weekday}
+            </time>
+            <span className="season-tile__tag">결과</span>
+          </span>
+          {renderTeam(game)}
+          <span className="season-tile__foot">
+            <span className="season-tile__score">
+              {favoriteScore}
+              <i aria-hidden="true">:</i>
+              {opponentScore}
+            </span>
+            <span className="season-tile__result">
+              {outcome === 'win'
+                ? '승'
+                : outcome === 'lose'
+                  ? '패'
+                  : outcome === 'draw'
+                    ? '무'
+                    : '결과'}
+            </span>
+          </span>
+        </Link>
+      );
+    };
+
     const slides: SeasonTimelineSlide[] = [
-      ...[...recentRecords].reverse().map((record) => {
+      ...pastItems.map((item) => {
+        if (item.kind === 'result') {
+          return {
+            key: `result-${item.game.id}`,
+            isToday: item.game.gameDate.slice(0, 10) === todayKey,
+            content: renderResultTile(item.game),
+          };
+        }
+
+        const record = item.record;
         const game = record.game as Game;
         const parts = formatDateParts(game.gameDate);
         const favoriteIsHome = game.homeTeam.id === favoriteTeam?.id;
@@ -316,7 +423,7 @@ export function HomePageClient({
     }
 
     const todayIndex = slides.findIndex((slide) => slide.isToday);
-    const firstNextIndex = recentRecords.length;
+    const firstNextIndex = pastItems.length;
 
     return {
       slides,
@@ -325,7 +432,7 @@ export function HomePageClient({
           ? todayIndex
           : Math.min(firstNextIndex, slides.length - 1),
     };
-  }, [favoriteTeam?.id, recentRecords, upcomingGames]);
+  }, [favoriteTeam?.id, finishedTeamGames, recentRecords, upcomingGames]);
 
   const nextGame = upcomingGames[0] ?? null;
   const nextGameDate = nextGame ? formatDateParts(nextGame.gameDate) : null;
@@ -339,6 +446,7 @@ export function HomePageClient({
       <PublicHome
         gamesRange={gamesRange}
         initialGames={initialGames}
+        postseason={postseason}
         projection={seasonProjection}
         projectionLoading={seasonProjectionLoading}
         standings={teamStandings}
@@ -522,13 +630,32 @@ export function HomePageClient({
           <div>
             <h2>리그 현황</h2>
           </div>
-          <p>팀 순위와 {seasonYear} 시즌 예상 순위</p>
+          <p>
+            {postseason
+              ? '포스트시즌 대진과 정규시즌 최종 순위'
+              : `팀 순위와 ${seasonYear} 시즌 예상 순위`}
+          </p>
         </header>
+
+        {postseason ? (
+          <section className="card stack home-leaderboard-card">
+            <div className="section-heading">
+              <div>
+                <h3>{seasonYear} 포스트시즌</h3>
+                <p>{summarizePostseason(postseason)}</p>
+              </div>
+            </div>
+            <PostseasonBracket
+              bracket={postseason}
+              highlightTeamId={favoriteTeam?.id}
+            />
+          </section>
+        ) : null}
 
         <section className="card stack home-leaderboard-card">
           <div className="section-heading">
             <div>
-              <h3>KBO 팀 순위</h3>
+              <h3>{postseason ? '정규시즌 최종 순위' : 'KBO 팀 순위'}</h3>
               <p>
                 {favoriteTeam
                   ? `${josa(favoriteTeam.shortName, '은')} ${

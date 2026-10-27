@@ -165,6 +165,112 @@ export type SeasonProjectionResponse = {
   projectedGames: number;
 };
 
+export type PostseasonTeam = {
+  teamId: number;
+  shortName: string;
+  name: string;
+  /** 정규시즌 순위 */
+  seed: number | null;
+};
+
+export type PostseasonGame = {
+  id: number;
+  gameDate: string;
+  status: 'scheduled' | 'finished' | 'cancelled';
+  homeTeam: Omit<PostseasonTeam, 'seed'>;
+  awayTeam: Omit<PostseasonTeam, 'seed'>;
+  homeScore: number | null;
+  awayScore: number | null;
+};
+
+export type PostseasonRound = {
+  seriesId: '4' | '3' | '5' | '7';
+  name: string;
+  shortName: string;
+  winsNeeded: { higher: number; lower: number };
+  higher: PostseasonTeam | null;
+  lower: PostseasonTeam | null;
+  higherPlaceholder: string;
+  lowerPlaceholder: string;
+  higherWins: number;
+  lowerWins: number;
+  draws: number;
+  winnerTeamId: number | null;
+  status: 'waiting' | 'upcoming' | 'in_progress' | 'finished';
+  games: PostseasonGame[];
+};
+
+export type PostseasonBracket = {
+  seasonYear: number;
+  active: boolean;
+  rounds: PostseasonRound[];
+  champion: PostseasonTeam | null;
+};
+
+export type BoxScoreLine = {
+  innings: (number | null)[];
+  runs: number | null;
+  hits: number | null;
+  errors: number | null;
+  walks: number | null;
+};
+
+export type BoxScoreHitter = {
+  battingOrder: number | null;
+  position: string;
+  name: string;
+  isSubstitute: boolean;
+  innings: string[];
+  atBats: number | null;
+  hits: number | null;
+  rbi: number | null;
+  runs: number | null;
+  average: string | null;
+};
+
+export type BoxScorePitcher = {
+  name: string;
+  isStarter: boolean;
+  decision: string | null;
+  seasonWins: number | null;
+  seasonLosses: number | null;
+  seasonSaves: number | null;
+  innings: string;
+  battersFaced: number | null;
+  pitches: number | null;
+  atBats: number | null;
+  hits: number | null;
+  homeRuns: number | null;
+  walks: number | null;
+  strikeouts: number | null;
+  runs: number | null;
+  earnedRuns: number | null;
+  era: string | null;
+};
+
+export type BoxScoreTeam = {
+  line: BoxScoreLine;
+  hitters: BoxScoreHitter[];
+  hitterTotals: {
+    atBats: number | null;
+    hits: number | null;
+    rbi: number | null;
+    runs: number | null;
+  } | null;
+  pitchers: BoxScorePitcher[];
+};
+
+export type BoxScore = {
+  inningCount: number;
+  away: BoxScoreTeam;
+  home: BoxScoreTeam;
+  notes: { label: string; value: string }[];
+  crowd: number | null;
+  startTime: string | null;
+  endTime: string | null;
+  duration: string | null;
+};
+
 export function listTeams() {
   return request<{ items: Team[] }>('/teams');
 }
@@ -199,6 +305,12 @@ export function getSeasonProjection(seasonYear?: number) {
   );
 }
 
+export function getPostseasonBracket(seasonYear: number) {
+  return request<PostseasonBracket>(
+    `/teams/postseason?seasonYear=${seasonYear}`,
+  );
+}
+
 export function updateFavoriteTeam(teamId: number, token: string) {
   return request<{ user: PublicUser }>('/users/me/favorite-team', {
     method: 'PATCH',
@@ -226,4 +338,8 @@ export function listGames(input: {
 
 export function fetchGame(gameId: number) {
   return request<{ game: Game }>(`/games/${gameId}`);
+}
+
+export function fetchGameBoxScore(gameId: number) {
+  return request<{ boxScore: BoxScore | null }>(`/games/${gameId}/box-score`);
 }

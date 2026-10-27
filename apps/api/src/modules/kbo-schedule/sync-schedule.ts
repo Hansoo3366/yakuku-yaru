@@ -1,7 +1,14 @@
 import { fetchKboMonthSchedule } from './kbo-schedule.client.js';
 import { parseKboScheduleTable } from './parse-schedule.js';
 import { listTeamIdsByShortName, upsertKboGame } from './kbo-game.repository.js';
-import { removeGamesMissingFromMonth } from './sync-modes.js';
+import {
+  removeGamesMissingFromMonth,
+  syncBoxScoresForMonth,
+} from './sync-modes.js';
+import {
+  fetchPostseasonSeriesByExternalId,
+  KBO_REGULAR_SERIES_ID,
+} from './postseason-series.js';
 
 export type SyncKboScheduleSummary = {
   seasonYear: number;
@@ -15,6 +22,10 @@ export type SyncKboScheduleSummary = {
 export async function syncKboScheduleForMonth(seasonYear: number, month: number) {
   const table = await fetchKboMonthSchedule({ seasonYear, month });
   const parsedGames = parseKboScheduleTable(table, seasonYear);
+  const seriesByExternalId = await fetchPostseasonSeriesByExternalId(
+    seasonYear,
+    month,
+  );
   const teamIds = await listTeamIdsByShortName();
 
   let inserted = 0;
@@ -22,7 +33,11 @@ export async function syncKboScheduleForMonth(seasonYear: number, month: number)
   let skipped = 0;
 
   for (const game of parsedGames) {
-    const result = await upsertKboGame(game, teamIds);
+    const result = await upsertKboGame(
+      game,
+      teamIds,
+      seriesByExternalId.get(game.externalId) ?? KBO_REGULAR_SERIES_ID,
+    );
 
     if (result === 'inserted') inserted += 1;
     else if (result === 'updated') updated += 1;
@@ -32,6 +47,9 @@ export async function syncKboScheduleForMonth(seasonYear: number, month: number)
   const stale = await removeGamesMissingFromMonth({
     target: { seasonYear, month },
     monthGames: parsedGames,
+  });
+  const boxScores = await syncBoxScoresForMonth({
+    target: { seasonYear, month },
   });
 
   return {
@@ -43,5 +61,6 @@ export async function syncKboScheduleForMonth(seasonYear: number, month: number)
     skipped,
     removed: stale.deleted,
     cancelled: stale.cancelled,
+    boxScores: boxScores.saved,
   };
 }

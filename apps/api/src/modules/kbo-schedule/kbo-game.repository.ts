@@ -265,6 +265,7 @@ export type UpsertKboGameResult = 'inserted' | 'updated' | 'skipped';
 export async function upsertKboGame(
   game: ParsedKboGame,
   teamIds: Map<string, number>,
+  seriesId: string,
 ): Promise<UpsertKboGameResult> {
   const homeTeamId = teamIds.get(game.homeTeamShortName);
   const awayTeamId = teamIds.get(game.awayTeamShortName);
@@ -302,7 +303,8 @@ export async function upsertKboGame(
            status = ?,
            cancellation_reason = ?,
            external_source = ?,
-           external_id = ?
+           external_id = ?,
+           kbo_series_id = ?
        WHERE id = ?`,
       [
         game.gameDate,
@@ -315,6 +317,7 @@ export async function upsertKboGame(
         game.cancellationReason,
         KBO_EXTERNAL_SOURCE,
         game.externalId,
+        seriesId,
         existingId,
       ],
     );
@@ -343,9 +346,10 @@ export async function upsertKboGame(
        status,
        cancellation_reason,
        external_source,
-       external_id
+       external_id,
+       kbo_series_id
      )
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       game.gameDate,
       game.stadium,
@@ -357,6 +361,7 @@ export async function upsertKboGame(
       game.cancellationReason,
       KBO_EXTERNAL_SOURCE,
       game.externalId,
+      seriesId,
     ],
   );
 

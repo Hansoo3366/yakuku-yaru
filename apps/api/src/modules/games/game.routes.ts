@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { HttpError } from '../../utils/http-error.js';
 import { findGameById, listGames } from './game.repository.js';
+import { findGameBoxScore } from '../kbo-box-score/box-score.repository.js';
 
 export const gameRouter = Router();
 
@@ -75,6 +76,22 @@ gameRouter.get('/:gameId', async (req, res, next) => {
 
     res.json({
       game,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+gameRouter.get('/:gameId/box-score', async (req, res, next) => {
+  try {
+    const gameId = Number(req.params.gameId);
+
+    if (!Number.isInteger(gameId) || gameId < 1) {
+      throw new HttpError(400, 'INVALID_INPUT', '올바른 경기 ID가 필요합니다.');
+    }
+
+    res.json({
+      boxScore: await findGameBoxScore(gameId),
     });
   } catch (error) {
     next(error);
