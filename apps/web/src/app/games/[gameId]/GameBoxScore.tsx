@@ -208,87 +208,99 @@ function PitcherTable({ pitchers }: { pitchers: BoxScorePitcher[] }) {
   );
 }
 
-function HitterSummary({ hitter }: { hitter: BoxScoreHitter }) {
-  if (!hitter.atBats && !hitter.hits && !hitter.rbi && !hitter.runs) {
-    const appeared = hitter.innings.some(Boolean);
-    return <span className="box-score-hitter__line is-quiet">{appeared ? '0타수' : '타석 없음'}</span>;
-  }
+/** 회마다 칸을 나눈 타자 기록표. 칸 안에는 "좌익수 / 뜬공"처럼 공이 간 곳과 결과를 두 줄로 쓴다 */
+function HitterTable({ team, inningCount }: { team: BoxScoreTeam; inningCount: number }) {
+  const innings = Array.from({ length: inningCount }, (_, index) => index);
 
   return (
-    <span className="box-score-hitter__line">
-      <span>
-        <b>{hitter.atBats ?? 0}</b>타수 <b data-hot={Boolean(hitter.hits)}>{hitter.hits ?? 0}</b>안타
-      </span>
-      {hitter.rbi ? (
-        <span>
-          <b data-hot="true">{hitter.rbi}</b>타점
-        </span>
-      ) : null}
-      {hitter.runs ? (
-        <span>
-          <b>{hitter.runs}</b>득점
-        </span>
-      ) : null}
-    </span>
-  );
-}
-
-function HitterList({ team }: { team: BoxScoreTeam }) {
-  return (
-    <div className="box-score-hitters">
-      <ol className="box-score-hitter-list">
-        {team.hitters.map((hitter, index) => {
-          const plates = hitter.innings.flatMap((value, inningIndex) =>
-            describePlateResults(value).map((result, order) => ({
-              ...result,
-              inning: inningIndex + 1,
-              key: `${inningIndex}-${order}`,
-            })),
-          );
-          const average = formatAverage(hitter.average);
-
-          return (
-            <li
-              className="box-score-hitter"
-              data-substitute={hitter.isSubstitute}
-              key={`${hitter.name}-${index}`}
-            >
-              <span aria-label={hitter.isSubstitute ? '교체 선수' : `${hitter.battingOrder}번 타자`} className="box-score-hitter__order">
-                {hitter.isSubstitute ? '교체' : hitter.battingOrder}
-              </span>
-              <div className="box-score-hitter__head">
-                <span className="box-score-hitter__who">
-                  <strong>{hitter.name}</strong>
-                  <span>{describePosition(hitter.position)}</span>
-                  {average ? <span>타율 {average}</span> : null}
+    <div className="box-score-scroll">
+      <table className="box-score-table box-score-hitters">
+        <thead>
+          <tr>
+            <th scope="col">타자</th>
+            <th className="is-stat" scope="col">타수</th>
+            <th className="is-stat" scope="col">안타</th>
+            <th className="is-stat" scope="col">타점</th>
+            <th className="is-stat" scope="col">득점</th>
+            <th className="is-stat is-last-stat" scope="col">타율</th>
+            {innings.map((index) => (
+              <th className="is-inning" key={index} scope="col">
+                {index + 1}회
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {team.hitters.map((hitter: BoxScoreHitter, index) => (
+            <tr data-substitute={hitter.isSubstitute} key={`${hitter.name}-${index}`}>
+              <th scope="row">
+                <span className="box-score-batter">
+                  <span
+                    aria-label={hitter.isSubstitute ? '교체 선수' : `${hitter.battingOrder}번 타자`}
+                    className="box-score-batter__order"
+                  >
+                    {hitter.isSubstitute ? '↳' : hitter.battingOrder}
+                  </span>
+                  <span className="box-score-batter__who">
+                    <strong>{hitter.name}</strong>
+                    <span>{describePosition(hitter.position)}</span>
+                    {/* 좁은 화면에서는 기록 칸을 숨기고 이름 밑에 한 줄로 적는다 */}
+                    <span className="box-score-batter__line">
+                      {hitter.atBats ?? 0}타수 {hitter.hits ?? 0}안타
+                      {hitter.rbi ? ` ${hitter.rbi}타점` : ''}
+                    </span>
+                  </span>
                 </span>
-                <HitterSummary hitter={hitter} />
-              </div>
-              {plates.length > 0 ? (
-                <ul aria-label={`${hitter.name} 타석 결과`} className="box-score-plates">
-                  {plates.map((plate) => (
-                    <li data-kind={plate.kind} key={plate.key} title={plate.code}>
-                      <span className="box-score-plates__inning">{plate.inning}회</span>
-                      {plate.label}
-                    </li>
-                  ))}
-                </ul>
-              ) : null}
-            </li>
-          );
-        })}
-      </ol>
-      {team.hitterTotals ? (
-        <p className="box-score-hitter-total">
-          <span>팀 합계</span>
-          <span>
-            <b>{formatNumber(team.hitterTotals.atBats)}</b>타수{' '}
-            <b>{formatNumber(team.hitterTotals.hits)}</b>안타{' '}
-            <b>{formatNumber(team.hitterTotals.rbi)}</b>타점{' '}
-            <b>{formatNumber(team.hitterTotals.runs)}</b>득점
-          </span>
-        </p>
-      ) : null}
+              </th>
+              <td className="is-stat" data-zero={hitter.atBats === 0}>{formatNumber(hitter.atBats)}</td>
+              <td className="is-stat" data-hot={Boolean(hitter.hits)} data-zero={hitter.hits === 0}>
+                {formatNumber(hitter.hits)}
+              </td>
+              <td className="is-stat" data-hot={Boolean(hitter.rbi)} data-zero={hitter.rbi === 0}>
+                {formatNumber(hitter.rbi)}
+              </td>
+              <td className="is-stat" data-zero={hitter.runs === 0}>{formatNumber(hitter.runs)}</td>
+              <td className="is-stat is-last-stat is-average">
+                {formatAverage(hitter.average) ?? '-'}
+              </td>
+              {innings.map((inningIndex) => {
+                const plates = describePlateResults(hitter.innings[inningIndex] ?? '');
+
+                return (
+                  <td className="is-inning" key={inningIndex}>
+                    {plates.map((plate, order) => (
+                      <span
+                        className="box-score-plate"
+                        data-kind={plate.kind}
+                        key={order}
+                        title={plate.label}
+                      >
+                        {plate.place ? <small>{plate.place}</small> : null}
+                        {plate.outcome}
+                      </span>
+                    ))}
+                  </td>
+                );
+              })}
+            </tr>
+          ))}
+        </tbody>
+        {team.hitterTotals ? (
+          <tfoot>
+            <tr>
+              <th scope="row">팀 합계</th>
+              <td className="is-stat">{formatNumber(team.hitterTotals.atBats)}</td>
+              <td className="is-stat">{formatNumber(team.hitterTotals.hits)}</td>
+              <td className="is-stat">{formatNumber(team.hitterTotals.rbi)}</td>
+              <td className="is-stat">{formatNumber(team.hitterTotals.runs)}</td>
+              <td className="is-stat is-last-stat" />
+              {innings.map((index) => (
+                <td className="is-inning" key={index} />
+              ))}
+            </tr>
+          </tfoot>
+        ) : null}
+      </table>
     </div>
   );
 }
@@ -373,7 +385,7 @@ export function GameBoxScore({ game, viewerFavoriteTeamId, initialBoxScore }: Pr
                 ))}
               </ul>
             </div>
-            <HitterList team={boxScore[side]} />
+            <HitterTable inningCount={boxScore.inningCount} team={boxScore[side]} />
           </div>
 
           <div className="box-score-block">

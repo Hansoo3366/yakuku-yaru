@@ -44,17 +44,31 @@ export type PlateResultKind = 'homerun' | 'hit' | 'walk' | 'reach' | 'out';
 
 export type PlateResult = {
   code: string;
+  /** 공이 간 곳. 삼진·볼넷처럼 방향이 없으면 null (예: "좌익수", "좌중간", "우익수 앞") */
+  place: string | null;
+  /** 결과 (예: "뜬공", "안타", "홈런", "삼진") */
+  outcome: string;
+  /** place 와 outcome 을 이은 한 줄 (예: "좌익수 뜬공") */
   label: string;
   kind: PlateResultKind;
 };
 
-const STANDALONE: Record<string, Omit<PlateResult, 'code'>> = {
-  삼진: { label: '삼진', kind: 'out' },
-  '4구': { label: '볼넷', kind: 'walk' },
-  고4: { label: '고의 볼넷', kind: 'walk' },
-  사구: { label: '몸에 맞는 공', kind: 'walk' },
-  타방: { label: '타격 방해 출루', kind: 'walk' },
-  낫아웃: { label: '낫아웃 출루', kind: 'reach' },
+function result(
+  code: string,
+  place: string | null,
+  outcome: string,
+  kind: PlateResultKind,
+): PlateResult {
+  return { code, place, outcome, label: place ? `${place} ${outcome}` : outcome, kind };
+}
+
+const STANDALONE: Record<string, { outcome: string; kind: PlateResultKind }> = {
+  삼진: { outcome: '삼진', kind: 'out' },
+  '4구': { outcome: '볼넷', kind: 'walk' },
+  고4: { outcome: '고의 볼넷', kind: 'walk' },
+  사구: { outcome: '몸에 맞는 공', kind: 'walk' },
+  타방: { outcome: '타격 방해', kind: 'walk' },
+  낫아웃: { outcome: '낫아웃 출루', kind: 'reach' },
 };
 
 /** 결과 글자는 긴 것부터 맞춘다 (희번이 번보다 먼저) */
@@ -75,54 +89,50 @@ function towards(fielder: string) {
 
 function describeOne(code: string): PlateResult {
   const standalone = STANDALONE[code];
-  if (standalone) return { code, ...standalone };
+  if (standalone) return result(code, null, standalone.outcome, standalone.kind);
 
   const suffix = OUTCOME_SUFFIXES.find(
     (candidate) => code.endsWith(candidate) && code.length > candidate.length,
   );
   const fielder = suffix ? resolveFielder(code.slice(0, -suffix.length)) : null;
 
-  if (!suffix || !fielder) return { code, label: code, kind: 'out' };
+  if (!suffix || !fielder) return result(code, null, code, 'out');
 
   const name = FIELDERS[fielder];
 
   switch (suffix) {
     case '안':
       return OUTFIELD.has(fielder)
-        ? {
-            code,
-            label: fielder.length === 2 ? `${name} 안타` : `${name} 앞 안타`,
-            kind: 'hit',
-          }
-        : { code, label: `${name} 쪽 내야안타`, kind: 'hit' };
+        ? result(code, fielder.length === 2 ? name : `${name} 앞`, '안타', 'hit')
+        : result(code, name, '내야안타', 'hit');
     case '2':
-      return { code, label: `${towards(fielder)} 2루타`, kind: 'hit' };
+      return result(code, towards(fielder), '2루타', 'hit');
     case '3':
-      return { code, label: `${towards(fielder)} 3루타`, kind: 'hit' };
+      return result(code, towards(fielder), '3루타', 'hit');
     case '홈':
-      return { code, label: `${towards(fielder)} 홈런`, kind: 'homerun' };
+      return result(code, towards(fielder), '홈런', 'homerun');
     case '땅':
-      return { code, label: `${name} 땅볼`, kind: 'out' };
+      return result(code, name, '땅볼', 'out');
     case '비':
-      return { code, label: `${name} 뜬공`, kind: 'out' };
+      return result(code, name, '뜬공', 'out');
     case '파':
-      return { code, label: `${name} 파울 뜬공`, kind: 'out' };
+      return result(code, name, '파울 뜬공', 'out');
     case '직':
-      return { code, label: `${name} 직선타`, kind: 'out' };
+      return result(code, name, '직선타', 'out');
     case '병':
-      return { code, label: `${name} 병살타`, kind: 'out' };
+      return result(code, name, '병살타', 'out');
     case '실':
-      return { code, label: `${name} 실책으로 출루`, kind: 'reach' };
+      return result(code, name, '실책 출루', 'reach');
     case '야선':
-      return { code, label: `야수 선택으로 출루`, kind: 'reach' };
+      return result(code, null, '야수 선택', 'reach');
     case '희번':
-      return { code, label: `${name} 쪽 희생번트`, kind: 'out' };
+      return result(code, name, '희생번트', 'out');
     case '희비':
-      return { code, label: `${name} 희생플라이`, kind: 'out' };
+      return result(code, name, '희생플라이', 'out');
     case '번':
-      return { code, label: `${name} 쪽 번트 아웃`, kind: 'out' };
+      return result(code, name, '번트 아웃', 'out');
     default:
-      return { code, label: code, kind: 'out' };
+      return result(code, null, code, 'out');
   }
 }
 
