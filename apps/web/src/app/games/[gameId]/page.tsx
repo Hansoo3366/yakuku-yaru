@@ -1,10 +1,14 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import type { Game } from '@/lib/baseball-api';
-import { formatKoreanDateTime } from '@/lib/date-format';
+import type { BoxScore, Game } from '@/lib/baseball-api';
+import { getBoxScoreHighlights } from '@/lib/box-score-terms';
+import { formatKoreanDateTime, formatKoreanMonthDay } from '@/lib/date-format';
 import {
+  fetchPublicBoxScore,
   fetchPublicGame,
   fetchPublicGameResult,
+  fetchPublicPostseason,
+  findPostseasonGame,
 } from '@/lib/server-baseball-api';
 import { getAbsoluteUrl } from '@/lib/site-url';
 import { getTeamLogoSrc } from '@/lib/team-logo';
@@ -31,31 +35,124 @@ function hasScore(game: Game) {
   );
 }
 
-function buildGameTitle(game: Game) {
+type GameExtras = {
+  /** 포스트시즌 경기면 시리즈 이름과 몇 차전인지 */
+  postseason: { seasonYear: number; roundName: string; gameNumber: number } | null;
+  boxScore: BoxScore | null;
+};
+
+/** 포스트시즌 회차와 끝난 경기 기록을 함께 받는다. 둘 다 캐시된 조회라 메타데이터와 본문이 같은 응답을 쓴다. */
+async function loadGameExtras(game: Game): Promise<GameExtras> {
+  const seasonYear = Number(game.gameDate.slice(0, 4));
+  const [bracket, boxScore] = await Promise.all([
+    fetchPublicPostseason(seasonYear),
+    game.status === 'finished' ? fetchPublicBoxScore(game.id) : Promise.resolve(null),
+  ]);
+  const found = findPostseasonGame(bracket, game.id);
+
+  return {
+    postseason: found
+      ? { seasonYear, roundName: found.round.name, gameNumber: found.gameNumber }
+      : null,
+    boxScore,
+  };
+}
+
+function postseasonLabel(extras: GameExtras) {
+  return extras.postseason
+    ? `${extras.postseason.roundName} ${extras.postseason.gameNumber}차전`
+    : null;
+}
+
+function buildGameTitle(game: Game, extras: GameExtras) {
   const matchup = `${game.awayTeam.shortName} vs ${game.homeTeam.shortName}`;
   const score = hasScore(game) ? ` ${game.awayScore} : ${game.homeScore}` : '';
+  const label = postseasonLabel(extras);
 
-  return `${matchup}${score} - ${formatKoreanDateTime(game.gameDate)} KBO 경기`;
+  // 포스트시즌은 "플레이오프 1차전"으로 찾으니 회차를 앞에 두고 날짜는 짧게 쓴다.
+  return label
+    ? `${matchup}${score} - ${extras.postseason?.seasonYear} ${label} (${formatKoreanMonthDay(game.gameDate)}) KBO 경기`
+    : `${matchup}${score} - ${formatKoreanDateTime(game.gameDate)} KBO 경기`;
 }
 
-function buildGameDescription(game: Game) {
-  const matchup = `${josa(game.awayTeam.name, '과')} ${game.homeTeam.name}`;
-  const score = hasScore(game)
-    ? `스코어는 ${game.awayTeam.shortName} ${game.awayScore}, ${game.homeTeam.shortName} ${game.homeScore}입니다. `
+/** "KIA가 5:1로 이겼어요. 승리 투수 이의리, 패전 투수 페덱." 같은 한두 문장 */
+function describeResult(game: Game, boxScore: BoxScore | null) {
+  if (!hasScore(game)) return '';
+
+  const awayScore = game.awayScore as number;
+  const homeScore = game.homeScore as number;
+  const result =
+    awayScore === homeScore
+      ? `${josa(game.awayTeam.shortName, '과')} ${josa(game.homeTeam.shortName, '이')} ${awayScore}:${homeScore}로 비겼습니다. `
+      : `${josa(
+          awayScore > homeScore ? game.awayTeam.shortName : game.homeTeam.shortName,
+          '이',
+        )} ${Math.max(awayScore, homeScore)}:${Math.min(awayScore, homeScore)}로 이겼습니다. `;
+
+  if (!boxScore) return result;
+
+  const highlights = getBoxScoreHighlights(boxScore);
+  const pitchers = [
+    highlights.winningPitcher ? `승리 투수 ${highlights.winningPitcher.name}` : null,
+    highlights.losingPitcher ? `패전 투수 ${highlights.losingPitcher.name}` : null,
+    highlights.savePitcher ? `세이브 ${highlights.savePitcher.name}` : null,
+  ].filter(Boolean);
+  const winningHit = highlights.winningHit
+    ? ` 결승타는 ${highlights.winningHit.name}${highlights.winningHit.detail ? `(${highlights.winningHit.detail})` : ''}.`
     : '';
 
-  return `${formatKoreanDateTime(game.gameDate)} ${game.stadium}에서 열리는 ${matchup} 경기 정보입니다. ${score}선발 투수, 라인업, 예매 정보와 구장 정보를 확인하세요.`;
+  return `${result}${pitchers.length ? `${pitchers.join(', ')}.` : ''}${winningHit} `;
 }
 
-function buildGameKeywords(game: Game) {
+function buildGameDescription(game: Game, extras: GameExtras) {
+  const matchup = `${josa(game.awayTeam.name, '과')} ${game.homeTeam.name}`;
+  const label = postseasonLabel(extras);
+  const isPast = hasScore(game) || new Date(game.gameDate) < new Date();
+  const where = `${formatKoreanDateTime(game.gameDate)} ${game.stadium}에서 ${isPast ? '열린' : '열리는'}`;
+  const what = label ? `${extras.postseason?.seasonYear} ${label} ${matchup}` : matchup;
+
+  if (extras.boxScore) {
+    return `${where} ${what} 경기 결과입니다. ${describeResult(game, extras.boxScore)}이닝별 득점과 타자·투수 기록을 확인하세요.`;
+  }
+
+  return `${where} ${what} 경기 정보입니다. ${describeResult(game, null)}선발 투수, 라인업, 예매 정보와 구장 정보를 확인하세요.`;
+}
+
+function buildGameKeywords(game: Game, extras: GameExtras) {
+  const away = game.awayTeam.shortName;
+  const home = game.homeTeam.shortName;
+  const postseason = extras.postseason;
+  const highlights = extras.boxScore ? getBoxScoreHighlights(extras.boxScore) : null;
+
   return [
-    `${game.awayTeam.shortName} ${game.homeTeam.shortName}`,
-    `${game.awayTeam.shortName} vs ${game.homeTeam.shortName}`,
+    `${away} ${home}`,
+    `${away} vs ${home}`,
     `${game.awayTeam.name} ${game.homeTeam.name}`,
-    `${game.awayTeam.shortName} 경기`,
-    `${game.homeTeam.shortName} 경기`,
-    `${game.homeTeam.shortName} 홈경기`,
+    `${away} 경기`,
+    `${home} 경기`,
+    `${home} 홈경기`,
     `${game.stadium} 야구`,
+    ...(postseason
+      ? [
+          `${postseason.seasonYear} ${postseason.roundName}`,
+          `${postseason.roundName} ${postseason.gameNumber}차전`,
+          `${postseason.seasonYear} ${postseason.roundName} ${postseason.gameNumber}차전`,
+          `${away} ${home} ${postseason.roundName}`,
+          'KBO 포스트시즌',
+          '가을야구',
+        ]
+      : []),
+    ...(extras.boxScore
+      ? [
+          `${away} ${home} 경기 결과`,
+          `${away} ${home} 박스스코어`,
+          'KBO 박스스코어',
+          'KBO 경기 기록',
+          'KBO 경기 결과',
+        ]
+      : []),
+    ...[highlights?.winningPitcher?.name, highlights?.losingPitcher?.name]
+      .filter((name): name is string => Boolean(name)),
     'KBO 경기',
     'KBO 경기 일정',
     '오늘 야구 경기',
@@ -73,7 +170,7 @@ function buildGameKeywords(game: Game) {
 /** KBO 경기는 보통 3시간 안팎이라, 끝난 시각 정보가 없으니 시작 3시간 30분 뒤를 종료로 본다. */
 const TYPICAL_GAME_DURATION_MS = 3.5 * 60 * 60 * 1000;
 
-function buildGameJsonLd(game: Game) {
+function buildGameJsonLd(game: Game, extras: GameExtras) {
   const url = getAbsoluteUrl(`/games/${game.id}`);
   const startedAt = new Date(game.gameDate);
   const endDate = new Date(
@@ -88,11 +185,38 @@ function buildGameJsonLd(game: Game) {
     logo: getAbsoluteUrl(getTeamLogoSrc(item)),
   });
 
+  const label = postseasonLabel(extras);
+  const highlights = extras.boxScore ? getBoxScoreHighlights(extras.boxScore) : null;
+  const property = (name: string, value: string | number | null | undefined) =>
+    value === null || value === undefined || value === ''
+      ? []
+      : [{ '@type': 'PropertyValue', name, value }];
+  const properties = [
+    ...(hasScore(game)
+      ? [
+          ...property(`${game.awayTeam.shortName} 득점`, game.awayScore),
+          ...property(`${game.homeTeam.shortName} 득점`, game.homeScore),
+        ]
+      : []),
+    ...property('승리 투수', highlights?.winningPitcher?.name),
+    ...property('패전 투수', highlights?.losingPitcher?.name),
+    ...property('세이브 투수', highlights?.savePitcher?.name),
+    ...property(
+      '결승타',
+      highlights?.winningHit
+        ? `${highlights.winningHit.name}${highlights.winningHit.detail ? ` (${highlights.winningHit.detail})` : ''}`
+        : null,
+    ),
+    ...property('홈런', highlights?.homeRuns),
+    ...property('관중', extras.boxScore?.crowd),
+    ...property('경기 시간', extras.boxScore?.duration),
+  ];
+
   return {
     '@context': 'https://schema.org',
     '@type': 'SportsEvent',
-    name: `${game.awayTeam.name} vs ${game.homeTeam.name}`,
-    description: buildGameDescription(game),
+    name: `${label ? `${extras.postseason?.seasonYear} ${label} ` : ''}${game.awayTeam.name} vs ${game.homeTeam.name}`,
+    description: buildGameDescription(game, extras),
     sport: 'Baseball',
     startDate: game.gameDate,
     endDate,
@@ -128,22 +252,16 @@ function buildGameJsonLd(game: Game) {
           },
         }
       : {}),
-    ...(hasScore(game)
+    ...(extras.postseason
       ? {
-          additionalProperty: [
-            {
-              '@type': 'PropertyValue',
-              name: `${game.awayTeam.shortName} 득점`,
-              value: game.awayScore,
-            },
-            {
-              '@type': 'PropertyValue',
-              name: `${game.homeTeam.shortName} 득점`,
-              value: game.homeScore,
-            },
-          ],
+          superEvent: {
+            '@type': 'SportsEvent',
+            name: `${extras.postseason.seasonYear} KBO ${extras.postseason.roundName}`,
+            sport: 'Baseball',
+          },
         }
       : {}),
+    ...(properties.length ? { additionalProperty: properties } : {}),
   };
 }
 
@@ -192,13 +310,14 @@ export async function generateMetadata({
     };
   }
 
-  const title = buildGameTitle(game);
-  const description = buildGameDescription(game);
+  const extras = await loadGameExtras(game);
+  const title = buildGameTitle(game, extras);
+  const description = buildGameDescription(game, extras);
 
   return {
     title,
     description,
-    keywords: buildGameKeywords(game),
+    keywords: buildGameKeywords(game, extras),
     alternates: {
       canonical,
     },
@@ -243,12 +362,14 @@ export default async function GameDetailPage({ params }: GamePageProps) {
     notFound();
   }
 
+  const extras = game ? await loadGameExtras(game) : null;
+
   return (
     <>
       {game ? (
         <script
           dangerouslySetInnerHTML={{
-            __html: JSON.stringify(buildGameJsonLd(game)).replace(
+            __html: JSON.stringify(buildGameJsonLd(game, extras ?? { postseason: null, boxScore: null })).replace(
               /</g,
               '\\u003c',
             ),
@@ -256,7 +377,12 @@ export default async function GameDetailPage({ params }: GamePageProps) {
           type="application/ld+json"
         />
       ) : null}
-      <GameDetailPageClient gameId={numericGameId} initialGame={game} />
+      <GameDetailPageClient
+        gameId={numericGameId}
+        initialBoxScore={extras?.boxScore ?? null}
+        initialGame={game}
+        postseasonLabel={extras ? postseasonLabel(extras) : null}
+      />
     </>
   );
 }

@@ -990,11 +990,11 @@
 
 /* ---------------------------------------------------------
  * 경기 기록(박스스코어)
- * 표가 화면보다 넓으면 표 안에서만 가로로 밀리고, 선수 이름 칸은 왼쪽에 붙어 있는다.
+ * 줄임말 대신 풀어 쓴 결과를 칩으로 보여 준다. 칩 색은 안타·출루·아웃만 구분한다.
  * --------------------------------------------------------- */
 .app-shell--game-detail .box-score {
   display: grid;
-  gap: 16px;
+  gap: 22px;
   min-width: 0;
 }
 
@@ -1006,7 +1006,8 @@
 
 .app-shell--game-detail .box-score-scroll {
   background: var(--game-paper);
-  border-radius: 8px;
+  border: 1px solid var(--color-line);
+  border-radius: 10px;
   max-width: 100%;
   overflow-x: auto;
 }
@@ -1023,7 +1024,7 @@
 .app-shell--game-detail .box-score-table td {
   border-bottom: 1px solid var(--color-line);
   color: var(--game-ink);
-  padding: 9px 8px;
+  padding: 10px 8px;
   text-align: center;
   white-space: nowrap;
 }
@@ -1034,55 +1035,142 @@
 }
 
 .app-shell--game-detail .box-score-table thead th {
+  background: var(--game-surface);
   color: var(--game-muted);
   font-size: 12px;
   font-weight: var(--weight-bold);
+  padding-bottom: 8px;
+  padding-top: 8px;
 }
 
 .app-shell--game-detail .box-score-table tbody th,
-.app-shell--game-detail .box-score-table tfoot th,
 .app-shell--game-detail .box-score-table thead th:first-child {
-  background: var(--game-paper);
   left: 0;
+  padding-left: 14px;
   position: sticky;
   text-align: left;
   z-index: 1;
 }
 
 .app-shell--game-detail .box-score-table tbody th {
-  font-weight: var(--weight-bold);
+  background: var(--game-paper);
+}
+
+/* 이닝 점수판. 칸 폭을 글자에 맞춰 잡아야 좁은 화면에서 팀 이름이 옆 칸과 겹치지 않는다 */
+.app-shell--game-detail .box-score-line {
+  min-width: 100%;
+  width: max-content;
+}
+
+.app-shell--game-detail .box-score-line td {
+  color: var(--game-muted);
+  min-width: 28px;
 }
 
 .app-shell--game-detail .box-score-line td[data-scored='true'] {
+  color: var(--game-ink);
   font-weight: var(--weight-black);
 }
 
 .app-shell--game-detail .box-score-line .is-total {
-  color: var(--color-win-ink);
+  min-width: 40px;
+}
+
+.app-shell--game-detail .box-score-line td.is-total {
+  color: var(--game-ink);
+  font-weight: var(--weight-bold);
+}
+
+.app-shell--game-detail .box-score-line .is-first-total {
+  border-left: 1px solid var(--color-line);
+}
+
+.app-shell--game-detail .box-score-line td.is-runs {
+  font-size: 16px;
   font-weight: var(--weight-black);
 }
 
+.app-shell--game-detail .box-score-line tr[data-winner='true'] td.is-runs {
+  color: var(--color-win-ink);
+}
+
+.app-shell--game-detail .box-score-line tr[data-winner='false'] .box-score-team {
+  color: var(--game-muted);
+}
+
 .app-shell--game-detail .box-score-team {
+  font-weight: var(--weight-black);
   white-space: nowrap;
 }
 
 /* 표가 좁아질 때 flex 칸은 글자 폭을 잃고 옆 칸과 겹치므로 인라인으로 둔다 */
 .app-shell--game-detail .box-score-team img {
   display: inline-block;
-  height: 22px;
-  margin-right: 6px;
+  height: 24px;
+  margin-right: 7px;
   object-fit: contain;
   vertical-align: middle;
-  width: 22px;
+  width: 24px;
 }
 
+/* 승리·패전·세이브 투수와 결승타 */
+.app-shell--game-detail .box-score-keys {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.app-shell--game-detail .box-score-keys li {
+  background: var(--game-paper);
+  border: 1px solid var(--color-line);
+  border-radius: 10px;
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  padding: 11px 13px;
+}
+
+.app-shell--game-detail .box-score-keys__label {
+  color: var(--game-muted);
+  font-size: 12px;
+  font-weight: var(--weight-bold);
+}
+
+.app-shell--game-detail .box-score-keys__name {
+  align-items: center;
+  color: var(--game-ink);
+  display: flex;
+  font-size: 15px;
+  gap: 6px;
+}
+
+.app-shell--game-detail .box-score-keys__name img {
+  flex-shrink: 0;
+  height: 20px;
+  object-fit: contain;
+  width: 20px;
+}
+
+.app-shell--game-detail .box-score-keys__name strong {
+  font-weight: var(--weight-black);
+}
+
+.app-shell--game-detail .box-score-keys__detail {
+  color: var(--game-muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+/* 팀 고르기 */
 .app-shell--game-detail .box-score-switch {
   background: var(--game-surface-strong);
-  border-radius: 7px;
+  border-radius: 10px;
   display: grid;
   gap: 4px;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  max-width: 360px;
   padding: 4px;
 }
 
@@ -1090,27 +1178,29 @@
   align-items: center;
   background: transparent;
   border: 0;
-  border-radius: 5px;
+  border-radius: 7px;
   color: var(--game-muted);
   cursor: pointer;
   display: inline-flex;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: var(--weight-black);
-  gap: 7px;
+  gap: 8px;
   justify-content: center;
-  min-height: 38px;
+  min-height: 42px;
 }
 
 .app-shell--game-detail .box-score-switch button.is-selected {
-  background: var(--game-team);
-  color: var(--game-on-team);
+  background: var(--game-paper);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 12%);
+  color: var(--game-ink);
 }
 
 .app-shell--game-detail .box-score-switch img {
-  background: var(--color-paper);
-  border-radius: 50%;
   object-fit: contain;
-  padding: 2px;
+}
+
+.app-shell--game-detail .box-score-switch button:not(.is-selected) img {
+  opacity: 0.55;
 }
 
 .app-shell--game-detail .box-score-switch button:focus-visible {
@@ -1120,111 +1210,326 @@
 
 .app-shell--game-detail .box-score-block {
   display: grid;
-  gap: 8px;
+  gap: 10px;
   min-width: 0;
+}
+
+.app-shell--game-detail .box-score-block__head {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  justify-content: space-between;
 }
 
 .app-shell--game-detail .box-score-block h3 {
   color: var(--game-ink);
-  font-size: 15px;
+  font-size: 16px;
   font-weight: var(--weight-black);
   margin: 0;
 }
 
-.app-shell--game-detail .box-score-player {
+/* 타석 결과 색. 범례와 칩이 같이 쓴다 */
+.app-shell--game-detail [data-kind='hit'],
+.app-shell--game-detail [data-kind='homerun'] {
+  --plate-bg: var(--color-win-tint);
+  --plate-ink: var(--color-win-ink);
+  --plate-dot: var(--color-win);
+}
+
+.app-shell--game-detail [data-kind='walk'] {
+  --plate-bg: var(--color-success-tint);
+  --plate-ink: var(--color-success-ink);
+  --plate-dot: var(--color-success);
+}
+
+.app-shell--game-detail [data-kind='reach'] {
+  --plate-bg: var(--color-warning-tint);
+  --plate-ink: var(--color-warning-ink);
+  --plate-dot: var(--color-warning);
+}
+
+.app-shell--game-detail [data-kind='out'] {
+  --plate-bg: var(--game-surface);
+  --plate-ink: var(--game-muted);
+  --plate-dot: var(--color-line-strong);
+}
+
+.app-shell--game-detail .box-score-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.app-shell--game-detail .box-score-legend li {
+  align-items: center;
+  color: var(--game-muted);
+  display: inline-flex;
+  font-size: 12px;
+  gap: 5px;
+}
+
+.app-shell--game-detail .box-score-legend li::before {
+  background: var(--plate-dot);
+  border-radius: 50%;
+  content: '';
+  height: 8px;
+  width: 8px;
+}
+
+/* 타자 */
+.app-shell--game-detail .box-score-hitters {
+  background: var(--game-paper);
+  border: 1px solid var(--color-line);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.app-shell--game-detail .box-score-hitter-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.app-shell--game-detail .box-score-hitter {
+  border-top: 1px solid var(--color-line);
+  column-gap: 12px;
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr);
+  padding: 12px 14px;
+  row-gap: 8px;
+}
+
+.app-shell--game-detail .box-score-hitter:first-child {
+  border-top: 0;
+}
+
+/* 교체 선수는 앞 타자 밑에 매달린 것처럼 위 줄을 옅게 두고 살짝 안으로 들인다 */
+.app-shell--game-detail .box-score-hitter[data-substitute='true'] {
+  border-top-style: dashed;
+  padding-left: 34px;
+}
+
+.app-shell--game-detail .box-score-hitter__order {
+  align-items: center;
+  align-self: start;
+  background: var(--game-ink);
+  border-radius: 50%;
+  color: var(--game-paper);
+  display: inline-flex;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--weight-black);
+  height: 26px;
+  justify-content: center;
+  width: 26px;
+}
+
+.app-shell--game-detail .box-score-hitter[data-substitute='true'] .box-score-hitter__order {
+  background: transparent;
+  border-radius: 0;
+  color: var(--game-muted);
+  font-size: 11px;
+  font-weight: var(--weight-bold);
+  width: auto;
+}
+
+.app-shell--game-detail .box-score-hitter__head {
+  align-items: baseline;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  justify-content: space-between;
+  min-height: 26px;
+}
+
+.app-shell--game-detail .box-score-hitter__who {
+  align-items: baseline;
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 2px 8px;
+}
+
+.app-shell--game-detail .box-score-hitter__who strong {
+  color: var(--game-ink);
+  font-size: 15px;
+  font-weight: var(--weight-black);
+}
+
+.app-shell--game-detail .box-score-hitter__who span {
+  color: var(--game-muted);
+  font-size: 12px;
+}
+
+.app-shell--game-detail .box-score-hitter__who span + span::before {
+  content: '·';
+  margin-right: 8px;
+}
+
+.app-shell--game-detail .box-score-hitter__line {
+  color: var(--game-muted);
+  display: inline-flex;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  gap: 10px;
+  white-space: nowrap;
+}
+
+.app-shell--game-detail .box-score-hitter__line b {
+  color: var(--game-ink);
+  font-weight: var(--weight-black);
+  margin-right: 1px;
+}
+
+.app-shell--game-detail .box-score-hitter__line b[data-hot='true'] {
+  color: var(--color-win-ink);
+}
+
+.app-shell--game-detail .box-score-plates {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  grid-column: 2;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.app-shell--game-detail .box-score-plates li {
+  align-items: center;
+  background: var(--plate-bg);
+  border-radius: 7px;
+  color: var(--plate-ink);
+  display: inline-flex;
+  font-size: 13px;
+  font-weight: var(--weight-bold);
+  gap: 6px;
+  line-height: 1.2;
+  padding: 6px 9px;
+}
+
+.app-shell--game-detail .box-score-plates li[data-kind='out'] {
+  font-weight: var(--weight-medium);
+}
+
+.app-shell--game-detail .box-score-plates li[data-kind='homerun'] {
+  background: var(--color-win);
+  color: var(--color-white);
+}
+
+.app-shell--game-detail .box-score-plates__inning {
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--weight-bold);
+  opacity: 0.7;
+}
+
+.app-shell--game-detail .box-score-hitter-total {
+  align-items: baseline;
+  background: var(--game-surface);
+  border-top: 1px solid var(--color-line);
+  color: var(--game-muted);
+  display: flex;
+  flex-wrap: wrap;
+  font-size: 13px;
+  gap: 4px 12px;
+  justify-content: space-between;
+  margin: 0;
+  padding: 11px 14px;
+}
+
+.app-shell--game-detail .box-score-hitter-total > span:first-child {
+  color: var(--game-ink);
+  font-weight: var(--weight-black);
+}
+
+.app-shell--game-detail .box-score-hitter-total b {
+  color: var(--game-ink);
+  font-weight: var(--weight-black);
+}
+
+/* 투수 */
+.app-shell--game-detail .box-score-pitchers td {
+  min-width: 46px;
+}
+
+.app-shell--game-detail .box-score-pitchers td[data-zero='true'] {
+  color: var(--game-muted);
+}
+
+.app-shell--game-detail .box-score-pitchers td.is-strong {
+  font-weight: var(--weight-black);
+}
+
+.app-shell--game-detail .box-score-person {
+  display: grid;
+  gap: 2px;
+}
+
+.app-shell--game-detail .box-score-person__name {
   align-items: center;
   display: inline-flex;
   gap: 6px;
 }
 
-.app-shell--game-detail .box-score-player > * {
-  flex-shrink: 0;
+.app-shell--game-detail .box-score-person__name strong {
+  font-size: 14px;
+  font-weight: var(--weight-black);
 }
 
-.app-shell--game-detail .box-score-player strong {
-  font-weight: var(--weight-bold);
-}
-
-.app-shell--game-detail .box-score-player em {
+.app-shell--game-detail .box-score-person__sub {
   color: var(--game-muted);
-  font-size: 12px;
-  font-style: normal;
-  font-weight: var(--weight-medium);
-}
-
-.app-shell--game-detail .box-score-order {
-  color: var(--game-muted);
-  display: inline-block;
-  font-size: 12px;
-  min-width: 1.2em;
-}
-
-.app-shell--game-detail .box-score-hitters tr[data-substitute='true'] th strong {
+  font-size: 11px;
   font-weight: var(--weight-medium);
 }
 
 .app-shell--game-detail .box-score-decision {
-  border: 1px solid;
-  border-radius: var(--radius-pill);
+  border-radius: 5px;
   font-size: 11px;
-  font-weight: var(--weight-bold);
+  font-weight: var(--weight-black);
   line-height: 1;
-  padding: 3px 6px;
+  padding: 3px 5px;
 }
 
-.app-shell--game-detail .box-score-decision[data-kind='승'] {
+.app-shell--game-detail .box-score-decision[data-kind='승리'] {
   background: var(--color-win-tint);
-  border-color: color-mix(in srgb, var(--color-win-ink) 22%, transparent);
   color: var(--color-win-ink);
 }
 
-.app-shell--game-detail .box-score-decision[data-kind='패'] {
+.app-shell--game-detail .box-score-decision[data-kind='패전'] {
   background: var(--color-lose-tint);
-  border-color: color-mix(in srgb, var(--color-lose-ink) 22%, transparent);
   color: var(--color-lose-ink);
 }
 
-.app-shell--game-detail .box-score-decision[data-kind='세'],
-.app-shell--game-detail .box-score-decision[data-kind='홀'] {
+.app-shell--game-detail .box-score-decision[data-kind='세이브'],
+.app-shell--game-detail .box-score-decision[data-kind='홀드'] {
   background: var(--color-success-tint);
-  border-color: color-mix(in srgb, var(--color-success-ink) 22%, transparent);
   color: var(--color-success-ink);
 }
 
-.app-shell--game-detail .box-score-table td[data-strong='true'] {
-  font-weight: var(--weight-black);
-}
-
-.app-shell--game-detail .box-score-table .is-inning {
-  color: var(--game-muted);
-  font-size: 12px;
-  min-width: 46px;
-}
-
-.app-shell--game-detail .box-score-table td.is-inning[data-hit='true'] {
-  color: var(--color-win-ink);
-  font-weight: var(--weight-bold);
-}
-
-.app-shell--game-detail .box-score-table tfoot th,
-.app-shell--game-detail .box-score-table tfoot td {
-  border-bottom: 0;
-  border-top: 1px solid var(--color-line-strong);
-  font-weight: var(--weight-black);
-}
-
+/* 주요 기록 */
 .app-shell--game-detail .box-score-notes {
-  display: grid;
-  gap: 6px;
+  background: var(--game-paper);
+  border: 1px solid var(--color-line);
+  border-radius: 10px;
   margin: 0;
 }
 
 .app-shell--game-detail .box-score-notes div {
+  border-top: 1px solid var(--color-line);
   display: grid;
   font-size: 13px;
-  gap: 12px;
+  gap: 14px;
   grid-template-columns: 64px minmax(0, 1fr);
-  line-height: 1.5;
+  line-height: 1.55;
+  padding: 10px 14px;
+}
+
+.app-shell--game-detail .box-score-notes div:first-child {
+  border-top: 0;
 }
 
 .app-shell--game-detail .box-score-notes dt {
@@ -1240,17 +1545,96 @@
 @media (max-width: 640px) {
   .app-shell--game-detail .box-score-line th,
   .app-shell--game-detail .box-score-line td {
-    padding: 8px 5px;
+    padding: 9px 5px;
+  }
+
+  .app-shell--game-detail .box-score-line td {
+    min-width: 18px;
+    padding-left: 3px;
+    padding-right: 3px;
+  }
+
+  .app-shell--game-detail .box-score-line thead th:not(:first-child) {
+    padding-left: 3px;
+    padding-right: 3px;
+  }
+
+  .app-shell--game-detail .box-score-line .is-total {
+    min-width: 30px;
   }
 
   .app-shell--game-detail .box-score-line tbody th,
   .app-shell--game-detail .box-score-line thead th:first-child {
-    padding-left: 8px;
+    padding-left: 10px;
   }
 
   .app-shell--game-detail .box-score-team img {
     height: 20px;
-    margin-right: 4px;
+    margin-right: 5px;
     width: 20px;
+  }
+
+  /* 볼넷은 아래 타자 기록에 있으니, 점수판이 한 화면에 들어오도록 뺀다 */
+  .app-shell--game-detail .box-score-line .is-walks {
+    display: none;
+  }
+
+  .app-shell--game-detail .box-score-keys {
+    gap: 0;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .app-shell--game-detail .box-score-keys li {
+    border-radius: 0;
+    border-top-width: 0;
+    column-gap: 10px;
+    grid-template-columns: 64px minmax(0, 1fr);
+    padding: 10px 12px;
+  }
+
+  .app-shell--game-detail .box-score-keys li:first-child {
+    border-radius: 10px 10px 0 0;
+    border-top-width: 1px;
+  }
+
+  .app-shell--game-detail .box-score-keys li:last-child {
+    border-radius: 0 0 10px 10px;
+  }
+
+  .app-shell--game-detail .box-score-keys li:only-child {
+    border-radius: 10px;
+  }
+
+  .app-shell--game-detail .box-score-keys__label {
+    align-self: center;
+  }
+
+  .app-shell--game-detail .box-score-keys__detail {
+    grid-column: 2;
+  }
+
+  .app-shell--game-detail .box-score-hitter {
+    column-gap: 10px;
+    grid-template-columns: 26px minmax(0, 1fr);
+    padding: 12px;
+  }
+
+  .app-shell--game-detail .box-score-hitter[data-substitute='true'] {
+    padding-left: 28px;
+  }
+
+  .app-shell--game-detail .box-score-plates {
+    gap: 5px;
+  }
+
+  .app-shell--game-detail .box-score-plates li {
+    font-size: 12px;
+    padding: 5px 8px;
+  }
+
+  .app-shell--game-detail .box-score-pitchers td {
+    min-width: 40px;
+    padding-left: 6px;
+    padding-right: 6px;
   }
 }

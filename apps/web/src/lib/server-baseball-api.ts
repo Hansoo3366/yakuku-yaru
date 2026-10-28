@@ -1,4 +1,5 @@
 import type {
+  BoxScore,
   Game,
   PostseasonBracket,
   SeasonProjectionResponse,
@@ -123,6 +124,32 @@ export function fetchPublicPostseason(seasonYear: number) {
     `/teams/postseason?seasonYear=${seasonYear}`,
     60 * 5,
   );
+}
+
+/** 끝난 경기 박스스코어. 한 번 받으면 바뀌지 않으니 길게 캐시한다. */
+export async function fetchPublicBoxScore(gameId: number) {
+  const response = await requestPublic<{ boxScore: BoxScore | null }>(
+    `/games/${gameId}/box-score`,
+    60 * 30,
+  );
+
+  return response?.boxScore ?? null;
+}
+
+/** 포스트시즌 경기면 어느 시리즈 몇 차전인지 돌려준다. (예: 플레이오프 1차전) */
+export function findPostseasonGame(
+  bracket: PostseasonBracket | null,
+  gameId: number,
+) {
+  for (const round of bracket?.rounds ?? []) {
+    const index = round.games.findIndex((game) => game.id === gameId);
+
+    if (index >= 0) {
+      return { round, gameNumber: index + 1 };
+    }
+  }
+
+  return null;
 }
 
 export async function listPublicGames(

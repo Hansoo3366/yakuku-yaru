@@ -16,6 +16,7 @@ import {
   listAttendanceRecords,
 } from '@/lib/attendance-api';
 import type {
+  BoxScore,
   Game,
   PostseasonBracket,
   SeasonProjectionResponse,
@@ -102,11 +103,17 @@ export function usePostseasonQuery(
 }
 
 /** 끝난 경기만 박스스코어가 있다. 경기 직후에는 아직 안 받아 왔을 수 있다. */
-export function useGameBoxScoreQuery(gameId: number, enabled: boolean) {
+export function useGameBoxScoreQuery(
+  gameId: number,
+  enabled: boolean,
+  options?: { initialData?: BoxScore | null },
+) {
   return useQuery({
     queryKey: queryKeys.gameBoxScore(gameId),
     queryFn: () => fetchGameBoxScore(gameId),
     enabled,
+    // 서버가 기록을 받아 왔을 때만 채운다. 없으면 아직 안 올라온 것이니 클라이언트가 다시 묻는다.
+    initialData: options?.initialData ? { boxScore: options.initialData } : undefined,
     staleTime: 1000 * 60 * 5,
   });
 }

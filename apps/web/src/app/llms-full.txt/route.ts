@@ -1,4 +1,5 @@
-import type { Game } from '@/lib/baseball-api';
+import type { Game, PostseasonBracket, PostseasonRound } from '@/lib/baseball-api';
+import { getBoxScoreHighlights, type BoxScoreHighlights } from '@/lib/box-score-terms';
 import {
   formatKoreanTime,
   formatKoreanWeekday,
@@ -6,6 +7,8 @@ import {
 } from '@/lib/date-format';
 import { getCancellationLabel } from '@/lib/game-cancellation';
 import {
+  fetchPublicBoxScore,
+  fetchPublicPostseason,
   fetchPublicSeasonProjection,
   fetchPublicStandings,
   getKoreaSeasonYear,
@@ -22,7 +25,24 @@ import { getAbsoluteUrl } from '@/lib/site-url';
  */
 export const dynamic = 'force-dynamic';
 
-function describeGame(game: Game) {
+/** 최근 결과에 승리·패전 투수를 붙이려고 받는 박스스코어 수. 한 주 경기 수(최대 35)를 넘지 않는다 */
+const MAX_RESULT_BOX_SCORES = 35;
+
+type HighlightsByGame = Map<number, BoxScoreHighlights>;
+
+function describePitchers(highlights: BoxScoreHighlights | undefined) {
+  if (!highlights) return '';
+
+  const items = [
+    highlights.winningPitcher ? `승 ${highlights.winningPitcher.name}` : null,
+    highlights.losingPitcher ? `패 ${highlights.losingPitcher.name}` : null,
+    highlights.savePitcher ? `세 ${highlights.savePitcher.name}` : null,
+  ].filter(Boolean);
+
+  return items.length ? ` | ${items.join(', ')}` : '';
+}
+
+function describeGame(game: Game, highlights?: HighlightsByGame) {
   const matchup = `${game.awayTeam.shortName} vs ${game.homeTeam.shortName}`;
   const result =
     game.status === 'cancelled'
@@ -35,10 +55,10 @@ function describeGame(game: Game) {
   const pitchers =
     away || home ? ` | 선발 ${away ?? '미정'} vs ${home ?? '미정'}` : '';
 
-  return `- ${formatKoreanTime(game.gameDate)} ${matchup} | ${result} | ${game.stadium}${pitchers} | ${getAbsoluteUrl(`/games/${game.id}`)}`;
+  return `- ${formatKoreanTime(game.gameDate)} ${matchup} | ${result} | ${game.stadium}${pitchers}${describePitchers(highlights?.get(game.id))} | ${getAbsoluteUrl(`/games/${game.id}`)}`;
 }
 
-function describeDays(games: Game[]) {
+function describeDays(games: Game[], highlights?: HighlightsByGame) {
   const byDay = new Map<string, Game[]>();
 
   for (const game of games) {
@@ -56,22 +76,82 @@ function describeDays(games: Game[]) {
             (a, b) =>
               new Date(a.gameDate).getTime() - new Date(b.gameDate).getTime(),
           )
-          .map(describeGame)
+          .map((game) => describeGame(game, highlights))
           .join('\n')}`,
     )
     .join('\n\n');
 }
 
+const ROUND_STATUS_LABEL: Record<PostseasonRound['status'], string> = {
+  waiting: '대진 미정',
+  upcoming: '시작 전',
+  in_progress: '진행 중',
+  finished: '종료',
+};
+
+function describeRound(round: PostseasonRound) {
+  const higher = round.higher?.name ?? round.higherPlaceholder;
+  const lower = round.lower?.name ?? round.lowerPlaceholder;
+  const winner = [round.higher, round.lower].find(
+    (team) => team && team.teamId === round.winnerTeamId,
+  );
+  const record =
+    round.status === 'in_progress' || round.status === 'finished'
+      ? ` | 전적 ${round.higher?.shortName ?? '상위'} ${round.higherWins}승, ${round.lower?.shortName ?? '하위'} ${round.lowerWins}승${round.draws ? `, 무승부 ${round.draws}` : ''}`
+      : '';
+  const rule =
+    round.seriesId === '4'
+      ? '4위 팀이 1승을 안고 시작, 최대 2경기'
+      : `${round.winsNeeded.higher}승 선승제`;
+  const games = round.games
+    .map((game, index) => {
+      const score =
+        game.awayScore !== null && game.homeScore !== null && game.status === 'finished'
+          ? `${game.awayScore} : ${game.homeScore}`
+          : getKoreaDateString(game.gameDate);
+
+      return `  - ${index + 1}차전 ${game.awayTeam.shortName} vs ${game.homeTeam.shortName} | ${score} | ${getAbsoluteUrl(`/games/${game.id}`)}`;
+    })
+    .join('\n');
+
+  return `- ${round.name} (${rule}): ${higher} vs ${lower} | ${ROUND_STATUS_LABEL[round.status]}${record}${winner ? ` | ${winner.name} 진출` : ''}${games ? `\n${games}` : ''}`;
+}
+
+function describePostseason(bracket: PostseasonBracket) {
+  return `## ${bracket.seasonYear} KBO 포스트시즌 대진
+
+정규시즌 1~5위가 계단식으로 올라갑니다. 와일드카드 결정전(4위 vs 5위) 승자가 준플레이오프에서 3위와, 그 승자가 플레이오프에서 2위와, 그 승자가 한국시리즈에서 1위와 맞붙습니다. 스코어는 "원정 : 홈" 순서입니다.${bracket.champion ? `\n\n**${bracket.seasonYear} 한국시리즈 우승: ${bracket.champion.name}**` : ''}
+
+${bracket.rounds.map(describeRound).join('\n')}`;
+}
+
+/** 끝난 경기의 승리·패전·세이브 투수 */
+async function loadHighlights(games: Game[]): Promise<HighlightsByGame> {
+  const finished = games
+    .filter((game) => game.status === 'finished')
+    .slice(-MAX_RESULT_BOX_SCORES);
+  const boxScores = await Promise.all(
+    finished.map(async (game) => [game.id, await fetchPublicBoxScore(game.id)] as const),
+  );
+
+  return new Map(
+    boxScores.flatMap(([gameId, boxScore]) =>
+      boxScore ? [[gameId, getBoxScoreHighlights(boxScore)] as const] : [],
+    ),
+  );
+}
+
 export async function GET() {
   const seasonYear = getKoreaSeasonYear();
   const today = getKoreaDateString();
-  const [standings, projection, games] = await Promise.all([
+  const [standings, projection, games, postseason] = await Promise.all([
     fetchPublicStandings(seasonYear),
     fetchPublicSeasonProjection(seasonYear),
     listPublicGames({
       from: getKoreaDateString(new Date(), -7),
       to: getKoreaDateString(new Date(), 8),
     }),
+    fetchPublicPostseason(seasonYear),
   ]);
   const recent = (games ?? []).filter(
     (game) => getKoreaDateString(game.gameDate) < today,
@@ -79,10 +159,11 @@ export async function GET() {
   const upcoming = (games ?? []).filter(
     (game) => getKoreaDateString(game.gameDate) >= today,
   );
+  const highlights = await loadHighlights(recent);
   const sections = [
     `# 야크크 야르 - KBO 리그 현황 요약
 
-> ${today} (한국 시간) 기준. KBO 프로야구의 팀 순위, 최근 일주일 결과, 앞으로 일주일 일정입니다. 비공식 팬 서비스의 데이터이며 공식 기록과 조금 다를 수 있습니다. 스코어는 "원정 : 홈" 순서입니다.
+> ${today} (한국 시간) 기준. KBO 프로야구의 팀 순위, 포스트시즌 대진, 최근 일주일 결과, 앞으로 일주일 일정입니다. 비공식 팬 서비스의 데이터이며 공식 기록과 조금 다를 수 있습니다. 스코어는 "원정 : 홈" 순서입니다.
 
 사이트 안내는 ${getAbsoluteUrl('/llms.txt')} 에 있습니다.`,
   ];
@@ -102,6 +183,10 @@ ${standings.items
 
 페이지: ${getAbsoluteUrl('/standings')}`,
     );
+  }
+
+  if (postseason?.active) {
+    sections.push(describePostseason(postseason));
   }
 
   if (projection?.status === 'regularSeason' && projection.rows.length) {
@@ -145,7 +230,7 @@ ${projection.postseasonRows
   }
 
   if (recent.length) {
-    sections.push(`## 최근 일주일 경기 결과\n\n${describeDays(recent)}`);
+    sections.push(`## 최근 일주일 경기 결과\n\n${describeDays(recent, highlights)}`);
   }
 
   sections.push(`## 더 보기

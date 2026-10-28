@@ -121,3 +121,19 @@
     display: none;
   }
 }
+
+.panelHead {
+  display: grid;
+  gap: var(--space-1);
+  margin-bottom: var(--space-4);
+}
+
+.panelHead h2 {
+  color: var(--color-ink);
+  font-size: var(--text-md);
+}
+
+.panelHead p {
+  color: var(--color-muted);
+  font-size: var(--text-sm);
+}

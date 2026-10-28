@@ -7,7 +7,7 @@ import './game-detail.css';
 import Link from 'next/link';
 import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useState } from 'react';
-import { type Game } from '@/lib/baseball-api';
+import { type BoxScore, type Game } from '@/lib/baseball-api';
 import {
   type AttendanceRecord,
   updateAttendanceViewerPreference,
@@ -573,10 +573,16 @@ function GameTicketPanel({ game }: { game: Game }) {
 export function GameDetailPageClient({
   gameId,
   initialGame,
+  initialBoxScore,
+  postseasonLabel,
 }: {
   gameId: number;
   /** 서버가 미리 받아 온 경기 정보. 첫 HTML 에 본문이 담기게 한다. */
   initialGame?: Game | null;
+  /** 서버가 미리 받아 온 끝난 경기 기록 */
+  initialBoxScore?: BoxScore | null;
+  /** 포스트시즌 경기면 "플레이오프 1차전" 같은 이름 */
+  postseasonLabel?: string | null;
 }) {
   const queryClient = useQueryClient();
   const token = useAuthStore((state) => state.token);
@@ -746,7 +752,9 @@ export function GameDetailPageClient({
           </span>
         </div>
         <div className="match-hero-copy">
-          <span className="eyebrow">KBO 리그</span>
+          <span className="eyebrow">
+            {postseasonLabel ? `KBO 리그 · ${postseasonLabel}` : 'KBO 리그'}
+          </span>
           <h1>
             {game.awayTeam.name} vs {game.homeTeam.name}
           </h1>
@@ -824,7 +832,11 @@ export function GameDetailPageClient({
       </div>
 
       {isFinished ? (
-        <GameBoxScore game={game} viewerFavoriteTeamId={viewerFavoriteTeamId} />
+        <GameBoxScore
+          game={game}
+          initialBoxScore={initialBoxScore}
+          viewerFavoriteTeamId={viewerFavoriteTeamId}
+        />
       ) : null}
 
       <section
