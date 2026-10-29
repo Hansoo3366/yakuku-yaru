@@ -112,7 +112,12 @@ export function readCookieHeader(
     const [rawKey, ...rawValue] = cookie.trim().split('=');
 
     if (rawKey === name) {
-      return decodeURIComponent(rawValue.join('='));
+      // "%" 처럼 깨진 값은 decodeURIComponent 가 던진다. 인증 미들웨어 try 밖이라 프로세스가 죽으니 쿠키가 없는 것으로 본다
+      try {
+        return decodeURIComponent(rawValue.join('='));
+      } catch {
+        return null;
+      }
     }
   }
 

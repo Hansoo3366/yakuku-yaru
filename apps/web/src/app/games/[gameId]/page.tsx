@@ -29,9 +29,12 @@ function parseGameId(value: string) {
   return Number.isInteger(gameId) && gameId > 0 ? gameId : null;
 }
 
-function hasScore(game: Game) {
+/** 경기 당일에는 시작 전부터 0:0, 경기 중에는 진행 점수가 들어오니 끝난 경기만 결과로 쓴다 */
+function hasFinalScore(game: Game) {
   return (
-    typeof game.awayScore === 'number' && typeof game.homeScore === 'number'
+    game.status === 'finished' &&
+    typeof game.awayScore === 'number' &&
+    typeof game.homeScore === 'number'
   );
 }
 
@@ -66,7 +69,7 @@ function postseasonLabel(extras: GameExtras) {
 
 function buildGameTitle(game: Game, extras: GameExtras) {
   const matchup = `${game.awayTeam.shortName} vs ${game.homeTeam.shortName}`;
-  const score = hasScore(game) ? ` ${game.awayScore} : ${game.homeScore}` : '';
+  const score = hasFinalScore(game) ? ` ${game.awayScore} : ${game.homeScore}` : '';
   const label = postseasonLabel(extras);
 
   // 포스트시즌은 "플레이오프 1차전"으로 찾으니 회차를 앞에 두고 날짜는 짧게 쓴다.
@@ -77,7 +80,7 @@ function buildGameTitle(game: Game, extras: GameExtras) {
 
 /** "KIA가 5:1로 이겼어요. 승리 투수 이의리, 패전 투수 페덱." 같은 한두 문장 */
 function describeResult(game: Game, boxScore: BoxScore | null) {
-  if (!hasScore(game)) return '';
+  if (!hasFinalScore(game)) return '';
 
   const awayScore = game.awayScore as number;
   const homeScore = game.homeScore as number;
@@ -107,7 +110,7 @@ function describeResult(game: Game, boxScore: BoxScore | null) {
 function buildGameDescription(game: Game, extras: GameExtras) {
   const matchup = `${josa(game.awayTeam.name, '과')} ${game.homeTeam.name}`;
   const label = postseasonLabel(extras);
-  const isPast = hasScore(game) || new Date(game.gameDate) < new Date();
+  const isPast = hasFinalScore(game) || new Date(game.gameDate) < new Date();
   const where = `${formatKoreanDateTime(game.gameDate)} ${game.stadium}에서 ${isPast ? '열린' : '열리는'}`;
   const what = label ? `${extras.postseason?.seasonYear} ${label} ${matchup}` : matchup;
 
@@ -192,7 +195,7 @@ function buildGameJsonLd(game: Game, extras: GameExtras) {
       ? []
       : [{ '@type': 'PropertyValue', name, value }];
   const properties = [
-    ...(hasScore(game)
+    ...(hasFinalScore(game)
       ? [
           ...property(`${game.awayTeam.shortName} 득점`, game.awayScore),
           ...property(`${game.homeTeam.shortName} 득점`, game.homeScore),

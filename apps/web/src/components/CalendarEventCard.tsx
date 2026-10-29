@@ -86,7 +86,9 @@ export function CalendarEventCard({
   const outcomeLabel = getGameOutcomeLabel(outcome);
   const matchupLabel = `${game.awayTeam.shortName} vs ${game.homeTeam.shortName}`;
   const timeLabel = formatGameTime(game.gameDate);
-  const hasScore = game.homeScore !== null && game.awayScore !== null;
+  // 경기 당일 시작 전 0:0 이나 경기 중 점수를 결과처럼 보여 주지 않는다
+  const hasScore =
+    game.status === 'finished' && game.homeScore !== null && game.awayScore !== null;
   const pitcherLine = formatPitcherLine(game);
   const cancellationMeta =
     game.status === 'cancelled'
