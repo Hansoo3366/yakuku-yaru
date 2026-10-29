@@ -18,6 +18,8 @@ export type KboGameCenterGame = {
   HOME_ID: string;
   AWAY_NM: string;
   HOME_NM: string;
+  /** 0=정규시즌, 4=와일드카드, 3=준PO, 5=PO, 7=KS 처럼 경기 종류 */
+  SR_ID?: number | string | null;
   T_PIT_P_ID: number | null;
   T_PIT_P_NM: string | null;
   B_PIT_P_ID: number | null;
@@ -305,12 +307,14 @@ export async function fetchKboPitcherAnalysis(input: {
 export async function fetchKboLineupAnalysis(input: {
   seasonYear: number;
   gameExternalId: string;
+  /** 경기 목록의 SR_ID. 포스트시즌 경기를 정규시즌(0)으로 물으면 지난 정규시즌 라인업이 온다 */
+  seriesId?: number | string | null;
 }) {
   const data = await postKboJson<KboLineupAnalysisResponse>(
     KBO_LINEUP_ANALYSIS_URL,
     new URLSearchParams({
       leId: '1',
-      srId: '0',
+      srId: String(input.seriesId ?? 0),
       seasonId: String(input.seasonYear),
       gameId: input.gameExternalId,
     }),

@@ -323,6 +323,7 @@ export async function syncKboGameCenter(input?: {
         const lineupAnalysis = await fetchKboLineupAnalysis({
           seasonYear,
           gameExternalId: game.G_ID,
+          seriesId: game.SR_ID,
         });
         const awayLineup = await enrichLineupPlayersWithSearchIds({
           seasonYear,
