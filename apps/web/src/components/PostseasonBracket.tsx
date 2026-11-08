@@ -34,10 +34,33 @@ function formatShortDate(value: string) {
   return formatKoreanMonthDay(value).replace('월 ', '.').replace('일', '');
 }
 
+/** 대진에 오른 팀 중 정규시즌 1위. 1위는 한국시리즈에 바로 올라간다. */
+function findRegularSeasonLeader(bracket: PostseasonBracketData) {
+  return (
+    bracket.rounds
+      .flatMap((round) => [round.higher, round.lower])
+      .find((team) => team?.seed === 1) ?? null
+  );
+}
+
+/** 정규시즌 1위가 한국시리즈까지 우승하면 통합우승 */
+export function isIntegratedChampion(bracket: PostseasonBracketData) {
+  return bracket.champion?.seed === 1;
+}
+
 /** 대진표 위 한 줄 요약: 우승 > 진행 중인 시리즈 > 다음 시리즈 순 */
 export function summarizePostseason(bracket: PostseasonBracketData) {
   if (bracket.champion) {
-    return `${josa(bracket.champion.shortName, '이')} ${bracket.seasonYear} 한국시리즈 우승팀이에요.`;
+    if (isIntegratedChampion(bracket)) {
+      return `${josa(bracket.champion.shortName, '이')} ${bracket.seasonYear} 정규시즌 1위와 한국시리즈 우승을 모두 차지한 통합우승팀이에요.`;
+    }
+
+    const leader = findRegularSeasonLeader(bracket);
+    const champion = `${josa(bracket.champion.shortName, '이')} 한국시리즈 우승으로 ${bracket.seasonYear} 최종 1위에 올랐어요.`;
+
+    return leader
+      ? `${champion} 정규시즌 1위는 ${josa(leader.shortName, '이')} 차지했어요.`
+      : champion;
   }
 
   const live = bracket.rounds.find((round) => round.status === 'in_progress');
@@ -137,7 +160,15 @@ function GameRow({ game, index }: { game: PostseasonGame; index: number }) {
   );
 }
 
-function ChampionCrown({ champion, seasonYear }: { champion: PostseasonTeam | null; seasonYear: number }) {
+function ChampionCrown({
+  champion,
+  seasonYear,
+  integrated,
+}: {
+  champion: PostseasonTeam | null;
+  seasonYear: number;
+  integrated: boolean;
+}) {
   return (
     <div className={`bracket-crown${champion ? ' is-decided' : ''}`}>
       <span className="bracket-crown__badge">
@@ -146,7 +177,8 @@ function ChampionCrown({ champion, seasonYear }: { champion: PostseasonTeam | nu
       {champion ? (
         <span className="bracket-crown__label">
           <img alt="" src={getTeamLogoSrc({ shortName: champion.shortName })} />
-          <strong>{champion.shortName}</strong> {seasonYear} 우승
+          <strong>{champion.shortName}</strong> {seasonYear}{' '}
+          {integrated ? '통합우승' : '한국시리즈 우승'}
         </span>
       ) : (
         <span className="bracket-crown__label">{seasonYear} 우승팀</span>
@@ -241,6 +273,7 @@ export function PostseasonBracket({ bracket, highlightTeamId }: Props) {
               index === lastStep ? (
                 <ChampionCrown
                   champion={bracket.champion}
+                  integrated={isIntegratedChampion(bracket)}
                   seasonYear={bracket.seasonYear}
                 />
               ) : undefined

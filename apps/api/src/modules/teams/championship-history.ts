@@ -52,6 +52,7 @@ const KBO_CHAMPIONS_BY_SEASON: Array<{
   { seasonYear: 2023, teamShortName: 'LG' },
   { seasonYear: 2024, teamShortName: 'KIA' },
   { seasonYear: 2025, teamShortName: 'LG' },
+  { seasonYear: 2026, teamShortName: '삼성' },
 ];
 
 export function getTeamChampionshipHistory(

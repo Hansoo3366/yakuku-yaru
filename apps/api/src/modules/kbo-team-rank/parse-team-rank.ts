@@ -71,6 +71,29 @@ function parseGamesBehind(value: string) {
   return 0;
 }
 
+function exactWinRate(standing: ParsedKboTeamStanding) {
+  const decided = standing.wins + standing.losses;
+  return decided > 0 ? standing.wins / decided : 0;
+}
+
+// 한국시리즈가 끝나면 KBO 페이지의 순위 칸이 포스트시즌 결과를 반영한 최종 순위로 바뀐다.
+// 정규시즌 순위는 승률로 다시 매기고, 승률이 같으면 KBO처럼 같은 순위를 준다.
+export function rankByRegularSeasonWinRate(
+  standings: ParsedKboTeamStanding[],
+): ParsedKboTeamStanding[] {
+  const sorted = [...standings].sort(
+    (a, b) => exactWinRate(b) - exactWinRate(a) || a.rank - b.rank,
+  );
+
+  return sorted.map((standing) => ({
+    ...standing,
+    rank:
+      1 +
+      sorted.filter((other) => exactWinRate(other) > exactWinRate(standing))
+        .length,
+  }));
+}
+
 export function parseKboTeamRankHtml(html: string): ParsedKboTeamRankPage {
   const rankDate = parseRankDateFromHtml(html);
   const seasonYear = Number(rankDate.slice(0, 4));
@@ -126,6 +149,6 @@ export function parseKboTeamRankHtml(html: string): ParsedKboTeamRankPage {
     seasonYear,
     rankDate,
     seriesId,
-    standings,
+    standings: rankByRegularSeasonWinRate(standings),
   };
 }

@@ -90,7 +90,7 @@ export default async function StandingsPage() {
     ? {
         '@context': 'https://schema.org',
         '@type': 'ItemList',
-        name: `${standings.seasonYear} KBO 팀 순위`,
+        name: `${standings.seasonYear} KBO 정규시즌 순위`,
         url: getAbsoluteUrl('/standings'),
         itemListOrder: 'https://schema.org/ItemListOrderAscending',
         itemListElement: standings.items.map((item) => ({
@@ -151,7 +151,15 @@ export default async function StandingsPage() {
         </section>
       ) : null}
 
-      <section aria-label="팀 순위" className={styles.panel}>
+      <section aria-labelledby="regular-season-title" className={styles.panel}>
+        <div className={styles.panelHead}>
+          <h2 id="regular-season-title">정규시즌 순위</h2>
+          <p>
+            {activePostseason
+              ? '144경기 승률로 매긴 순위예요. 포스트시즌 결과는 위 대진에 따로 있어요.'
+              : '144경기 승률로 매긴 순위예요.'}
+          </p>
+        </div>
         <TeamStandingsTable standings={standings} />
       </section>
 
