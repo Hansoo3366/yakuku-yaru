@@ -120,41 +120,75 @@ docker compose --env-file .env.production -f docker-compose.prod.yml exec api np
 
 ## 9. GitHub Actions 자동 배포
 
-`.github/workflows/deploy.yml`은 `main` 브랜치에 push되면 Google Cloud VM에 SSH로 접속해 최신 코드를 받고 Docker Compose를 다시 실행합니다.
+`.github/workflows/deploy.yml`은 `main` 브랜치에 push되면 이미지를 빌드하고, IAP 터널을 거쳐 서버에 SSH로 접속해 `scripts/deploy/remote-deploy.sh`를 실행합니다.
+
+```txt
+GitHub Actions ─(Workload Identity)→ GCP 로그인
+               ─(IAP 터널, localhost:2222)→ VM 22번
+               ─(ssh, 호스트 키 검사)→ remote-deploy.sh
+```
+
+- 서버 SSH 22번은 IAP 대역(`35.235.240.0/20`)에만 열려 있습니다. 외부 IP로 직접 SSH 할 수 없습니다.
+- GitHub Actions는 키 파일 없이 Workload Identity로 GCP에 로그인합니다. 이 저장소의 `main`에서 돈 workflow만 로그인할 수 있습니다.
+- 모든 Action은 커밋 SHA로 고정합니다. 버전을 올릴 때도 태그 대신 SHA를 적습니다.
 
 서버에는 이미 아래 준비가 되어 있어야 합니다.
 
 - Docker와 Docker Compose plugin 설치
-- repository clone 완료
-- repository 루트에 `.env.production` 생성 완료
-- 서버의 SSH key가 GitHub repository 접근 권한을 가짐
+- repository를 https로 clone (공개 저장소라 서버에 GitHub 키를 두지 않습니다)
+- repository 루트에 `.env.production` 생성 (권한 600)
 
-GitHub repository에서 아래 Secrets를 등록합니다.
-
-```txt
-DEPLOY_HOST      Google Cloud VM 외부 IP
-DEPLOY_USER      VM SSH 사용자명
-DEPLOY_SSH_KEY   VM에 접속할 private key
-DEPLOY_PATH      서버의 repository 절대 경로
-DEPLOY_PORT      SSH 포트, 기본값은 22
-DEPLOY_COMPOSE_PROFILES  선택 값. Caddy를 켤 때 proxy
-NEXT_PUBLIC_API_URL  빌드 시 web 이미지에 주입할 API URL
-```
-
-예시:
+### GitHub Secrets
 
 ```txt
-DEPLOY_HOST=34.000.000.000
-DEPLOY_USER=hanso3366
-DEPLOY_PATH=/home/hanso3366/yakuku-yaru
-DEPLOY_PORT=22
-DEPLOY_COMPOSE_PROFILES=proxy
-NEXT_PUBLIC_API_URL=https://yakuku-yaru.today/api
+DEPLOY_USER             VM SSH 사용자명
+DEPLOY_SSH_KEY          VM에 접속할 private key
+DEPLOY_PATH             서버의 repository 절대 경로
+NEXT_PUBLIC_API_URL     빌드 시 web 이미지에 주입할 API URL
+NEXT_PUBLIC_SENTRY_DSN  브라우저 오류 추적 DSN (선택)
 ```
+
+Repository variable로 `NEXT_PUBLIC_CONTACT_EMAIL`도 필요합니다.
+
+VM 이름, zone, Workload Identity provider, 배포 서비스 계정, 서버 SSH 호스트 키는 비밀값이 아니므로 `deploy.yml`의 `deploy` job `env`와 `Authenticate to Google Cloud` 단계에 직접 적혀 있습니다.
 
 GitHub Actions는 `api`, `web` Docker 이미지를 GitHub Container Registry(GHCR)에 먼저 빌드/push합니다.
 서버는 이미지를 pull한 뒤 `docker compose up -d --no-build`로 교체만 수행합니다.
 따라서 e2-small 같은 작은 VM에서도 배포 중 서버가 직접 Next.js 빌드를 수행하지 않습니다.
+
+### GCP 준비 (한 번만, Cloud Shell)
+
+배포 전용 서비스 계정은 IAP 터널 접속과 VM 조회 권한만 가집니다.
+
+```bash
+PROJECT_ID=yakuku-yaru
+PROJECT_NUMBER=$(gcloud projects describe $PROJECT_ID --format='value(projectNumber)')
+REPO=Hansoo3366/yakuku-yaru
+SA=github-deploy@$PROJECT_ID.iam.gserviceaccount.com
+
+gcloud services enable iap.googleapis.com iamcredentials.googleapis.com sts.googleapis.com
+gcloud iam service-accounts create github-deploy --display-name="GitHub Actions deploy"
+gcloud projects add-iam-policy-binding $PROJECT_ID --member=serviceAccount:$SA --role=roles/iap.tunnelResourceAccessor --condition=None
+gcloud projects add-iam-policy-binding $PROJECT_ID --member=serviceAccount:$SA --role=roles/compute.viewer --condition=None
+
+gcloud iam workload-identity-pools create github --location=global --display-name="GitHub"
+gcloud iam workload-identity-pools providers create-oidc github-repo \
+  --location=global --workload-identity-pool=github \
+  --issuer-uri=https://token.actions.githubusercontent.com \
+  --attribute-mapping="google.subject=assertion.sub,attribute.repository=assertion.repository,attribute.ref=assertion.ref" \
+  --attribute-condition="assertion.repository=='$REPO' && assertion.ref=='refs/heads/main'"
+gcloud iam service-accounts add-iam-policy-binding $SA --role=roles/iam.workloadIdentityUser \
+  --member="principalSet://iam.googleapis.com/projects/$PROJECT_NUMBER/locations/global/workloadIdentityPools/github/attribute.repository/$REPO"
+```
+
+방화벽은 SSH를 IAP 대역에만 열고, 외부에는 80/443만 엽니다.
+
+```bash
+gcloud compute firewall-rules update default-allow-ssh --source-ranges=35.235.240.0/20
+gcloud compute firewall-rules list --format="table(name,sourceRanges.list(),allowed[].map().firewall_rule().list(),targetTags.list())"
+```
+
+### 배포 키 만들기
 
 `DEPLOY_SSH_KEY`는 GitHub가 서버에 접속할 때 사용할 **private key**입니다. 서버에서 한 번만 실행합니다.
 
@@ -163,90 +197,46 @@ cd ~/yakuku-yaru
 bash scripts/deploy/setup-github-actions-ssh.sh
 ```
 
-스크립트가 `authorized_keys`에 공개키를 넣고, `DEPLOY_SSH_KEY`에 붙여 넣을 private key를 출력합니다.
-
-수동으로 할 경우:
-
-```bash
-ssh-keygen -t ed25519 -C "github-actions-yakuku-yaru" -f ~/.ssh/github_actions_yakuku_yaru -N ""
-chmod 600 ~/.ssh/github_actions_yakuku_yaru ~/.ssh/authorized_keys
-chmod 700 ~/.ssh
-cat ~/.ssh/github_actions_yakuku_yaru.pub >> ~/.ssh/authorized_keys
-cat ~/.ssh/github_actions_yakuku_yaru   # ← 이 출력 전체가 DEPLOY_SSH_KEY
-```
+스크립트가 공개키를 `authorized_keys`에 넣고, `DEPLOY_SSH_KEY`에 붙여 넣을 private key를 출력한 뒤 서버의 private key 파일을 지웁니다. private key는 GitHub Secret에만 둡니다. Mac 등 다른 곳으로 복사하지 않습니다.
 
 **주의:** `.pub` 파일이 아니라 **private key**(`BEGIN OPENSSH PRIVATE KEY`)를 Secret에 넣습니다.
 
+GCP 브라우저 SSH를 쓰면 `authorized_keys`가 메타데이터 기준으로 다시 쓰일 수 있습니다. 공개키를 GCP Console의 VM → `수정` → `SSH 키`에 등록하면 사라지지 않습니다. 형식은 `ssh-ed25519 AAAA... hanso3366`이고, 맨 끝 사용자명이 `DEPLOY_USER`와 같아야 합니다.
+
+### 서버 접속
+
+외부 IP로 직접 SSH 할 수 없으므로 아래 중 하나를 씁니다.
+
+- GCP Console의 **브라우저 SSH**
+- `gcloud compute ssh instance-20260521-045939 --zone us-central1-a --tunnel-through-iap`
+
+### VM을 새로 만들었을 때
+
+1. `deploy.yml`의 `GCP_INSTANCE`, `GCP_ZONE`을 새 값으로 바꿉니다.
+2. 새 VM에서 `cat /etc/ssh/ssh_host_ed25519_key.pub` 값으로 `DEPLOY_HOST_KEY`를 바꿉니다.
+3. 위 "배포 키 만들기"를 다시 하고 `DEPLOY_SSH_KEY`를 덮어씁니다.
+
 수동으로 자동 배포를 테스트하려면 GitHub Actions 화면에서 `Deploy to Google Cloud VM` workflow의 `Run workflow`를 실행합니다.
 
-### SSH 인증 실패 (`unable to authenticate, attempted methods [none publickey]`)
+### 배포 실패할 때
 
-KBO 크롤 workflow가 아니라 **`Deploy to Google Cloud VM`** 배포 단계에서 나는 오류입니다.
+| 실패한 단계                                                     | 확인할 것                                                                                                     |
+| --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `Authenticate to Google Cloud`                                  | provider 경로, 서비스 계정의 `roles/iam.workloadIdentityUser` 바인딩, `main` 브랜치에서 돌았는지              |
+| `Open IAP tunnel`                                               | 서비스 계정의 `roles/iap.tunnelResourceAccessor`, 방화벽에 `35.235.240.0/20` → 22 허용이 있는지, VM 이름/zone |
+| `Deploy with Docker Compose` 의 `Host key verification failed`  | VM을 새로 만들었으면 `DEPLOY_HOST_KEY` 교체                                                                   |
+| `Deploy with Docker Compose` 의 `Permission denied (publickey)` | `DEPLOY_SSH_KEY`와 서버 공개키 지문 비교, `DEPLOY_USER`                                                       |
 
-`deploy.yml`은 `appleboy/ssh-action`에 **`key:`(Secret 내용)** 을 넘깁니다. 이전 단계에서 runner의 `~/.ssh/deploy_key`를 만들고 `key_path`로 가리키면 **동작하지 않습니다**. ssh-action은 Docker 컨테이너 안에서 실행되어 runner 홈 디렉터리의 파일을 읽을 수 없기 때문입니다.
-
-Secret과 서버 `authorized_keys`가 맞지 않을 때도 같은 메시지가 납니다.
-
-#### A. 서버 (GCP SSH 또는 브라우저 SSH)
-
-```bash
-cd ~/yakuku-yaru
-git pull   # setup 스크립트가 있으면
-bash scripts/deploy/setup-github-actions-ssh.sh
-```
-
-출력된 **private key 전체**를 복사해 둡니다.
-
-서버에서 지문 확인:
+키 지문 비교:
 
 ```bash
-ssh-keygen -lf ~/.ssh/github_actions_yakuku_yaru.pub
+# 서버
+ssh-keygen -lf ~/.ssh/authorized_keys
+# Secret 에 넣은 private key (Mac 등에서 임시로)
+ssh-keygen -y -f key_file | ssh-keygen -lf -
 ```
-
-#### B. GitHub Secrets (Repository → Settings → Secrets → Actions)
-
-| Secret           | 값                                                         |
-| ---------------- | ---------------------------------------------------------- |
-| `DEPLOY_USER`    | 서버 `whoami` 결과 (예: `hanso3366`)                       |
-| `DEPLOY_HOST`    | GCP VM **외부 IP** (내부 IP 아님)                          |
-| `DEPLOY_PATH`    | `/home/hanso3366/yakuku-yaru`                              |
-| `DEPLOY_SSH_KEY` | A에서 복사한 private key **전체** (BEGIN~END, 따옴표 없음) |
-
-`DEPLOY_SSH_KEY`는 **Update**로 덮어쓰기. 줄바꿈이 깨지면 Secret을 삭제 후 새로 만드는 편이 낫습니다.
-
-#### 권장: GCP VM 메타데이터 SSH key 사용
-
-GCP 브라우저 SSH를 자주 쓰거나 OS Login/metadata 설정 때문에 `authorized_keys`가 사라지는 경우가 있습니다. 이때는 GitHub Actions용 공개키를 **VM 메타데이터 SSH 키**에 등록하는 방식이 더 안정적입니다.
-
-1. GitHub Actions용 key pair를 생성합니다.
-2. private key 전체를 `DEPLOY_SSH_KEY` Secret에 넣습니다.
-3. public key 내용을 GCP Console의 VM → `수정` → `SSH 키`에 추가합니다.
-4. 형식은 보통 `ssh-ed25519 AAAA... hanso3366` 입니다. 맨 끝 사용자명이 `DEPLOY_USER`와 같아야 합니다.
-
-이 방식을 쓰면 서버 안의 `~/.ssh/authorized_keys`가 없어져도 VM 메타데이터가 다시 키를 주입하므로 반복 장애가 줄어듭니다.
-
-#### C. Mac에서 접속 테스트 (선택, 권장)
-
-서버에서 private key 파일을 Mac으로 복사한 뒤:
-
-```bash
-chmod 600 ~/Downloads/github_actions_yakuku_yaru
-ssh -i ~/Downloads/github_actions_yakuku_yaru hanso3366@VM외부IP "echo ok"
-```
-
-`ok`가 나오면 Secret도 동일 키이므로 Actions가 통과해야 합니다.
-
-#### D. Actions 재실행
-
-`Deploy to Google Cloud VM` → **Run workflow**
-
-**Validate deployment secrets** 로그에 `Deploy key fingerprint`가 나옵니다. 서버의 `ssh-keygen -lf ~/.ssh/github_actions_yakuku_yaru.pub` 지문과 **같아야** 합니다. 다르면 Secret에 잘못된 키가 들어간 것입니다.
-
-#### E. 그래도 실패할 때
 
 - GCP VM에 **OS Login**이 켜져 있으면 `~/.ssh/authorized_keys`가 무시될 수 있습니다. 메타데이터에서 OS Login을 끄거나, OS Login용 키를 등록해야 합니다.
-- `DEPLOY_USER`가 키를 넣은 계정과 다른 경우 (예: `ubuntu` vs `hanso3366`)
-- 방화벽: SSH 22는 열려 있어야 함 (연결 자체가 안 되면 timeout, 지금은 auth 실패)
 
 ## 10. DuckDNS and HTTPS
 
@@ -270,13 +260,9 @@ docker compose --env-file .env.production -f docker-compose.prod.yml --profile p
 
 Caddy는 `APP_DOMAIN` 기준으로 Let's Encrypt 인증서를 자동 발급하고 갱신합니다.
 
-GitHub Actions 자동 배포에서도 Caddy를 함께 실행하려면 repository secret에 아래 값을 추가합니다.
+GitHub Actions 자동 배포는 항상 `--profile proxy`로 Caddy를 함께 실행합니다.
 
-```txt
-DEPLOY_COMPOSE_PROFILES=proxy
-```
-
-Google Cloud 방화벽에서도 `3000`, `4000` 포트는 닫고 `80`, `443`만 외부에 열어둡니다.
+Google Cloud 방화벽에서는 `80`, `443`만 외부에 열고, SSH `22`는 IAP 대역(`35.235.240.0/20`)에만 엽니다.
 
 애플리케이션 요청 제한은 대규모 회선 DDoS를 완전히 막지 못합니다. Cloudflare 프록시 또는 Google Cloud Load Balancer + Cloud Armor 구성과 원본 방화벽 제한은 [security.md](./security.md)를 참고합니다.
 
