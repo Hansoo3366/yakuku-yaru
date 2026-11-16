@@ -109,7 +109,8 @@ GitHub Actions
   v
 GitHub Container Registry
   |
-  | SSH deploy: image pull + compose up --no-build
+  | Workload Identity -> IAP tunnel -> ssh deploy@ (배포 명령만 허용)
+  | image pull + compose up --no-build + health/container check
   v
 Google Cloud VM
   |

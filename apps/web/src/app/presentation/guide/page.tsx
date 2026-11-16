@@ -52,10 +52,10 @@ const deployFlow = [
   'GitHub Actions',
   'Docker build',
   'GHCR push',
-  'SSH',
+  'IAP 터널 · deploy 키',
   'Compose pull / up',
   'nginx -t · caddy validate',
-  'Health check 12회',
+  'Health check · 컨테이너 확인 2회',
 ];
 
 const stats = [
@@ -590,13 +590,13 @@ const groups: TermGroup[] = [
         name: 'SSH deploy',
         meaning:
           'private key로 원격 서버에 접속해 배포 명령을 실행하는 단계입니다.',
-        role: 'appleboy/ssh-action이 VM에서 git reset --hard origin/main → 이미지 prune → compose pull api web → --profile proxy up -d --no-build → gateway만 --force-recreate로 설정 반영을 합니다.',
+        role: 'Workload Identity로 GCP에 로그인해 IAP 터널을 연 뒤, 배포 전용 사용자 deploy로 접속합니다. 이 키는 authorized_keys의 restrict,command=로 묶여 있어 셸을 열 수 없고 "deploy <커밋 SHA> <GitHub 사용자>"만 보낼 수 있습니다. 서버의 /usr/local/bin/yakuku-deploy가 값을 검사한 뒤 운영 계정으로 git reset --hard origin/main → scripts/deploy/remote-deploy.sh를 실행합니다.',
       },
       {
         name: 'Health check',
         meaning:
           '배포된 서비스가 실제로 응답하는지 확인하는 검사. 컨테이너가 떴다는 것과 서비스가 건강하다는 것은 다릅니다.',
-        role: 'gateway 컨테이너 안에서 wget으로 http://127.0.0.1:8080/api/health와 /api-docs.json을 12번 × 5초 간격으로 시도합니다. 둘 중 하나라도 실패면 workflow가 실패하지만 되돌리는 단계는 없습니다.',
+        role: 'gateway 컨테이너 안에서 wget으로 /api/health, /api-docs.json, /를 12번 × 5초 간격으로 시도하고, api·web 컨테이너가 새 이미지로 떠 있고 재시작이 0회인지 docker inspect로 확인합니다. 20초 뒤 한 번 더 확인해 뜨자마자 죽는 경우도 잡습니다. 스크립트 마지막 줄 DEPLOY_OK <SHA>가 없으면 workflow가 실패합니다. 되돌리는 단계는 없습니다.',
       },
       {
         name: 'named volume',
@@ -1434,7 +1434,7 @@ const questionGroups: QuestionGroup[] = [
       {
         question: '자동 배포는 어떤 순서로 실행되나요?',
         answer:
-          'main에 push하면 .github/workflows/deploy.yml이 돕니다. secret 검증을 먼저 하고(없으면 배포를 시작하지 않음), buildx로 api·web 이미지를 빌드해 GHCR에 commit SHA와 latest 태그로 push합니다. 그다음 SSH로 VM에 접속해 git reset --hard origin/main → prune → compose pull api web → --profile proxy up -d --no-build → gateway만 --force-recreate로 설정을 반영합니다. 마지막으로 nginx -t와 caddy validate로 설정을 검사하고, gateway 안에서 /api/health와 /api-docs.json을 12회 × 5초 시도해 둘 다 성공해야 배포가 끝납니다.',
+          'main에 push하면 .github/workflows/deploy.yml이 돕니다. secret 검증을 먼저 하고(없으면 배포를 시작하지 않음), buildx로 api·web 이미지를 빌드해 GHCR에 commit SHA와 latest 태그로 push합니다. 그다음 IAP 터널을 거쳐 셸 없이 배포 명령만 실행되는 deploy 사용자로 VM에 접속하고, 서버가 git reset --hard origin/main → compose pull api web → --profile proxy up -d --no-build → gateway만 --force-recreate로 설정을 반영합니다. nginx -t와 caddy validate로 설정을 검사한 뒤 /api/health·/api-docs.json·/ 응답과 api·web 컨테이너(새 이미지, 재시작 0회)를 20초 간격으로 두 번 확인하고, 이전 이미지를 정리한 다음 DEPLOY_OK를 남겨야 배포가 끝납니다.',
         followUps: [
           {
             question: 'VM에서 빌드하지 않나요?',

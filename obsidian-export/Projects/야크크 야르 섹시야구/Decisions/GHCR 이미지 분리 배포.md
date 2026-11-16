@@ -13,7 +13,7 @@ Next.js·API Docker 이미지는 **GitHub Actions에서 빌드해 GHCR로 `push`
 
 1. `main` push → GHA
 2. Buildx로 `ghcr.io/<owner>/yakuku-yaru-web:sha` 빌드
-3. SSH로 VM 접속
+3. Workload Identity → IAP 터널 → 배포 전용 사용자 `deploy`로 VM 접속 ([[IAP 터널과 배포 전용 사용자]])
 4. `docker compose pull && up -d --no-build`
 
 ## Secrets
