@@ -42,7 +42,7 @@
     "multer": "^2.2.0",
     "mysql2": "^3.11.3",
     "node-cron": "^4.2.1",
-    "nodemailer": "^9.0.4",
+    "nodemailer": "^10.1.4",
     "sharp": "0.35.3",
     "swagger-ui-express": "^5.0.1"
   },
