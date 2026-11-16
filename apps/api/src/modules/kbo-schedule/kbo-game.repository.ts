@@ -6,7 +6,7 @@ import {
   selectGamesMissingFromSchedule,
   type ScheduleWindow,
 } from './stale-games.js';
-import { reconcileAttendanceRecordsForGame } from '../attendance/attendance.repository.js';
+import { reconcileAttendanceRecordsForGame } from '../attendance/attendance-reconcile.js';
 
 export const KBO_EXTERNAL_SOURCE = 'kbo';
 

@@ -5,8 +5,9 @@ import type { AttendanceRecord } from '@/lib/attendance-api';
 import {
   formatDateInput,
   getAgendaDayElementId,
-  isSameDay,
+  getKoreaToday,
 } from '@/lib/calendar-range';
+import { groupAttendanceRecordsByGame } from '@/lib/calendar-data';
 import { CalendarEventCard } from '@/components/CalendarEventCard';
 
 const weekdayLabels = [
@@ -40,17 +41,8 @@ export function CalendarAgendaView({
   referenceMonth,
   focusDateKey = null,
 }: Props) {
-  const today = new Date();
-
-  function groupAttendanceRecordsByGame(records: AttendanceRecord[]) {
-    const groups = new Map<number, AttendanceRecord[]>();
-
-    for (const record of records) {
-      groups.set(record.gameId, [...(groups.get(record.gameId) ?? []), record]);
-    }
-
-    return [...groups.values()];
-  }
+  // 달력 격자와 같은 한국 시간 기준 오늘
+  const todayKey = formatDateInput(getKoreaToday());
 
   const visibleDays = days.filter((date) => {
     if (
@@ -84,7 +76,7 @@ export function CalendarAgendaView({
         );
         const isOutside =
           referenceMonth && date.getMonth() !== referenceMonth.getMonth();
-        const isToday = isSameDay(date, today);
+        const isToday = key === todayKey;
         const isFocused = key === focusDateKey;
         const hasEvents = dayGames.length > 0 || extraRecordGroups.length > 0;
 

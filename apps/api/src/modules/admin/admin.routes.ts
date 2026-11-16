@@ -21,8 +21,8 @@ import { updatePostModeration } from '../posts/post.repository.js';
 import {
   deleteAttendanceRecord,
   findAttendanceRecordById,
-  reconcileAttendanceRecordsForGame,
 } from '../attendance/attendance.repository.js';
+import { reconcileAttendanceRecordsForGame } from '../attendance/attendance-reconcile.js';
 import {
   listAdminReports,
   updateContentReport,

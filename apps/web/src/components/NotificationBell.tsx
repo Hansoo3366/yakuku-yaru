@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
 import { useAuthStore } from '@/lib/auth-store';
 import {
@@ -12,6 +13,7 @@ import {
   type AppNotification,
 } from '@/lib/notification-api';
 import { respondAttendanceCompanion } from '@/lib/attendance-api';
+import { queryKeys } from '@/lib/query-keys';
 import {
   formatKoreanDateShort,
   formatTimeAgo as formatRelativeTimeAgo,
@@ -46,6 +48,7 @@ export function NotificationBell({ userId }: NotificationBellProps) {
   );
   const containerRef = useRef<HTMLDivElement | null>(null);
   const token = useAuthStore((state) => state.token);
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     if (userId === null || !token) {
@@ -163,6 +166,15 @@ export function NotificationBell({ userId }: NotificationBellProps) {
     try {
       await respondAttendanceCompanion(recordId, status, token);
       setRespondedRecords((current) => ({ ...current, [recordId]: status }));
+      // 동행을 수락하면 그 경기가 내 기록·통계에 들어온다.
+      if (status === 'accepted') {
+        void queryClient.invalidateQueries({
+          queryKey: queryKeys.attendanceRecordsAll(token),
+        });
+        void queryClient.invalidateQueries({
+          queryKey: queryKeys.attendanceStatsAll(token),
+        });
+      }
       if (!notification.readAt) {
         await markNotificationRead(notification.id, token);
       }

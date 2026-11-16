@@ -40,6 +40,12 @@ export const queryKeys = {
     token: string | null | undefined,
     input: { from?: string; to?: string } = {},
   ) => ['attendance-stats', token, input.from ?? null, input.to ?? null] as const,
+  /** 기간과 관계없이 이 사용자의 통계 전부. 무효화에 쓴다. */
+  attendanceStatsAll: (token: string | null | undefined) =>
+    ['attendance-stats', token] as const,
+  /** 기간과 관계없이 이 사용자의 기록 목록 전부. 무효화에 쓴다. */
+  attendanceRecordsAll: (token: string | null | undefined) =>
+    ['attendance-records', token] as const,
   posts: (input: {
     page: number;
     keyword?: string;

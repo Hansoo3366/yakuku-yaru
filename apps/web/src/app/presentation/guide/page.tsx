@@ -657,7 +657,7 @@ const groups: TermGroup[] = [
         name: '칭호 계산',
         meaning:
           '원본 데이터에서 파생된 값을 규칙으로 계산해내는 로직. 저장하지 않고 매번 계산하면 원본이 바뀔 때 자동으로 따라옵니다.',
-        role: 'apps/api/src/modules/attendance/attendance-score.ts의 resolveAttendanceTitles가 승리요정·패배요정·프로 직관러 등 22종을 계산합니다. 화면용 미러가 apps/web/src/lib/attendance-score.ts에 있어 같은 규칙을 씁니다.',
+        role: 'apps/api/src/modules/attendance/attendance-score.ts의 resolveAttendanceTitles가 승리요정·패배요정·프로 직관러 등 22종을 계산합니다. 홈과 마이페이지는 모두 이 API 결과(/attendance-records/stats/me)를 받아 보여 줘서 화면마다 칭호가 달라지지 않습니다.',
       },
     ],
   },

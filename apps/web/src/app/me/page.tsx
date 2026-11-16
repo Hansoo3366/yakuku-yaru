@@ -27,10 +27,12 @@ import { applyTeamTheme, useTeamTheme } from '@/lib/team-theme';
 import { NICKNAME_MAX_LENGTH, validateNicknameClient } from '@/lib/user-input';
 import { Skeleton } from '@/components/Skeleton';
 import {
+  getAttendanceSeasonRange,
   useAttendanceStatsQuery,
   useMeQuery,
   useTeamsQuery,
 } from '@/lib/queries';
+import { getKoreaDateString } from '@/lib/date-format';
 import { queryKeys } from '@/lib/query-keys';
 
 type StatFilterKey = 'overall' | 'stadium' | 'home' | 'favoriteStadium';
@@ -57,11 +59,10 @@ export default function MyPage() {
   useAuthGuard();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const token = useAuthStore((state) => state.token);
-  const statsYear = new Date().getFullYear();
-  const statsRange = {
-    from: `${statsYear}-01-01`,
-    to: `${statsYear + 1}-01-01`,
-  };
+  // 홈과 같은 한국 시간 기준 시즌 연도·같은 쿼리 키를 쓴다.
+  const statsRange = getAttendanceSeasonRange(
+    Number(getKoreaDateString().slice(0, 4)),
+  );
   const storedUser = useAuthStore((state) => state.user);
   const setStoredUser = useAuthStore((state) => state.setUser);
   const clearSession = useAuthStore((state) => state.clearSession);
@@ -201,8 +202,13 @@ export default function MyPage() {
     const response = await updateFavoriteTeam(teamId, token);
     setStoredUser(response.user);
     queryClient.setQueryData(queryKeys.me(token), { user: response.user });
+    // 응원팀이 바뀌면 서버가 저장 스코어를 다시 맞춘다. 기간별 통계·기록을 모두 새로 받는다.
+    // (queryKeys.attendanceStats(token) 은 기간 자리가 null 이라 기간이 있는 통계와 맞지 않았다)
     void queryClient.invalidateQueries({
-      queryKey: queryKeys.attendanceStats(token),
+      queryKey: queryKeys.attendanceStatsAll(token),
+    });
+    void queryClient.invalidateQueries({
+      queryKey: queryKeys.attendanceRecordsAll(token),
     });
     setStatusMessage('내 팀이 변경되었습니다.');
     setShowTeamPicker(false);

@@ -10,7 +10,7 @@ import {
   assertUserUploadQuota,
   profilePhotoUpload,
 } from '../attendance/upload.js';
-import { reconcileAttendanceScoresForUser } from '../attendance/attendance.repository.js';
+import { reconcileAttendanceScoresForUser } from '../attendance/attendance-reconcile.js';
 import { findTeamById } from '../teams/team.repository.js';
 import {
   findUserByNickname,

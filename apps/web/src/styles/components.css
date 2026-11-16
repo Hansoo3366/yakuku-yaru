@@ -347,15 +347,6 @@
   width: 14px;
 }
 
-.admin-sync-controls .btn {
-  min-height: 40px;
-}
-
-.admin-row .btn {
-  justify-self: start;
-  width: max-content;
-}
-
 .notice-card {
   background: var(--color-surface-soft);
   border: 1px solid var(--color-line);
@@ -494,8 +485,6 @@
  * ========================================================= */
 .card,
 .auth-card,
-.admin-summary-card,
-.admin-table-card,
 .calendar-summary-card {
   border: 1px solid var(--color-line);
   box-shadow: var(--shadow-sm);
@@ -531,10 +520,6 @@
 .icon-button:hover:not(:disabled) {
   background: var(--color-surface-strong);
   border-color: var(--color-line);
-}
-
-.admin-cheer-filter .btn {
-  height: 46px;
 }
 
 @media (max-width: 720px) {

@@ -11,11 +11,11 @@ import {
   findAttendanceRecordByGame,
   findAttendanceRecordById,
   getAttendanceStats,
-  reconcileAttendanceRecordById,
   listAttendanceRecords,
   updateAttendancePhoto,
   updateAttendanceRecord,
 } from './attendance.repository.js';
+import { reconcileAttendanceRecordById } from './attendance-reconcile.js';
 import {
   findCompanionForUser,
   replaceAttendanceCompanions,

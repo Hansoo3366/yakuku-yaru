@@ -183,14 +183,24 @@ export function useAttendanceRecordsQuery(
   });
 }
 
+/** 한 시즌(1월 1일 ~ 이듬해 1월 1일) 통계·기록 조회 기간. 홈과 /me 가 같은 캐시를 쓰도록 모은다. */
+export function getAttendanceSeasonRange(seasonYear: number) {
+  return {
+    from: `${seasonYear}-01-01`,
+    to: `${seasonYear + 1}-01-01`,
+  };
+}
+
+/** 직관 통계·명예타이틀은 API 가 계산한 값만 쓴다 (웹에서 다시 계산하지 않는다). */
 export function useAttendanceStatsQuery(
   token: string | null | undefined,
   input: { from?: string; to?: string } = {},
+  options?: { enabled?: boolean },
 ) {
   return useQuery({
     queryKey: queryKeys.attendanceStats(token, input),
     queryFn: () => fetchAttendanceStats(token ?? '', input),
-    enabled: Boolean(token),
+    enabled: Boolean(token) && (options?.enabled ?? true),
   });
 }
 

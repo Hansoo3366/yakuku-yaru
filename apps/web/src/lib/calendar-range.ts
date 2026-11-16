@@ -1,10 +1,19 @@
-import { formatKoreanTime } from '@/lib/date-format';
+import { formatKoreanTime, getKoreaDateString } from '@/lib/date-format';
 
 export function formatDateInput(date: Date) {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const day = String(date.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
+}
+
+/**
+ * 한국 시간 기준 오늘 날짜를 그 날 0시의 로컬 Date 로 돌려준다. 달력 격자는 로컬 Date 로
+ * 날짜를 세므로, 서버(UTC)와 브라우저가 같은 「오늘」을 쓰려면 이 값을 기준으로 삼는다.
+ */
+export function getKoreaToday() {
+  const [year, month, day] = getKoreaDateString().split('-').map(Number);
+  return new Date(year, month - 1, day);
 }
 
 export function getAgendaDayElementId(dateKey: string) {
