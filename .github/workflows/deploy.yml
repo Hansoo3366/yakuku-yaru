@@ -186,6 +186,7 @@ jobs:
           DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
           GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          set -o pipefail
           install -m 700 -d ~/.ssh
           printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
@@ -196,7 +197,10 @@ jobs:
             -o IdentitiesOnly=yes -o BatchMode=yes \
             -o ServerAliveInterval=30 -o ServerAliveCountMax=10 \
             "$DEPLOY_USER@localhost" \
-            "DEPLOY_PATH='$DEPLOY_PATH' API_IMAGE='$API_IMAGE' WEB_IMAGE='$WEB_IMAGE' SENTRY_RELEASE='$GITHUB_SHA' GHCR_USER='$GITHUB_ACTOR' bash -c 'read -r GHCR_TOKEN && export GHCR_TOKEN && exec bash -s'"
+            "DEPLOY_PATH='$DEPLOY_PATH' API_IMAGE='$API_IMAGE' WEB_IMAGE='$WEB_IMAGE' SENTRY_RELEASE='$GITHUB_SHA' GHCR_USER='$GITHUB_ACTOR' bash -c 'read -r GHCR_TOKEN && export GHCR_TOKEN && exec bash -s'" \
+            | tee "$RUNNER_TEMP/deploy.log"
+          # 스크립트가 중간에 조용히 끝나도 ssh 는 성공으로 끝날 수 있어, 마지막 표시까지 확인한다.
+          grep -qx "DEPLOY_OK $GITHUB_SHA" "$RUNNER_TEMP/deploy.log"
 
       - name: Clean up SSH key
         if: always()
