@@ -120,17 +120,20 @@ docker compose --env-file .env.production -f docker-compose.prod.yml exec api np
 
 ## 9. GitHub Actions 자동 배포
 
-`.github/workflows/deploy.yml`은 `main` 브랜치에 push되면 이미지를 빌드하고, IAP 터널을 거쳐 서버에 SSH로 접속해 `scripts/deploy/remote-deploy.sh`를 실행합니다.
+`.github/workflows/deploy.yml`은 `main` 브랜치에 push되면 이미지를 빌드하고, IAP 터널을 거쳐 서버에 배포 전용 사용자 `deploy`로 접속합니다. 서버는 저장소를 최신 `main`으로 맞춘 뒤 `scripts/deploy/remote-deploy.sh`를 실행합니다.
 
 ```txt
 GitHub Actions ─(Workload Identity)→ GCP 로그인
                ─(IAP 터널, localhost:2222)→ VM 22번
-               ─(ssh, 호스트 키 검사)→ remote-deploy.sh
+               ─(ssh deploy@, 호스트 키 검사)→ /usr/local/bin/yakuku-deploy
+               ─(sudo, 운영 계정)→ git reset → remote-deploy.sh
 ```
 
 - 서버 SSH 22번은 IAP 대역(`35.235.240.0/20`)에만 열려 있습니다. 외부 IP로 직접 SSH 할 수 없습니다.
 - GitHub Actions는 키 파일 없이 Workload Identity로 GCP에 로그인합니다. 이 저장소의 `main`에서 돈 workflow만 로그인할 수 있습니다.
 - 모든 Action은 커밋 SHA로 고정합니다. 버전을 올릴 때도 태그 대신 SHA를 적습니다.
+- `deploy` 사용자의 키로는 셸을 열 수 없습니다. 할 수 있는 일은 `deploy <커밋 SHA> <GitHub 사용자>` 하나뿐이고, 포트 포워딩도 막혀 있습니다 (`authorized_keys`의 `restrict,command=`). 키가 새도 이미 올라간 이미지로 다시 배포하는 것밖에 못 합니다.
+- `remote-deploy.sh`는 새 API·웹 컨테이너가 새 이미지로 떠 있고 재시작이 없는지 20초 간격으로 두 번 확인합니다. 마지막 줄 `DEPLOY_OK <SHA>`가 없으면 workflow가 실패합니다.
 
 서버에는 이미 아래 준비가 되어 있어야 합니다.
 
@@ -141,9 +144,8 @@ GitHub Actions ─(Workload Identity)→ GCP 로그인
 ### GitHub Secrets
 
 ```txt
-DEPLOY_USER             VM SSH 사용자명
-DEPLOY_SSH_KEY          VM에 접속할 private key
-DEPLOY_PATH             서버의 repository 절대 경로
+DEPLOY_USER             deploy (배포 전용 사용자)
+DEPLOY_SSH_KEY          deploy 사용자의 private key
 NEXT_PUBLIC_API_URL     빌드 시 web 이미지에 주입할 API URL
 NEXT_PUBLIC_SENTRY_DSN  브라우저 오류 추적 DSN (선택)
 ```
@@ -190,18 +192,25 @@ gcloud compute firewall-rules list --format="table(name,sourceRanges.list(),allo
 
 ### 배포 키 만들기
 
-`DEPLOY_SSH_KEY`는 GitHub가 서버에 접속할 때 사용할 **private key**입니다. 서버에서 한 번만 실행합니다.
+서버에서 운영 계정으로 한 번만 실행합니다.
 
 ```bash
 cd ~/yakuku-yaru
-bash scripts/deploy/setup-github-actions-ssh.sh
+sudo bash scripts/deploy/setup-deploy-user.sh
 ```
 
-스크립트가 공개키를 `authorized_keys`에 넣고, `DEPLOY_SSH_KEY`에 붙여 넣을 private key를 출력한 뒤 서버의 private key 파일을 지웁니다. private key는 GitHub Secret에만 둡니다. Mac 등 다른 곳으로 복사하지 않습니다.
+스크립트가 하는 일:
 
-**주의:** `.pub` 파일이 아니라 **private key**(`BEGIN OPENSSH PRIVATE KEY`)를 Secret에 넣습니다.
+1. 비밀번호 없이 공개키로만 접속하는 `deploy` 사용자를 만듭니다.
+2. `scripts/deploy/yakuku-deploy`를 `/usr/local/bin/yakuku-deploy`에 root 소유로 복사하고, 운영 계정과 저장소 경로를 `/etc/yakuku-deploy.conf`에 적습니다.
+3. `deploy`가 그 명령 하나만 운영 계정으로 실행할 수 있게 `/etc/sudoers.d/yakuku-deploy`를 만듭니다.
+4. 새 키를 만들어 `restrict,command="/usr/local/bin/yakuku-deploy"`를 붙여 등록하고, `DEPLOY_SSH_KEY`에 넣을 private key를 출력한 뒤 서버에서 지웁니다.
 
-GCP 브라우저 SSH를 쓰면 `authorized_keys`가 메타데이터 기준으로 다시 쓰일 수 있습니다. 공개키를 GCP Console의 VM → `수정` → `SSH 키`에 등록하면 사라지지 않습니다. 형식은 `ssh-ed25519 AAAA... hanso3366`이고, 맨 끝 사용자명이 `DEPLOY_USER`와 같아야 합니다.
+**주의:** `.pub` 파일이 아니라 **private key**(`BEGIN OPENSSH PRIVATE KEY`)를 Secret에 넣습니다. Mac 등 다른 곳으로 복사하지 않습니다.
+
+`scripts/deploy/yakuku-deploy`를 고치면 서버에 자동으로 반영되지 않습니다. 고친 커밋이 배포된 뒤 위 명령을 다시 실행하고 `DEPLOY_SSH_KEY`를 새 키로 바꿉니다.
+
+`deploy`는 GCP 메타데이터가 관리하지 않는 사용자라, 브라우저 SSH를 써도 키가 지워지지 않습니다. GCP Console의 `SSH 키`에 배포 키를 등록하지 않습니다.
 
 ### 서버 접속
 
@@ -220,18 +229,21 @@ GCP 브라우저 SSH를 쓰면 `authorized_keys`가 메타데이터 기준으로
 
 ### 배포 실패할 때
 
-| 실패한 단계                                                     | 확인할 것                                                                                                     |
-| --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| `Authenticate to Google Cloud`                                  | provider 경로, 서비스 계정의 `roles/iam.workloadIdentityUser` 바인딩, `main` 브랜치에서 돌았는지              |
-| `Open IAP tunnel`                                               | 서비스 계정의 `roles/iap.tunnelResourceAccessor`, 방화벽에 `35.235.240.0/20` → 22 허용이 있는지, VM 이름/zone |
-| `Deploy with Docker Compose` 의 `Host key verification failed`  | VM을 새로 만들었으면 `DEPLOY_HOST_KEY` 교체                                                                   |
-| `Deploy with Docker Compose` 의 `Permission denied (publickey)` | `DEPLOY_SSH_KEY`와 서버 공개키 지문 비교, `DEPLOY_USER`                                                       |
+| 실패한 단계                                                         | 확인할 것                                                                                                     |
+| ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `Authenticate to Google Cloud`                                      | provider 경로, 서비스 계정의 `roles/iam.workloadIdentityUser` 바인딩, `main` 브랜치에서 돌았는지              |
+| `Open IAP tunnel`                                                   | 서비스 계정의 `roles/iap.tunnelResourceAccessor`, 방화벽에 `35.235.240.0/20` → 22 허용이 있는지, VM 이름/zone |
+| `Deploy with Docker Compose` 의 `Host key verification failed`      | VM을 새로 만들었으면 `DEPLOY_HOST_KEY` 교체                                                                   |
+| `Deploy with Docker Compose` 의 `Permission denied (publickey)`     | `DEPLOY_SSH_KEY`와 서버 공개키 지문 비교, `DEPLOY_USER`가 `deploy`인지                                        |
+| `Deploy with Docker Compose` 의 `허용되지 않은 명령입니다`          | workflow의 ssh 명령이 `deploy <SHA> <사용자>` 꼴인지                                                          |
+| `Deploy with Docker Compose` 의 `sudo: a password is required`      | `/etc/sudoers.d/yakuku-deploy`가 있는지, `setup-deploy-user.sh`를 다시 실행                                   |
+| `Deploy with Docker Compose` 의 `비정상 컨테이너` / `준비되지 않음` | 서버에서 `docker compose -f docker-compose.prod.yml logs --tail 80 api web`                                   |
 
 키 지문 비교:
 
 ```bash
 # 서버
-ssh-keygen -lf ~/.ssh/authorized_keys
+sudo ssh-keygen -lf /home/deploy/.ssh/authorized_keys
 # Secret 에 넣은 private key (Mac 등에서 임시로)
 ssh-keygen -y -f key_file | ssh-keygen -lf -
 ```

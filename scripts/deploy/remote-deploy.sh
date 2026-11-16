@@ -1,11 +1,10 @@
 #!/usr/bin/env bash
-# GitHub Actions 가 IAP 터널 너머 서버에서 stdin 으로 실행하는 배포 스크립트.
-# 첫 줄은 ghcr 로그인 토큰이고, 나머지 값은 ssh 명령에서 환경변수로 넘어온다.
-# 필요한 값: DEPLOY_PATH, API_IMAGE, WEB_IMAGE, SENTRY_RELEASE, GHCR_USER, GHCR_TOKEN
+# 서버에서 새 이미지로 교체하는 배포 스크립트. GitHub Actions 가 deploy 키로 접속하면
+# /usr/local/bin/yakuku-deploy 가 저장소를 최신 main 으로 맞춘 뒤 이 파일을 실행한다.
+# 필요한 값(yakuku-deploy 가 넘김): DEPLOY_PATH, API_IMAGE, WEB_IMAGE, SENTRY_RELEASE, GHCR_USER, GHCR_TOKEN
 #
-# 스크립트 자체가 stdin 으로 들어오므로, 본문을 함수로 감싸 끝까지 읽은 뒤 실행하고
-# 함수의 stdin 은 /dev/null 로 막는다. 그러지 않으면 `docker compose exec` 같은 명령이
-# 남은 스크립트를 stdin 으로 삼켜 중간에 조용히 끝나 버린다.
+# 본문을 함수로 감싸 끝까지 읽은 뒤 실행하고, 함수의 stdin 은 /dev/null 로 막는다.
+# 그래야 `docker compose exec` 같은 명령이 stdin 을 가져가도 실행이 중간에 끊기지 않는다.
 # 마지막 줄의 DEPLOY_OK 는 workflow 가 끝까지 실행됐는지 확인하는 표시다.
 set -euo pipefail
 
@@ -54,8 +53,6 @@ main() {
   export API_IMAGE WEB_IMAGE SENTRY_RELEASE
 
   cd "$DEPLOY_PATH"
-  git fetch origin main
-  git reset --hard origin/main
 
   printf '%s' "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
   unset GHCR_TOKEN

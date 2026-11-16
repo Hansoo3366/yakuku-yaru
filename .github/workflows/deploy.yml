@@ -57,13 +57,11 @@ jobs:
         env:
           DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
           DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
-          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
           NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL }}
           NEXT_PUBLIC_CONTACT_EMAIL: ${{ vars.NEXT_PUBLIC_CONTACT_EMAIL }}
         run: |
           test -n "$DEPLOY_USER" || (echo "DEPLOY_USER secret is missing" && exit 1)
           test -n "$DEPLOY_SSH_KEY" || (echo "DEPLOY_SSH_KEY secret is missing" && exit 1)
-          test -n "$DEPLOY_PATH" || (echo "DEPLOY_PATH secret is missing" && exit 1)
           test -n "$NEXT_PUBLIC_API_URL" || (echo "NEXT_PUBLIC_API_URL secret is missing" && exit 1)
           test -n "$NEXT_PUBLIC_CONTACT_EMAIL" || (
             echo "NEXT_PUBLIC_CONTACT_EMAIL repository variable is missing" && exit 1
@@ -183,7 +181,6 @@ jobs:
         env:
           DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
           DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
-          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
           GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -o pipefail
@@ -191,13 +188,15 @@ jobs:
           printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
           printf 'yakuku-prod %s\n' "$DEPLOY_HOST_KEY" > ~/.ssh/known_hosts
-          { printf '%s\n' "$GHCR_TOKEN"; cat scripts/deploy/remote-deploy.sh; } | ssh \
+          # 서버의 deploy 키는 /usr/local/bin/yakuku-deploy 만 실행할 수 있다 (scripts/deploy/yakuku-deploy).
+          # 보낼 수 있는 것은 커밋 SHA 와 GitHub 사용자뿐이고, stdin 은 ghcr 토큰 한 줄이다.
+          printf '%s\n' "$GHCR_TOKEN" | ssh \
             -i ~/.ssh/deploy_key -p 2222 \
             -o HostKeyAlias=yakuku-prod -o StrictHostKeyChecking=yes \
             -o IdentitiesOnly=yes -o BatchMode=yes \
             -o ServerAliveInterval=30 -o ServerAliveCountMax=10 \
             "$DEPLOY_USER@localhost" \
-            "DEPLOY_PATH='$DEPLOY_PATH' API_IMAGE='$API_IMAGE' WEB_IMAGE='$WEB_IMAGE' SENTRY_RELEASE='$GITHUB_SHA' GHCR_USER='$GITHUB_ACTOR' bash -c 'read -r GHCR_TOKEN && export GHCR_TOKEN && exec bash -s'" \
+            "deploy $GITHUB_SHA $GITHUB_ACTOR" \
             | tee "$RUNNER_TEMP/deploy.log"
           # 스크립트가 중간에 조용히 끝나도 ssh 는 성공으로 끝날 수 있어, 마지막 표시까지 확인한다.
           grep -qx "DEPLOY_OK $GITHUB_SHA" "$RUNNER_TEMP/deploy.log"
