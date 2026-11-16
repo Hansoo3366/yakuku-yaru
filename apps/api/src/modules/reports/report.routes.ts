@@ -50,7 +50,7 @@ reportRouter.post(
 
       if (
         !TARGET_TYPES.has(targetType) ||
-        !Number.isInteger(targetId) ||
+        !Number.isSafeInteger(targetId) ||
         targetId < 1 ||
         !REPORT_REASONS.has(reason)
       ) {

@@ -38,7 +38,7 @@ notificationRouter.patch('/read', authenticate, async (req, res, next) => {
 notificationRouter.patch('/:notificationId/read', authenticate, async (req, res, next) => {
   try {
     const id = Number(req.params.notificationId);
-    if (!Number.isInteger(id) || id <= 0) {
+    if (!Number.isSafeInteger(id) || id <= 0) {
       throw new HttpError(400, 'INVALID_INPUT', '알림 ID가 올바르지 않습니다.');
     }
     await markNotificationRead({ id, userId: req.user?.id ?? 0 });
@@ -60,7 +60,7 @@ notificationRouter.delete('/', authenticate, async (req, res, next) => {
 notificationRouter.delete('/:notificationId', authenticate, async (req, res, next) => {
   try {
     const id = Number(req.params.notificationId);
-    if (!Number.isInteger(id) || id <= 0) {
+    if (!Number.isSafeInteger(id) || id <= 0) {
       throw new HttpError(400, 'INVALID_INPUT', '알림 ID가 올바르지 않습니다.');
     }
     await deleteNotification({ id, userId: req.user?.id ?? 0 });

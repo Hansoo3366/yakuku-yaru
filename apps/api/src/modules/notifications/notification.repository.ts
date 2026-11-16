@@ -59,6 +59,27 @@ export async function listNotifiedUserIdsForAttendanceRecord(
   return new Set(rows.map((row) => row.user_id));
 }
 
+/** 같은 사람이 보낸 같은 종류의 알림이 최근에 이미 있는지 (팔로우·언팔로우 반복 같은 알림 도배 방지) */
+export async function hasRecentNotificationFromActor(input: {
+  userId: number;
+  actorUserId: number;
+  type: string;
+  withinHours: number;
+}) {
+  const [rows] = await db.query<RowDataPacket[]>(
+    `SELECT 1
+     FROM notifications
+     WHERE user_id = ?
+       AND actor_user_id = ?
+       AND type = ?
+       AND created_at > CURRENT_TIMESTAMP - INTERVAL ? HOUR
+     LIMIT 1`,
+    [input.userId, input.actorUserId, input.type, input.withinHours],
+  );
+
+  return rows.length > 0;
+}
+
 export async function createNotification(input: {
   userId: number;
   actorUserId?: number | null;

@@ -11,7 +11,7 @@ export function normalizeTeamId(value: number | string | null | undefined) {
 
   const id = Number(value);
 
-  return Number.isInteger(id) && id > 0 ? id : null;
+  return Number.isSafeInteger(id) && id > 0 ? id : null;
 }
 
 /** 프로필 응원팀이 이 경기에서 뛰는 팀 ID (경기 row 기준, ID·약칭 모두 확인) */
@@ -235,7 +235,7 @@ export function assertValidCheeredTeamId(input: {
       ? input.cheeredTeamId
       : Number(input.cheeredTeamId);
 
-  if (!Number.isInteger(teamId) || !isTeamInGame(input.game, teamId)) {
+  if (!Number.isSafeInteger(teamId) || !isTeamInGame(input.game, teamId)) {
     return '이 경기에서 응원한 팀을 선택해주세요.';
   }
 

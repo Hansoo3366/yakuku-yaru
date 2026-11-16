@@ -36,8 +36,8 @@ export function verifyAccessToken(token: string) {
 
   if (
     payload.tokenType !== 'access' ||
-    !Number.isInteger(payload.userId) ||
-    !Number.isInteger(Number(payload.sessionVersion))
+    !Number.isSafeInteger(payload.userId) ||
+    !Number.isSafeInteger(Number(payload.sessionVersion))
   ) {
     throw new Error('Invalid access token payload');
   }

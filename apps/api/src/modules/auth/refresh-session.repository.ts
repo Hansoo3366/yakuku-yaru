@@ -13,7 +13,16 @@ type RefreshSessionRow = RowDataPacket & {
   remember_me: number | boolean;
   rotated_at: Date | null;
   revoked_at: Date | null;
+  /** 방금(REFRESH_REUSE_GRACE_SECONDS 안에) 회전된 토큰인지. DB 시각으로 비교한다. */
+  rotated_recently: number | null;
 };
+
+/**
+ * 회전된 토큰이 다시 오면 탈취로 보고 같은 계열을 모두 끊는다. 다만 회전 직후 잠깐은
+ * 정상 사용자일 가능성이 높다: 갱신 응답이 네트워크에서 사라졌거나, 탭 여러 개가 같은
+ * 쿠키로 동시에 갱신한 경우. 이때는 끊지 않고 같은 계열의 새 토큰을 한 번 더 내준다.
+ */
+const REFRESH_REUSE_GRACE_SECONDS = 30;
 
 export type IssuedRefreshSession = {
   token: string;
@@ -88,12 +97,13 @@ export async function rotateRefreshSession(
          rs.expires_at,
          rs.remember_me,
          rs.rotated_at,
-         rs.revoked_at
+         rs.revoked_at,
+         rs.rotated_at > CURRENT_TIMESTAMP - INTERVAL ? SECOND AS rotated_recently
        FROM refresh_sessions rs
        WHERE rs.token_hash = ?
        LIMIT 1
        FOR UPDATE`,
-      [tokenHash],
+      [REFRESH_REUSE_GRACE_SECONDS, tokenHash],
     );
     const session = rows[0];
 
@@ -102,7 +112,10 @@ export async function rotateRefreshSession(
       return null;
     }
 
-    if (session.rotated_at || session.revoked_at) {
+    const reusedWithinGrace =
+      session.rotated_at !== null && Number(session.rotated_recently) === 1;
+
+    if (session.revoked_at || (session.rotated_at && !reusedWithinGrace)) {
       await connection.execute(
         `UPDATE refresh_sessions
          SET revoked_at = COALESCE(revoked_at, CURRENT_TIMESTAMP)
@@ -162,13 +175,16 @@ export async function rotateRefreshSession(
       ],
     );
 
-    await connection.execute(
-      `UPDATE refresh_sessions
-       SET rotated_at = CURRENT_TIMESTAMP,
-           replaced_by_session_id = ?
-       WHERE id = ?`,
-      [insertResult.insertId, session.id],
-    );
+    // 유예 기간에 다시 쓰인 토큰은 처음 회전한 시각을 그대로 둔다. 다시 찍으면 유예가 계속 늘어난다.
+    if (!reusedWithinGrace) {
+      await connection.execute(
+        `UPDATE refresh_sessions
+         SET rotated_at = CURRENT_TIMESTAMP,
+             replaced_by_session_id = ?
+         WHERE id = ?`,
+        [insertResult.insertId, session.id],
+      );
+    }
 
     await connection.commit();
 

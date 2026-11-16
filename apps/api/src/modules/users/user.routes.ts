@@ -6,7 +6,10 @@ import {
 import { rateLimit } from '../../middleware/rate-limit.js';
 import { HttpError } from '../../utils/http-error.js';
 import { getAttendanceStats } from '../attendance/attendance.repository.js';
-import { createNotification } from '../notifications/notification.repository.js';
+import {
+  createNotification,
+  hasRecentNotificationFromActor,
+} from '../notifications/notification.repository.js';
 import { listRecentPostsByUser } from '../posts/post.repository.js';
 import { findUserById, searchUsers } from './user.repository.js';
 import {
@@ -27,7 +30,7 @@ const followRateLimit = rateLimit({
 
 function parsePositiveInt(value: unknown, fallback: number) {
   const parsed = Number(value);
-  return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
+  return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : fallback;
 }
 
 userRouter.get('/discover', optionalAuthenticate, async (req, res, next) => {
@@ -178,7 +181,15 @@ userRouter.post(
 
       const created = await followUser({ followerUserId, followedUserId });
 
-      if (created) {
+      if (
+        created &&
+        !(await hasRecentNotificationFromActor({
+          userId: followedUserId,
+          actorUserId: followerUserId,
+          type: 'user_followed',
+          withinHours: 24,
+        }))
+      ) {
         await createNotification({
           userId: followedUserId,
           actorUserId: followerUserId,

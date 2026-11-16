@@ -90,7 +90,7 @@ const createCommentRateLimit = rateLimit({
 function parsePositiveInt(value: unknown, fallback: number) {
   const parsed = Number(value);
 
-  if (!Number.isInteger(parsed) || parsed < 1) {
+  if (!Number.isSafeInteger(parsed) || parsed < 1) {
     return fallback;
   }
 

@@ -20,7 +20,7 @@ function optionalTeamId(value: unknown) {
 
   const parsed = Number(value);
 
-  if (!Number.isInteger(parsed) || parsed < 1) {
+  if (!Number.isSafeInteger(parsed) || parsed < 1) {
     throw new HttpError(400, 'INVALID_INPUT', '올바른 팀 ID가 필요합니다.');
   }
 
@@ -38,7 +38,7 @@ function optionalPositiveInteger(
 
   const parsed = Number(value);
 
-  if (!Number.isInteger(parsed) || parsed < 1) {
+  if (!Number.isSafeInteger(parsed) || parsed < 1) {
     throw new HttpError(400, 'INVALID_INPUT', `${label} 값이 올바르지 않습니다.`);
   }
 
@@ -86,7 +86,7 @@ playerCheerRouter.get('/teams/:teamId', async (req, res, next) => {
   try {
     const teamId = Number(req.params.teamId);
 
-    if (!Number.isInteger(teamId) || teamId < 1) {
+    if (!Number.isSafeInteger(teamId) || teamId < 1) {
       throw new HttpError(400, 'INVALID_INPUT', '올바른 팀 ID가 필요합니다.');
     }
 
@@ -106,7 +106,7 @@ playerCheerRouter.get('/:playerId', async (req, res, next) => {
   try {
     const playerId = Number(req.params.playerId);
 
-    if (!Number.isInteger(playerId) || playerId < 1) {
+    if (!Number.isSafeInteger(playerId) || playerId < 1) {
       throw new HttpError(400, 'INVALID_INPUT', '올바른 선수 ID가 필요합니다.');
     }
 

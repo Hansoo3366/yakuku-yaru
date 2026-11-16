@@ -56,7 +56,7 @@ meRouter.patch(
         teamId?: number;
       };
 
-      if (!Number.isInteger(teamId) || !teamId) {
+      if (!Number.isSafeInteger(teamId) || !teamId) {
         throw new HttpError(400, 'INVALID_INPUT', '팀을 선택해주세요.');
       }
 

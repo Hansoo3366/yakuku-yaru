@@ -115,7 +115,7 @@ function normalizeCompanionUserIds(value: unknown) {
     ...new Set(
       value
         .map((item) => Number(item))
-        .filter((item) => Number.isInteger(item) && item > 0),
+        .filter((item) => Number.isSafeInteger(item) && item > 0),
     ),
   ];
 
@@ -246,7 +246,7 @@ attendanceRouter.post(
         req.body.companionUserIds,
       );
 
-      if (!Number.isInteger(gameId) || !gameId) {
+      if (!Number.isSafeInteger(gameId) || !gameId) {
         throw new HttpError(400, 'INVALID_INPUT', '경기를 선택해주세요.');
       }
 
@@ -355,7 +355,8 @@ attendanceRouter.get('/:recordId', authenticate, async (req, res, next) => {
     if (record.userId !== userId) {
       const companion = await findCompanionForUser({ recordId, userId });
 
-      if (!companion) {
+      // 대기 중이면 수락할지 정하려고 볼 수 있어야 한다. 거절했으면 더 볼 수 없다.
+      if (!companion || companion.status === 'rejected') {
         throw new HttpError(
           403,
           'FORBIDDEN',
@@ -417,25 +418,36 @@ attendanceRouter.patch(
         throw new HttpError(404, 'GAME_NOT_FOUND', '경기를 찾을 수 없습니다.');
       }
 
+      const isOwner = record.userId === req.user?.id;
       const owner = await findUserById(record.userId);
-      const editor = await findUserById(req.user?.id ?? 0);
       const ownerFavoriteTeamId = getFavoriteTeamIdFromUser(owner);
       const ownerFavoriteTeamShortName =
         getFavoriteTeamShortNameFromUser(owner);
-      const editorFavoriteTeamId = getFavoriteTeamIdFromUser(editor);
-      const editorFavoriteTeamShortName =
-        getFavoriteTeamShortNameFromUser(editor);
-      const cheeredTeamId = assertValidCheeredTeamId({
+      // 동행자가 고쳐도 기록의 응원 팀과 승패는 작성자 기준 그대로 둔다.
+      // 동행자가 고른 팀은 동행자 본인의 응원 팀으로 확인해, 그 사람의 경기별
+      // 응원 팀(viewer preference)에만 저장한다.
+      const editor = isOwner ? owner : await findUserById(req.user?.id ?? 0);
+      const requestedCheeredTeamId = assertValidCheeredTeamId({
         game,
-        ownerFavoriteTeamId,
-        ownerFavoriteTeamShortName,
-        editorFavoriteTeamId,
-        editorFavoriteTeamShortName,
+        ownerFavoriteTeamId: getFavoriteTeamIdFromUser(editor),
+        ownerFavoriteTeamShortName: getFavoriteTeamShortNameFromUser(editor),
         cheeredTeamId: (req.body as { cheeredTeamId?: number }).cheeredTeamId,
       });
 
-      if (typeof cheeredTeamId === 'string') {
-        throw new HttpError(400, 'INVALID_INPUT', cheeredTeamId);
+      if (typeof requestedCheeredTeamId === 'string') {
+        throw new HttpError(400, 'INVALID_INPUT', requestedCheeredTeamId);
+      }
+
+      const cheeredTeamId = isOwner
+        ? requestedCheeredTeamId
+        : record.cheeredTeamId;
+
+      if (!isOwner && requestedCheeredTeamId != null) {
+        await upsertAttendanceViewerPreference({
+          userId: req.user?.id ?? 0,
+          gameId: record.gameId,
+          cheeredTeamId: requestedCheeredTeamId,
+        });
       }
 
       const scoreFields = buildAttendanceScoreFields({
@@ -444,8 +456,6 @@ attendanceRouter.patch(
           game,
           ownerFavoriteTeamId,
           ownerFavoriteTeamShortName,
-          editorFavoriteTeamId,
-          editorFavoriteTeamShortName,
         }),
         cheeredTeamId,
       });
@@ -681,7 +691,7 @@ attendanceRouter.patch(
       }
 
       if (
-        !Number.isInteger(cheeredTeamId) ||
+        !Number.isSafeInteger(cheeredTeamId) ||
         !resolveFavoriteTeamIdInGame(game, cheeredTeamId, null)
       ) {
         throw new HttpError(

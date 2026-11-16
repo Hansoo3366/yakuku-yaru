@@ -127,7 +127,12 @@ export default function EditAttendancePage() {
         const favoriteShortName = meResponse.user.favoriteTeamShortName ?? null;
         setFavoriteTeamId(favoriteTeamId);
         setFavoriteTeamShortName(favoriteShortName);
-        setCheeredTeamId(r.cheeredTeamId ?? null);
+        // 동행자는 작성자의 응원 팀이 아니라 자기가 이 경기에서 응원한 팀을 고친다.
+        setCheeredTeamId(
+          (r.viewerRelation === 'companion'
+            ? r.viewerCheeredTeamId
+            : r.cheeredTeamId) ?? null,
+        );
         reset({ memo: r.memo ?? '', watchType: r.watchType });
         setCompanions(toSelectedCompanions(r.companions));
       },

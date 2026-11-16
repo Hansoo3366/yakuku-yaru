@@ -83,7 +83,7 @@ export function parseAdminSyncJobParams(input: unknown): AdminSyncJobParams {
 
   if (body.year != null && body.year !== '') {
     const year = Number(body.year);
-    if (!Number.isInteger(year) || year < 2000 || year > 2100) {
+    if (!Number.isSafeInteger(year) || year < 2000 || year > 2100) {
       throw new Error('INVALID_YEAR');
     }
     params.year = year;
@@ -91,7 +91,7 @@ export function parseAdminSyncJobParams(input: unknown): AdminSyncJobParams {
 
   if (body.month != null && body.month !== '') {
     const month = Number(body.month);
-    if (!Number.isInteger(month) || month < 1 || month > 12) {
+    if (!Number.isSafeInteger(month) || month < 1 || month > 12) {
       throw new Error('INVALID_MONTH');
     }
     params.month = month;

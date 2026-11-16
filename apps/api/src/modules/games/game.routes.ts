@@ -48,7 +48,7 @@ gameRouter.get('/', async (req, res, next) => {
     const from = req.query.from as string;
     const to = req.query.to as string;
 
-    if (teamId !== undefined && (!Number.isInteger(teamId) || teamId < 1)) {
+    if (teamId !== undefined && (!Number.isSafeInteger(teamId) || teamId < 1)) {
       throw new HttpError(400, 'INVALID_INPUT', '올바른 팀 ID가 필요합니다.');
     }
 
@@ -86,7 +86,7 @@ gameRouter.get('/:gameId/box-score', async (req, res, next) => {
   try {
     const gameId = Number(req.params.gameId);
 
-    if (!Number.isInteger(gameId) || gameId < 1) {
+    if (!Number.isSafeInteger(gameId) || gameId < 1) {
       throw new HttpError(400, 'INVALID_INPUT', '올바른 경기 ID가 필요합니다.');
     }
 

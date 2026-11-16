@@ -94,7 +94,7 @@ function nullableString(value: unknown) {
 function parsePlayerId(value: unknown) {
   const playerId = Number(value);
 
-  if (!Number.isInteger(playerId) || playerId < 1) {
+  if (!Number.isSafeInteger(playerId) || playerId < 1) {
     throw new HttpError(400, 'INVALID_INPUT', '올바른 선수 ID가 필요합니다.');
   }
 
@@ -108,7 +108,7 @@ function optionalTeamId(value: unknown) {
 
   const parsed = Number(value);
 
-  if (!Number.isInteger(parsed) || parsed < 1) {
+  if (!Number.isSafeInteger(parsed) || parsed < 1) {
     throw new HttpError(400, 'INVALID_INPUT', '올바른 팀 ID가 필요합니다.');
   }
 
@@ -126,7 +126,7 @@ function optionalPositiveInteger(
 
   const parsed = Number(value);
 
-  if (!Number.isInteger(parsed) || parsed < 1) {
+  if (!Number.isSafeInteger(parsed) || parsed < 1) {
     throw new HttpError(
       400,
       'INVALID_INPUT',
@@ -248,8 +248,8 @@ function parseGameInput(body: Record<string, unknown>) {
   if (
     !gameDate ||
     !stadium ||
-    !Number.isInteger(homeTeamId) ||
-    !Number.isInteger(awayTeamId)
+    !Number.isSafeInteger(homeTeamId) ||
+    !Number.isSafeInteger(awayTeamId)
   ) {
     throw new HttpError(
       400,
@@ -653,7 +653,7 @@ adminRouter.put(
     try {
       const teamId = Number(req.params.teamId);
 
-      if (!Number.isInteger(teamId) || teamId < 1) {
+      if (!Number.isSafeInteger(teamId) || teamId < 1) {
         throw new HttpError(400, 'INVALID_INPUT', '올바른 팀 ID가 필요합니다.');
       }
 
@@ -678,7 +678,7 @@ adminRouter.delete(
     try {
       const teamId = Number(req.params.teamId);
 
-      if (!Number.isInteger(teamId) || teamId < 1) {
+      if (!Number.isSafeInteger(teamId) || teamId < 1) {
         throw new HttpError(400, 'INVALID_INPUT', '올바른 팀 ID가 필요합니다.');
       }
 

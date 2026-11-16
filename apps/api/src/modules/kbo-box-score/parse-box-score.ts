@@ -120,7 +120,7 @@ function toInteger(value: string) {
   }
 
   const parsed = Number(value.replace(/,/g, ''));
-  return Number.isInteger(parsed) ? parsed : null;
+  return Number.isSafeInteger(parsed) ? parsed : null;
 }
 
 function toNullableText(value: string) {

@@ -31,7 +31,7 @@ teamRouter.get('/standings', async (req, res, next) => {
     const seriesId =
       typeof req.query.seriesId === 'string' ? req.query.seriesId : '0';
 
-    if (!Number.isInteger(seasonYear) || seasonYear < 2000) {
+    if (!Number.isSafeInteger(seasonYear) || seasonYear < 2000) {
       throw new HttpError(400, 'INVALID_INPUT', '올바른 시즌 연도가 필요합니다.');
     }
 
@@ -61,7 +61,7 @@ teamRouter.get('/postseason', async (req, res, next) => {
         ? Number(req.query.seasonYear)
         : new Date().getFullYear();
 
-    if (!Number.isInteger(seasonYear) || seasonYear < 2000) {
+    if (!Number.isSafeInteger(seasonYear) || seasonYear < 2000) {
       throw new HttpError(400, 'INVALID_INPUT', '올바른 시즌 연도가 필요합니다.');
     }
 
@@ -80,7 +80,7 @@ teamRouter.get('/season-projection', async (req, res, next) => {
     const seriesId =
       typeof req.query.seriesId === 'string' ? req.query.seriesId : '0';
 
-    if (!Number.isInteger(seasonYear) || seasonYear < 2000) {
+    if (!Number.isSafeInteger(seasonYear) || seasonYear < 2000) {
       throw new HttpError(400, 'INVALID_INPUT', '올바른 시즌 연도가 필요합니다.');
     }
 

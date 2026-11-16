@@ -34,7 +34,7 @@ function uniqueUserIds(userIds: number[], ownerId: number) {
   return Array.from(
     new Set(
       userIds.filter(
-        (userId) => Number.isInteger(userId) && userId > 0 && userId !== ownerId,
+        (userId) => Number.isSafeInteger(userId) && userId > 0 && userId !== ownerId,
       ),
     ),
   );
