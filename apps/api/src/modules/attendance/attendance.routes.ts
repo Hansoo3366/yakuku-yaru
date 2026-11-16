@@ -25,7 +25,10 @@ import {
   getAttendanceViewerPreference,
   upsertAttendanceViewerPreference,
 } from './viewer-preference.repository.js';
-import { createNotification } from '../notifications/notification.repository.js';
+import {
+  createNotification,
+  listNotifiedUserIdsForAttendanceRecord,
+} from '../notifications/notification.repository.js';
 import {
   assertUploadedImageFile,
   assertUserUploadQuota,
@@ -100,14 +103,31 @@ function normalizeWatchType(value: unknown) {
   return value === 'home' ? 'home' : 'stadium';
 }
 
+/** 기록 하나에 태그할 수 있는 동행자 수. 많이 넣어 알림을 뿌리지 못하게 막는다. */
+const MAX_COMPANIONS = 10;
+
 function normalizeCompanionUserIds(value: unknown) {
   if (!Array.isArray(value)) {
     return [];
   }
 
-  return value
-    .map((item) => Number(item))
-    .filter((item) => Number.isInteger(item) && item > 0);
+  const userIds = [
+    ...new Set(
+      value
+        .map((item) => Number(item))
+        .filter((item) => Number.isInteger(item) && item > 0),
+    ),
+  ];
+
+  if (userIds.length > MAX_COMPANIONS) {
+    throw new HttpError(
+      400,
+      'TOO_MANY_COMPANIONS',
+      `동행자는 최대 ${MAX_COMPANIONS}명까지 태그할 수 있어요.`,
+    );
+  }
+
+  return userIds;
 }
 
 function resolveScoreFavoriteTeamId(input: {
@@ -156,16 +176,24 @@ async function saveCompanionsAndNotify(input: {
     companionUserIds: input.companionUserIds,
   });
 
+  // 태그를 뺐다가 다시 넣어도 같은 기록으로는 한 번만 알린다.
+  const alreadyNotified = await listNotifiedUserIdsForAttendanceRecord(
+    input.recordId,
+    'attendance_tagged',
+  );
+
   await Promise.all(
-    newUserIds.map((userId) =>
-      createNotification({
-        userId,
-        actorUserId: input.ownerId,
-        attendanceRecordId: input.recordId,
-        type: 'attendance_tagged',
-        message: `${input.ownerLabel}님이 나를 직관 기록에 태그했어요. 마이페이지에서 수락 또는 거절을 선택해주세요.`,
-      }),
-    ),
+    newUserIds
+      .filter((userId) => !alreadyNotified.has(userId))
+      .map((userId) =>
+        createNotification({
+          userId,
+          actorUserId: input.ownerId,
+          attendanceRecordId: input.recordId,
+          type: 'attendance_tagged',
+          message: `${input.ownerLabel}님이 나를 직관 기록에 태그했어요. 마이페이지에서 수락 또는 거절을 선택해주세요.`,
+        }),
+      ),
   );
 }
 
@@ -214,6 +242,9 @@ attendanceRouter.post(
         companionUserIds?: number[];
       };
       const userId = req.user?.id ?? 0;
+      const companionUserIds = normalizeCompanionUserIds(
+        req.body.companionUserIds,
+      );
 
       if (!Number.isInteger(gameId) || !gameId) {
         throw new HttpError(400, 'INVALID_INPUT', '경기를 선택해주세요.');
@@ -294,9 +325,7 @@ attendanceRouter.post(
           recordId: record.id,
           ownerId: userId,
           ownerLabel: record.ownerNickname,
-          companionUserIds: normalizeCompanionUserIds(
-            req.body.companionUserIds,
-          ),
+          companionUserIds,
         });
       }
 
@@ -374,6 +403,9 @@ attendanceRouter.patch(
       }
 
       await assertCanEdit(record, req.user?.id ?? 0);
+      const companionUserIds = normalizeCompanionUserIds(
+        req.body.companionUserIds,
+      );
 
       const { memo, watchType } = req.body as {
         memo?: string;
@@ -438,9 +470,7 @@ attendanceRouter.patch(
           recordId: updatedRecord.id,
           ownerId: record.userId,
           ownerLabel: record.ownerNickname,
-          companionUserIds: normalizeCompanionUserIds(
-            req.body.companionUserIds,
-          ),
+          companionUserIds,
         });
       }
 

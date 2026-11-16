@@ -8,6 +8,7 @@ import { comparePassword, hashPassword } from '../../utils/password.js';
 import {
   deleteEmailVerificationTokensForUser,
   findUsableEmailVerificationTokenByEmailAndCode,
+  recordFailedEmailVerificationAttempt,
 } from './email-verification.repository.js';
 import {
   getEmailVerificationStatus,
@@ -587,6 +588,7 @@ authRouter.post(
         );
 
       if (!verificationToken) {
+        await recordFailedEmailVerificationAttempt(normalizedEmail);
         throw new HttpError(
           400,
           'INVALID_VERIFICATION_TOKEN',

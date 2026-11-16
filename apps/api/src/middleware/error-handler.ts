@@ -23,6 +23,21 @@ function isClientAbort(
   );
 }
 
+function isClientRequestError(
+  error: unknown,
+): error is { status: number; type: string } {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'type' in error &&
+    typeof error.type === 'string' &&
+    'status' in error &&
+    typeof error.status === 'number' &&
+    error.status >= 400 &&
+    error.status < 500
+  );
+}
+
 export const errorHandler: ErrorRequestHandler = (error, req, res, next) => {
   if (isClientAbort(error, req)) {
     // 응답할 상대가 없다. 연결만 정리한다.
@@ -36,6 +51,19 @@ export const errorHandler: ErrorRequestHandler = (error, req, res, next) => {
   if (res.headersSent) {
     console.error(error);
     next(error);
+    return;
+  }
+
+  // 깨진 JSON(400), 너무 큰 본문(413)처럼 body-parser 가 낸 클라이언트 오류.
+  // 메시지에 본문 일부가 섞여 알림 쿨다운을 비껴가므로 알리지 않고 그대로 답한다.
+  if (isClientRequestError(error)) {
+    res.status(error.status).json({
+      code: error.status === 413 ? 'PAYLOAD_TOO_LARGE' : 'INVALID_REQUEST',
+      message:
+        error.status === 413
+          ? '요청 본문이 너무 큽니다.'
+          : '요청 형식이 올바르지 않습니다.',
+    });
     return;
   }
 

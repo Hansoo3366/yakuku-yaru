@@ -7,6 +7,8 @@ export const EMAIL_VERIFICATION_RESEND_COOLDOWN_SECONDS = 30;
 export const EMAIL_VERIFICATION_MAX_SENDS = 4;
 /** 발송 횟수 제한은 이 기간 안의 발송만 센다. 지나면 다시 요청할 수 있다. */
 export const EMAIL_VERIFICATION_SEND_WINDOW_MINUTES = 60;
+/** 6자리 번호를 여러 IP 로 나눠 맞히지 못하게, 이만큼 틀린 번호는 더 받지 않는다. */
+export const EMAIL_VERIFICATION_MAX_FAILED_ATTEMPTS = 5;
 
 type EmailVerificationTokenRow = RowDataPacket & {
   id: number;
@@ -129,12 +131,26 @@ export async function findUsableEmailVerificationTokenByEmailAndCode(
      WHERE u.email = ?
        AND evt.token = ?
        AND evt.used_at IS NULL
+       AND evt.failed_attempts < ?
        AND evt.expires_at > CURRENT_TIMESTAMP
      LIMIT 1`,
-    [email, code],
+    [email, code, EMAIL_VERIFICATION_MAX_FAILED_ATTEMPTS],
   );
 
   return rows[0] ?? null;
+}
+
+/** 이 이메일로 아직 쓸 수 있는 인증번호들에 틀린 횟수를 하나씩 더한다. */
+export async function recordFailedEmailVerificationAttempt(email: string) {
+  await db.execute(
+    `UPDATE email_verification_tokens evt
+     INNER JOIN users u ON u.id = evt.user_id
+     SET evt.failed_attempts = evt.failed_attempts + 1
+     WHERE u.email = ?
+       AND evt.used_at IS NULL
+       AND evt.expires_at > CURRENT_TIMESTAMP`,
+    [email],
+  );
 }
 
 /** 인증이 끝난 사용자의 코드는 더 쓸 일이 없으므로 모두 지운다. */

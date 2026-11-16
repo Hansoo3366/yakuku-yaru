@@ -1042,6 +1042,16 @@ async function addGameSeriesAndBoxScores() {
   );
 }
 
+/** 인증번호를 틀린 횟수. 일정 횟수를 넘긴 번호는 더 이상 받지 않는다. */
+async function addEmailVerificationFailedAttempts() {
+  if (!(await columnExists('email_verification_tokens', 'failed_attempts'))) {
+    await db.execute(
+      `ALTER TABLE email_verification_tokens
+       ADD COLUMN failed_attempts TINYINT UNSIGNED NOT NULL DEFAULT 0 AFTER used_at`,
+    );
+  }
+}
+
 type Migration = {
   /** 한 번 적용되면 schema_migrations 에 기록된다. 이미 배포된 id 는 바꾸지 않는다. */
   id: string;
@@ -1060,6 +1070,10 @@ const MIGRATIONS: readonly Migration[] = [
   },
   { id: '0003_list_query_indexes', up: addListQueryIndexes },
   { id: '0004_game_series_and_box_scores', up: addGameSeriesAndBoxScores },
+  {
+    id: '0005_email_verification_failed_attempts',
+    up: addEmailVerificationFailedAttempts,
+  },
 ];
 
 const MIGRATION_LOCK_NAME = 'yakuku_yaru_migrations';

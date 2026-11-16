@@ -114,3 +114,29 @@ void test('알 수 없는 오류는 500 으로 응답한다', () => {
   assert.equal(calls.status, 500);
   assert.equal((calls.json as { code: string }).code, 'INTERNAL_SERVER_ERROR');
 });
+
+void test('깨진 JSON 본문은 알리지 않고 400 으로 응답한다', () => {
+  const { res, calls } = createResponse();
+  const error = Object.assign(
+    new SyntaxError('Unexpected token \'z\', "{"a":zzqq1}" is not valid JSON'),
+    { status: 400, type: 'entity.parse.failed' },
+  );
+
+  void errorHandler(error, createRequest(), res, (() => {}) as NextFunction);
+
+  assert.equal(calls.status, 400);
+  assert.equal((calls.json as { code: string }).code, 'INVALID_REQUEST');
+});
+
+void test('너무 큰 요청 본문은 413 으로 응답한다', () => {
+  const { res, calls } = createResponse();
+  const error = Object.assign(new Error('request entity too large'), {
+    status: 413,
+    type: 'entity.too.large',
+  });
+
+  void errorHandler(error, createRequest(), res, (() => {}) as NextFunction);
+
+  assert.equal(calls.status, 413);
+  assert.equal((calls.json as { code: string }).code, 'PAYLOAD_TOO_LARGE');
+});

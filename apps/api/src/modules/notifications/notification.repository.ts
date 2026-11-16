@@ -43,6 +43,22 @@ function toNotification(row: NotificationRow): Notification {
   };
 }
 
+/** 이 직관 기록으로 이미 해당 종류의 알림을 받은 사용자 */
+export async function listNotifiedUserIdsForAttendanceRecord(
+  attendanceRecordId: number,
+  type: string,
+) {
+  const [rows] = await db.query<(RowDataPacket & { user_id: number })[]>(
+    `SELECT DISTINCT user_id
+     FROM notifications
+     WHERE attendance_record_id = ?
+       AND type = ?`,
+    [attendanceRecordId, type],
+  );
+
+  return new Set(rows.map((row) => row.user_id));
+}
+
 export async function createNotification(input: {
   userId: number;
   actorUserId?: number | null;

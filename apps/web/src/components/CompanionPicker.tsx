@@ -5,6 +5,9 @@ import { useAuthStore } from '@/lib/auth-store';
 import { searchUsers, type UserSearchResult } from '@/lib/user-api';
 import type { AttendanceCompanion } from '@/lib/attendance-api';
 
+/** API 와 같은 상한. 기록 하나에 태그할 수 있는 동행자 수 */
+const MAX_COMPANIONS = 10;
+
 export type SelectedCompanion = {
   id: number;
   nickname: string;
@@ -78,6 +81,11 @@ export function CompanionPicker({
 
   function addCompanion(user: UserSearchResult) {
     if (selectedCompanions.some((companion) => companion.id === user.id)) {
+      return;
+    }
+
+    if (selectedCompanions.length >= MAX_COMPANIONS) {
+      setMessage(`동행자는 최대 ${MAX_COMPANIONS}명까지 태그할 수 있어요.`);
       return;
     }
 
