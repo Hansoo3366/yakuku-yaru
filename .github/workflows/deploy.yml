@@ -20,10 +20,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22
           cache: npm
@@ -51,18 +51,16 @@ jobs:
       web_image: ${{ steps.names.outputs.web_image }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
       - name: Validate deployment secrets
         env:
-          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
           DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
           DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
           DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
           NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL }}
           NEXT_PUBLIC_CONTACT_EMAIL: ${{ vars.NEXT_PUBLIC_CONTACT_EMAIL }}
         run: |
-          test -n "$DEPLOY_HOST" || (echo "DEPLOY_HOST secret is missing" && exit 1)
           test -n "$DEPLOY_USER" || (echo "DEPLOY_USER secret is missing" && exit 1)
           test -n "$DEPLOY_SSH_KEY" || (echo "DEPLOY_SSH_KEY secret is missing" && exit 1)
           test -n "$DEPLOY_PATH" || (echo "DEPLOY_PATH secret is missing" && exit 1)
@@ -92,17 +90,17 @@ jobs:
           echo "web_image=${WEB_IMAGE}" >> "$GITHUB_OUTPUT"
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
 
       - name: Login to GitHub Container Registry
-        uses: docker/login-action@v3
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push API image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
         with:
           context: .
           file: apps/api/Dockerfile
@@ -112,7 +110,7 @@ jobs:
           cache-to: type=gha,mode=max,scope=api
 
       - name: Build and push Web image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
         with:
           context: .
           file: apps/web/Dockerfile
@@ -129,12 +127,24 @@ jobs:
     name: Deploy
     needs: [verify, build]
     runs-on: ubuntu-latest
+    # Workload Identity 로 GCP 에 로그인하려면 OIDC 토큰이 필요하다.
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
     env:
       API_IMAGE: ${{ needs.build.outputs.api_image }}
       WEB_IMAGE: ${{ needs.build.outputs.web_image }}
+      GCP_INSTANCE: instance-20260521-045939
+      GCP_ZONE: us-central1-a
+      # 서버 SSH 호스트 키. VM 을 새로 만들면 /etc/ssh/ssh_host_ed25519_key.pub 값으로 바꾼다.
+      DEPLOY_HOST_KEY: ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIY/FBSk0lOo+Mz09fZwjdtXpGIoJJqHfLCm9+hPNvKw
     steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
       - name: Login to GitHub Container Registry
-        uses: docker/login-action@v3
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -146,47 +156,48 @@ jobs:
           docker buildx imagetools create -t "${API_IMAGE%:*}:latest" "$API_IMAGE"
           docker buildx imagetools create -t "${WEB_IMAGE%:*}:latest" "$WEB_IMAGE"
 
-      - name: Deploy with Docker Compose
-        uses: appleboy/ssh-action@v1.2.0
+      # 서버의 SSH 는 IAP 대역에만 열려 있다. 키 파일 없이 이 저장소의 main 에서만 로그인된다.
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@c200f3691d83b41bf9bbd8638997a462592937ed # v2.1.13
         with:
-          host: ${{ secrets.DEPLOY_HOST }}
-          username: ${{ secrets.DEPLOY_USER }}
-          key: ${{ secrets.DEPLOY_SSH_KEY }}
-          port: ${{ secrets.DEPLOY_PORT || 22 }}
-          timeout: 30m
-          command_timeout: 60m
-          script: |
-            set -e
-            cd ${{ secrets.DEPLOY_PATH }}
-            git fetch origin main
-            git reset --hard origin/main
-            export API_IMAGE="${{ env.API_IMAGE }}"
-            export SENTRY_RELEASE="${{ github.sha }}"
-            export WEB_IMAGE="${{ env.WEB_IMAGE }}"
-            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
-            docker compose -f docker-compose.prod.yml --env-file .env.production pull api web
-            docker compose -f docker-compose.prod.yml --env-file .env.production --profile proxy up -d --no-build
-            docker compose -f docker-compose.prod.yml --env-file .env.production --profile proxy up -d --no-build --force-recreate gateway
-            docker compose -f docker-compose.prod.yml --env-file .env.production --profile proxy exec -T gateway nginx -t
-            docker compose -f docker-compose.prod.yml --env-file .env.production --profile proxy exec -T caddy caddy validate --config /etc/caddy/Caddyfile
-            healthy=0
-            for attempt in $(seq 1 12); do
-              if docker compose -f docker-compose.prod.yml --env-file .env.production --profile proxy exec -T gateway wget -qO- http://127.0.0.1:8080/api/health; then
-                healthy=1
-                break
-              fi
-              sleep 5
-            done
-            test "$healthy" = 1
-            swagger_ready=0
-            for attempt in $(seq 1 12); do
-              if docker compose -f docker-compose.prod.yml --env-file .env.production --profile proxy exec -T gateway wget -qO- http://127.0.0.1:8080/api-docs.json > /dev/null; then
-                swagger_ready=1
-                break
-              fi
-              sleep 5
-            done
-            test "$swagger_ready" = 1
-            # 새 버전이 뜬 뒤에 이전 이미지를 정리한다. (배포 전에 지우면 공통 레이어까지 다시 받게 된다)
-            docker container prune -f
-            docker image prune -af
+          workload_identity_provider: projects/409994051730/locations/global/workloadIdentityPools/github/providers/github-repo
+          service_account: github-deploy@yakuku-yaru.iam.gserviceaccount.com
+
+      - name: Set up gcloud
+        uses: google-github-actions/setup-gcloud@e427ad8a34f8676edf47cf7d7925499adf3eb74f # v2.2.1
+
+      - name: Open IAP tunnel
+        run: |
+          gcloud compute start-iap-tunnel "$GCP_INSTANCE" 22 \
+            --zone="$GCP_ZONE" --local-host-port=localhost:2222 > /tmp/iap-tunnel.log 2>&1 &
+          for _ in $(seq 1 30); do
+            if (exec 3<>/dev/tcp/127.0.0.1/2222) 2>/dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/iap-tunnel.log
+          exit 1
+
+      - name: Deploy with Docker Compose
+        env:
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          printf 'yakuku-prod %s\n' "$DEPLOY_HOST_KEY" > ~/.ssh/known_hosts
+          { printf '%s\n' "$GHCR_TOKEN"; cat scripts/deploy/remote-deploy.sh; } | ssh \
+            -i ~/.ssh/deploy_key -p 2222 \
+            -o HostKeyAlias=yakuku-prod -o StrictHostKeyChecking=yes \
+            -o IdentitiesOnly=yes -o BatchMode=yes \
+            -o ServerAliveInterval=30 -o ServerAliveCountMax=10 \
+            "$DEPLOY_USER@localhost" \
+            "DEPLOY_PATH='$DEPLOY_PATH' API_IMAGE='$API_IMAGE' WEB_IMAGE='$WEB_IMAGE' SENTRY_RELEASE='$GITHUB_SHA' GHCR_USER='$GITHUB_ACTOR' bash -c 'read -r GHCR_TOKEN && export GHCR_TOKEN && exec bash -s'"
+
+      - name: Clean up SSH key
+        if: always()
+        run: rm -f ~/.ssh/deploy_key
