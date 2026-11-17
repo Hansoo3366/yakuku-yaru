@@ -20,6 +20,8 @@
   box-shadow: var(--shadow-lg);
   color: var(--color-ink);
   display: grid;
+  /* 열을 0까지 줄 수 있게 해야 넓은 기록 표가 팝업을 늘리지 않고 표 안에서 가로로 넘어간다 */
+  grid-template-columns: minmax(0, 1fr);
   grid-template-rows: auto minmax(0, 1fr);
   max-height: min(820px, calc(100dvh - 48px));
   overflow: hidden;
@@ -119,6 +121,7 @@
 .fa-record__scroll {
   display: grid;
   gap: var(--space-4);
+  grid-template-columns: minmax(0, 1fr);
   overflow-y: auto;
   overscroll-behavior: contain;
   padding: var(--space-5);
@@ -180,6 +183,7 @@
 .fa-record-panel {
   display: grid;
   gap: var(--space-4);
+  grid-template-columns: minmax(0, 1fr);
 }
 
 /* 올시즌 핵심 기록 */
@@ -216,6 +220,7 @@
 .fa-record-table-wrap {
   border: 1px solid var(--color-line);
   border-radius: var(--radius-md);
+  max-width: 100%;
   overflow-x: auto;
 }
 
