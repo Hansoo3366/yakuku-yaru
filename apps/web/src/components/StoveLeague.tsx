@@ -16,6 +16,7 @@ import type {
 } from '@/lib/baseball-api';
 import { formatKoreanMonthDay } from '@/lib/date-format';
 import { formatFreeAgentBreakdown, formatFreeAgentDeal } from '@/lib/fa-amount';
+import { formatKboChampionshipLabel } from '@/lib/kbo-championship-history';
 import { getPlayerProfileImageSrc } from '@/lib/player-image';
 import { getTeamLogoSrc } from '@/lib/team-logo';
 import { FreeAgentRecordDialog } from './FreeAgentRecordDialog';
@@ -526,6 +527,24 @@ export function FreeAgentBoard({
 
 /* ---------- 시즌 결과 ---------- */
 
+/** "V10 · 최근 2026 우승". 좁은 화면에서는 뒤쪽을 숨기고 "V10" 만 남긴다. */
+function ChampionshipLabel({
+  history,
+}: {
+  history: TeamStandingsResponse['items'][number]['championshipHistory'];
+}) {
+  const [title, ...rest] = formatKboChampionshipLabel(history).split(' · ');
+
+  return (
+    <small>
+      {title}
+      {rest.length ? (
+        <span className="season-recap__since"> · {rest.join(' · ')}</span>
+      ) : null}
+    </small>
+  );
+}
+
 /** 포스트시즌 시리즈 결과와 정규시즌 최종 순위. 우승팀과 가을야구 진출선을 표시한다. */
 export function SeasonRecap({
   bracket,
@@ -620,15 +639,22 @@ export function SeasonRecap({
                             shortName: item.teamShortName,
                           })}
                         />
-                        {item.teamShortName}
-                        {item.teamId === championId ? (
-                          <Trophy
-                            aria-label="한국시리즈 우승"
-                            className="season-recap__trophy"
-                            size={14}
-                            strokeWidth={2.4}
+                        <span className="season-recap__name">
+                          <span>
+                            {item.teamShortName}
+                            {item.teamId === championId ? (
+                              <Trophy
+                                aria-label="한국시리즈 우승"
+                                className="season-recap__trophy"
+                                size={14}
+                                strokeWidth={2.4}
+                              />
+                            ) : null}
+                          </span>
+                          <ChampionshipLabel
+                            history={item.championshipHistory}
                           />
-                        ) : null}
+                        </span>
                       </span>
                     </th>
                     <td>{item.wins}</td>
