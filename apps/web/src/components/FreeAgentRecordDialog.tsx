@@ -43,6 +43,13 @@ function formatProfileValue(value: string) {
     : value;
 }
 
+/** KBO 경력은 지금 팀 직전까지만 적는다. 끝에 지금 팀을 붙인다. */
+function withCurrentTeam(career: string, teamName: string) {
+  return career.split('-').at(-1) === teamName
+    ? career
+    : `${career}-${teamName}`;
+}
+
 function getCell(table: RecordTable | null, key: string, rowIndex = 0) {
   const index = table?.columns.findIndex((column) => column.key === key) ?? -1;
   return index >= 0 ? (table?.rows[rowIndex]?.[index] ?? null) : null;
@@ -322,7 +329,11 @@ export function FreeAgentRecordDialog({
                       ? `${year} 연봉`
                       : item.label}
                   </dt>
-                  <dd>{formatProfileValue(item.value)}</dd>
+                  <dd>
+                    {item.label === '경력'
+                      ? withCurrentTeam(item.value, team.shortName)
+                      : formatProfileValue(item.value)}
+                  </dd>
                 </div>
               ))}
             </dl>
