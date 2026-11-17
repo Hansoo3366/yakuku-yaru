@@ -1,0 +1,360 @@
+/* =========================================================
+ * FA 선수 기록 팝업
+ * 응원가 팝업과 같은 틀: 가운데 모달, 좁은 화면에서는 아래에서 올라오는 시트.
+ * ========================================================= */
+.fa-record-backdrop {
+  align-items: center;
+  backdrop-filter: blur(6px);
+  background: rgb(10 18 28 / 0.68);
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  padding: 24px;
+  position: fixed;
+  z-index: 80;
+}
+
+.fa-record {
+  background: var(--color-paper);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-lg);
+  color: var(--color-ink);
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  max-height: min(820px, calc(100dvh - 48px));
+  overflow: hidden;
+  width: min(100%, 760px);
+}
+
+/* 머리: 사진 · 이름 · FA 상태 */
+.fa-record__head {
+  align-items: center;
+  background: var(--color-surface-dark);
+  color: var(--color-white);
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: 88px minmax(0, 1fr) auto;
+  padding: var(--space-5);
+}
+
+.fa-record__photo {
+  background: var(--color-white);
+  border-radius: 50%;
+  height: 88px;
+  object-fit: cover;
+  object-position: center 15%;
+  width: 88px;
+}
+
+.fa-record__identity {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.fa-record__team {
+  align-items: center;
+  display: inline-flex;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  gap: 6px;
+  opacity: 0.85;
+}
+
+.fa-record__team img {
+  background: var(--color-white);
+  border-radius: 50%;
+  height: 20px;
+  object-fit: contain;
+  padding: 2px;
+  width: 20px;
+}
+
+.fa-record__identity h2 {
+  font-size: 1.75rem;
+  font-weight: 800;
+  letter-spacing: var(--tracking-display);
+  line-height: 1.2;
+}
+
+.fa-record__identity p {
+  font-size: var(--text-sm);
+  opacity: 0.8;
+}
+
+.fa-record__identity .fa-record__status {
+  color: #f2d48a;
+  display: grid;
+  font-size: var(--text-base);
+  font-weight: 700;
+  margin-top: 4px;
+  opacity: 1;
+}
+
+.fa-record__status small {
+  color: var(--color-white);
+  font-size: var(--text-xs);
+  font-weight: 500;
+  opacity: 0.8;
+}
+
+.fa-record__close {
+  align-items: center;
+  align-self: start;
+  background: rgb(255 255 255 / 0.12);
+  border: 0;
+  border-radius: 50%;
+  color: inherit;
+  cursor: pointer;
+  display: inline-flex;
+  height: 40px;
+  justify-content: center;
+  width: 40px;
+}
+
+.fa-record__close:hover {
+  background: rgb(255 255 255 / 0.22);
+}
+
+.fa-record__scroll {
+  display: grid;
+  gap: var(--space-4);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: var(--space-5);
+}
+
+/* 선수 정보 */
+.fa-record-profile {
+  display: grid;
+  gap: var(--space-3) var(--space-5);
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  margin: 0;
+}
+
+.fa-record-profile div {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.fa-record-profile dt {
+  color: var(--color-muted);
+  font-size: var(--text-xs);
+}
+
+.fa-record-profile dd {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+/* 탭 */
+.fa-record-tabs {
+  background: var(--color-surface-soft);
+  border-radius: var(--radius-md);
+  display: grid;
+  gap: 4px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  padding: 4px;
+}
+
+.fa-record-tabs button {
+  background: transparent;
+  border: 0;
+  border-radius: var(--radius-sm);
+  color: var(--color-muted);
+  cursor: pointer;
+  font-size: var(--text-sm);
+  font-weight: 700;
+  min-height: 40px;
+}
+
+.fa-record-tabs button[aria-selected='true'] {
+  background: var(--color-paper);
+  box-shadow: var(--shadow-sm);
+  color: var(--color-ink);
+}
+
+.fa-record-panel {
+  display: grid;
+  gap: var(--space-4);
+}
+
+/* 올시즌 핵심 기록 */
+.fa-record-tiles {
+  display: grid;
+  gap: var(--space-2);
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  margin: 0;
+}
+
+.fa-record-tiles div {
+  background: var(--color-surface-soft);
+  border-radius: var(--radius-md);
+  display: grid;
+  gap: 2px;
+  padding: var(--space-3);
+}
+
+.fa-record-tiles dt {
+  color: var(--color-muted);
+  font-size: var(--text-xs);
+  white-space: nowrap;
+}
+
+.fa-record-tiles dd {
+  font-size: 1.25rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+  margin: 0;
+  white-space: nowrap;
+}
+
+/* KBO 표 그대로 */
+.fa-record-table-wrap {
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-md);
+  overflow-x: auto;
+}
+
+.fa-record-table {
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+  min-width: 100%;
+  white-space: nowrap;
+}
+
+.fa-record-table th,
+.fa-record-table td {
+  border-bottom: 1px solid var(--color-line);
+  padding: 9px 12px;
+  text-align: right;
+}
+
+.fa-record-table thead th {
+  background: var(--color-surface-soft);
+  color: var(--color-muted);
+  font-size: var(--text-xs);
+  font-weight: 600;
+}
+
+.fa-record-table :is(thead, tbody, tfoot) th:first-child {
+  background: var(--color-paper);
+  left: 0;
+  position: sticky;
+  text-align: left;
+}
+
+.fa-record-table thead th:first-child {
+  background: var(--color-surface-soft);
+}
+
+.fa-record-table tbody th {
+  font-weight: 700;
+}
+
+.fa-record-table tbody tr:last-child > * {
+  border-bottom: 0;
+}
+
+.fa-record-table tfoot > tr > * {
+  background: var(--color-surface-soft);
+  border-bottom: 0;
+  border-top: 1px solid var(--color-line-strong);
+  font-weight: 800;
+}
+
+.fa-record-table tfoot th:first-child {
+  background: var(--color-surface-soft);
+}
+
+/* 주요 순위 */
+.fa-record-rankings h4 {
+  font-size: var(--text-sm);
+  font-weight: 700;
+  margin-bottom: var(--space-2);
+}
+
+.fa-record-rankings ul {
+  display: grid;
+  gap: 6px;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.fa-record-rankings li {
+  align-items: baseline;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-md);
+  display: grid;
+  font-size: var(--text-sm);
+  gap: var(--space-2);
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  padding: 8px 12px;
+}
+
+.fa-record-rankings li span {
+  color: var(--color-muted);
+  font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
+}
+
+.fa-record-rankings li b {
+  color: var(--color-ticket-gold-ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.fa-record-empty {
+  background: var(--color-surface-soft);
+  border-radius: var(--radius-md);
+  color: var(--color-muted);
+  font-size: var(--text-sm);
+  padding: var(--space-6) var(--space-4);
+  text-align: center;
+}
+
+.fa-record-source {
+  color: var(--color-muted);
+  font-size: var(--text-xs);
+}
+
+@media (max-width: 720px) {
+  .fa-record-backdrop {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  .fa-record {
+    border-radius: 16px 16px 0 0;
+    max-height: calc(100dvh - 52px);
+    width: 100%;
+  }
+
+  .fa-record__head {
+    gap: var(--space-3);
+    grid-template-columns: 64px minmax(0, 1fr) auto;
+    padding: var(--space-4);
+  }
+
+  .fa-record__photo {
+    height: 64px;
+    width: 64px;
+  }
+
+  .fa-record__identity h2 {
+    font-size: 1.375rem;
+  }
+
+  .fa-record__scroll {
+    padding: var(--space-4);
+  }
+
+  .fa-record-tiles {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}

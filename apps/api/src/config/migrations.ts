@@ -1089,6 +1089,22 @@ async function addFreeAgents() {
   );
 }
 
+/**
+ * KBO 선수 기록 페이지에서 받은 선수 정보·올시즌·최근 10경기·통산 기록.
+ * 페이지 구조를 그대로 옮긴 JSON 이라 표 모양이 바뀌어도 마이그레이션 없이 다시 받으면 된다.
+ */
+async function addKboPlayerRecords() {
+  await db.execute(
+    `CREATE TABLE IF NOT EXISTS kbo_player_records (
+       kbo_player_id VARCHAR(64) NOT NULL,
+       role VARCHAR(10) NOT NULL,
+       payload JSON NOT NULL,
+       synced_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+       PRIMARY KEY (kbo_player_id)
+     )`,
+  );
+}
+
 type Migration = {
   /** 한 번 적용되면 schema_migrations 에 기록된다. 이미 배포된 id 는 바꾸지 않는다. */
   id: string;
@@ -1112,6 +1128,7 @@ const MIGRATIONS: readonly Migration[] = [
     up: addEmailVerificationFailedAttempts,
   },
   { id: '0006_free_agents', up: addFreeAgents },
+  { id: '0007_kbo_player_records', up: addKboPlayerRecords },
 ];
 
 const MIGRATION_LOCK_NAME = 'yakuku_yaru_migrations';

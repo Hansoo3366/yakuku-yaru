@@ -223,6 +223,75 @@
   font-weight: 800;
 }
 
+.fa-filters {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.fa-filters__teams,
+.fa-filters__positions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.fa-filters button {
+  align-items: center;
+  background: var(--color-paper);
+  border: 1px solid var(--color-line-strong);
+  border-radius: var(--radius-pill);
+  color: var(--color-ink);
+  cursor: pointer;
+  display: inline-flex;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  gap: 6px;
+  min-height: 36px;
+  padding: 0 14px;
+  white-space: nowrap;
+}
+
+.fa-filters button img {
+  height: 18px;
+  object-fit: contain;
+  width: 18px;
+}
+
+.fa-filters button:hover {
+  border-color: var(--color-ink);
+}
+
+.fa-filters button[aria-pressed='true'] {
+  background: var(--color-ink);
+  border-color: var(--color-ink);
+  color: var(--color-canvas);
+}
+
+.fa-filters__positions button {
+  min-height: 32px;
+  padding: 0 12px;
+}
+
+.fa-board__empty {
+  background: var(--color-surface-soft);
+  border-radius: var(--radius-lg);
+  color: var(--color-muted);
+  font-size: var(--text-sm);
+  padding: var(--space-5);
+  text-align: center;
+}
+
+/* 좁은 화면에서는 팀 칩을 한 줄로 두고 옆으로 넘긴다 */
+@media (max-width: 720px) {
+  .fa-filters__teams {
+    flex-wrap: nowrap;
+    margin: 0 calc(var(--space-4) * -1);
+    overflow-x: auto;
+    padding: 0 var(--space-4) 2px;
+    scrollbar-width: none;
+  }
+}
+
 .fa-board__block {
   display: grid;
   gap: var(--space-3);
@@ -267,6 +336,34 @@
   padding: 0;
 }
 
+/* 선수 줄 전체가 버튼. 누르면 기록 팝업 */
+.fa-signed,
+.fa-player {
+  background: transparent;
+  border: 0;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+  width: 100%;
+}
+
+.fa-signed:hover,
+.fa-player:hover {
+  background: var(--color-surface-soft);
+}
+
+.fa-signed:focus-visible,
+.fa-player:focus-visible {
+  outline: 2px solid var(--color-ink);
+  outline-offset: -2px;
+}
+
+.fa-player:hover .fa-player__who strong {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
 .fa-signed {
   align-items: center;
   display: grid;
@@ -277,7 +374,7 @@
   padding: var(--space-3) var(--space-4);
 }
 
-.fa-signed + .fa-signed {
+.fa-signed-list li + li {
   border-top: 1px solid var(--color-line);
 }
 
@@ -390,13 +487,17 @@
 
 .fa-player {
   align-items: center;
+  border-radius: var(--radius-md);
   display: grid;
   gap: var(--space-3);
   grid-template-columns: 44px minmax(0, 1fr) auto;
-  padding: var(--space-2) 0;
+  /* 눌렀을 때 배경이 카드 안쪽 여백까지 닿게 좌우로 조금 넓힌다 */
+  margin: 0 calc(var(--space-2) * -1);
+  padding: var(--space-2);
+  width: calc(100% + var(--space-2) * 2);
 }
 
-.fa-player + .fa-player {
+.fa-team__list li + li {
   border-top: 1px solid var(--color-line);
 }
 

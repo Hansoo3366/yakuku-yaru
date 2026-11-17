@@ -24,9 +24,11 @@ import { errorMessage, useAdminFeedback } from '../_components/feedback';
 import {
   Avatar,
   Chip,
+  FilterSelect,
   listState,
   PanelHeading,
   ResultCount,
+  SearchBox,
   Segmented,
   TeamName,
   Toolbar,
@@ -34,21 +36,27 @@ import {
 
 type StatusFilter = 'all' | 'open' | 'signed';
 
+type MoneyKey =
+  | 'signingBonus'
+  | 'salaryAmount'
+  | 'incentiveAmount'
+  | 'totalAmount';
+
+/** 금액은 억·만 원 두 칸으로 받는다. 3억 2,500만 원 → { eok: '3', man: '2500' } */
+type Money = { eok: string; man: string };
+
 type FreeAgentForm = {
   contractYears: string;
-  /** 금액은 억 단위로 입력받아 저장할 때 만 원으로 바꾼다 */
-  incentiveAmount: string;
   newTeamId: string;
   note: string;
-  salaryAmount: string;
   signedOn: string;
-  signingBonus: string;
-  totalAmount: string;
+  money: Record<MoneyKey, Money>;
 };
 
-type AmountKey = 'signingBonus' | 'salaryAmount' | 'incentiveAmount';
-
-const AMOUNT_FIELDS: { key: AmountKey; label: string }[] = [
+const AMOUNT_FIELDS: {
+  key: Exclude<MoneyKey, 'totalAmount'>;
+  label: string;
+}[] = [
   { key: 'signingBonus', label: '계약금' },
   { key: 'salaryAmount', label: '연봉 총액' },
   { key: 'incentiveAmount', label: '옵션·인센티브' },
@@ -56,28 +64,48 @@ const AMOUNT_FIELDS: { key: AmountKey; label: string }[] = [
 
 type ContractChoice = 'open' | 'stayed' | 'moved';
 
-/** 만 원 → 억 (입력창 표시용). 50억 → "50", 4억 5천만 → "4.5" */
-function toEok(amount: number | null) {
-  return amount == null ? '' : String(amount / 10000);
+/** 만 원 → 입력칸. 0인 칸은 비워 둔다 */
+function toMoney(amount: number | null): Money {
+  if (amount == null) return { eok: '', man: '' };
+  const eok = Math.floor(amount / 10000);
+  const man = amount % 10000;
+  return {
+    eok: eok ? String(eok) : man ? '' : '0',
+    man: man ? String(man) : '',
+  };
 }
 
-/** 억 입력값 → 만 원. 비었거나 숫자가 아니면 null */
-function eokToManwon(value: string) {
-  if (value.trim() === '') return null;
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? Math.round(parsed * 10000) : Number.NaN;
+/** 입력칸 → 만 원. 둘 다 비면 null, 정수가 아니거나 만 원 칸이 9999를 넘으면 NaN */
+function moneyToManwon({ eok, man }: Money) {
+  if (eok.trim() === '' && man.trim() === '') return null;
+  const eokValue = eok.trim() === '' ? 0 : Number(eok);
+  const manValue = man.trim() === '' ? 0 : Number(man);
+
+  if (
+    !Number.isSafeInteger(eokValue) ||
+    !Number.isSafeInteger(manValue) ||
+    eokValue < 0 ||
+    manValue < 0 ||
+    manValue > 9999
+  ) {
+    return Number.NaN;
+  }
+
+  return eokValue * 10000 + manValue;
 }
 
 function toForm(freeAgent: FreeAgent): FreeAgentForm {
   return {
     contractYears: freeAgent.contractYears?.toString() ?? '',
-    incentiveAmount: toEok(freeAgent.incentiveAmount),
     newTeamId: freeAgent.newTeam ? String(freeAgent.newTeam.id) : '',
     note: freeAgent.note ?? '',
-    salaryAmount: toEok(freeAgent.salaryAmount),
     signedOn: freeAgent.signedOn ?? '',
-    signingBonus: toEok(freeAgent.signingBonus),
-    totalAmount: toEok(freeAgent.totalAmount),
+    money: {
+      signingBonus: toMoney(freeAgent.signingBonus),
+      salaryAmount: toMoney(freeAgent.salaryAmount),
+      incentiveAmount: toMoney(freeAgent.incentiveAmount),
+      totalAmount: toMoney(freeAgent.totalAmount),
+    },
   };
 }
 
@@ -85,14 +113,61 @@ function toInput(form: FreeAgentForm): AdminFreeAgentInput {
   return {
     contractYears:
       form.contractYears.trim() === '' ? null : Number(form.contractYears),
-    incentiveAmount: eokToManwon(form.incentiveAmount),
+    incentiveAmount: moneyToManwon(form.money.incentiveAmount),
     newTeamId: form.newTeamId ? Number(form.newTeamId) : null,
     note: form.note.trim() || null,
-    salaryAmount: eokToManwon(form.salaryAmount),
+    salaryAmount: moneyToManwon(form.money.salaryAmount),
     signedOn: form.signedOn || null,
-    signingBonus: eokToManwon(form.signingBonus),
-    totalAmount: eokToManwon(form.totalAmount),
+    signingBonus: moneyToManwon(form.money.signingBonus),
+    totalAmount: moneyToManwon(form.money.totalAmount),
   };
+}
+
+/** 억 · 만 원 두 칸 입력 */
+function MoneyInput({
+  label,
+  value,
+  onChange,
+  placeholder,
+}: {
+  label: string;
+  value: Money;
+  onChange: (value: Money) => void;
+  placeholder?: Money;
+}) {
+  return (
+    <span className="fa-editor__money-inputs">
+      <span className="fa-editor__unit">
+        <input
+          aria-label={`${label} 억`}
+          className="admin-input admin-input--num"
+          inputMode="numeric"
+          min={0}
+          onChange={(event) => onChange({ ...value, eok: event.target.value })}
+          placeholder={placeholder?.eok || '0'}
+          step={1}
+          type="number"
+          value={value.eok}
+        />
+        <i aria-hidden="true">억</i>
+      </span>
+      <span className="fa-editor__unit is-man">
+        <input
+          aria-label={`${label} 만 원`}
+          className="admin-input admin-input--num"
+          inputMode="numeric"
+          max={9999}
+          min={0}
+          onChange={(event) => onChange({ ...value, man: event.target.value })}
+          placeholder={placeholder?.man || '0'}
+          step={1}
+          type="number"
+          value={value.man}
+        />
+        <i aria-hidden="true">만</i>
+      </span>
+    </span>
+  );
 }
 
 /** 저장하면 홈에 보일 모습을 미리 그리기 위한 값 */
@@ -122,6 +197,8 @@ function toPreview(
 export function FreeAgentsTab() {
   const [year, setYear] = useState<number | null>(null);
   const [status, setStatus] = useState<StatusFilter>('all');
+  const [keyword, setKeyword] = useState('');
+  const [teamId, setTeamId] = useState('all');
   const [editing, setEditing] = useState<FreeAgent | null>(null);
   const freeAgentsQuery = useAdminFreeAgentsQuery(year);
   const teamsQuery = useTeamsQuery();
@@ -133,12 +210,20 @@ export function FreeAgentsTab() {
   const data = freeAgentsQuery.data;
   const allItems = data?.items ?? [];
   const signedCount = allItems.filter((item) => item.newTeam).length;
-  const items = allItems.filter((item) =>
-    status === 'all'
-      ? true
-      : status === 'signed'
-        ? item.newTeam
-        : !item.newTeam,
+  // FA 가 있는 팀만 고를 수 있게 원소속 팀 목록을 만든다
+  const teamOptions = [
+    ...new Map(
+      allItems.map((item) => [item.previousTeam.id, item.previousTeam]),
+    ).values(),
+  ].sort((a, b) => a.shortName.localeCompare(b.shortName, 'ko'));
+  const items = allItems.filter(
+    (item) =>
+      (status === 'all' ||
+        (status === 'signed' ? item.newTeam : !item.newTeam)) &&
+      (teamId === 'all' ||
+        String(item.previousTeam.id) === teamId ||
+        String(item.newTeam?.id) === teamId) &&
+      (!keyword || item.playerName.includes(keyword)),
   );
 
   const state = listState({
@@ -185,6 +270,23 @@ export function FreeAgentsTab() {
             { value: 'signed', label: '계약', count: signedCount },
           ]}
           value={status}
+        />
+        <FilterSelect
+          label="팀"
+          onChange={setTeamId}
+          options={[
+            { value: 'all', label: '전체 팀' },
+            ...teamOptions.map((team) => ({
+              value: String(team.id),
+              label: team.shortName,
+            })),
+          ]}
+          value={teamId}
+        />
+        <SearchBox
+          label="선수 이름 검색"
+          onSearch={setKeyword}
+          placeholder="선수 이름"
         />
         <ResultCount
           fetching={freeAgentsQuery.isFetching && !freeAgentsQuery.isPending}
@@ -324,7 +426,7 @@ function FreeAgentEditor({
       ? 'stayed'
       : 'moved';
   const partsSum = AMOUNT_FIELDS.reduce(
-    (sum, field) => sum + (eokToManwon(form[field.key]) || 0),
+    (sum, field) => sum + (moneyToManwon(form.money[field.key]) || 0),
     0,
   );
   const preview = toPreview(freeAgent, form, teams);
@@ -350,6 +452,13 @@ function FreeAgentEditor({
     value: FreeAgentForm[K],
   ) {
     setForm((current) => ({ ...current, [key]: value }));
+  }
+
+  function updateMoney(key: MoneyKey, value: Money) {
+    setForm((current) => ({
+      ...current,
+      money: { ...current.money, [key]: value },
+    }));
   }
 
   function chooseContract(next: ContractChoice) {
@@ -384,7 +493,7 @@ function FreeAgentEditor({
       )
     ) {
       setFormError(
-        '금액은 0 이상의 숫자로 입력해 주세요. 예: 4.5 = 4억 5천만 원',
+        '금액은 억·만 원 칸에 0 이상의 정수로 넣어 주세요. 만 원 칸은 9999까지입니다. 예: 3억 2,500만 원 → 3억 2500만',
       );
       return;
     }
@@ -532,49 +641,33 @@ function FreeAgentEditor({
         {choice !== 'open' ? (
           <section className="fa-editor__section">
             <h3>
-              금액 <small>억 원 단위 · 4억 5천만 원은 4.5</small>
+              금액{' '}
+              <small>
+                3억 2,500만 원 → 3억 2500만 · 천만·백만 원은 만 원 칸에
+              </small>
             </h3>
             <div className="fa-editor__money">
               {AMOUNT_FIELDS.map((field) => (
-                <label className="fa-editor__money-row" key={field.key}>
+                <div className="fa-editor__money-row" key={field.key}>
                   <span>{field.label}</span>
-                  <span className="fa-editor__unit">
-                    <input
-                      className="admin-input admin-input--num"
-                      inputMode="decimal"
-                      min={0}
-                      onChange={(event) =>
-                        update(field.key, event.target.value)
-                      }
-                      placeholder="0"
-                      step="0.1"
-                      type="number"
-                      value={form[field.key]}
-                    />
-                    <i aria-hidden="true">억</i>
-                  </span>
-                </label>
-              ))}
-              <label className="fa-editor__money-row is-total">
-                <span>총액</span>
-                <span className="fa-editor__unit">
-                  <input
-                    className="admin-input admin-input--num"
-                    inputMode="decimal"
-                    min={0}
-                    onChange={(event) =>
-                      update('totalAmount', event.target.value)
-                    }
-                    placeholder={partsSum ? String(partsSum / 10000) : '0'}
-                    step="0.1"
-                    type="number"
-                    value={form.totalAmount}
+                  <MoneyInput
+                    label={field.label}
+                    onChange={(value) => updateMoney(field.key, value)}
+                    value={form.money[field.key]}
                   />
-                  <i aria-hidden="true">억</i>
-                </span>
-              </label>
+                </div>
+              ))}
+              <div className="fa-editor__money-row is-total">
+                <span>총액</span>
+                <MoneyInput
+                  label="총액"
+                  onChange={(value) => updateMoney('totalAmount', value)}
+                  placeholder={partsSum ? toMoney(partsSum) : undefined}
+                  value={form.money.totalAmount}
+                />
+              </div>
               <p className="fa-editor__hint">
-                {form.totalAmount.trim()
+                {moneyToManwon(form.money.totalAmount) != null
                   ? '발표된 총액을 그대로 씁니다.'
                   : partsSum
                     ? `총액을 비우면 세 항목 합계 ${formatManwon(partsSum)} 원으로 보여요.`

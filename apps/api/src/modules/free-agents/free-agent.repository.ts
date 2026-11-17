@@ -155,6 +155,15 @@ export async function findFreeAgentById(id: number) {
   return rows[0] ? toFreeAgent(rows[0]) : null;
 }
 
+export async function countFreeAgents(faYear: number) {
+  const [rows] = await db.query<(RowDataPacket & { count: number })[]>(
+    'SELECT COUNT(*) AS count FROM free_agents WHERE fa_year = ?',
+    [faYear],
+  );
+
+  return Number(rows[0]?.count ?? 0);
+}
+
 /** 자격 공시 명단 반영. 계약 정보와 관리자가 채운 값은 건드리지 않는다. */
 export async function upsertQualifiedFreeAgent(input: {
   faYear: number;
@@ -163,7 +172,7 @@ export async function upsertQualifiedFreeAgent(input: {
   previousTeamId: number;
   qualifiedOn: string;
 }) {
-  const [result] = await db.execute<ResultSetHeader>(
+  await db.execute(
     `INSERT INTO free_agents (fa_year, player_name, position, previous_team_id, qualified_on)
      VALUES (?, ?, ?, ?, ?)
      ON DUPLICATE KEY UPDATE qualified_on = VALUES(qualified_on)`,
@@ -175,8 +184,6 @@ export async function upsertQualifiedFreeAgent(input: {
       input.qualifiedOn,
     ],
   );
-
-  return result.affectedRows === 1 ? ('inserted' as const) : ('kept' as const);
 }
 
 /** KBO 가 공시한 계약 팀·날짜. 관리자가 미리 넣었더라도 KBO 공시를 따른다. */

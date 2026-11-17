@@ -234,6 +234,30 @@ export type FreeAgentsResponse = {
   items: FreeAgent[];
 };
 
+/** KBO 선수 기록 페이지의 표를 그대로 옮긴 것. 열은 약어(key)와 한글(label) */
+export type RecordTable = {
+  columns: { key: string; label: string }[];
+  rows: string[][];
+  /** 통산·합계 줄. 첫 칸이 앞쪽 여러 열을 차지한다 */
+  total: string[] | null;
+};
+
+export type PlayerRecord = {
+  role: 'hitter' | 'pitcher';
+  profile: { label: string; value: string }[];
+  season: RecordTable | null;
+  recent: RecordTable | null;
+  rankings: RecordTable | null;
+  career: RecordTable | null;
+};
+
+export type FreeAgentRecordResponse = {
+  freeAgent: FreeAgent;
+  /** KBO 선수와 연결되지 않았거나 KBO 가 응답하지 않으면 null */
+  record: PlayerRecord | null;
+  syncedAt: string | null;
+};
+
 export type BoxScoreLine = {
   innings: (number | null)[];
   runs: number | null;
@@ -335,6 +359,12 @@ export function getSeasonProjection(seasonYear?: number) {
 export function getPostseasonBracket(seasonYear: number) {
   return request<PostseasonBracket>(
     `/teams/postseason?seasonYear=${seasonYear}`,
+  );
+}
+
+export function getFreeAgentRecord(freeAgentId: number) {
+  return request<FreeAgentRecordResponse>(
+    `/teams/free-agents/${freeAgentId}/record`,
   );
 }
 

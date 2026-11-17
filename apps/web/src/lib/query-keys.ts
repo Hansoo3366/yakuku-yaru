@@ -15,6 +15,8 @@ export const queryKeys = {
   gameBoxScore: (gameId: number) => ['game-box-score', gameId] as const,
   postseason: (seasonYear: number) => ['postseason', seasonYear] as const,
   freeAgents: () => ['free-agents'] as const,
+  freeAgentRecord: (freeAgentId: number) =>
+    ['free-agent-record', freeAgentId] as const,
   playerCheers: (input: {
     keyword?: string;
     teamId?: number | null;

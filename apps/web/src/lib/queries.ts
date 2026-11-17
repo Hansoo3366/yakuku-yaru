@@ -5,6 +5,7 @@ import { fetchMe } from '@/lib/auth-api';
 import {
   fetchGame,
   fetchGameBoxScore,
+  getFreeAgentRecord,
   getFreeAgents,
   getPostseasonBracket,
   getSeasonProjection,
@@ -118,6 +119,16 @@ export function useFreeAgentsQuery(options?: {
     initialData: options?.initialData ?? undefined,
     enabled: options?.enabled ?? true,
     staleTime: 1000 * 60 * 5,
+  });
+}
+
+/** FA 선수 상세 기록. 모달을 열 때만 받는다. 비시즌 기록은 잘 바뀌지 않는다. */
+export function useFreeAgentRecordQuery(freeAgentId: number | null) {
+  return useQuery({
+    queryKey: queryKeys.freeAgentRecord(freeAgentId ?? 0),
+    queryFn: () => getFreeAgentRecord(freeAgentId ?? 0),
+    enabled: freeAgentId !== null,
+    staleTime: 1000 * 60 * 30,
   });
 }
 

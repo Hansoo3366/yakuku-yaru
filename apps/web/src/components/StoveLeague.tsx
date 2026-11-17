@@ -9,6 +9,7 @@ import Link from 'next/link';
 import { useMemo, useState, type CSSProperties } from 'react';
 import type {
   FreeAgent,
+  FreeAgentTeam,
   PostseasonBracket,
   Team,
   TeamStandingsResponse,
@@ -17,6 +18,7 @@ import { formatKoreanMonthDay } from '@/lib/date-format';
 import { formatFreeAgentBreakdown, formatFreeAgentDeal } from '@/lib/fa-amount';
 import { getPlayerProfileImageSrc } from '@/lib/player-image';
 import { getTeamLogoSrc } from '@/lib/team-logo';
+import { FreeAgentRecordDialog } from './FreeAgentRecordDialog';
 import { isIntegratedChampion } from './PostseasonBracket';
 
 /* ---------- 우승 배너 ---------- */
@@ -188,7 +190,13 @@ function FreeAgentStatus({ freeAgent }: { freeAgent: FreeAgent }) {
 }
 
 /** 계약 소식 한 줄: 사진 · 이름 · 원소속 → 계약 팀 · 조건 */
-function SignedRow({ freeAgent }: { freeAgent: FreeAgent }) {
+function SignedRow({
+  freeAgent,
+  onOpen,
+}: {
+  freeAgent: FreeAgent;
+  onOpen: (freeAgent: FreeAgent) => void;
+}) {
   const newTeam = freeAgent.newTeam;
   const deal = formatFreeAgentDeal(freeAgent);
   const breakdown = formatFreeAgentBreakdown(freeAgent);
@@ -200,38 +208,55 @@ function SignedRow({ freeAgent }: { freeAgent: FreeAgent }) {
   const stayed = newTeam.id === freeAgent.previousTeam.id;
 
   return (
-    <li className="fa-signed">
-      <PlayerPhoto freeAgent={freeAgent} />
-      <span className="fa-signed__who">
-        <strong>{freeAgent.playerName}</strong>
-        <small>{freeAgent.position}</small>
-      </span>
-      <span
-        className="fa-signed__move"
-        data-state={stayed ? 'stayed' : 'moved'}
+    <li>
+      <button
+        aria-label={`${freeAgent.playerName} 기록 보기`}
+        className="fa-signed"
+        onClick={() => onOpen(freeAgent)}
+        type="button"
       >
-        <img alt="" src={getTeamLogoSrc(freeAgent.previousTeam)} />
-        {stayed ? (
-          <span>{newTeam.shortName} 잔류</span>
-        ) : (
-          <span>
-            {freeAgent.previousTeam.shortName} → <b>{newTeam.shortName}</b>
-          </span>
-        )}
-        {stayed ? null : <img alt="" src={getTeamLogoSrc(newTeam)} />}
-      </span>
-      <span className="fa-signed__deal">
-        <strong>{deal ?? '조건 미공개'}</strong>
-        {breakdown ? <small>{breakdown}</small> : null}
-      </span>
-      {freeAgent.signedOn ? (
-        <time className="fa-signed__date" dateTime={freeAgent.signedOn}>
-          {formatShortDate(freeAgent.signedOn)}
-        </time>
-      ) : null}
+        <PlayerPhoto freeAgent={freeAgent} />
+        <span className="fa-signed__who">
+          <strong>{freeAgent.playerName}</strong>
+          <small>{freeAgent.position}</small>
+        </span>
+        <span
+          className="fa-signed__move"
+          data-state={stayed ? 'stayed' : 'moved'}
+        >
+          <img alt="" src={getTeamLogoSrc(freeAgent.previousTeam)} />
+          {stayed ? (
+            <span>{newTeam.shortName} 잔류</span>
+          ) : (
+            <span>
+              {freeAgent.previousTeam.shortName} → <b>{newTeam.shortName}</b>
+            </span>
+          )}
+          {stayed ? null : <img alt="" src={getTeamLogoSrc(newTeam)} />}
+        </span>
+        <span className="fa-signed__deal">
+          <strong>{deal ?? '조건 미공개'}</strong>
+          {breakdown ? <small>{breakdown}</small> : null}
+        </span>
+        {freeAgent.signedOn ? (
+          <time className="fa-signed__date" dateTime={freeAgent.signedOn}>
+            {formatShortDate(freeAgent.signedOn)}
+          </time>
+        ) : null}
+      </button>
     </li>
   );
 }
+
+/** 고른 값이면 빼고, 아니면 더한다 */
+function toggle<T>(values: T[], value: T) {
+  return values.includes(value)
+    ? values.filter((item) => item !== value)
+    : [...values, value];
+}
+
+/** 포지션 필터 순서. KBO 이동현황의 포지션 표기를 그대로 쓴다. */
+const POSITION_ORDER = ['투수', '포수', '내야수', '외야수'];
 
 /**
  * 스토브리그 FA 현황. 계약 소식(최근 순)과 원소속 팀별 명단.
@@ -252,16 +277,40 @@ export function FreeAgentBoard({
   /** 홈에서 FA 전용 페이지로 잇는 링크 */
   moreHref?: string;
 }) {
+  // 여러 개를 고를 수 있고, 아무것도 안 고르면 전체다
+  const [teamFilter, setTeamFilter] = useState<number[]>([]);
+  const [positionFilter, setPositionFilter] = useState<string[]>([]);
+  // 선수를 누르면 KBO 기록 팝업을 연다
+  const [opened, setOpened] = useState<FreeAgent | null>(null);
+  // 팀을 고르면 그 팀에서 나간 선수와 들어온 선수를 함께 보여 준다
+  const filtered = useMemo(
+    () =>
+      items.filter(
+        (item) =>
+          (!teamFilter.length ||
+            teamFilter.includes(item.previousTeam.id) ||
+            (item.newTeam != null && teamFilter.includes(item.newTeam.id))) &&
+          (!positionFilter.length || positionFilter.includes(item.position)),
+      ),
+    [items, teamFilter, positionFilter],
+  );
+  const positions = useMemo(
+    () =>
+      POSITION_ORDER.filter((position) =>
+        items.some((item) => item.position === position),
+      ),
+    [items],
+  );
   const signed = useMemo(
     () =>
-      items
+      filtered
         .filter((item) => item.newTeam)
         .sort(
           (a, b) =>
             (b.signedOn ?? '').localeCompare(a.signedOn ?? '') ||
             a.playerName.localeCompare(b.playerName, 'ko'),
         ),
-    [items],
+    [filtered],
   );
   const byTeam = useMemo(() => {
     const rankByTeam = new Map(
@@ -269,7 +318,7 @@ export function FreeAgentBoard({
     );
     const groups = new Map<number, FreeAgent[]>();
 
-    for (const item of items) {
+    for (const item of filtered) {
       groups.set(item.previousTeam.id, [
         ...(groups.get(item.previousTeam.id) ?? []),
         item,
@@ -290,8 +339,25 @@ export function FreeAgentBoard({
             (rankByTeam.get(b[0].previousTeam.id) ?? 99) ||
           a[0].previousTeam.id - b[0].previousTeam.id,
       );
+  }, [filtered, standings]);
+  // 필터 칩의 팀 순서도 정규시즌 순위를 따른다
+  const teamChips = useMemo(() => {
+    const rankByTeam = new Map(
+      (standings?.items ?? []).map((item) => [item.teamId, item.rank]),
+    );
+    const teams = new Map<number, FreeAgentTeam>();
+
+    for (const item of items) {
+      teams.set(item.previousTeam.id, item.previousTeam);
+      if (item.newTeam) teams.set(item.newTeam.id, item.newTeam);
+    }
+
+    return [...teams.values()].sort(
+      (a, b) => (rankByTeam.get(a.id) ?? 99) - (rankByTeam.get(b.id) ?? 99),
+    );
   }, [items, standings]);
-  const movedCount = signed.filter(
+  const allSigned = items.filter((item) => item.newTeam);
+  const movedCount = allSigned.filter(
     (item) => item.newTeam?.id !== item.previousTeam.id,
   ).length;
 
@@ -324,7 +390,7 @@ export function FreeAgentBoard({
           </div>
           <div>
             <dt>계약</dt>
-            <dd>{signed.length}명</dd>
+            <dd>{allSigned.length}명</dd>
           </div>
           <div>
             <dt>이적</dt>
@@ -332,56 +398,128 @@ export function FreeAgentBoard({
           </div>
           <div>
             <dt>미계약</dt>
-            <dd>{items.length - signed.length}명</dd>
+            <dd>{items.length - allSigned.length}명</dd>
           </div>
         </dl>
       </header>
+
+      <div className="fa-filters">
+        <div aria-label="팀 필터" className="fa-filters__teams" role="group">
+          <button
+            aria-pressed={!teamFilter.length}
+            onClick={() => setTeamFilter([])}
+            type="button"
+          >
+            전체 팀
+          </button>
+          {teamChips.map((team) => (
+            <button
+              aria-pressed={teamFilter.includes(team.id)}
+              key={team.id}
+              onClick={() => setTeamFilter(toggle(teamFilter, team.id))}
+              type="button"
+            >
+              <img alt="" src={getTeamLogoSrc(team)} />
+              {team.shortName}
+            </button>
+          ))}
+        </div>
+        <div
+          aria-label="포지션 필터"
+          className="fa-filters__positions"
+          role="group"
+        >
+          <button
+            aria-pressed={!positionFilter.length}
+            onClick={() => setPositionFilter([])}
+            type="button"
+          >
+            전체 포지션
+          </button>
+          {positions.map((position) => (
+            <button
+              aria-pressed={positionFilter.includes(position)}
+              key={position}
+              onClick={() =>
+                setPositionFilter(toggle(positionFilter, position))
+              }
+              type="button"
+            >
+              {position}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {filtered.length ? null : (
+        <p className="fa-board__empty">조건에 맞는 FA 선수가 없어요.</p>
+      )}
 
       {signed.length ? (
         <div className="fa-board__block">
           <h3>계약 소식</h3>
           <ul className="fa-signed-list">
             {signed.map((freeAgent) => (
-              <SignedRow freeAgent={freeAgent} key={freeAgent.id} />
+              <SignedRow
+                freeAgent={freeAgent}
+                key={freeAgent.id}
+                onOpen={setOpened}
+              />
             ))}
           </ul>
         </div>
       ) : null}
 
-      <div className="fa-board__block">
-        <h3>팀별 FA 명단</h3>
-        <div className="fa-teams">
-          {byTeam.map((players) => {
-            const team = players[0].previousTeam;
-            const teamSigned = players.filter((item) => item.newTeam).length;
+      {byTeam.length ? (
+        <div className="fa-board__block">
+          <h3>팀별 FA 명단</h3>
+          <div className="fa-teams">
+            {byTeam.map((players) => {
+              const team = players[0].previousTeam;
+              const teamSigned = players.filter((item) => item.newTeam).length;
 
-            return (
-              <section className="fa-team" key={team.id}>
-                <header className="fa-team__head">
-                  <img alt="" src={getTeamLogoSrc(team)} />
-                  <h4>{team.name}</h4>
-                  <span>
-                    {players.length}명
-                    {teamSigned ? ` · 계약 ${teamSigned}` : ''}
-                  </span>
-                </header>
-                <ul className="fa-team__list">
-                  {players.map((freeAgent) => (
-                    <li className="fa-player" key={freeAgent.id}>
-                      <PlayerPhoto freeAgent={freeAgent} />
-                      <span className="fa-player__who">
-                        <strong>{freeAgent.playerName}</strong>
-                        <small>{freeAgent.position}</small>
-                      </span>
-                      <FreeAgentStatus freeAgent={freeAgent} />
-                    </li>
-                  ))}
-                </ul>
-              </section>
-            );
-          })}
+              return (
+                <section className="fa-team" key={team.id}>
+                  <header className="fa-team__head">
+                    <img alt="" src={getTeamLogoSrc(team)} />
+                    <h4>{team.name}</h4>
+                    <span>
+                      {players.length}명
+                      {teamSigned ? ` · 계약 ${teamSigned}` : ''}
+                    </span>
+                  </header>
+                  <ul className="fa-team__list">
+                    {players.map((freeAgent) => (
+                      <li key={freeAgent.id}>
+                        <button
+                          aria-label={`${freeAgent.playerName} 기록 보기`}
+                          className="fa-player"
+                          onClick={() => setOpened(freeAgent)}
+                          type="button"
+                        >
+                          <PlayerPhoto freeAgent={freeAgent} />
+                          <span className="fa-player__who">
+                            <strong>{freeAgent.playerName}</strong>
+                            <small>{freeAgent.position}</small>
+                          </span>
+                          <FreeAgentStatus freeAgent={freeAgent} />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              );
+            })}
+          </div>
         </div>
-      </div>
+      ) : null}
+
+      {opened ? (
+        <FreeAgentRecordDialog
+          freeAgent={opened}
+          onClose={() => setOpened(null)}
+        />
+      ) : null}
     </section>
   );
 }

@@ -1557,8 +1557,14 @@ html[data-theme='dark'] .admin-team-dot {
   align-items: center;
   display: grid;
   gap: var(--space-3);
-  grid-template-columns: minmax(0, 1fr) 140px;
+  grid-template-columns: minmax(0, 1fr) 236px;
   padding: var(--space-2) 0;
+}
+
+.fa-editor__money-inputs {
+  display: grid;
+  gap: 6px;
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1fr);
 }
 
 .fa-editor__money-row + .fa-editor__money-row {

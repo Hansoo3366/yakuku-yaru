@@ -6,9 +6,11 @@ import {
 } from './kbo-free-agent.client.js';
 import {
   applyFreeAgentContract,
+  countFreeAgents,
   linkFreeAgentPlayers,
   upsertQualifiedFreeAgent,
 } from './free-agent.repository.js';
+import { syncFreeAgentRecords } from './player-record.service.js';
 import {
   getKoreaDateKey,
   getStoveLeagueYear,
@@ -32,7 +34,8 @@ export async function syncKboFreeAgents(faYear: number) {
     section: KBO_TRADE_SECTIONS.faQualified,
   });
 
-  let inserted = 0;
+  // 이미 있는 행도 '1행 영향'으로 돌아와서, 새로 생긴 수는 전후 개수로 센다
+  const countBefore = await countFreeAgents(faYear);
   let unknownTeams = 0;
 
   for (const row of qualified) {
@@ -43,17 +46,16 @@ export async function syncKboFreeAgents(faYear: number) {
       continue;
     }
 
-    const result = await upsertQualifiedFreeAgent({
+    await upsertQualifiedFreeAgent({
       faYear,
       playerName: row.playerName,
       position: row.position,
       previousTeamId: teamId,
       qualifiedOn: row.date,
     });
-
-    if (result === 'inserted') inserted += 1;
   }
 
+  const inserted = (await countFreeAgents(faYear)) - countBefore;
   const qualifiedOn = qualified.map((row) => row.date).sort()[0];
   let signed = 0;
 
@@ -90,6 +92,8 @@ export async function syncKboFreeAgents(faYear: number) {
   }
 
   const linked = await linkFreeAgentPlayers(faYear);
+  // 선수 기록(올시즌·통산)은 없거나 오래된 것만 받는다
+  const records = await syncFreeAgentRecords(faYear);
 
   syncLog(
     'kbo-free-agents',
@@ -103,5 +107,6 @@ export async function syncKboFreeAgents(faYear: number) {
     signed,
     linked,
     unknownTeams,
+    records,
   };
 }
