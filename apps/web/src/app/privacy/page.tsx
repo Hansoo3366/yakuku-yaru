@@ -2,7 +2,11 @@ import type { Metadata } from 'next';
 import { SERVICE_CONTACT_EMAIL } from '@/lib/service-contact';
 import styles from '../legal.module.css';
 
-export const metadata: Metadata = { title: '개인정보 처리방침' };
+// canonical 을 적지 않으면 루트 레이아웃의 canonical('/')을 물려받아 홈의 중복으로 처리된다.
+export const metadata: Metadata = {
+  title: '개인정보 처리방침',
+  alternates: { canonical: '/privacy' },
+};
 
 export default function PrivacyPage() {
   return (

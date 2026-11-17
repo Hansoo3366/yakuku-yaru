@@ -1,7 +1,9 @@
 import type { Metadata } from 'next';
+import { notFound } from 'next/navigation';
 import { QuerySeed } from '@/components/QuerySeed';
 import { queryKeys } from '@/lib/query-keys';
-import { listPublicTeams, requestPublic } from '@/lib/server-baseball-api';
+import { listPublicTeams } from '@/lib/server-baseball-api';
+import { requestPublicResource } from '@/lib/server-public-resource';
 import type {
   PublicStadiumNote,
   StadiumSummary,
@@ -40,13 +42,18 @@ export async function generateMetadata({
 export default async function StadiumPage({ params }: StadiumPageProps) {
   const stadium = decodeStadiumParam((await params).stadium);
 
-  const [detail, teams] = await Promise.all([
-    requestPublic<{ stadium: StadiumSummary; notes: PublicStadiumNote[] }>(
-      `/stadiums/${encodeURIComponent(stadium)}`,
-      60,
-    ),
+  const [{ data: detail, missing }, teams] = await Promise.all([
+    requestPublicResource<{
+      stadium: StadiumSummary;
+      notes: PublicStadiumNote[];
+    }>(`/stadiums/${encodeURIComponent(stadium)}`, 60),
     listPublicTeams(),
   ]);
+
+  // 경기 기록이 없는 구장 이름은 빈 화면(200) 대신 404 로 응답해 검색엔진이 색인하지 않게 한다.
+  if (missing) {
+    notFound();
+  }
 
   return (
     <QuerySeed

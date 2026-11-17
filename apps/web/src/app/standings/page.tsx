@@ -17,40 +17,37 @@ import {
 import { getAbsoluteUrl } from '@/lib/site-url';
 import styles from '../data-page.module.css';
 
-/** 포스트시즌 시리즈를 SportsEvent 로 적어 검색·AI 가 대진과 전적을 읽게 한다 */
+/**
+ * 포스트시즌 대진과 시리즈 전적을 목록으로 적어 검색·AI 가 읽게 한다.
+ * 시리즈·포스트시즌 전체는 한 구장·한 시각이 아니어서 Event 로 적으면 startDate·location 누락 오류가 난다.
+ * 경기 하나하나의 SportsEvent 는 각 경기 페이지(/games/{id})가 맡고, 여기서는 그 주소만 잇는다.
+ */
 function buildPostseasonJsonLd(bracket: PostseasonBracketData) {
+  const rounds = bracket.rounds.filter((round) => round.higher && round.lower);
+
   return {
     '@context': 'https://schema.org',
-    '@type': 'SportsEvent',
+    '@type': 'ItemList',
     name: `${bracket.seasonYear} KBO 포스트시즌`,
     description: summarizePostseason(bracket),
-    sport: 'Baseball',
     url: getAbsoluteUrl('/standings'),
-    organizer: {
-      '@type': 'SportsOrganization',
-      name: 'KBO 리그',
-      url: 'https://www.koreabaseball.com',
-    },
-    subEvent: bracket.rounds
-      .filter((round) => round.higher && round.lower)
-      .map((round) => ({
-        '@type': 'SportsEvent',
+    numberOfItems: rounds.length,
+    itemListElement: rounds.map((round, roundIndex) => ({
+      '@type': 'ListItem',
+      position: roundIndex + 1,
+      item: {
+        '@type': 'ItemList',
         name: `${bracket.seasonYear} KBO ${round.name}`,
-        sport: 'Baseball',
-        ...(round.games[0] ? { startDate: round.games[0].gameDate } : {}),
-        competitor: [round.higher, round.lower].map((team) => ({
-          '@type': 'SportsTeam',
-          name: team?.name,
-          alternateName: team?.shortName,
-        })),
-        description: `${round.higher?.shortName} ${round.higherWins}승, ${round.lower?.shortName} ${round.lowerWins}승${round.draws ? `, 무승부 ${round.draws}` : ''}`,
-        subEvent: round.games.map((game, index) => ({
-          '@type': 'SportsEvent',
+        description: `${round.higher?.name} ${round.higherWins}승, ${round.lower?.name} ${round.lowerWins}승${round.draws ? `, 무승부 ${round.draws}` : ''}`,
+        numberOfItems: round.games.length,
+        itemListElement: round.games.map((game, index) => ({
+          '@type': 'ListItem',
+          position: index + 1,
           name: `${round.name} ${index + 1}차전 ${game.awayTeam.shortName} vs ${game.homeTeam.shortName}`,
-          startDate: game.gameDate,
           url: getAbsoluteUrl(`/games/${game.id}`),
         })),
-      })),
+      },
+    })),
   };
 }
 

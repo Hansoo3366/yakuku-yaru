@@ -11,6 +11,12 @@ import {
   findPostseasonGame,
 } from '@/lib/server-baseball-api';
 import { getAbsoluteUrl } from '@/lib/site-url';
+import {
+  buildStadiumPlace,
+  KBO_ORGANIZER,
+  toEventStatus,
+  toKstIsoString,
+} from '@/lib/sports-event-schema';
 import { getTeamLogoSrc } from '@/lib/team-logo';
 import { GameDetailPageClient } from './GameDetailPageClient';
 import { josa } from '@/lib/josa';
@@ -176,9 +182,9 @@ const TYPICAL_GAME_DURATION_MS = 3.5 * 60 * 60 * 1000;
 function buildGameJsonLd(game: Game, extras: GameExtras) {
   const url = getAbsoluteUrl(`/games/${game.id}`);
   const startedAt = new Date(game.gameDate);
-  const endDate = new Date(
-    startedAt.getTime() + TYPICAL_GAME_DURATION_MS,
-  ).toISOString();
+  const endDate = toKstIsoString(
+    new Date(startedAt.getTime() + TYPICAL_GAME_DURATION_MS),
+  );
   const isUpcoming = game.status !== 'cancelled' && startedAt > new Date();
   const team = (item: Game['homeTeam']) => ({
     '@type': 'SportsTeam',
@@ -195,6 +201,14 @@ function buildGameJsonLd(game: Game, extras: GameExtras) {
       ? []
       : [{ '@type': 'PropertyValue', name, value }];
   const properties = [
+    // 시리즈는 한 구장·한 시각이 아니라 superEvent(Event)로 적으면 startDate·location 누락 오류가 난다.
+    ...property(
+      '포스트시즌 시리즈',
+      extras.postseason
+        ? `${extras.postseason.seasonYear} KBO ${extras.postseason.roundName}`
+        : null,
+    ),
+    ...property('시리즈 차전', extras.postseason?.gameNumber),
     ...(hasFinalScore(game)
       ? [
           ...property(`${game.awayTeam.shortName} 득점`, game.awayScore),
@@ -221,29 +235,18 @@ function buildGameJsonLd(game: Game, extras: GameExtras) {
     name: `${label ? `${extras.postseason?.seasonYear} ${label} ` : ''}${game.awayTeam.name} vs ${game.homeTeam.name}`,
     description: buildGameDescription(game, extras),
     sport: 'Baseball',
-    startDate: game.gameDate,
+    startDate: toKstIsoString(game.gameDate),
     endDate,
     url,
     image: [getAbsoluteUrl('/main_kv.jpg')],
-    eventStatus:
-      game.status === 'cancelled'
-        ? 'https://schema.org/EventCancelled'
-        : 'https://schema.org/EventScheduled',
+    eventStatus: toEventStatus(game.status),
     eventAttendanceMode: 'https://schema.org/OfflineEventAttendanceMode',
-    location: {
-      '@type': 'StadiumOrArena',
-      name: game.stadium,
-      address: { '@type': 'PostalAddress', addressCountry: 'KR' },
-    },
+    location: buildStadiumPlace(game.stadium),
     homeTeam: team(game.homeTeam),
     awayTeam: team(game.awayTeam),
     competitor: [team(game.awayTeam), team(game.homeTeam)],
     performer: [team(game.awayTeam), team(game.homeTeam)],
-    organizer: {
-      '@type': 'SportsOrganization',
-      name: 'KBO 리그',
-      url: 'https://www.koreabaseball.com',
-    },
+    organizer: KBO_ORGANIZER,
     // 예매 정보는 앞으로 열리는 경기에만 뜻이 있다. 가격은 구단·좌석마다 달라 적지 않는다.
     ...(isUpcoming && game.ticketUrl
       ? {
@@ -252,15 +255,6 @@ function buildGameJsonLd(game: Game, extras: GameExtras) {
             url: game.ticketUrl,
             availability: 'https://schema.org/InStock',
             ...(game.ticketOpenAt ? { validFrom: game.ticketOpenAt } : {}),
-          },
-        }
-      : {}),
-    ...(extras.postseason
-      ? {
-          superEvent: {
-            '@type': 'SportsEvent',
-            name: `${extras.postseason.seasonYear} KBO ${extras.postseason.roundName}`,
-            sport: 'Baseball',
           },
         }
       : {}),

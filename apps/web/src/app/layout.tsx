@@ -274,9 +274,7 @@ export const metadata: Metadata = {
   creator: 'Yakuku Yaru',
   publisher: 'Yakuku Yaru',
   category: 'sports',
-  alternates: {
-    canonical: '/',
-  },
+  // canonical 은 페이지마다 둔다. 여기 두면 자기 canonical 이 없는 하위 페이지가 모두 홈을 가리킨다.
   robots: {
     index: true,
     follow: true,

@@ -2,7 +2,11 @@ import type { Metadata } from 'next';
 import { SERVICE_CONTACT_EMAIL } from '@/lib/service-contact';
 import styles from '../legal.module.css';
 
-export const metadata: Metadata = { title: '커뮤니티 운영정책' };
+// canonical 을 적지 않으면 루트 레이아웃의 canonical('/')을 물려받아 홈의 중복으로 처리된다.
+export const metadata: Metadata = {
+  title: '커뮤니티 운영정책',
+  alternates: { canonical: '/community-guidelines' },
+};
 
 export default function CommunityGuidelinesPage() {
   return (
