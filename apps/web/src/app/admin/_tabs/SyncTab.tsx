@@ -29,6 +29,7 @@ export const SYNC_JOB_LABELS: Record<AdminSyncJobType, string> = {
   standings: '팀 순위',
   projection: '시즌 예상 순위',
   players: '선수 명단',
+  'free-agents': 'FA 명단·계약',
 };
 
 export const SYNC_STATUS_LABELS: Record<AdminSyncJob['status'], string> = {
@@ -68,8 +69,8 @@ const SYNC_SECTIONS: {
   {
     id: 'year',
     title: '시즌 단위',
-    description: '몇 분 걸릴 수 있습니다. 비우면 올해입니다.',
-    types: ['schedule-season', 'projection'],
+    description: '몇 분 걸릴 수 있습니다. 비우면 올해입니다. FA는 그해 11월에 시작한 스토브리그를 받습니다.',
+    types: ['schedule-season', 'projection', 'free-agents'],
   },
   {
     id: 'none',

@@ -18,11 +18,18 @@ import {
   summarizePostseason,
 } from '@/components/PostseasonBracket';
 import { SeasonProjectionTable } from '@/components/SeasonProjectionTable';
+import {
+  ChampionBanner,
+  FreeAgentBoard,
+  SeasonRecap,
+} from '@/components/StoveLeague';
 import { TeamStandingsTable } from '@/components/TeamStandingsTable';
 import type {
+  FreeAgent,
   Game,
   PostseasonBracket as PostseasonBracketData,
   SeasonProjectionResponse,
+  Team,
   TeamStandingsResponse,
 } from '@/lib/baseball-api';
 import {
@@ -66,6 +73,10 @@ type Props = {
   standings: TeamStandingsResponse | null;
   /** 포스트시즌 중일 때만 넘어온다 */
   postseason: PostseasonBracketData | null;
+  /** 한국시리즈가 끝났을 때만 넘어온다. 스토브리그 화면으로 바꾼다. */
+  finishedSeason: PostseasonBracketData | null;
+  freeAgents: FreeAgent[];
+  teams: Team[];
   projection: SeasonProjectionResponse | null;
   projectionLoading: boolean;
   initialGames: Game[] | null;
@@ -150,6 +161,9 @@ function GameRow({ game }: { game: Game }) {
 export function PublicHome({
   standings,
   postseason,
+  finishedSeason,
+  freeAgents,
+  teams,
   projection,
   projectionLoading,
   initialGames,
@@ -163,110 +177,132 @@ export function PublicHome({
 
   return (
     <main className="page-shell landing">
-      <div className="landing-top">
-        <section className="landing-intro">
-          <div className="landing-intro__copy">
-            <h1>오늘 경기를 보고, 내 야구를 남기세요.</h1>
-            <p>
-              KBO 일정과 순위를 확인하고, 직관과 집관의 순간을 한 시즌의
-              기록으로 모으는 야구 팬 서비스입니다.
-            </p>
-          </div>
-          <div className="landing-intro__actions">
-            <Link className="landing-intro__primary" href="/register">
-              내 시즌 시작하기
-              <ArrowRight aria-hidden="true" size={18} />
-            </Link>
-            <Link className="landing-intro__secondary" href="/calendar">
-              전체 일정 보기
-            </Link>
-          </div>
-        </section>
-
-        {/* 키 비주얼이 가려지지 않도록 경기 목록은 왼쪽에만 둔다. */}
-        <div className="landing-hero">
-          <section
-            aria-labelledby="landing-games-title"
-            className="landing-games"
-          >
-            <header className="landing-games__head">
-              <h2 id="landing-games-title">
-                {gameDay
-                  ? gameDay.isToday
-                    ? '오늘의 경기'
-                    : '다음 경기'
-                  : '경기 일정'}
-              </h2>
-              {gameDay ? (
-                <span>{formatDayLabel(gameDay.games[0].gameDate)}</span>
-              ) : null}
-            </header>
-            {gameDay ? (
-              <ul className="landing-games__list">
-                {gameDay.games.map((game) => (
-                  <GameRow game={game} key={game.id} />
-                ))}
-              </ul>
-            ) : (
-              <p className="landing-games__empty">
-                {gamesQuery.isLoading
-                  ? '경기 일정을 불러오고 있어요.'
-                  : '앞으로 일주일 동안 예정된 경기가 없어요.'}
-              </p>
-            )}
-          </section>
-        </div>
-      </div>
-
-      {postseason ? (
-        <section
-          aria-labelledby="landing-postseason-title"
-          className="landing-section"
-        >
-          <header className="landing-section__head">
-            <div>
-              <h2 id="landing-postseason-title">
-                {postseason.seasonYear} 포스트시즌
-              </h2>
-              <p>{summarizePostseason(postseason)}</p>
-            </div>
-          </header>
-          <div className="landing-section__body">
-            <PostseasonBracket bracket={postseason} />
-          </div>
-        </section>
+      {finishedSeason ? (
+        <ChampionBanner bracket={finishedSeason} teams={teams} titleAs="h1" />
       ) : null}
+      {/* 스토브리그에는 경기가 없어 소개·경기 일정 대신 우승 배너와 FA 를 먼저 보여 준다. */}
+      {finishedSeason ? null : (
+        <div className="landing-top">
+          <section className="landing-intro">
+            <div className="landing-intro__copy">
+              <h1>오늘 경기를 보고, 내 야구를 남기세요.</h1>
+              <p>
+                KBO 일정과 순위를 확인하고, 직관과 집관의 순간을 한 시즌의
+                기록으로 모으는 야구 팬 서비스입니다.
+              </p>
+            </div>
+            <div className="landing-intro__actions">
+              <Link className="landing-intro__primary" href="/register">
+                내 시즌 시작하기
+                <ArrowRight aria-hidden="true" size={18} />
+              </Link>
+              <Link className="landing-intro__secondary" href="/calendar">
+                전체 일정 보기
+              </Link>
+            </div>
+          </section>
 
-      <section
-        aria-labelledby="landing-standings-title"
-        className="landing-section"
-      >
-        <header className="landing-section__head">
-          <div>
-            <h2 id="landing-standings-title">
-              {postseason ? '정규시즌 최종 순위' : 'KBO 팀 순위'}
-            </h2>
-            <p>
-              {postseason
-                ? '포스트시즌 시드를 정한 정규시즌 성적이에요.'
-                : '매일 갱신되는 순위로 선두 경쟁과 중위권 흐름을 확인하세요.'}
-            </p>
+          {/* 키 비주얼이 가려지지 않도록 경기 목록은 왼쪽에만 둔다. */}
+          <div className="landing-hero">
+            <section
+              aria-labelledby="landing-games-title"
+              className="landing-games"
+            >
+              <header className="landing-games__head">
+                <h2 id="landing-games-title">
+                  {gameDay
+                    ? gameDay.isToday
+                      ? '오늘의 경기'
+                      : '다음 경기'
+                    : '경기 일정'}
+                </h2>
+                {gameDay ? (
+                  <span>{formatDayLabel(gameDay.games[0].gameDate)}</span>
+                ) : null}
+              </header>
+              {gameDay ? (
+                <ul className="landing-games__list">
+                  {gameDay.games.map((game) => (
+                    <GameRow game={game} key={game.id} />
+                  ))}
+                </ul>
+              ) : (
+                <p className="landing-games__empty">
+                  {gamesQuery.isLoading
+                    ? '경기 일정을 불러오고 있어요.'
+                    : '앞으로 일주일 동안 예정된 경기가 없어요.'}
+                </p>
+              )}
+            </section>
           </div>
-          <Link href="/calendar">
-            전체 일정 보기 <ArrowRight aria-hidden="true" size={16} />
-          </Link>
-        </header>
-        <div className="landing-section__body">
-          <TeamStandingsTable standings={standings} />
         </div>
-      </section>
+      )}
 
-      <section aria-label="시즌 예상 순위" className="landing-section">
-        <SeasonProjectionTable
-          loading={projectionLoading}
-          projection={projection}
-        />
-      </section>
+      {finishedSeason ? (
+        <>
+          {freeAgents.length ? (
+            <FreeAgentBoard
+              moreHref="/fa"
+              faYear={finishedSeason.seasonYear}
+              items={freeAgents}
+              standings={standings}
+            />
+          ) : null}
+          <SeasonRecap bracket={finishedSeason} standings={standings} />
+        </>
+      ) : (
+        <>
+          {postseason ? (
+            <section
+              aria-labelledby="landing-postseason-title"
+              className="landing-section"
+            >
+              <header className="landing-section__head">
+                <div>
+                  <h2 id="landing-postseason-title">
+                    {postseason.seasonYear} 포스트시즌
+                  </h2>
+                  <p>{summarizePostseason(postseason)}</p>
+                </div>
+              </header>
+              <div className="landing-section__body">
+                <PostseasonBracket bracket={postseason} />
+              </div>
+            </section>
+          ) : null}
+
+          <section
+            aria-labelledby="landing-standings-title"
+            className="landing-section"
+          >
+            <header className="landing-section__head">
+              <div>
+                <h2 id="landing-standings-title">
+                  {postseason ? '정규시즌 최종 순위' : 'KBO 팀 순위'}
+                </h2>
+                <p>
+                  {postseason
+                    ? '포스트시즌 시드를 정한 정규시즌 성적이에요.'
+                    : '매일 갱신되는 순위로 선두 경쟁과 중위권 흐름을 확인하세요.'}
+                </p>
+              </div>
+              <Link href="/calendar">
+                전체 일정 보기 <ArrowRight aria-hidden="true" size={16} />
+              </Link>
+            </header>
+            <div className="landing-section__body">
+              <TeamStandingsTable standings={standings} />
+            </div>
+          </section>
+
+          <section aria-label="시즌 예상 순위" className="landing-section">
+            <SeasonProjectionTable
+              loading={projectionLoading}
+              projection={projection}
+            />
+          </section>
+        </>
+      )}
 
       <section
         aria-labelledby="landing-features-title"

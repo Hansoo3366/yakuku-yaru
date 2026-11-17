@@ -1052,6 +1052,43 @@ async function addEmailVerificationFailedAttempts() {
   }
 }
 
+/**
+ * 스토브리그 FA 명단. 명단과 계약 팀은 KBO 선수 이동현황에서 받고,
+ * KBO 가 공개하지 않는 계약 조건(기간·금액)은 관리자가 채운다. 금액 단위는 만 원.
+ */
+async function addFreeAgents() {
+  await db.execute(
+    `CREATE TABLE IF NOT EXISTS free_agents (
+       id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+       fa_year SMALLINT UNSIGNED NOT NULL,
+       player_name VARCHAR(50) NOT NULL,
+       position VARCHAR(20) NOT NULL,
+       previous_team_id BIGINT UNSIGNED NOT NULL,
+       player_id BIGINT UNSIGNED NULL,
+       qualified_on DATE NOT NULL,
+       new_team_id BIGINT UNSIGNED NULL,
+       signed_on DATE NULL,
+       contract_years TINYINT UNSIGNED NULL,
+       total_amount INT UNSIGNED NULL,
+       signing_bonus INT UNSIGNED NULL,
+       salary_amount INT UNSIGNED NULL,
+       incentive_amount INT UNSIGNED NULL,
+       note VARCHAR(200) NULL,
+       created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+       updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+       PRIMARY KEY (id),
+       UNIQUE KEY uq_free_agents_player (fa_year, player_name, position, previous_team_id),
+       CONSTRAINT fk_free_agents_previous_team
+         FOREIGN KEY (previous_team_id) REFERENCES teams(id),
+       CONSTRAINT fk_free_agents_new_team
+         FOREIGN KEY (new_team_id) REFERENCES teams(id),
+       CONSTRAINT fk_free_agents_player
+         FOREIGN KEY (player_id) REFERENCES players(id)
+         ON DELETE SET NULL
+     )`,
+  );
+}
+
 type Migration = {
   /** 한 번 적용되면 schema_migrations 에 기록된다. 이미 배포된 id 는 바꾸지 않는다. */
   id: string;
@@ -1074,6 +1111,7 @@ const MIGRATIONS: readonly Migration[] = [
     id: '0005_email_verification_failed_attempts',
     up: addEmailVerificationFailedAttempts,
   },
+  { id: '0006_free_agents', up: addFreeAgents },
 ];
 
 const MIGRATION_LOCK_NAME = 'yakuku_yaru_migrations';

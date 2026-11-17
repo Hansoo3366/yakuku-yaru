@@ -1,5 +1,6 @@
 import type {
   BoxScore,
+  FreeAgentsResponse,
   Game,
   PostseasonBracket,
   SeasonProjectionResponse,
@@ -101,6 +102,40 @@ export function getKoreaSeasonYear(base = new Date()) {
   return Number(getKoreaDateString(base).slice(0, 4));
 }
 
+/**
+ * 스토브리그 홈이 끝나는 날(MM-DD, 한국 시간). 시범경기가 보통 3월 둘째 주에 시작한다.
+ * 시범경기 일정은 동기화하지 않아 날짜로 정한다.
+ */
+export const STOVE_LEAGUE_END_MONTH_DAY = '03-08';
+
+/**
+ * 홈이 보여 줄 시즌과 스토브리그 여부.
+ * 한국시리즈 우승팀이 정해지면 다음 해 시범경기 무렵(STOVE_LEAGUE_END_MONTH_DAY)까지
+ * 지난 시즌을 기준으로 우승 배너·FA 를 보여 주고, 그 뒤로는 새 시즌 홈으로 돌아간다.
+ */
+export async function resolveHomeSeason(base = new Date()) {
+  const today = getKoreaDateString(base);
+  const year = Number(today.slice(0, 4));
+  const monthDay = today.slice(5);
+  // 10~12월은 그해, 1월~시범경기 전은 지난해 포스트시즌을 본다
+  const finishedYear =
+    monthDay >= '10-01'
+      ? year
+      : monthDay < STOVE_LEAGUE_END_MONTH_DAY
+        ? year - 1
+        : null;
+
+  if (finishedYear === null) {
+    return { seasonYear: year, stoveLeague: false };
+  }
+
+  const postseason = await fetchPublicPostseason(finishedYear);
+
+  return postseason?.champion
+    ? { seasonYear: finishedYear, stoveLeague: true }
+    : { seasonYear: year, stoveLeague: false };
+}
+
 export function listPublicTeams() {
   return requestPublic<{ items: Team[] }>('/teams', 60 * 60);
 }
@@ -124,6 +159,10 @@ export function fetchPublicPostseason(seasonYear: number) {
     `/teams/postseason?seasonYear=${seasonYear}`,
     60 * 5,
   );
+}
+
+export function fetchPublicFreeAgents() {
+  return requestPublic<FreeAgentsResponse>('/teams/free-agents', 60 * 5);
 }
 
 /** 끝난 경기 박스스코어. 한 번 받으면 바뀌지 않으니 길게 캐시한다. */

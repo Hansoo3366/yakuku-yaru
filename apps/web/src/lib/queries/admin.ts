@@ -11,6 +11,7 @@ import {
   fetchCurrentAdminSyncJob,
   listAdminAttendanceRecords,
   listAdminComments,
+  listAdminFreeAgents,
   listAdminGames,
   listAdminPosts,
   listAdminReports,
@@ -48,6 +49,7 @@ export const adminKeys = {
       input.rosterScope,
       input.page,
     ] as const,
+  freeAgents: (year: number | null) => ['admin', 'free-agents', year] as const,
   syncJob: () => ['admin', 'sync-job'] as const,
 };
 
@@ -172,6 +174,16 @@ export function useAdminGamesQuery(input: AdminGameFilter) {
         size: ADMIN_GAME_PAGE_SIZE,
         status: input.status,
       }),
+    enabled: Boolean(token),
+    placeholderData: keepPreviousData,
+  });
+}
+
+export function useAdminFreeAgentsQuery(year: number | null) {
+  const token = useAdminToken();
+  return useQuery({
+    queryKey: adminKeys.freeAgents(year),
+    queryFn: () => listAdminFreeAgents(token, year),
     enabled: Boolean(token),
     placeholderData: keepPreviousData,
   });

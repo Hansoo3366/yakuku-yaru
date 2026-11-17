@@ -3,6 +3,7 @@ import { authenticate } from '../../middleware/authenticate.js';
 import { requireAdmin } from '../../middleware/require-admin.js';
 import { rateLimit } from '../../middleware/rate-limit.js';
 import { HttpError } from '../../utils/http-error.js';
+import { purgeWebCache } from '../../lib/web-cache.js';
 import { normalizeExternalHttpUrl } from '../../utils/external-url.js';
 import { deleteUploadedFile } from '../../utils/upload-file.js';
 import { deleteComment } from '../comments/comment.repository.js';
@@ -46,6 +47,13 @@ import {
   updateAdminGame,
   updateUserRole,
 } from './admin.repository.js';
+import {
+  findFreeAgentById,
+  findLatestFreeAgentYear,
+  listFreeAgentYears,
+  listFreeAgents,
+  updateFreeAgentTerms,
+} from '../free-agents/free-agent.repository.js';
 import {
   getCurrentSyncJob,
   getSyncJob,
@@ -233,6 +241,46 @@ function parseTeamCheerInput(body: Record<string, unknown>, teamId: number) {
     youtubeId,
     youtubeUrl: null,
     lyrics: nullableString(body.lyrics),
+  };
+}
+
+const DATE_ONLY_RE = /^\d{4}-\d{2}-\d{2}$/;
+/** 만 원 단위 상한. 1조 원(1억 만 원)을 넘는 계약은 없다. */
+const MAX_FA_AMOUNT = 100_000_000;
+
+function nullableWholeNumber(value: unknown, label: string, max: number) {
+  if (value === null || value === undefined || value === '') return null;
+  const parsed = Number(value);
+
+  if (!Number.isSafeInteger(parsed) || parsed < 0 || parsed > max) {
+    throw new HttpError(400, 'INVALID_INPUT', `${label} 값이 올바르지 않습니다.`);
+  }
+
+  return parsed;
+}
+
+function parseFreeAgentTermsInput(body: Record<string, unknown>) {
+  const newTeamId = nullableWholeNumber(body.newTeamId, '계약 팀', Number.MAX_SAFE_INTEGER);
+  const signedOn = nullableString(body.signedOn);
+  const note = nullableString(body.note);
+
+  if (signedOn && !DATE_ONLY_RE.test(signedOn)) {
+    throw new HttpError(400, 'INVALID_INPUT', '계약일 형식이 올바르지 않습니다.');
+  }
+
+  if (note && note.length > 200) {
+    throw new HttpError(400, 'INVALID_INPUT', '메모는 200자까지 쓸 수 있습니다.');
+  }
+
+  return {
+    newTeamId: newTeamId || null,
+    signedOn,
+    contractYears: nullableWholeNumber(body.contractYears, '계약 기간', 20),
+    totalAmount: nullableWholeNumber(body.totalAmount, '총액', MAX_FA_AMOUNT),
+    signingBonus: nullableWholeNumber(body.signingBonus, '계약금', MAX_FA_AMOUNT),
+    salaryAmount: nullableWholeNumber(body.salaryAmount, '연봉', MAX_FA_AMOUNT),
+    incentiveAmount: nullableWholeNumber(body.incentiveAmount, '옵션', MAX_FA_AMOUNT),
+    note,
   };
 }
 
@@ -780,6 +828,60 @@ adminRouter.patch('/games/:gameId', adminWriteLimit, async (req, res, next) => {
     next(error);
   }
 });
+
+adminRouter.get('/free-agents', async (req, res, next) => {
+  try {
+    const requestedYear =
+      typeof req.query.year === 'string' && req.query.year
+        ? Number(req.query.year)
+        : null;
+
+    if (
+      requestedYear !== null &&
+      (!Number.isSafeInteger(requestedYear) || requestedYear < 2000)
+    ) {
+      throw new HttpError(400, 'INVALID_INPUT', '올바른 연도가 필요합니다.');
+    }
+
+    const faYear = requestedYear ?? (await findLatestFreeAgentYear());
+
+    res.json({
+      faYear,
+      years: await listFreeAgentYears(),
+      items: faYear ? await listFreeAgents(faYear) : [],
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+adminRouter.patch(
+  '/free-agents/:freeAgentId',
+  adminWriteLimit,
+  async (req, res, next) => {
+    try {
+      const freeAgentId = Number(req.params.freeAgentId);
+
+      if (!Number.isSafeInteger(freeAgentId) || freeAgentId < 1) {
+        throw new HttpError(400, 'INVALID_INPUT', '올바른 FA ID가 필요합니다.');
+      }
+
+      const input = parseFreeAgentTermsInput(req.body ?? {});
+
+      if (!(await findFreeAgentById(freeAgentId))) {
+        throw new HttpError(404, 'FREE_AGENT_NOT_FOUND', 'FA 선수를 찾을 수 없습니다.');
+      }
+
+      await updateFreeAgentTerms(freeAgentId, input);
+      // 홈 FA 화면에 바로 보이도록 웹 서버 캐시를 비운다
+      await purgeWebCache();
+
+      res.json({ item: await findFreeAgentById(freeAgentId) });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
 
 adminRouter.post('/sync-jobs', adminWriteLimit, async (req, res, next) => {
   try {

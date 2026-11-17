@@ -17,6 +17,7 @@ const staticRoutes: Array<{
   { path: '/', changeFrequency: 'daily', priority: 1 },
   { path: '/calendar', changeFrequency: 'daily', priority: 0.9 },
   { path: '/standings', changeFrequency: 'daily', priority: 0.9 },
+  { path: '/fa', changeFrequency: 'daily', priority: 0.8 },
   { path: '/posts', changeFrequency: 'daily', priority: 0.8 },
   { path: '/fans', changeFrequency: 'daily', priority: 0.7 },
   { path: '/stadiums', changeFrequency: 'daily', priority: 0.7 },

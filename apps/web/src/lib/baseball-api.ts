@@ -207,6 +207,33 @@ export type PostseasonBracket = {
   champion: PostseasonTeam | null;
 };
 
+export type FreeAgentTeam = { id: number; name: string; shortName: string };
+
+/** 스토브리그 FA. 금액은 만 원 단위이고, KBO 가 공개하지 않아 관리자가 채우기 전에는 null. */
+export type FreeAgent = {
+  id: number;
+  faYear: number;
+  playerName: string;
+  position: string;
+  profileImageUrl: string | null;
+  previousTeam: FreeAgentTeam;
+  newTeam: FreeAgentTeam | null;
+  qualifiedOn: string;
+  signedOn: string | null;
+  contractYears: number | null;
+  totalAmount: number | null;
+  signingBonus: number | null;
+  salaryAmount: number | null;
+  incentiveAmount: number | null;
+  note: string | null;
+};
+
+export type FreeAgentsResponse = {
+  /** 가장 최근 스토브리그 연도. 명단을 아직 받지 않았으면 null */
+  faYear: number | null;
+  items: FreeAgent[];
+};
+
 export type BoxScoreLine = {
   innings: (number | null)[];
   runs: number | null;
@@ -309,6 +336,10 @@ export function getPostseasonBracket(seasonYear: number) {
   return request<PostseasonBracket>(
     `/teams/postseason?seasonYear=${seasonYear}`,
   );
+}
+
+export function getFreeAgents() {
+  return request<FreeAgentsResponse>('/teams/free-agents');
 }
 
 export function updateFavoriteTeam(teamId: number, token: string) {

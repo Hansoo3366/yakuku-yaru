@@ -1,4 +1,8 @@
 import { purgeWebCache } from '../../lib/web-cache.js';
+import {
+  getCurrentStoveLeagueYear,
+  syncKboFreeAgents,
+} from '../free-agents/sync-free-agents.js';
 import { syncKboGameCenter } from '../kbo-game-center/sync-game-center.js';
 import { syncKboPlayers } from '../kbo-players/sync-kbo-players.js';
 import { syncKboScheduleForMonth } from '../kbo-schedule/sync-schedule.js';
@@ -18,6 +22,7 @@ export const ADMIN_SYNC_JOB_TYPES = [
   'standings',
   'projection',
   'players',
+  'free-agents',
 ] as const;
 
 export type AdminSyncJobType = (typeof ADMIN_SYNC_JOB_TYPES)[number];
@@ -270,6 +275,13 @@ async function executeSyncJob(
       });
     case 'players':
       return syncKboPlayers();
+    case 'free-agents':
+      // 연도를 고르지 않으면 지금 스토브리그, 시즌 중이면 지난 스토브리그
+      return syncKboFreeAgents(
+        params.year ??
+          getCurrentStoveLeagueYear() ??
+          new Date().getFullYear() - 1,
+      );
     default: {
       const exhaustive: never = type;
       throw new Error(`알 수 없는 동기화 유형: ${exhaustive}`);

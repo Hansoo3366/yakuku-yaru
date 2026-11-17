@@ -14,6 +14,7 @@ import {
 } from '@/lib/queries/admin';
 import { CheersTab } from '../_tabs/CheersTab';
 import { CommentsTab } from '../_tabs/CommentsTab';
+import { FreeAgentsTab } from '../_tabs/FreeAgentsTab';
 import { GamesTab } from '../_tabs/GamesTab';
 import { MediaTab } from '../_tabs/MediaTab';
 import { OverviewTab } from '../_tabs/OverviewTab';
@@ -168,6 +169,7 @@ function AdminWorkspace({ currentUserId }: { currentUserId: number }) {
         {tab === 'comments' ? <CommentsTab /> : null}
         {tab === 'media' ? <MediaTab /> : null}
         {tab === 'games' ? <GamesTab /> : null}
+        {tab === 'free-agents' ? <FreeAgentsTab /> : null}
         {tab === 'cheers' ? <CheersTab /> : null}
         {tab === 'sync' ? <SyncTab /> : null}
       </div>

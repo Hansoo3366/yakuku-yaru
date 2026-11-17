@@ -1,0 +1,774 @@
+/* =========================================================
+ * 스토브리그 홈: 우승 배너 · FA 현황 · 시즌 결과
+ * 우승 배너만 우승팀 컬러 면을 쓰고, 나머지는 중립 색이다.
+ * ========================================================= */
+
+/* ---------- 우승 배너 ---------- */
+.champion-banner {
+  --champion-color: var(--color-brand);
+  align-items: center;
+  background: var(--champion-color);
+  border-radius: var(--radius-xl);
+  color: var(--color-white);
+  display: grid;
+  gap: var(--space-5);
+  grid-template-columns: minmax(0, 1fr) auto;
+  isolation: isolate;
+  overflow: hidden;
+  padding: clamp(24px, 4.5vw, 56px);
+  position: relative;
+}
+
+/* 배경에 은은한 빛 한 겹. 우승팀 컬러 위에서 평평해 보이지 않게 한다. */
+.champion-banner::before {
+  background: radial-gradient(
+    120% 140% at 100% 0%,
+    rgb(255 255 255 / 0.22),
+    transparent 60%
+  );
+  content: '';
+  inset: 0;
+  position: absolute;
+  z-index: -1;
+}
+
+/* 우승 KV: 이미지는 배경, 글자는 빈 자리에 얹는다. PC 3:1(왼쪽), 모바일 1:1(아래). */
+.champion-banner--kv {
+  align-items: center;
+  aspect-ratio: 3 / 1;
+  grid-template-columns: minmax(0, 0.55fr);
+  padding: clamp(24px, 4vw, 56px) clamp(24px, 5vw, 64px);
+}
+
+.champion-banner--kv::before {
+  content: none;
+}
+
+.champion-banner__kv {
+  inset: 0;
+  position: absolute;
+  z-index: -1;
+}
+
+.champion-banner__kv img {
+  display: block;
+  height: 100%;
+  object-fit: cover;
+  object-position: right center;
+  width: 100%;
+}
+
+.champion-banner--kv .champion-banner__eyebrow {
+  color: #f2d48a;
+  opacity: 1;
+}
+
+.champion-banner--kv h1,
+.champion-banner--kv h2 {
+  text-shadow: 0 2px 16px rgb(0 0 0 / 0.35);
+}
+
+.champion-banner__copy {
+  display: grid;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.champion-banner__eyebrow {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  letter-spacing: 0.04em;
+  opacity: 0.85;
+}
+
+.champion-banner :is(h1, h2) {
+  display: grid;
+  font-size: clamp(2rem, 5.4vw, 3.5rem);
+  font-weight: 800;
+  gap: 4px;
+  letter-spacing: var(--tracking-display);
+  line-height: 1.1;
+  text-wrap: balance;
+}
+
+.champion-banner :is(h1, h2) span {
+  font-size: clamp(1.125rem, 2.4vw, 1.5rem);
+  font-weight: 700;
+  opacity: 0.92;
+}
+
+.champion-banner__facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-5);
+  margin-top: var(--space-2);
+}
+
+.champion-banner__facts div {
+  display: grid;
+  gap: 2px;
+}
+
+.champion-banner__facts dt {
+  font-size: var(--text-xs);
+  opacity: 0.75;
+}
+
+.champion-banner__facts dd {
+  margin: 0;
+  font-size: var(--text-md);
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
+.champion-banner__facts dd small {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  margin-left: 4px;
+  opacity: 0.8;
+}
+
+.champion-banner__mark {
+  align-items: center;
+  display: grid;
+  justify-items: center;
+  position: relative;
+}
+
+.champion-banner__titles {
+  color: transparent;
+  font-size: clamp(5rem, 13vw, 9.5rem);
+  font-weight: 900;
+  letter-spacing: -0.04em;
+  line-height: 1;
+  -webkit-text-stroke: 2px rgb(255 255 255 / 0.55);
+}
+
+.champion-banner__mark img {
+  background: var(--color-white);
+  border-radius: 50%;
+  bottom: -8px;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.18);
+  height: clamp(56px, 8vw, 88px);
+  object-fit: contain;
+  padding: 10px;
+  position: absolute;
+  right: -8px;
+  width: clamp(56px, 8vw, 88px);
+}
+
+.champion-banner__mark:not(:has(.champion-banner__titles)) img {
+  position: static;
+}
+
+/* ---------- FA 현황 ---------- */
+.fa-board {
+  display: grid;
+  gap: var(--space-5);
+}
+
+.fa-board__head {
+  align-items: flex-end;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3) var(--space-5);
+  justify-content: space-between;
+}
+
+.fa-board__head h2 {
+  color: var(--color-ink);
+  font-size: var(--type-page-title, 1.5rem);
+  font-weight: 800;
+  letter-spacing: var(--tracking-display);
+}
+
+.fa-board__head h2 a {
+  align-items: center;
+  color: inherit;
+  display: inline-flex;
+  gap: 2px;
+}
+
+.fa-board__head h2 a:hover {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.fa-board__head p {
+  color: var(--color-muted);
+  font-size: var(--text-sm);
+  margin-top: 4px;
+}
+
+.fa-board__counts {
+  display: flex;
+  gap: var(--space-5);
+}
+
+.fa-board__counts div {
+  display: grid;
+  gap: 2px;
+}
+
+.fa-board__counts dt {
+  color: var(--color-muted);
+  font-size: var(--text-xs);
+}
+
+.fa-board__counts dd {
+  margin: 0;
+  color: var(--color-ink);
+  font-size: 1.25rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+}
+
+.fa-board__block {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.fa-board__block h3 {
+  color: var(--color-ink);
+  font-size: var(--text-md);
+  font-weight: 700;
+}
+
+.fa-photo {
+  background: var(--color-surface-soft);
+  border-radius: 50%;
+  flex: none;
+  height: 44px;
+  object-fit: cover;
+  object-position: center 15%;
+  width: 44px;
+}
+
+.fa-photo--logo {
+  align-items: center;
+  display: inline-flex;
+  justify-content: center;
+}
+
+.fa-photo--logo img {
+  height: 26px;
+  object-fit: contain;
+  width: 26px;
+}
+
+/* 계약 소식 */
+.fa-signed-list {
+  background: var(--color-paper);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-lg);
+  display: grid;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.fa-signed {
+  align-items: center;
+  display: grid;
+  gap: var(--space-2) var(--space-4);
+  grid-template-columns:
+    44px minmax(88px, 0.8fr) minmax(0, 1.2fr) minmax(0, 1.4fr)
+    auto;
+  padding: var(--space-3) var(--space-4);
+}
+
+.fa-signed + .fa-signed {
+  border-top: 1px solid var(--color-line);
+}
+
+.fa-signed__who,
+.fa-player__who,
+.fa-signed__deal {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+}
+
+.fa-signed__who strong,
+.fa-player__who strong {
+  color: var(--color-ink);
+  font-size: var(--text-base);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.fa-signed__who small,
+.fa-player__who small,
+.fa-signed__deal small {
+  color: var(--color-muted);
+  font-size: var(--text-xs);
+}
+
+.fa-signed__move {
+  align-items: center;
+  color: var(--color-ink);
+  display: flex;
+  font-size: var(--text-sm);
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.fa-signed__move img {
+  height: 20px;
+  object-fit: contain;
+  width: 20px;
+}
+
+.fa-signed__move b {
+  font-weight: 800;
+}
+
+.fa-signed__deal strong {
+  color: var(--color-ink);
+  font-size: var(--text-base);
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+}
+
+.fa-signed__date {
+  color: var(--color-muted);
+  font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
+}
+
+/* 팀별 명단 */
+.fa-teams {
+  display: grid;
+  gap: var(--space-3);
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr));
+}
+
+.fa-team {
+  background: var(--color-paper);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-lg);
+  display: grid;
+  align-content: start;
+  padding: var(--space-3) var(--space-4) var(--space-2);
+}
+
+.fa-team__head {
+  align-items: center;
+  border-bottom: 1px solid var(--color-line);
+  display: flex;
+  gap: var(--space-2);
+  padding-bottom: var(--space-3);
+}
+
+.fa-team__head img {
+  height: 26px;
+  object-fit: contain;
+  width: 26px;
+}
+
+.fa-team__head h4 {
+  color: var(--color-ink);
+  flex: 1;
+  font-size: var(--text-base);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.fa-team__head span {
+  color: var(--color-muted);
+  font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.fa-team__list {
+  display: grid;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.fa-player {
+  align-items: center;
+  display: grid;
+  gap: var(--space-3);
+  grid-template-columns: 44px minmax(0, 1fr) auto;
+  padding: var(--space-2) 0;
+}
+
+.fa-player + .fa-player {
+  border-top: 1px solid var(--color-line);
+}
+
+/* 상태: 글자 배지 대신 점 */
+.fa-status {
+  align-items: center;
+  color: var(--color-muted);
+  display: inline-flex;
+  flex-wrap: wrap;
+  font-size: var(--text-sm);
+  gap: 2px 6px;
+  justify-content: flex-end;
+  text-align: right;
+}
+
+.fa-status i {
+  background: var(--color-muted-soft);
+  border-radius: 50%;
+  height: 7px;
+  width: 7px;
+}
+
+.fa-status[data-state='stayed'] {
+  color: var(--color-ink);
+}
+
+.fa-status[data-state='stayed'] i {
+  background: var(--color-success);
+}
+
+.fa-status[data-state='moved'] {
+  color: var(--color-ink);
+  font-weight: 600;
+}
+
+.fa-status[data-state='moved'] i {
+  background: var(--color-warning);
+}
+
+.fa-status b {
+  flex-basis: 100%;
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+}
+
+/* ---------- 시즌 결과 ---------- */
+.season-recap {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.season-recap__head {
+  align-items: flex-end;
+  display: flex;
+  gap: var(--space-3);
+  justify-content: space-between;
+}
+
+.season-recap__head h2 {
+  color: var(--color-ink);
+  font-size: var(--type-page-title, 1.5rem);
+  font-weight: 800;
+  letter-spacing: var(--tracking-display);
+}
+
+.season-recap__head a {
+  align-items: center;
+  color: var(--color-muted);
+  display: inline-flex;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  gap: 2px;
+}
+
+.season-recap__head a:hover {
+  color: var(--color-ink);
+}
+
+.season-recap__grid {
+  align-items: start;
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr);
+}
+
+.season-recap__card {
+  background: var(--color-paper);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-lg);
+  display: grid;
+  gap: var(--space-3);
+  min-width: 0;
+  padding: var(--space-4) var(--space-5);
+}
+
+.season-recap__card h3 {
+  color: var(--color-ink);
+  font-size: var(--text-md);
+  font-weight: 700;
+}
+
+/* 포스트시즌: 한국시리즈부터 아래로 */
+.season-recap__series {
+  display: grid;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.season-recap__series li {
+  display: grid;
+  gap: 6px;
+  padding: var(--space-3) 0;
+}
+
+.season-recap__series li + li {
+  border-top: 1px solid var(--color-line);
+}
+
+.season-recap__round {
+  align-items: center;
+  color: var(--color-muted);
+  display: inline-flex;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  gap: 4px;
+}
+
+.season-recap__series li[data-final] .season-recap__round {
+  color: var(--color-ticket-gold-ink);
+}
+
+.season-recap__matchup {
+  align-items: center;
+  display: grid;
+  gap: var(--space-3);
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+}
+
+.season-recap__team {
+  align-items: center;
+  color: var(--color-ink);
+  display: inline-flex;
+  font-size: var(--text-base);
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.season-recap__team img {
+  height: 24px;
+  object-fit: contain;
+  width: 24px;
+}
+
+.season-recap__team.is-winner {
+  font-weight: 800;
+}
+
+.season-recap__team.is-loser {
+  color: var(--color-muted);
+  justify-content: flex-end;
+}
+
+.season-recap__series li[data-final] .season-recap__team {
+  font-size: var(--text-md);
+}
+
+.season-recap__series li[data-final] .season-recap__team img {
+  height: 30px;
+  width: 30px;
+}
+
+.season-recap__score {
+  color: var(--color-muted);
+  font-size: var(--text-md);
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.season-recap__score b {
+  color: var(--color-ink);
+  font-weight: 800;
+}
+
+.season-recap__score i {
+  font-style: normal;
+  margin: 0 6px;
+}
+
+.season-recap__score small {
+  font-size: var(--text-xs);
+  font-weight: 500;
+}
+
+/* 정규시즌 순위 표 */
+.season-recap__table {
+  border-collapse: collapse;
+  font-size: var(--text-base);
+  font-variant-numeric: tabular-nums;
+  width: 100%;
+}
+
+.season-recap__table thead th {
+  border-bottom: 1px solid var(--color-line-strong);
+  color: var(--color-muted);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  padding: 0 12px 8px;
+  text-align: right;
+}
+
+.season-recap__table thead th:nth-child(-n + 2) {
+  text-align: left;
+}
+
+.season-recap__table td,
+.season-recap__table tbody th {
+  border-bottom: 1px solid var(--color-line);
+  color: var(--color-ink);
+  font-weight: 500;
+  height: 44px;
+  padding: 0 12px;
+  text-align: right;
+}
+
+.season-recap__table tbody th {
+  font-weight: 700;
+  text-align: left;
+}
+
+.season-recap__table :is(th, td):nth-child(n + 6) {
+  padding-left: 18px;
+}
+
+.season-recap__table tbody tr:last-child > * {
+  border-bottom: 0;
+}
+
+/* 가을야구 진출선: 5위 아래 */
+.season-recap__table tr[data-cutline] > * {
+  border-bottom: 1.5px dashed var(--color-muted-soft);
+}
+
+.season-recap__table tr:nth-child(n + 6) > * {
+  color: var(--color-muted);
+}
+
+.season-recap__table tr[data-champion] > * {
+  background: var(--color-ticket-gold-soft);
+}
+
+.season-recap__table td.season-recap__rank {
+  font-weight: 700;
+  text-align: left;
+  width: 52px;
+}
+
+.season-recap__trophy {
+  color: var(--color-ticket-gold-ink);
+}
+
+.season-recap__note {
+  color: var(--color-muted);
+  font-size: var(--text-xs);
+}
+
+/* ---------- 좁은 화면 ---------- */
+@media (max-width: 900px) {
+  .season-recap__grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 720px) {
+  .champion-banner {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .season-recap__card {
+    padding: var(--space-4);
+  }
+
+  .season-recap__table {
+    font-size: var(--text-sm);
+  }
+
+  .season-recap__table td,
+  .season-recap__table tbody th {
+    height: 40px;
+    padding: 0 7px;
+  }
+
+  .season-recap__table thead th {
+    padding: 0 7px 8px;
+  }
+
+  .season-recap__table :is(th, td):nth-child(n + 6) {
+    padding-left: 10px;
+  }
+
+  /* 모바일 KV: 위쪽 로고는 그대로 보이고 글자는 아래 빈 자리에. 글자가 길어지면 배경색이 이어진다. */
+  .champion-banner--kv {
+    align-content: end;
+    align-items: end;
+    aspect-ratio: auto;
+    min-height: calc(100vw - 32px);
+    padding: 0 var(--space-5) var(--space-5);
+    padding-top: calc((100vw - 32px) * 0.62);
+  }
+
+  .champion-banner__kv {
+    bottom: auto;
+  }
+
+  .champion-banner__kv img {
+    aspect-ratio: 1 / 1;
+    height: auto;
+    object-position: center top;
+  }
+
+  .champion-banner--kv h1,
+  .champion-banner--kv h2 {
+    font-size: 1.875rem;
+  }
+
+  .champion-banner--kv .champion-banner__facts {
+    gap: var(--space-2) var(--space-4);
+    margin-top: 0;
+  }
+
+  .champion-banner__mark {
+    justify-items: start;
+    order: -1;
+  }
+
+  .champion-banner__titles {
+    font-size: 4.5rem;
+  }
+
+  .champion-banner__mark img {
+    bottom: -4px;
+    height: 48px;
+    left: 96px;
+    padding: 7px;
+    right: auto;
+    width: 48px;
+  }
+
+  .fa-board__counts {
+    gap: var(--space-4);
+    width: 100%;
+  }
+
+  /* 계약 소식: 사진 · 이름 · 날짜 / 이동 / 조건 */
+  .fa-signed {
+    gap: 2px var(--space-3);
+    grid-template-columns: 44px minmax(0, 1fr) auto;
+    padding: var(--space-3);
+  }
+
+  .fa-signed .fa-photo {
+    grid-row: span 3;
+  }
+
+  .fa-signed__move,
+  .fa-signed__deal {
+    grid-column: 2 / -1;
+  }
+
+  .fa-signed__date {
+    grid-column: 3;
+    grid-row: 1;
+  }
+}

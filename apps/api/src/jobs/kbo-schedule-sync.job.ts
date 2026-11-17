@@ -4,6 +4,10 @@ import { notifyError } from '../lib/error-alert.js';
 import { generateKboSeasonProjection } from '../modules/kbo-season-projection/generate-season-projection.js';
 import { syncKboTeamRank } from '../modules/kbo-team-rank/sync-team-rank.js';
 import { runKboSyncMode } from '../modules/kbo-schedule/sync-modes.js';
+import {
+  getCurrentStoveLeagueYear,
+  syncKboFreeAgents,
+} from '../modules/free-agents/sync-free-agents.js';
 
 const KST_TIME_ZONE = 'Asia/Seoul';
 
@@ -26,6 +30,13 @@ async function runGuarded(mode: 'week' | 'today') {
       console.log(
         `[kbo-sync] 팀 순위 반영 — ${result.seasonYear}시즌 ${result.rankDate} 기준 ${result.teamCount}팀`,
       );
+    }
+
+    // 스토브리그(11~3월)에만 FA 명단·계약을 받는다. 계약 공시가 수시로 나와 매시간 확인한다.
+    const faYear = getCurrentStoveLeagueYear();
+
+    if (faYear) {
+      await syncKboFreeAgents(faYear);
     }
   } finally {
     isRunning = false;

@@ -1,13 +1,23 @@
-import type { Game, PostseasonBracket, PostseasonRound } from '@/lib/baseball-api';
-import { getBoxScoreHighlights, type BoxScoreHighlights } from '@/lib/box-score-terms';
+import type {
+  FreeAgent,
+  Game,
+  PostseasonBracket,
+  PostseasonRound,
+} from '@/lib/baseball-api';
+import {
+  getBoxScoreHighlights,
+  type BoxScoreHighlights,
+} from '@/lib/box-score-terms';
 import {
   formatKoreanTime,
   formatKoreanWeekday,
   getKoreaDateString,
 } from '@/lib/date-format';
+import { formatFreeAgentBreakdown, formatFreeAgentDeal } from '@/lib/fa-amount';
 import { getCancellationLabel } from '@/lib/game-cancellation';
 import {
   fetchPublicBoxScore,
+  fetchPublicFreeAgents,
   fetchPublicPostseason,
   fetchPublicSeasonProjection,
   fetchPublicStandings,
@@ -106,7 +116,9 @@ function describeRound(round: PostseasonRound) {
   const games = round.games
     .map((game, index) => {
       const score =
-        game.awayScore !== null && game.homeScore !== null && game.status === 'finished'
+        game.awayScore !== null &&
+        game.homeScore !== null &&
+        game.status === 'finished'
           ? `${game.awayScore} : ${game.homeScore}`
           : getKoreaDateString(game.gameDate);
 
@@ -131,7 +143,9 @@ async function loadHighlights(games: Game[]): Promise<HighlightsByGame> {
     .filter((game) => game.status === 'finished')
     .slice(-MAX_RESULT_BOX_SCORES);
   const boxScores = await Promise.all(
-    finished.map(async (game) => [game.id, await fetchPublicBoxScore(game.id)] as const),
+    finished.map(
+      async (game) => [game.id, await fetchPublicBoxScore(game.id)] as const,
+    ),
   );
 
   return new Map(
@@ -141,18 +155,58 @@ async function loadHighlights(games: Game[]): Promise<HighlightsByGame> {
   );
 }
 
+/** 스토브리그 FA: 원소속 팀별 표. 계약 조건은 관리자가 채운 만큼만 적는다. */
+function describeFreeAgents(faYear: number, items: FreeAgent[]) {
+  const signed = items.filter((item) => item.newTeam);
+  const moved = signed.filter(
+    (item) => item.newTeam?.id !== item.previousTeam.id,
+  );
+  const rows = [...items].sort(
+    (a, b) =>
+      a.previousTeam.name.localeCompare(b.previousTeam.name, 'ko') ||
+      a.playerName.localeCompare(b.playerName, 'ko'),
+  );
+
+  return `## ${faYear} 스토브리그 FA 현황
+
+FA 자격 ${items.length}명 · 계약 ${signed.length}명(이적 ${moved.length}명) · 미계약 ${items.length - signed.length}명. 명단과 계약 팀은 KBO 선수 이동현황 기준, 계약 기간과 금액은 구단 발표 기준입니다.
+
+| 원소속 | 선수 | 포지션 | 상태 | 계약 팀 | 계약일 | 계약 조건 |
+| --- | --- | --- | --- | --- | --- | --- |
+${rows
+  .map((item) => {
+    const status = !item.newTeam
+      ? '미계약'
+      : item.newTeam.id === item.previousTeam.id
+        ? '잔류'
+        : '이적';
+    const deal = formatFreeAgentDeal(item);
+    const breakdown = formatFreeAgentBreakdown(item);
+    // "4년 50억 (계약금 20억 · 연봉 25억 · 옵션 5억)"
+    const terms =
+      deal && breakdown ? `${deal} (${breakdown})` : deal || breakdown;
+
+    return `| ${item.previousTeam.name} | ${item.playerName} | ${item.position} | ${status} | ${item.newTeam?.name ?? '-'} | ${item.signedOn ?? '-'} | ${terms || '-'} |`;
+  })
+  .join('\n')}
+
+페이지: ${getAbsoluteUrl('/fa')}`;
+}
+
 export async function GET() {
   const seasonYear = getKoreaSeasonYear();
   const today = getKoreaDateString();
-  const [standings, projection, games, postseason] = await Promise.all([
-    fetchPublicStandings(seasonYear),
-    fetchPublicSeasonProjection(seasonYear),
-    listPublicGames({
-      from: getKoreaDateString(new Date(), -7),
-      to: getKoreaDateString(new Date(), 8),
-    }),
-    fetchPublicPostseason(seasonYear),
-  ]);
+  const [standings, projection, games, postseason, freeAgents] =
+    await Promise.all([
+      fetchPublicStandings(seasonYear),
+      fetchPublicSeasonProjection(seasonYear),
+      listPublicGames({
+        from: getKoreaDateString(new Date(), -7),
+        to: getKoreaDateString(new Date(), 8),
+      }),
+      fetchPublicPostseason(seasonYear),
+      fetchPublicFreeAgents(),
+    ]);
   const recent = (games ?? []).filter(
     (game) => getKoreaDateString(game.gameDate) < today,
   );
@@ -163,7 +217,7 @@ export async function GET() {
   const sections = [
     `# 야크크 야르 - KBO 리그 현황 요약
 
-> ${today} (한국 시간) 기준. KBO 프로야구의 팀 순위, 포스트시즌 대진, 최근 일주일 결과, 앞으로 일주일 일정입니다. 비공식 팬 서비스의 데이터이며 공식 기록과 조금 다를 수 있습니다. 스코어는 "원정 : 홈" 순서입니다.
+> ${today} (한국 시간) 기준. KBO 프로야구의 팀 순위, 포스트시즌 대진, 스토브리그 FA, 최근 일주일 결과, 앞으로 일주일 일정입니다. 비공식 팬 서비스의 데이터이며 공식 기록과 조금 다를 수 있습니다. 스코어는 "원정 : 홈" 순서입니다.
 
 사이트 안내는 ${getAbsoluteUrl('/llms.txt')} 에 있습니다.`,
   ];
@@ -187,6 +241,15 @@ ${standings.items
 
   if (postseason?.active) {
     sections.push(describePostseason(postseason));
+  }
+
+  // 지난 스토브리그까지만. 그보다 오래된 명단은 '현황'이 아니다.
+  if (
+    freeAgents?.faYear &&
+    freeAgents.faYear >= seasonYear - 1 &&
+    freeAgents.items.length
+  ) {
+    sections.push(describeFreeAgents(freeAgents.faYear, freeAgents.items));
   }
 
   if (projection?.status === 'regularSeason' && projection.rows.length) {
@@ -230,11 +293,14 @@ ${projection.postseasonRows
   }
 
   if (recent.length) {
-    sections.push(`## 최근 일주일 경기 결과\n\n${describeDays(recent, highlights)}`);
+    sections.push(
+      `## 최근 일주일 경기 결과\n\n${describeDays(recent, highlights)}`,
+    );
   }
 
   sections.push(`## 더 보기
 
+- FA 명단·계약 현황: ${getAbsoluteUrl('/fa')}
 - 월별 전체 일정·결과: ${getAbsoluteUrl(`/schedule/${today.slice(0, 7)}`)} (\`/schedule/YYYY-MM\`)
 - 선수 응원가 가사: ${getAbsoluteUrl('/cheers')} (\`/cheers/{playerId}\`)
 - 구장별 맛집·주차 팬 메모: ${getAbsoluteUrl('/stadiums')}

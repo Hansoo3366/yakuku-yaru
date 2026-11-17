@@ -8,6 +8,7 @@ export const ADMIN_TABS = [
   'comments',
   'media',
   'games',
+  'free-agents',
   'cheers',
   'sync',
 ] as const;
@@ -22,6 +23,7 @@ export const ADMIN_TAB_LABELS: Record<AdminTab, string> = {
   comments: '댓글',
   media: '직관 사진',
   games: '경기',
+  'free-agents': 'FA',
   cheers: '응원가',
   sync: '데이터 갱신',
 };

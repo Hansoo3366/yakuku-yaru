@@ -13,6 +13,11 @@ import {
   PostseasonBracket,
   summarizePostseason,
 } from '@/components/PostseasonBracket';
+import {
+  ChampionBanner,
+  FreeAgentBoard,
+  SeasonRecap,
+} from '@/components/StoveLeague';
 import { PublicHome } from './PublicHome';
 import {
   HomeSeasonTimeline,
@@ -22,7 +27,9 @@ import {
 import { useInitialSignedIn } from '@/components/AppProviders';
 import { HonorTitleSwiper } from '@/components/HonorTitleSwiper';
 import type {
+  FreeAgentsResponse,
   Game,
+  Team,
   PostseasonBracket as PostseasonBracketData,
   SeasonProjectionResponse,
   TeamStandingsResponse,
@@ -32,6 +39,7 @@ import {
   getAttendanceSeasonRange,
   useAttendanceRecordsQuery,
   useAttendanceStatsQuery,
+  useFreeAgentsQuery,
   useGamesQuery,
   useMeQuery,
   usePostseasonQuery,
@@ -49,7 +57,9 @@ const UPCOMING_MONTHS = 2;
 
 function hasFinalScore(game: Game) {
   return (
-    game.status === 'finished' && game.homeScore !== null && game.awayScore !== null
+    game.status === 'finished' &&
+    game.homeScore !== null &&
+    game.awayScore !== null
   );
 }
 
@@ -79,10 +89,16 @@ function getHomeScheduleRange() {
 export type HomePageClientProps = {
   /** 서버가 한국 시간 기준으로 정한 시즌 연도. 서버·클라이언트 쿼리 키를 맞춘다. */
   seasonYear: number;
+  /** 한국시리즈가 끝난 뒤 ~ 다음 시범경기 무렵. 우승 배너·FA 를 보여 주고 내 시즌은 숨긴다. */
+  stoveLeague: boolean;
   initialStandings: TeamStandingsResponse | null;
   initialProjection: SeasonProjectionResponse | null;
   /** 포스트시즌 경기가 잡히면(active) 순위표 위에 대진표를 띄운다 */
   initialPostseason: PostseasonBracketData | null;
+  /** 가장 최근 스토브리그 FA. 우승팀이 정해진 뒤에만 보여 준다. */
+  initialFreeAgents: FreeAgentsResponse | null;
+  /** 우승 배너가 첫 화면부터 우승팀 컬러로 그려지도록 서버에서 받는다 */
+  initialTeams: { items: Team[] } | null;
   /** 비로그인 홈의 '오늘의 경기'용 리그 전체 일정 */
   initialGames: Game[] | null;
   gamesRange: { from: string; to: string };
@@ -90,9 +106,12 @@ export type HomePageClientProps = {
 
 export function HomePageClient({
   seasonYear,
+  stoveLeague,
   initialStandings,
   initialProjection,
   initialPostseason,
+  initialFreeAgents,
+  initialTeams,
   initialGames,
   gamesRange,
 }: HomePageClientProps) {
@@ -102,7 +121,7 @@ export function HomePageClient({
   const initialSignedIn = useInitialSignedIn();
   const meQuery = useMeQuery(token);
   const user = meQuery.data?.user ?? storedUser;
-  const teamsQuery = useTeamsQuery();
+  const teamsQuery = useTeamsQuery({ initialData: initialTeams });
   const teamStandingsQuery = useTeamStandingsQuery(seasonYear, {
     initialData: initialStandings,
   });
@@ -113,6 +132,17 @@ export function HomePageClient({
     initialData: initialPostseason,
   });
   const postseason = postseasonQuery.data?.active ? postseasonQuery.data : null;
+  // 스토브리그 화면: 우승 배너 · FA · 시즌 결과. 기간은 서버가 정한다(resolveHomeSeason).
+  const finishedSeason =
+    stoveLeague && postseason?.champion ? postseason : null;
+  const freeAgentsQuery = useFreeAgentsQuery({
+    initialData: initialFreeAgents,
+    enabled: Boolean(finishedSeason),
+  });
+  const freeAgents =
+    finishedSeason && freeAgentsQuery.data?.faYear === seasonYear
+      ? freeAgentsQuery.data.items
+      : [];
   const seasonRange = useMemo(
     () => getAttendanceSeasonRange(seasonYear),
     [seasonYear],
@@ -188,8 +218,11 @@ export function HomePageClient({
       <PublicHome
         gamesRange={gamesRange}
         initialGames={initialGames}
+        finishedSeason={finishedSeason}
+        freeAgents={freeAgents}
         postseason={postseason}
         projection={seasonProjection}
+        teams={teams}
         projectionLoading={seasonProjectionLoading}
         standings={teamStandings}
       />
@@ -198,6 +231,9 @@ export function HomePageClient({
 
   return (
     <main className="page-shell page-shell--dashboard">
+      {finishedSeason ? (
+        <ChampionBanner bracket={finishedSeason} teams={teams} />
+      ) : null}
       <section className="dashboard-grid">
         <div className="dashboard-greeting">
           <div className="dashboard-greeting__content">
@@ -273,155 +309,173 @@ export function HomePageClient({
           </div>
         </div>
 
-        <div className="season">
-          <header className="dashboard-zone-header">
-            <div>
-              <h2>내 시즌</h2>
-            </div>
-            <Link className="season__link" href="/me">
-              통계 보기
-              <ChevronRight aria-hidden="true" size={16} />
-            </Link>
-          </header>
-
-          {/* 시즌 요약 한 줄: 승률 · 직관 · 집관 · 명예타이틀 */}
-          {stats ? (
-            <dl className="season-stats">
-              <div className="season-stats__rate">
-                <dt>관람 승률</dt>
-                <dd>
-                  <strong>
-                    {stats.totalCount > 0 ? stats.winRate : 0}
-                    <small>%</small>
-                  </strong>
-                  <span>
-                    {stats.winCount}승 {stats.drawCount}무 {stats.loseCount}패
-                  </span>
-                  {stats.winCount + stats.drawCount + stats.loseCount > 0 ? (
-                    <span
-                      aria-hidden="true"
-                      className="season-stats__bar"
-                      style={{
-                        ['--win' as string]: stats.winCount,
-                        ['--draw' as string]: stats.drawCount,
-                        ['--lose' as string]: stats.loseCount,
-                      }}
-                    >
-                      <i data-kind="win" />
-                      <i data-kind="draw" />
-                      <i data-kind="lose" />
-                    </span>
-                  ) : null}
-                </dd>
-              </div>
+        {/* 스토브리그에는 경기가 없어 내 시즌을 숨기고, 시범경기 무렵 다시 보여 준다. */}
+        {finishedSeason ? null : (
+          <div className="season">
+            <header className="dashboard-zone-header">
               <div>
-                <dt>직관</dt>
-                <dd>
-                  <strong>
-                    {stats.stadiumCount}
-                    <small>경기</small>
-                  </strong>
-                  <span>
-                    승률 {stats.overallStadiumWinRate ?? stats.stadiumWinRate}%
-                  </span>
-                </dd>
+                <h2>내 시즌</h2>
               </div>
-              <div>
-                <dt>집관</dt>
-                <dd>
-                  <strong>
-                    {stats.homeCount}
-                    <small>경기</small>
-                  </strong>
-                  <span>
-                    승률 {stats.overallHomeWinRate ?? stats.homeWinRate}%
-                  </span>
-                </dd>
-              </div>
-              <div className="season-stats__titles">
-                <dt>명예타이틀</dt>
-                <dd>
-                  {stats.titles?.length ? (
-                    <HonorTitleSwiper titles={stats.titles} />
-                  ) : (
-                    <span className="season-stats__empty">
-                      기록을 남기면 타이틀이 붙어요
-                    </span>
-                  )}
-                </dd>
-              </div>
-            </dl>
-          ) : (
-            <Skeleton height={112} radius={12} />
-          )}
+              <Link className="season__link" href="/me">
+                통계 보기
+                <ChevronRight aria-hidden="true" size={16} />
+              </Link>
+            </header>
 
-          {/* 타임라인: 최근 본 경기 → 오늘 → 다가오는 경기. 칸 크기가 같아 줄이 어긋나지 않는다. */}
-          {authState === 'checking' ? (
-            <Skeleton height={164} radius={12} />
-          ) : (
-            <HomeSeasonTimeline
-              favoriteTeamId={favoriteTeam?.id}
-              finishedTeamGames={finishedTeamGames}
-              recentRecords={recentRecords}
-              upcomingGames={upcomingGames}
-            />
-          )}
-        </div>
+            {/* 시즌 요약 한 줄: 승률 · 직관 · 집관 · 명예타이틀 */}
+            {stats ? (
+              <dl className="season-stats">
+                <div className="season-stats__rate">
+                  <dt>관람 승률</dt>
+                  <dd>
+                    <strong>
+                      {stats.totalCount > 0 ? stats.winRate : 0}
+                      <small>%</small>
+                    </strong>
+                    <span>
+                      {stats.winCount}승 {stats.drawCount}무 {stats.loseCount}패
+                    </span>
+                    {stats.winCount + stats.drawCount + stats.loseCount > 0 ? (
+                      <span
+                        aria-hidden="true"
+                        className="season-stats__bar"
+                        style={{
+                          ['--win' as string]: stats.winCount,
+                          ['--draw' as string]: stats.drawCount,
+                          ['--lose' as string]: stats.loseCount,
+                        }}
+                      >
+                        <i data-kind="win" />
+                        <i data-kind="draw" />
+                        <i data-kind="lose" />
+                      </span>
+                    ) : null}
+                  </dd>
+                </div>
+                <div>
+                  <dt>직관</dt>
+                  <dd>
+                    <strong>
+                      {stats.stadiumCount}
+                      <small>경기</small>
+                    </strong>
+                    <span>
+                      승률 {stats.overallStadiumWinRate ?? stats.stadiumWinRate}
+                      %
+                    </span>
+                  </dd>
+                </div>
+                <div>
+                  <dt>집관</dt>
+                  <dd>
+                    <strong>
+                      {stats.homeCount}
+                      <small>경기</small>
+                    </strong>
+                    <span>
+                      승률 {stats.overallHomeWinRate ?? stats.homeWinRate}%
+                    </span>
+                  </dd>
+                </div>
+                <div className="season-stats__titles">
+                  <dt>명예타이틀</dt>
+                  <dd>
+                    {stats.titles?.length ? (
+                      <HonorTitleSwiper titles={stats.titles} />
+                    ) : (
+                      <span className="season-stats__empty">
+                        기록을 남기면 타이틀이 붙어요
+                      </span>
+                    )}
+                  </dd>
+                </div>
+              </dl>
+            ) : (
+              <Skeleton height={112} radius={12} />
+            )}
+
+            {/* 타임라인: 최근 본 경기 → 오늘 → 다가오는 경기. 칸 크기가 같아 줄이 어긋나지 않는다. */}
+            {authState === 'checking' ? (
+              <Skeleton height={164} radius={12} />
+            ) : (
+              <HomeSeasonTimeline
+                favoriteTeamId={favoriteTeam?.id}
+                finishedTeamGames={finishedTeamGames}
+                recentRecords={recentRecords}
+                upcomingGames={upcomingGames}
+              />
+            )}
+          </div>
+        )}
       </section>
 
-      <section className="dashboard-league-zone stack">
-        <header className="dashboard-zone-header">
-          <div>
-            <h2>리그 현황</h2>
-          </div>
-          <p>
-            {postseason
-              ? '포스트시즌 대진과 정규시즌 최종 순위'
-              : `팀 순위와 ${seasonYear} 시즌 예상 순위`}
-          </p>
-        </header>
+      {finishedSeason ? (
+        <section className="dashboard-league-zone stack">
+          {freeAgents.length ? (
+            <FreeAgentBoard
+              moreHref="/fa"
+              faYear={seasonYear}
+              items={freeAgents}
+              standings={teamStandings}
+            />
+          ) : null}
+          <SeasonRecap bracket={finishedSeason} standings={teamStandings} />
+        </section>
+      ) : (
+        <section className="dashboard-league-zone stack">
+          <header className="dashboard-zone-header">
+            <div>
+              <h2>리그 현황</h2>
+            </div>
+            <p>
+              {postseason
+                ? '포스트시즌 대진과 정규시즌 최종 순위'
+                : `팀 순위와 ${seasonYear} 시즌 예상 순위`}
+            </p>
+          </header>
 
-        {postseason ? (
+          {postseason ? (
+            <section className="card stack home-leaderboard-card">
+              <div className="section-heading">
+                <div>
+                  <h3>{seasonYear} 포스트시즌</h3>
+                  <p>{summarizePostseason(postseason)}</p>
+                </div>
+              </div>
+              <PostseasonBracket
+                bracket={postseason}
+                highlightTeamId={favoriteTeam?.id}
+              />
+            </section>
+          ) : null}
+
           <section className="card stack home-leaderboard-card">
             <div className="section-heading">
               <div>
-                <h3>{seasonYear} 포스트시즌</h3>
-                <p>{summarizePostseason(postseason)}</p>
+                <h3>{postseason ? '정규시즌 최종 순위' : 'KBO 팀 순위'}</h3>
+                <p>
+                  {favoriteTeam
+                    ? `${josa(favoriteTeam.shortName, '은')} ${
+                        teamStandings?.items.find(
+                          (item) => item.teamId === favoriteTeam.id,
+                        )?.rank ?? '—'
+                      }위예요.`
+                    : '응원 팀을 설정하면 순위를 강조해 보여드려요.'}
+                </p>
               </div>
             </div>
-            <PostseasonBracket
-              bracket={postseason}
+            <TeamStandingsTable
               highlightTeamId={favoriteTeam?.id}
+              standings={teamStandings}
             />
           </section>
-        ) : null}
-
-        <section className="card stack home-leaderboard-card">
-          <div className="section-heading">
-            <div>
-              <h3>{postseason ? '정규시즌 최종 순위' : 'KBO 팀 순위'}</h3>
-              <p>
-                {favoriteTeam
-                  ? `${josa(favoriteTeam.shortName, '은')} ${
-                      teamStandings?.items.find(
-                        (item) => item.teamId === favoriteTeam.id,
-                      )?.rank ?? '—'
-                    }위예요.`
-                  : '응원 팀을 설정하면 순위를 강조해 보여드려요.'}
-              </p>
-            </div>
-          </div>
-          <TeamStandingsTable
+          <SeasonProjectionTable
             highlightTeamId={favoriteTeam?.id}
-            standings={teamStandings}
+            loading={seasonProjectionLoading}
+            projection={seasonProjection}
           />
         </section>
-        <SeasonProjectionTable
-          highlightTeamId={favoriteTeam?.id}
-          loading={seasonProjectionLoading}
-          projection={seasonProjection}
-        />
-      </section>
+      )}
     </main>
   );
 }

@@ -5,6 +5,7 @@ import { fetchMe } from '@/lib/auth-api';
 import {
   fetchGame,
   fetchGameBoxScore,
+  getFreeAgents,
   getPostseasonBracket,
   getSeasonProjection,
   listGames,
@@ -17,9 +18,11 @@ import {
 } from '@/lib/attendance-api';
 import type {
   BoxScore,
+  FreeAgentsResponse,
   Game,
   PostseasonBracket,
   SeasonProjectionResponse,
+  Team,
   TeamStandingsResponse,
 } from '@/lib/baseball-api';
 import { fetchPost, listComments, listPosts } from '@/lib/post-api';
@@ -37,10 +40,13 @@ export function useMeQuery(token: string | null | undefined) {
   });
 }
 
-export function useTeamsQuery() {
+export function useTeamsQuery(options?: {
+  initialData?: { items: Team[] } | null;
+}) {
   return useQuery({
     queryKey: queryKeys.teams(),
     queryFn: listTeams,
+    initialData: options?.initialData ?? undefined,
     staleTime: 1000 * 60 * 60,
   });
 }
@@ -99,6 +105,19 @@ export function usePostseasonQuery(
     queryFn: () => getPostseasonBracket(seasonYear),
     initialData: options?.initialData ?? undefined,
     staleTime: 1000 * 60,
+  });
+}
+
+export function useFreeAgentsQuery(options?: {
+  initialData?: FreeAgentsResponse | null;
+  enabled?: boolean;
+}) {
+  return useQuery({
+    queryKey: queryKeys.freeAgents(),
+    queryFn: getFreeAgents,
+    initialData: options?.initialData ?? undefined,
+    enabled: options?.enabled ?? true,
+    staleTime: 1000 * 60 * 5,
   });
 }
 

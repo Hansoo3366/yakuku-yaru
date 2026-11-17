@@ -1,4 +1,5 @@
 import { request } from './api';
+import type { FreeAgent, FreeAgentsResponse } from './baseball-api';
 
 export type AdminSummary = {
   users: number;
@@ -308,6 +309,38 @@ export function updateAdminGame(
   });
 }
 
+export type AdminFreeAgentsResponse = FreeAgentsResponse & { years: number[] };
+
+export type AdminFreeAgentInput = {
+  newTeamId: number | null;
+  signedOn: string | null;
+  contractYears: number | null;
+  totalAmount: number | null;
+  signingBonus: number | null;
+  salaryAmount: number | null;
+  incentiveAmount: number | null;
+  note: string | null;
+};
+
+export function listAdminFreeAgents(token: string, year: number | null) {
+  return request<AdminFreeAgentsResponse>(
+    `/admin/free-agents${year ? `?year=${year}` : ''}`,
+    { token },
+  );
+}
+
+export function updateAdminFreeAgent(
+  freeAgentId: number,
+  input: AdminFreeAgentInput,
+  token: string,
+) {
+  return request<{ item: FreeAgent }>(`/admin/free-agents/${freeAgentId}`, {
+    method: 'PATCH',
+    body: input,
+    token,
+  });
+}
+
 export const ADMIN_SYNC_JOB_TYPES = [
   'schedule-today',
   'schedule-week',
@@ -320,6 +353,7 @@ export const ADMIN_SYNC_JOB_TYPES = [
   'standings',
   'projection',
   'players',
+  'free-agents',
 ] as const;
 
 export type AdminSyncJobType = (typeof ADMIN_SYNC_JOB_TYPES)[number];
