@@ -10,6 +10,7 @@ type FreeAgentRow = RowDataPacket & {
   qualified_on: string;
   signed_on: string | null;
   contract_years: number | null;
+  option_years: number | null;
   total_amount: number | null;
   signing_bonus: number | null;
   salary_amount: number | null;
@@ -38,6 +39,8 @@ export type FreeAgent = {
   qualifiedOn: string;
   signedOn: string | null;
   contractYears: number | null;
+  /** 2+1년의 1. 옵션이 없으면 null */
+  optionYears: number | null;
   totalAmount: number | null;
   signingBonus: number | null;
   salaryAmount: number | null;
@@ -49,6 +52,7 @@ export type FreeAgentTermsInput = {
   newTeamId: number | null;
   signedOn: string | null;
   contractYears: number | null;
+  optionYears: number | null;
   totalAmount: number | null;
   signingBonus: number | null;
   salaryAmount: number | null;
@@ -79,6 +83,7 @@ function toFreeAgent(row: FreeAgentRow): FreeAgent {
     qualifiedOn: row.qualified_on,
     signedOn: row.signed_on,
     contractYears: row.contract_years,
+    optionYears: row.option_years,
     totalAmount: row.total_amount,
     signingBonus: row.signing_bonus,
     salaryAmount: row.salary_amount,
@@ -95,6 +100,7 @@ const selectColumns = `
   DATE_FORMAT(fa.qualified_on, '%Y-%m-%d') AS qualified_on,
   DATE_FORMAT(fa.signed_on, '%Y-%m-%d') AS signed_on,
   fa.contract_years,
+  fa.option_years,
   fa.total_amount,
   fa.signing_bonus,
   fa.salary_amount,
@@ -293,6 +299,7 @@ export async function updateFreeAgentTerms(
      SET new_team_id = ?,
          signed_on = ?,
          contract_years = ?,
+         option_years = ?,
          total_amount = ?,
          signing_bonus = ?,
          salary_amount = ?,
@@ -303,6 +310,7 @@ export async function updateFreeAgentTerms(
       input.newTeamId,
       input.signedOn,
       input.contractYears,
+      input.optionYears,
       input.totalAmount,
       input.signingBonus,
       input.salaryAmount,

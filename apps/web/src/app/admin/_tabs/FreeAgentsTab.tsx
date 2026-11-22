@@ -47,6 +47,7 @@ type Money = { eok: string; man: string };
 
 type FreeAgentForm = {
   contractYears: string;
+  optionYears: string;
   newTeamId: string;
   note: string;
   signedOn: string;
@@ -97,6 +98,7 @@ function moneyToManwon({ eok, man }: Money) {
 function toForm(freeAgent: FreeAgent): FreeAgentForm {
   return {
     contractYears: freeAgent.contractYears?.toString() ?? '',
+    optionYears: freeAgent.optionYears?.toString() ?? '',
     newTeamId: freeAgent.newTeam ? String(freeAgent.newTeam.id) : '',
     note: freeAgent.note ?? '',
     signedOn: freeAgent.signedOn ?? '',
@@ -113,6 +115,8 @@ function toInput(form: FreeAgentForm): AdminFreeAgentInput {
   return {
     contractYears:
       form.contractYears.trim() === '' ? null : Number(form.contractYears),
+    // 옵션 0년은 옵션 없음과 같다
+    optionYears: Number(form.optionYears) || null,
     incentiveAmount: moneyToManwon(form.money.incentiveAmount),
     newTeamId: form.newTeamId ? Number(form.newTeamId) : null,
     note: form.note.trim() || null,
@@ -187,6 +191,7 @@ function toPreview(
       ? { id: newTeam.id, name: newTeam.name, shortName: newTeam.shortName }
       : null,
     contractYears: valid(input.contractYears),
+    optionYears: valid(input.optionYears),
     totalAmount: valid(input.totalAmount),
     signingBonus: valid(input.signingBonus),
     salaryAmount: valid(input.salaryAmount),
@@ -507,6 +512,7 @@ function FreeAgentEditor({
             ...input,
             signedOn: null,
             contractYears: null,
+            optionYears: null,
             totalAmount: null,
             signingBonus: null,
             salaryAmount: null,
@@ -617,21 +623,41 @@ function FreeAgentEditor({
                 />
               </label>
               <label className="admin-field">
-                <span>계약 기간</span>
-                <span className="fa-editor__unit">
-                  <input
-                    className="admin-input admin-input--num"
-                    inputMode="numeric"
-                    max={20}
-                    min={1}
-                    onChange={(event) =>
-                      update('contractYears', event.target.value)
-                    }
-                    placeholder="4"
-                    type="number"
-                    value={form.contractYears}
-                  />
-                  <i aria-hidden="true">년</i>
+                <span>계약 기간 + 옵션</span>
+                <span className="fa-editor__years">
+                  <span className="fa-editor__unit">
+                    <input
+                      aria-label="계약 기간"
+                      className="admin-input admin-input--num"
+                      inputMode="numeric"
+                      max={20}
+                      min={1}
+                      onChange={(event) =>
+                        update('contractYears', event.target.value)
+                      }
+                      placeholder="4"
+                      type="number"
+                      value={form.contractYears}
+                    />
+                    <i aria-hidden="true">년</i>
+                  </span>
+                  <span aria-hidden="true">+</span>
+                  <span className="fa-editor__unit">
+                    <input
+                      aria-label="옵션 기간"
+                      className="admin-input admin-input--num"
+                      inputMode="numeric"
+                      max={20}
+                      min={0}
+                      onChange={(event) =>
+                        update('optionYears', event.target.value)
+                      }
+                      placeholder="0"
+                      type="number"
+                      value={form.optionYears}
+                    />
+                    <i aria-hidden="true">년</i>
+                  </span>
                 </span>
               </label>
             </div>
@@ -684,7 +710,7 @@ function FreeAgentEditor({
             className="admin-input"
             maxLength={200}
             onChange={(event) => update('note', event.target.value)}
-            placeholder="예: 4+2년, 보상선수 ○○○"
+            placeholder="예: 보상선수 ○○○"
             value={form.note}
           />
         </label>

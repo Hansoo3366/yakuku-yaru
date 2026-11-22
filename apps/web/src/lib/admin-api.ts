@@ -315,6 +315,7 @@ export type AdminFreeAgentInput = {
   newTeamId: number | null;
   signedOn: string | null;
   contractYears: number | null;
+  optionYears: number | null;
   totalAmount: number | null;
   signingBonus: number | null;
   salaryAmount: number | null;

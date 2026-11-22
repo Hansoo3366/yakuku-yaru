@@ -24,11 +24,19 @@ export function getFreeAgentTotal(freeAgent: FreeAgent) {
   return parts.length ? parts.reduce((sum, value) => sum + value, 0) : null;
 }
 
-/** "4년 50억" / "4년" / "50억" / null */
+/** "4년" / "2+1년" / null. 옵션 기간만 있으면 기간을 모르는 것으로 본다 */
+export function formatContractYears(freeAgent: FreeAgent) {
+  if (!freeAgent.contractYears) return null;
+  return freeAgent.optionYears
+    ? `${freeAgent.contractYears}+${freeAgent.optionYears}년`
+    : `${freeAgent.contractYears}년`;
+}
+
+/** "4년 50억" / "2+1년 20억" / "4년" / "50억" / null */
 export function formatFreeAgentDeal(freeAgent: FreeAgent) {
   const total = getFreeAgentTotal(freeAgent);
   const parts = [
-    freeAgent.contractYears ? `${freeAgent.contractYears}년` : null,
+    formatContractYears(freeAgent),
     total != null ? formatManwon(total) : null,
   ].filter(Boolean);
 

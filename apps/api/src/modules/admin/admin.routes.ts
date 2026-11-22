@@ -276,6 +276,7 @@ function parseFreeAgentTermsInput(body: Record<string, unknown>) {
     newTeamId: newTeamId || null,
     signedOn,
     contractYears: nullableWholeNumber(body.contractYears, '계약 기간', 20),
+    optionYears: nullableWholeNumber(body.optionYears, '옵션 기간', 20) || null,
     totalAmount: nullableWholeNumber(body.totalAmount, '총액', MAX_FA_AMOUNT),
     signingBonus: nullableWholeNumber(body.signingBonus, '계약금', MAX_FA_AMOUNT),
     salaryAmount: nullableWholeNumber(body.salaryAmount, '연봉', MAX_FA_AMOUNT),

@@ -1105,6 +1105,16 @@ async function addKboPlayerRecords() {
   );
 }
 
+/** 2+1년처럼 기본 기간 뒤에 붙는 옵션 기간. 옵션이 없는 계약은 비워 둔다. */
+async function addFreeAgentOptionYears() {
+  if (!(await columnExists('free_agents', 'option_years'))) {
+    await db.execute(
+      `ALTER TABLE free_agents
+       ADD COLUMN option_years TINYINT UNSIGNED NULL AFTER contract_years`,
+    );
+  }
+}
+
 type Migration = {
   /** 한 번 적용되면 schema_migrations 에 기록된다. 이미 배포된 id 는 바꾸지 않는다. */
   id: string;
@@ -1129,6 +1139,7 @@ const MIGRATIONS: readonly Migration[] = [
   },
   { id: '0006_free_agents', up: addFreeAgents },
   { id: '0007_kbo_player_records', up: addKboPlayerRecords },
+  { id: '0008_free_agent_option_years', up: addFreeAgentOptionYears },
 ];
 
 const MIGRATION_LOCK_NAME = 'yakuku_yaru_migrations';

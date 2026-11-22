@@ -221,6 +221,8 @@ export type FreeAgent = {
   qualifiedOn: string;
   signedOn: string | null;
   contractYears: number | null;
+  /** 2+1년의 1. 옵션이 없으면 null */
+  optionYears: number | null;
   totalAmount: number | null;
   signingBonus: number | null;
   salaryAmount: number | null;

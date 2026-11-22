@@ -1523,6 +1523,22 @@ html[data-theme='dark'] .admin-team-dot {
   grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
 }
 
+/* 폰에서는 계약일과 기간 + 옵션 두 칸을 위아래로 둔다 */
+@media (max-width: 520px) {
+  .fa-editor__row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* 기본 기간 + 옵션 기간 (2+1년) */
+.fa-editor__years {
+  align-items: center;
+  color: var(--color-muted);
+  display: grid;
+  gap: 6px;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+}
+
 /* 입력칸 안쪽 오른쪽에 단위(년·억)를 붙인다 */
 .fa-editor__unit {
   display: block;
