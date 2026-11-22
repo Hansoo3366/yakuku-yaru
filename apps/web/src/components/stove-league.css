@@ -290,6 +290,11 @@
     padding: 0 var(--space-4) 2px;
     scrollbar-width: none;
   }
+
+  /* 한 줄로 두면 칩이 줄어들어 팀 이름이 버튼 밖으로 나간다 */
+  .fa-filters__teams button {
+    flex: none;
+  }
 }
 
 .fa-board__block {
